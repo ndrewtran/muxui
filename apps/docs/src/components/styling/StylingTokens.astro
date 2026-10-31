@@ -37,6 +37,7 @@ const annotation = (row: Row) => row.requirement === 'required' ? null : [row.re
 	<li><strong>theme</strong> assign it on a theme scope or a wrapper that contains the component. <strong>fixed</strong> is Mux UI's own: do not assign it.</li>
 	<li>Whether assigning a role changes pixels depends on the part: a role read in a state, a portal or a closed overlay changes nothing until that part renders.</li>
 </ul>
+<p class="styling-note" data-styling-alias-scope>{tokens.scopeNote} <a href="/foundations/component-tokens/">Component token scope</a>.</p>
 {tokens.groups.map((group) => {
 	const table = (
 		<div class="styling-scroll not-content" data-styling-scroll>

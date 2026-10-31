@@ -1,8 +1,19 @@
+import { useState } from 'react';
 import { Sidebar } from '@muxui/react';
 
 const frame = { width: '14rem', height: '26rem' } as const;
 
 export function GroupingSidebarExample() {
+  const [showFeature, setShowFeature] = useState(true);
+  const feature = showFeature && (
+    <Sidebar.FeatureCard
+      title="Workspace tips"
+      description="Keep related pages in a shallow group."
+      dismissLabel="Dismiss workspace tips"
+      onDismiss={() => setShowFeature(false)}
+    />
+  );
+
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--muxui-reference-dimension-space-m)' }}>
       {/* Flat: every destination is one visible link. */}
@@ -14,8 +25,10 @@ export function GroupingSidebarExample() {
             <Sidebar.NavItem href="#now" current>Roadmap: Now</Sidebar.NavItem>
             <Sidebar.NavItem href="#next">Roadmap: Next</Sidebar.NavItem>
             <Sidebar.NavItem href="#later">Roadmap: Later</Sidebar.NavItem>
-            <Sidebar.NavItem href="#settings">Settings</Sidebar.NavItem>
           </Sidebar.NavList>
+          <Sidebar.Divider />
+          <Sidebar.NavButton href="#settings">Settings</Sidebar.NavButton>
+          {feature}
         </Sidebar.Root>
       </div>
       {/* Grouped: related secondary pages share one label, and the group holding the current page starts open. */}
@@ -34,8 +47,10 @@ export function GroupingSidebarExample() {
             >
               Roadmap
             </Sidebar.NavItem>
-            <Sidebar.NavItem href="#settings">Settings</Sidebar.NavItem>
           </Sidebar.NavList>
+          <Sidebar.Divider />
+          <Sidebar.NavButton href="#settings">Settings</Sidebar.NavButton>
+          {feature}
         </Sidebar.Root>
       </div>
     </div>

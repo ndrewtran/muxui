@@ -734,6 +734,37 @@ test('each Docs page points to the two reference files that hold the package-lev
 /** The generated story module of a family. */
 const moduleOf = ({ family, tranche }) => import(`../.storybook/generated/${tranche.replaceAll('.', '-').toLowerCase()}-${slugOf(family)}.stories.mjs`);
 
+/** Compare a rendered Controls options row with its actual declaring part, including
+ * all alternatives. Nonfinite props need no options list; the two existing selectors
+ * over a generic constraint/native number have explicit declaration-backed treatment.
+ */
+function assertControlOptions(control, declarations, { family, name, component, file }) {
+  const label = `${family}.${name} finite options`;
+  if (family === 'SelectNative' && name === 'size') {
+    assert.equal(declarations[0].type, 'SelectNativeVisualSize | number');
+    const visual = file.types.find(({ name }) => name === 'SelectNativeVisualSize').values;
+    assert.deepEqual(control.options.filter((value) => typeof value !== 'number').sort(), [...visual].sort(), label);
+    const native = control.options.filter((value) => typeof value === 'number');
+    assert.ok(native.length > 0 && native.every((value) => Number.isInteger(value) && value > 0), `${label}: positive native row counts`);
+    return;
+  }
+  let values;
+  if (declarations.length > 0 && declarations.every(({ values }) => values !== undefined)) {
+    values = [...new Set(declarations.flatMap(({ values }) => values))];
+  } else if (family === 'Text' && name === 'as') {
+    const parameter = component.parts.find(({ member }) => member === null).typeParameters.find(({ name }) => name === 'T');
+    assert.equal(declarations[0].type, parameter.name);
+    values = file.types.find(({ name }) => name === parameter.constraint).values;
+  } else {
+    // Native envelopes, React nodes, callbacks, hook options and other nonfinite types
+    // are not finite option authorities and must not silently acquire a select list.
+    assert.equal(control.options, undefined, `${label}: nonfinite declaration has no enumerated options`);
+    return;
+  }
+  assert.ok(Array.isArray(control.options), `${label}: the finite control retains its options`);
+  assert.deepEqual([...control.options].sort(), [...values].sort(), label);
+}
+
 test('the Controls describe each prop with its member comment and its declared type, and name a merged part as the owner', async () => {
   let described = 0;
   let typed = 0;
@@ -745,7 +776,8 @@ test('the Controls describe each prop with its member comment and its declared t
   for (const record of manifest.families) {
     const module = await moduleOf(record);
     const { api } = catalogOf(record.family);
-    const component = ownerFile(ownerOf(record.family)).exports.find(({ name }) => name === record.family);
+    const file = ownerFile(ownerOf(record.family));
+    const component = file.exports.find(({ name }) => name === record.family);
     // The blocks the adapter reads, root first, as STORY_API_PARTS and STORY_API_HOOKS name them for the family.
     const blocksOfFamily = storyApiBlocks({ export: record.family, api }).map((block) => ({
       member: block.member ?? null, root: block.part === 'root', hook: block.hook, block: block.api,
@@ -776,9 +808,11 @@ test('the Controls describe each prop with its member comment and its declared t
           assert.equal(control.description, undefined, `${record.family}.${name} has no declaration, so no description`);
           assert.ok(['MuxUI callback', 'React element', 'function', undefined].includes(control.table.type?.summary), `${record.family}.${name} keeps no invented type`);
           assert.equal(control.table.category, undefined);
+          assert.equal(control.options, undefined, `${record.family}.${name} has no finite declaration options`);
           continue;
         }
         const member = declaration(owner, name);
+        assertControlOptions(control, declarations(owner, name), { family: record.family, name, component, file });
         assert.equal(control.description, member.doc, `${record.family}.${name} description`);
         assert.equal(control.table.type.summary, controlType(owner, name), `${record.family}.${name} type`);
         if (new Set(declarations(owner, name).map(({ type }) => type)).size > 1) differing += 1;
@@ -817,6 +851,31 @@ test('a Control of a prop that alternatives declare differently offers the union
   assert.equal(meta.argTypes.variant.table.defaultValue.summary, 'body', 'the catalog still supplies the executed default');
   // A type declared the same everywhere stays as written.
   assert.equal(meta.argTypes.color.table.type.summary, 'TextColor');
+});
+
+test('finite Controls reject illegal values and missing legal alternatives using their declaration owner', async () => {
+  for (const [family, name, change] of [
+    ['Button', 'variant', (options) => [...options, 'invented']],
+    ['Text', 'variant', (options) => options.filter((value) => value !== 'display')],
+    ['Menu', 'placement', (options) => [...options, 'invented']],
+    ['SelectNative', 'size', (options) => options.map((value) => typeof value === 'number' ? 0 : value)],
+    ['SelectNative', 'size', (options) => options.filter((value) => value !== 'lg')],
+  ]) {
+    const { default: meta } = await moduleOf(manifest.families.find((record) => record.family === family));
+    const file = ownerFile(ownerOf(family));
+    const component = file.exports.find((item) => item.name === family);
+    const control = meta.argTypes[name];
+    // Read the part the adapter assigns the row to, then its actual declarations.
+    const owner = control.table.category?.slice(family.length + 1);
+    const declarations = component.parts.filter(({ member }) => owner ? member === owner : member === null || member === 'Root')
+      .flatMap((part) => [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)])
+      .filter((member) => member.name === name && member.never !== true);
+    const context = { family, name, component, file };
+    assertControlOptions(control, declarations, context);
+    const options = change(control.options);
+    assert.notDeepEqual(options, control.options, `${family}.${name} mutation changes the list`);
+    assert.throws(() => assertControlOptions({ ...control, options }, declarations, context), /finite options/u);
+  }
 });
 
 test('a Controls row without a model has no description, and one with a model but no comment has none either', async () => {

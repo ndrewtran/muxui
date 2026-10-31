@@ -2,9 +2,13 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
+import { createRequire } from 'node:module';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const read = (path) => readFile(resolve(repositoryRoot, path), 'utf8');
+const reactRequire = createRequire(resolve(repositoryRoot, 'packages/react/package.json'));
+const ts = reactRequire('typescript-6');
+const reference = (slug) => read(`packages/react/reference/${slug}.json`).then(JSON.parse);
 const derivedApi = (slug) => read(`packages/react/api/${slug}.json`).then(JSON.parse);
 
 /** The section of a guide under `## heading`. */
@@ -60,14 +64,12 @@ test('the Button guide covers exactly the variants its derived API declares', as
   assert.match(guide, /\[API reference\]\(#api-reference\) lists the `variant` and `size` values/u);
 });
 
-// Code spans a guide may state that no derived block owns. `native` lists native attributes and
-// their values, DOM and web APIs, and JavaScript values. `declared` lists facts about a
-// declaration-only surface, such as a provider's props, that the declaration-backed reference
-// reader will check; until it exists, the list names exactly the spans no check compares. It
-// excuses prose spans only, never an example's attributes, and only DECLARATION_ONLY_GUIDES use it.
+// `native` lists native attributes, web APIs and JavaScript values. `reference` lists
+// finite prose spans checked below against a named declaration surface. It never excuses
+// an example's attributes. A neighbour's API is checked through `from`.
 // `from` lists, by slug, the spans a guide states about a neighbouring component's API, such as the slider
 // props a picker's advice names; each must be a prop, event prop, or finite value of that component's derived
-// API, so the claim moves with the neighbour. It excuses prose spans only, like `declared`.
+// API, so the claim moves with the neighbour. It excuses prose spans only, like `reference`.
 // `described` lists, by derived type name, the spans a guide states about a format that type's description
 // states, such as the date format; each must appear in that description, so a changed format fails the guide.
 // It excuses prose spans only too.
@@ -100,7 +102,6 @@ const GUIDES = {
   'preview-trigger': {},
   // aria-label names the dialog surface.
   popover: { native: ['aria-label'] },
-  // maxVisible, placement and its four values, and className are ToastProvider's props, and pending is Button's.
   dialog: {},
   // The native validation rules a form checks are the browser's, not Form's.
   form: { native: ['required', 'type', 'pattern'] },
@@ -171,7 +172,7 @@ const GUIDES = {
   'prompt-composer': { native: ['onSubmit', '@', '/', 'inputProps.placeholder', 'inputProps.maxLength'] },
   // item.value is a field of an item record, which the guide says a named Select does not submit.
   select: { native: ['item.value'] },
-  toast: { declared: ['pending', 'maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] },
+  toast: { reference: { ToastProvider: ['maxVisible', 'placement', 'top-start', 'top-end', 'bottom-start', 'bottom-end', 'className'] }, from: { button: ['pending'] } },
   // aria-label and aria-labelledby name the group, which the public type offers beside the derived props; neutral is the Button variant the guide advises for attached buttons.
   'button-group': { native: ['aria-label', 'aria-labelledby'], from: { button: ['neutral'] } },
   // null and 0 are the values the guide states for an indeterminate and an empty circle.
@@ -198,19 +199,22 @@ const GUIDES = {
   // primary, danger and neutral are the variants of Button, which the guide says the dialog's actions use.
   'alert-dialog': { from: { button: ['primary', 'danger', 'neutral'] } },
   sidebar: {},
-  // The hook's options and the command's fields (`close`, `onError`, `subtitle`, `keywords`) are declaration-only: the hook has no derived API, so no block owns them.
-  'command-palette': { declared: ['subtitle', 'keywords', 'onError', 'close'] },
+  // The command and hook option fields belong to these declaration types, not the root block.
+  'command-palette': { reference: { CommandPaletteCommand: ['subtitle', 'keywords'], UseCommandPaletteOptions: ['onError', 'close'] } },
 };
 
 // Derived components with no usage guide yet, which this check cannot read. ColorModeToggle's guide is separate documentation work.
 const WITHOUT_GUIDE = ['color-mode-toggle'];
 
-// The guides whose declaration-only surface (ToastProvider and useToast; useCommandPalette and its command fields) the check cannot read yet.
-const DECLARATION_ONLY_GUIDES = ['toast', 'command-palette'];
-/** The guides that list `declared` spans without being declaration-only. */
-const undeclaredOwners = (guides) => Object.entries(guides)
-  .filter(([slug, entry]) => 'declared' in entry && !DECLARATION_ONLY_GUIDES.includes(slug))
-  .map(([slug]) => slug);
+/** Finite spans missing from their exact declaration owner (never a component-wide bag). */
+function missingFromReference(file, surfaces) {
+  return Object.entries(surfaces).flatMap(([name, spans]) => {
+    const members = file.exports.find((item) => item.name === name)?.parts?.flatMap((part) => part.members ?? [])
+      ?? file.types.find((item) => item.name === name)?.members ?? [];
+    const names = new Set(members.flatMap((member) => [member.name, ...(member.values ?? [])]));
+    return spans.filter((span) => !names.has(span)).map((span) => `${name}: ${span}`);
+  });
+}
 
 /** Every name one block owns: its props, events, event props, finite values, and the members of its object types. */
 const blockNames = (block) => [
@@ -229,9 +233,9 @@ const blocksOf = (api) => [api, ...Object.values(api.partApis ?? {})];
  * The names a guide may state for a component: its block, its anatomy, its native values, and the
  * package's own names. An example's attributes are checked against `attributes`, and the attributes
  * of a part's element (`<ListBox.Item>`) against that part's names (`partAttributes`, by member), so
- * a part's prop is not the root's; the guide's prose gets every block's names and also the `declared` spans.
+ * a part's prop is not the root's; the guide's prose gets every block's names and also the checked `reference` spans.
  */
-function guideNames({ derived, record, entry: { native = [], declared = [], from = {}, described = {} }, importPaths, componentNames }) {
+function guideNames({ derived, record, entry: { native = [], reference: surfaces = {}, from = {}, described = {} }, importPaths, componentNames }) {
   const { api } = derived;
   const shared = [
     ...importPaths,
@@ -242,7 +246,7 @@ function guideNames({ derived, record, entry: { native = [], declared = [], from
   const attributes = new Set([...shared, ...blockNames(api)]);
   const partAttributes = new Map(Object.values(api.partApis ?? {}).map((part) => [part.member, new Set([...shared, ...blockNames(part)])]));
   const partNames = Object.values(api.partApis ?? {}).flatMap(blockNames);
-  return { attributes, partAttributes, prose: new Set([...attributes, ...partNames, ...declared, ...Object.values(from).flat(), ...Object.values(described).flat()]) };
+  return { attributes, partAttributes, prose: new Set([...attributes, ...partNames, ...Object.values(surfaces).flat(), ...Object.values(from).flat(), ...Object.values(described).flat()]) };
 }
 
 /** The spans of `spans` that `api` (another component's derived API) does not own as a prop, event prop, or finite value. */
@@ -270,6 +274,43 @@ function unknownExampleAttributes(code, exportName, checked, partAttributes = ne
     .flatMap(([, member, attributes]) => [...attributes.matchAll(/([a-zA-Z-]+)=/gu)]
       .map(([, name]) => name)
       .filter((name) => !(partAttributes.get(member) ?? checked).has(name)));
+}
+
+/** Static JSX literals only: bind a finite value to the actual element/part and prop.
+ * Expressions, spreads and native props are outside this comparison, not guessed.
+ */
+function invalidExampleLiterals(code, derived) {
+  const source = ts.createSourceFile('guide.tsx', code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const problems = [];
+  const visit = (node) => {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = node.tagName.getText(source);
+      const part = tag.startsWith(`${derived.export}.`) ? tag.slice(derived.export.length + 1) : undefined;
+      const block = tag === derived.export || part === 'Root' ? derived.api
+        : Object.values(derived.api.partApis ?? {}).find(({ member }) => member === part);
+      if (block) for (const attribute of node.attributes.properties) {
+        if (!ts.isJsxAttribute(attribute)) continue;
+        const name = attribute.name.getText(source);
+        const values = block.propDetails[name]?.enum;
+        if (values === undefined) continue;
+        const initializer = attribute.initializer;
+        const expression = initializer && ts.isJsxExpression(initializer) ? initializer.expression : initializer;
+        let value;
+        if (expression === undefined && initializer === undefined) value = true;
+        else if (expression && (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression))) value = expression.text;
+        else if (expression && ts.isNumericLiteral(expression)) value = Number(expression.text);
+        else if (expression && ts.isPrefixUnaryExpression(expression) && ts.isNumericLiteral(expression.operand) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken].includes(expression.operator)) value = Number(expression.operand.text) * (expression.operator === ts.SyntaxKind.MinusToken ? -1 : 1);
+        else if (expression?.kind === ts.SyntaxKind.TrueKeyword) value = true;
+        else if (expression?.kind === ts.SyntaxKind.FalseKeyword) value = false;
+        else if (expression?.kind === ts.SyntaxKind.NullKeyword) value = null;
+        else continue;
+        if (!values.includes(value)) problems.push(`${tag}.${name}=${JSON.stringify(value)}`);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return problems;
 }
 
 /** Whether a prose span `name="value"` or `name={value}` names a prop of the root or of a part and, where the prop is finite, one of its values. */
@@ -317,21 +358,19 @@ test('every API name a derived component\'s guide states is in its derived API o
   ]);
   const derivedSlugs = (await readdir(resolve(repositoryRoot, 'packages/react/api'))).map((file) => file.replace(/\.json$/u, '')).sort();
   assert.deepEqual(Object.keys(GUIDES).sort(), derivedSlugs.filter((slug) => !WITHOUT_GUIDE.includes(slug)), 'each derived component\'s guide is checked');
-  assert.deepEqual(undeclaredOwners(GUIDES), [], 'only a declaration-only guide lists declared spans');
   const componentNames = new Set(await Promise.all(components.map((slug) => read(`catalog/components/${slug}/artifact.json`).then((text) => JSON.parse(text).name, () => undefined))));
   const importPaths = Object.keys(reactPackage.exports).map((path) => `${reactPackage.name}${path.slice(1)}`);
   // The stylesheet's layer order, as the generated README states it.
   const layerOrder = /^@layer reset, [^\n]+;$/mu.exec(readme)?.[0];
   assert.ok(layerOrder, 'the React README states the layer order');
 
-  for (const [slug, { native = [], declared = [], from = {}, described = {} }] of Object.entries(GUIDES)) {
+  for (const [slug, { native = [], reference: surfaces = {}, from = {}, described = {} }] of Object.entries(GUIDES)) {
     const [guide, derived, record] = await Promise.all([
       read(`catalog/guides/${slug}-usage.md`),
       derivedApi(slug),
       read(`catalog/components/${slug}/artifact.json`).then(JSON.parse),
     ]);
     const { api } = derived;
-    const props = new Set(blocksOf(api).flatMap((block) => block.props));
     // Each absence claim is worded so the check reads it, and the block has no such prop.
     const { claimed: absent, unread } = absenceClaims(guide);
     assert.deepEqual(unread, [], `${slug} guide words an absence the check cannot read; write "no \`name\` prop"`);
@@ -342,7 +381,8 @@ test('every API name a derived component\'s guide states is in its derived API o
     const prose = guide.replace(FENCE, '');
     // The list names only what the guide still states.
     const stated = new Set([...prose.matchAll(/`([^`]+)`/gu)].map(([, span]) => span.replace(/\s+/gu, ' ')));
-    assert.deepEqual(declared.filter((span) => !stated.has(span)), [], `${slug} declares spans its guide no longer states`);
+    assert.deepEqual(Object.values(surfaces).flat().filter((span) => !stated.has(span)), [], `${slug} references spans its guide no longer states`);
+    if (Object.keys(surfaces).length) assert.deepEqual(missingFromReference(await reference(slug), surfaces), [], `${slug} guide declaration spans`);
     assert.deepEqual(Object.values(described).flat().filter((span) => !stated.has(span)), [], `${slug} describes spans its guide no longer states`);
     assert.deepEqual(missingFromDescription(api, described), [], `${slug} guide states a format its derived types do not describe`);
     for (const [owner, spans] of Object.entries(from)) {
@@ -360,6 +400,7 @@ test('every API name a derived component\'s guide states is in its derived API o
         for (const name of names.split(',').map((value) => value.trim())) assert.ok(componentNames.has(name), `${slug} guide imports ${name}`);
       }
       assert.deepEqual(unknownExampleAttributes(code, derived.export, checked, partAttributes), [], `${slug} guide example attributes`);
+      assert.deepEqual(invalidExampleLiterals(code, derived), [], `${slug} guide finite example values`);
     }
   }
 });
@@ -443,21 +484,25 @@ test('a part\'s props, finite values, and element attributes are checked against
   assert.deepEqual(missingFromOwner({ ...api, partApis: undefined }, ['tone']), ['tone']);
 });
 
-test('declared spans belong to the declaration-only guide and never excuse an example attribute', async () => {
-  assert.deepEqual(undeclaredOwners(GUIDES), []);
-  // Another guide, even with an empty list, is rejected.
-  assert.deepEqual(undeclaredOwners({ ...GUIDES, button: { ...GUIDES.button, declared: ['tone'] } }), ['button']);
-  assert.deepEqual(undeclaredOwners({ ...GUIDES, tooltip: { declared: [] } }), ['tooltip']);
-
-  // Toast's provider props are declared, so the guide may state them in prose but an example may not pass them.
-  const [derived, record] = await Promise.all([derivedApi('toast'), read('catalog/components/toast/artifact.json').then(JSON.parse)]);
+test('declaration spans are compared with their exact surface and never excuse example attributes', async () => {
+  const [derived, record, toast, command] = await Promise.all([
+    derivedApi('toast'), read('catalog/components/toast/artifact.json').then(JSON.parse), reference('toast'), reference('command-palette'),
+  ]);
+  assert.deepEqual(missingFromReference(toast, GUIDES.toast.reference), []);
+  assert.deepEqual(missingFromReference(command, GUIDES['command-palette'].reference), []);
+  const withoutPlacement = structuredClone(toast);
+  withoutPlacement.exports.find(({ name }) => name === 'ToastProvider').parts[0].members.find(({ name }) => name === 'placement').values.pop();
+  assert.deepEqual(missingFromReference(withoutPlacement, GUIDES.toast.reference), ['ToastProvider: bottom-end']);
+  const renamed = structuredClone(command);
+  renamed.types.find(({ name }) => name === 'UseCommandPaletteOptions').members.find(({ name }) => name === 'onError').name = 'onFailure';
+  assert.deepEqual(missingFromReference(renamed, GUIDES['command-palette'].reference), ['UseCommandPaletteOptions: onError']);
   const { attributes: checked, prose } = guideNames({ derived, record, entry: GUIDES.toast, importPaths: [], componentNames: [] });
-  for (const span of GUIDES.toast.declared) {
-    assert.equal(prose.has(span), true, `${span} is stated in prose`);
-    assert.equal(checked.has(span), false, `${span} is excused in prose only`);
-  }
-  assert.deepEqual(unknownExampleAttributes('<Toast message="Saved" variant="success" duration={0} onDismiss={close} />', 'Toast', checked), []);
+  for (const span of GUIDES.toast.reference.ToastProvider) assert.equal(prose.has(span), true);
   assert.deepEqual(unknownExampleAttributes('<Toast message="Saved" maxVisible={5} pending={true} />', 'Toast', checked), ['maxVisible', 'pending']);
+  // The manager and hook signatures link these prose fields to the public declarations too.
+  assert.equal(toast.exports.find(({ name }) => name === 'useToast').returns.type, 'ToastManager');
+  assert.deepEqual(toast.types.find(({ name }) => name === 'ToastManager').members.map(({ name }) => name), ['add', 'remove']);
+  assert.ok(command.exports.find(({ name }) => name === 'useCommandPalette').parameters.some(({ type }) => type === 'UseCommandPaletteOptions<T>'));
 });
 
 test('a guide\'s absence claim fails once the derived API gains the prop', async () => {
@@ -565,4 +610,110 @@ test('the defaults and finite values the derived guides state are their derived 
   const kinds = /already marked as ([a-z, ]+), and DataDiff/u.exec(dataDiff)?.[1].split(/, (?:or )?/u) ?? [];
   assert.deepEqual(kinds.sort(), [...new Set(literals(dataDiffApi.api.types.DataDiffRow.type, dataDiffApi.api.types, 'kind'))].sort());
   assert.match(dataDiff, new RegExp(`The default is ${dataDiffApi.api.defaults.description}\\.`, 'u'));
+});
+
+function assertCardChoices(guide, api) {
+  assert.deepEqual(bulletSubjects(guide, 'Choosing a surface').sort(), [...api.propDetails.variant.enum].sort(), 'Card.variant choices');
+  const padding = /- `padding` is ([^.]+)\./u.exec(guide)?.[1] ?? '';
+  assert.deepEqual([...padding.matchAll(/`([^`]+)`/gu)].map(([, value]) => value).sort(), [...api.propDetails.padding.enum].sort(), 'Card.padding choices');
+}
+
+test('finite guide JSX values and Card lists keep their element, part and prop association', async () => {
+  const [swatch, card, guide, cardGuide] = await Promise.all([derivedApi('color-swatch'), derivedApi('card'), read('catalog/guides/color-swatch-usage.md'), read('catalog/guides/card-usage.md')]);
+  const example = /^```tsx\n([\s\S]*?)^```$/mu.exec(guide)?.[1];
+  assert.ok(example, 'the existing ColorSwatch JSX example');
+  assert.deepEqual(invalidExampleLiterals(example, swatch), []);
+  assert.deepEqual(invalidExampleLiterals(example.replace('shape="circle"', 'shape="triangle"'), swatch), ['ColorSwatch.shape="triangle"']);
+  assertCardChoices(cardGuide, card.api);
+  assert.throws(() => assertCardChoices(cardGuide.replace('`padding` is `sm`, `md`, or `lg`', '`padding` is `outlined`, `filled`, or `elevated`'), card.api), /Card.padding/u);
+  assert.deepEqual(invalidExampleLiterals('<Card.Root padding="filled" />', card), ['Card.Root.padding="filled"']);
+  const finite = (...values) => ({ enum: values });
+  const derived = { export: 'Thing', api: { propDetails: { tone: finite('quiet', 'loud') }, partApis: { item: { member: 'Item', propDetails: { tone: finite('soft', 'strong') } } } } };
+  assert.deepEqual(invalidExampleLiterals('<Thing tone="quiet"><Thing.Item tone={"soft"} /></Thing>', derived), []);
+  assert.deepEqual(invalidExampleLiterals('<Thing tone="soft"><Thing.Item tone="quiet" /></Thing>', derived), ['Thing.tone="soft"', 'Thing.Item.tone="quiet"']);
+});
+
+// The finite existing statements identified by the X-015 inspection. Patterns read each
+// statement's value, not a bag of legal words; semantic defaults name their precise wording.
+const DEFAULT_STATEMENTS = [
+  ['card', 'variant', /- `([^`]+)`, the default,/u, 'filled'],
+  ['button-group', 'orientation', /- `([^`]+)` is the default\./u, 'vertical'],
+  ['input-tags', 'tagPlacement', /- `([^`]+)`, the default,/u, 'below'],
+  ['multi-select', 'placeholder', /and defaults to ([^.]+)\./u, 'Pick'],
+  ['tree', 'expansionTrigger', /Keep the default `expansionTrigger="([^"]+)"`/u, 'chevron'],
+  ['tree', 'selectionMode', /Tree defaults to (\w+) selection/u, 'multiple'],
+  ['grid-list', 'layout', /The default `layout="([^"]+)"`/u, 'grid'],
+  ['grid-list', 'selectionMode', /GridList defaults to (\w+) selection/u, 'multiple'],
+  ['tabs', 'variant', /The `variant` defaults to `([^`]+)`/u, 'pill'],
+  ['tabs', 'keyboardActivation', /Keeping the (\w+) default for panels/u, 'manual'],
+  ['prompt-composer', 'inputLabel', /`inputLabel`, which defaults to ([^.]+)\./u, 'Send'],
+  ['color-swatch', 'shape', /default `shape="([^"]+)"`/u, 'circle'],
+  ['tag-group', 'color', /`([^`]+)` is the default, `brand`/u, 'brand'],
+  ['tag-group', 'variant', /`variant` sets the treatment of every tag: `([^`]+)` by default/u, 'outline'],
+  ['text-editor', 'toolbar', /Use the (\w+) toolbar, the default/u, 'advanced'],
+  ['virtualizer', 'layout', /The default (\w+) layout renders/u, 'grid'],
+  ['virtualizer', 'layout', /The default (\w+) layout is a list/u, 'grid'],
+  ['text', 'variant', /\| Body text \| `p` \| `([^`]+)`, the default/u, 'label'],
+  ['alert-dialog', 'variant', /keeps the default `([^`]+)` variant/u, 'neutral', 'button'],
+];
+
+function assertDefaultStatement(guide, api, prop, pattern) {
+  const match = pattern.exec(guide);
+  assert.ok(match, `the guide retains its checked ${prop} default statement`);
+  assert.equal(match[1], api.defaults[prop], `${prop} prose default`);
+}
+
+test('the remaining inspected guide defaults equal their executed API defaults, including legal-value mutants', async () => {
+  for (const [slug, prop, pattern, alternative, owner = slug] of DEFAULT_STATEMENTS) {
+    const [guide, { api }] = await Promise.all([read(`catalog/guides/${slug}-usage.md`), derivedApi(owner)]);
+    assertDefaultStatement(guide, api, prop, pattern);
+    const match = pattern.exec(guide);
+    assert.notEqual(alternative, api.defaults[prop], `${slug}.${prop} mutation changes the default`);
+    if (api.propDetails[prop].enum) assert.ok(api.propDetails[prop].enum.includes(alternative), `${slug}.${prop} mutant remains legal`);
+    const mutant = guide.replace(match[0], match[0].replace(match[1], alternative));
+    assert.throws(() => assertDefaultStatement(mutant, api, prop, pattern), /prose default/u, `${slug}.${prop} rejects another legal default`);
+  }
+  const [tabs, tabsApi, sidebar, sidebarApi] = await Promise.all([read('catalog/guides/tabs-usage.md'), derivedApi('tabs'), read('catalog/guides/sidebar-usage.md'), derivedApi('sidebar')]);
+  assert.match(tabs, /By default, an arrow key selects the tab it reaches/u);
+  assert.equal(tabsApi.api.defaults.keyboardActivation, 'automatic');
+  const assertSidebarDefault = (guide) => assert.equal(/A group starts (\w+),/u.exec(guide)?.[1], sidebarApi.api.partApis['nav-item'].defaults.defaultExpanded ? 'open' : 'closed', 'Sidebar.NavItem initial state');
+  assertSidebarDefault(sidebar);
+  assert.throws(() => assertSidebarDefault(sidebar.replace('A group starts closed,', 'A group starts open,')), /Sidebar.NavItem initial state/u);
+});
+
+function assertProviderDefaults(guide, { maxVisible, placement }) {
+  assert.equal(Number(/`maxVisible`[^\n]+It defaults to (\d+)/u.exec(guide)?.[1]), maxVisible, 'ToastProvider.maxVisible prose default');
+  assert.equal(/`placement`[^\n]+It defaults to `([^`]+)`/u.exec(guide)?.[1], placement, 'ToastProvider.placement prose default');
+}
+
+// Observe the provider itself with omitted props: declaration types cannot prove defaults.
+// Reuse the renderer's DOM harness; no test-only default extractor or alternate API block.
+test('ToastProvider prose defaults match its executed omitted-prop behavior', async () => {
+  const { createDom } = await import('../../react/test/support/dom.mjs');
+  const env = createDom('<div id="root"></div>', { layoutStubs: true });
+  const React = reactRequire('react');
+  const { act } = React;
+  const { createRoot } = reactRequire('react-dom/client');
+  const { ToastProvider, useToast } = await import('../../react/src/overlays.ts');
+  const root = createRoot(document.getElementById('root'));
+  let manager;
+  function CaptureManager() { manager = useToast(); return null; }
+  try {
+    await act(async () => root.render(React.createElement(ToastProvider, null, React.createElement(CaptureManager))));
+    const guide = await read('catalog/guides/toast-usage.md');
+    const count = Number(/`maxVisible`[^\n]+It defaults to (\d+)/u.exec(guide)?.[1]);
+    assert.ok(Number.isSafeInteger(count) && count > 0 && count < 100, 'a bounded stated queue count');
+    // Add one beyond the prose limit so a larger executed default cannot appear to agree.
+    await act(async () => { for (let index = 0; index <= count; index += 1) manager.add(`Notification ${index}`, { duration: 0 }); });
+    const observed = {
+      maxVisible: document.querySelectorAll('.muxui-toast').length,
+      placement: document.querySelector('.muxui-toast__region')?.getAttribute('data-muxui-placement'),
+    };
+    assertProviderDefaults(guide, observed);
+    assert.throws(() => assertProviderDefaults(guide.replace(`It defaults to ${count},`, `It defaults to ${count + 1},`), observed), /ToastProvider.maxVisible/u);
+    assert.throws(() => assertProviderDefaults(guide.replace('It defaults to `top-end`.', 'It defaults to `bottom-end`.'), observed), /ToastProvider.placement/u);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
 });

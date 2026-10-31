@@ -6,6 +6,9 @@ export function RadioFieldOptionsExample() {
   // The group owns the selected value and the change callback. A RadioField has neither.
   const [plan, setPlan] = useState('');
   const [attempted, setAttempted] = useState(false);
+  // This account needs monthly billing; the application validates the selected plan.
+  const yearlyInvalid = attempted && plan === 'yearly';
+  const missingPlan = attempted && plan === '';
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -15,8 +18,8 @@ export function RadioFieldOptionsExample() {
   return (
     <form noValidate onSubmit={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--muxui-reference-dimension-space-xs)' }}>
-        {/* invalid on the group marks every option, and the group's own error message shows once for all of them. */}
-        <RadioGroup label="Plan" name="plan" value={plan} onChange={setPlan} invalid={attempted && plan === ''} errorMessage="Choose a plan to continue.">
+        {/* The group is invalid when no plan is selected or the selected plan fails validation. */}
+        <RadioGroup label="Plan" name="plan" value={plan} onChange={setPlan} invalid={missingPlan || yearlyInvalid} errorMessage={missingPlan ? 'Choose a plan to continue.' : undefined}>
           <RadioField.Root value="monthly">
             <RadioField.Button>
               <RadioField.Indicator>
@@ -26,7 +29,7 @@ export function RadioFieldOptionsExample() {
             </RadioField.Button>
             <RadioField.Description>Billed every month.</RadioField.Description>
           </RadioField.Root>
-          <RadioField.Root value="yearly">
+          <RadioField.Root value="yearly" invalid={yearlyInvalid}>
             <RadioField.Button>
               <RadioField.Indicator>
                 <RadioField.Dot />
@@ -34,6 +37,7 @@ export function RadioFieldOptionsExample() {
               Yearly
             </RadioField.Button>
             <RadioField.Description>Billed once a year.</RadioField.Description>
+            {yearlyInvalid && <RadioField.Error>This account needs monthly billing. Choose Monthly.</RadioField.Error>}
           </RadioField.Root>
           <RadioField.Root value="invoice" disabled>
             <RadioField.Button>

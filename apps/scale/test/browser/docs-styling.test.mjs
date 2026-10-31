@@ -205,8 +205,13 @@ test('a group opens with Enter and Space, shows its focus ring, and opens for th
 		await page.goto(`${origin}/components/code-block/`);
 		const details = page.locator('#styling details.styling-group');
 		const summary = details.locator('> summary');
-		// The sequential focus starting point is the Tokens heading: the next stop is the closed group's summary.
+		const scopeLink = page.locator('#styling [data-styling-alias-scope] a');
+		assert.equal(await scopeLink.getAttribute('href'), '/foundations/component-tokens/', 'the token-scope link leads to its guide');
+		assert.equal(await scopeLink.textContent(), 'Component token scope');
+		// From the Tokens heading, Tab reaches the scope link, then the closed group's summary.
 		await page.locator('#styling-tokens').click();
+		await page.keyboard.press('Tab');
+		assert.equal(await scopeLink.evaluate((node) => document.activeElement === node), true, 'Tab reaches the token-scope link');
 		await page.keyboard.press('Tab');
 		assert.equal(await page.evaluate(() => document.activeElement === document.querySelector('#styling details.styling-group > summary')), true, 'Tab reaches the summary');
 		const ring = await summary.evaluate((node) => { const style = getComputedStyle(node); return { style: style.outlineStyle, width: style.outlineWidth, matches: node.matches(':focus-visible') }; });

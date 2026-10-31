@@ -5,7 +5,7 @@ import { Markdown } from '../../../packages/react/generated/markdown.js';
 import { TextEditor } from '../../../packages/react/generated/text-editor.js';
 import buttonApi from '../../../packages/react/api/button.json' with { type: 'json' };
 import selectNativeApi from '../../../packages/react/api/select-native.json' with { type: 'json' };
-import { partRow, selectorOf } from '../../../packages/react/test/support/styling-parts.ts';
+import { nonEmittedStates, partRow, selectorOf } from '../../../packages/react/test/support/styling-parts.ts';
 
 // Keep the theme control and Storybook toolbar on the same mode.
 function ColorModeTogglePreview({ syncWithToolbar = true, ...args }) {
@@ -2164,7 +2164,7 @@ function measureHooks(record, host) {
  * The reason is one of three, found by reading the family's source:
  *   not-reached          a writer of this very attribute exists; this canvas does not show it on a documented hook
  *   spelled-differently  the component expresses the state another way (named in the detail)
- *   no-writer-found      no writer of this attribute in the source: a candidate catalog gap
+ *   no-writer-found      no emitted public hook; the shared styling classification explains the concept state
  * They are "not observed in the canvas", never "nothing sets them": Resizable's invalid has an explicit writer.
  */
 export const NOT_OBSERVED_IN_CANVAS = Object.freeze({
@@ -2215,7 +2215,9 @@ export const NOT_OBSERVED_IN_CANVAS = Object.freeze({
 function notObservedNote(family, hook) {
   const entry = NOT_OBSERVED_IN_CANVAS[family]?.[hook];
   if (entry === undefined) return undefined;
-  const [reason, detail = 'No writer of this attribute found in the component source; a candidate catalog gap.'] = entry;
+  const [reason, recordedDetail] = entry;
+  const slug = family.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
+  const detail = recordedDetail ?? `No emitted CSS state hook. ${nonEmittedStates[slug]?.[hook.replace('data-muxui-state-', '')] ?? 'No writer of this attribute found in the component source.'}`;
   return { reason, text: `Not observed in the Anatomy canvas (${reason}). ${detail}` };
 }
 

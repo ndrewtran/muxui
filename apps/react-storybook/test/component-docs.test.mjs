@@ -28,7 +28,6 @@ const reactManifest = JSON.parse(read('packages/react/package.json'));
 const descriptor = JSON.parse(read('packages/react/generated/descriptor.json'));
 // The generated renderer contract names the runtime file of every family, after two marker comment lines.
 const contract = JSON.parse(read('packages/react/generated/r1-6-contract.json').split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
-const tokenGroupThreshold = 8;
 // The approved option A order, stated here so a reordered page fails. Used in blocks appears only for a component a Block uses.
 const sections = [
   ['basic', 'Basic example'],
@@ -243,26 +242,14 @@ test('every family Docs page runs the continuous reference sections in order, pr
       );
     }
 
-    // Anatomy and styling: parts, states and every token requirement, with no class names or selectors.
+    // Anatomy and styling: the shared hooks, rich token roles, override contract and actionable recipe.
     const styling = section('anatomy-and-styling');
     assert.deepEqual(texts(styling.querySelectorAll('[data-fact="anatomy"] code')), artifact.anatomy, `${family} anatomy`);
     assert.deepEqual(texts(styling.querySelectorAll('[data-fact="states"] code')), artifact.states, `${family} states`);
     assert.equal(styling.querySelector('[data-fact="tokenRecipe.source"]').textContent, `Token source: ${binding.tokenRecipe.source}`, `${family} token source`);
     const requirements = binding.tokenRecipe.requirements;
-    const annotation = ({ requirement, profiles }) => requirement === 'required' ? null : [requirement, ...(profiles ?? [])].join(', ');
-    const byToken = ([left], [right]) => left < right ? -1 : left > right ? 1 : 0;
-    assert.deepEqual(
-      [...styling.querySelectorAll('[data-fact="tokenRecipe.requirements"] li')]
-        .map((item) => [item.querySelector('code').textContent, item.querySelector('.muxui-docs-token-requirement')?.textContent ?? null]).sort(byToken),
-      requirements.map((entry) => [entry.token, annotation(entry)]).sort(byToken),
-      `${family} token requirements`,
-    );
-    assert.deepEqual(
-      texts(styling.querySelectorAll('h4.muxui-docs-token-group')),
-      requirements.length > tokenGroupThreshold ? [...new Set(requirements.map(({ token }) => token.split('.').slice(0, 2).join('.')))] : [],
-      `${family} token groups`,
-    );
-    assert.doesNotMatch(styling.textContent, /\.muxui-|data-muxui|\[data-/u, `${family} anatomy and styling shows a class name or selector`);
+    assert.deepEqual([...styling.querySelectorAll('[data-styling-token]')].map((row) => row.getAttribute('data-styling-token')).sort(), requirements.map(({ token }) => token).sort(), `${family} rich token requirements`);
+    assertStylingShown(styling, entry.styling);
 
     // Sources: the record, the canonical examples, the family's runtime file and the package manifest.
     const runtime = contract.components.find((component) => component.slug === slug)?.source;
@@ -304,21 +291,38 @@ async function withStorybookBlocks(run, window = new JSDOM('<!doctype html><html
   }
 }
 
-// The Anatomy story reads the hooks block of its family's `styling`; the Docs page above reads the four fields styling always had. Both come
-// from one embedded object, and the rest of the styling reference (tokens, override rules, recipe) is the docs site's and is not embedded.
-test('each story module embeds the four styling fields the Docs page reads, as they were, and the hooks block a fresh reference derives', async () => {
+// The Docs page and Anatomy story consume one shared styling reference.
+function assertStylingShown(section, styling) {
+  const rows = [...section.querySelectorAll('[data-styling-token]')];
+  for (const token of styling.tokens.groups.flatMap(({ rows }) => rows)) {
+    const row = rows.find((row) => row.getAttribute('data-styling-token') === token.token);
+    assert.ok(row, `${token.token}: omitted token`);
+    assert.equal(row.querySelector('[data-styling-meaning]')?.textContent, token.meaning, `${token.token}: meaning`);
+    assert.equal(row.querySelector('[data-styling-policy]')?.textContent, token.policy, `${token.token}: policy`);
+    assert.ok(row.textContent.includes(token.cssVar) && row.textContent.includes(token.light) && row.textContent.includes(token.dark), `${token.token}: names/defaults`);
+    if (token.readBy) assert.equal(row.querySelector('[data-styling-reader]')?.textContent, token.readBy.note);
+  }
+  assert.ok(section.querySelector('[data-styling-alias-scope]')?.textContent.includes(styling.tokens.scopeNote), 'alias scope caveat');
+  for (const paragraph of styling.overrides.paragraphs) assert.ok(section.querySelector('[data-styling-overrides]')?.textContent.includes(paragraph), 'override text');
+  assert.equal(section.querySelector('[data-styling-code="recipe-css"] code')?.textContent, styling.recipe.css, 'copyable recipe');
+  assert.ok(styling.recipe.steps.length > 0, 'nonempty recipe');
+  for (const row of styling.hooks.groups.flatMap(({ rows }) => rows)) assert.ok(section.textContent.includes(row.note), `hook disposition: ${row.hook}`);
+}
+
+test('each story module embeds the complete shared styling reference without the unused legacy token list', async () => {
   const all = await families();
   const packageFacts = readReactPackageFacts(repositoryRoot);
   const stylingFacts = await readStylingFacts(repositoryRoot);
   const observations = (await renderCatalogExamples(all.map(({ slug }) => slug))).map(({ family, source, html }) => ({ family, source, html }));
   for (const { family, meta, artifact, examples } of all) {
     const embedded = meta.parameters.muxuiReference.styling;
-    assert.deepEqual(Object.keys(embedded).sort(), ['anatomy', 'hooks', 'states', 'tokenGroups', 'tokenSource'], `${family} embeds the four legacy fields and the hooks block, and nothing else`);
+    assert.deepEqual(Object.keys(embedded).sort(), ['anatomy', 'hooks', 'overrides', 'recipe', 'sources', 'states', 'tokenSource', 'tokens'], `${family} embeds the shared reference`);
     // Without the facts, `componentReference` returns `styling` as it was before the styling reference existed.
     const legacy = componentReference({ artifact, examples, packageFacts }).styling;
-    for (const field of ['anatomy', 'states', 'tokenSource', 'tokenGroups']) assert.deepEqual(embedded[field], legacy[field], `${family} ${field}`);
+    for (const field of ['anatomy', 'states', 'tokenSource']) assert.deepEqual(embedded[field], legacy[field], `${family} ${field}`);
     const fresh = componentReference({ artifact, examples, packageFacts, stylingFacts, observations }).styling;
-    assert.deepEqual(embedded.hooks, JSON.parse(JSON.stringify(fresh.hooks)), `${family} hooks`);
+    const { tokenGroups: _legacy, ...expectedStyling } = fresh;
+    assert.deepEqual(embedded, JSON.parse(JSON.stringify(expectedStyling)), `${family} complete shared styling`);
     assert.ok(embedded.hooks.groups.some(({ id }) => id === 'root'), `${family} hooks have a root row`);
   }
 });
@@ -563,5 +567,15 @@ test('the family link forms the parser rejects are not ones the real renderer re
       const resolved = [...page.querySelectorAll('[data-guide-id] a')].filter((node) => node.getAttribute('href')?.startsWith('?path='));
       assert.deepEqual(resolved, [], `${form} is not a resolved link`);
     }, frame);
+  }
+});
+
+ test('styling omissions fail: token meaning/policy, override rules, alias caveat, recipe and supported state', async () => {
+  const entry = await familyEntry('Calendar');
+  const selectors = ['[data-styling-meaning]', '[data-styling-policy]', '[data-styling-overrides]', '[data-styling-alias-scope]', '[data-styling-code="recipe-css"]', '[data-styling-table="hooks-state"]'];
+  for (const selector of selectors) {
+    const section = new JSDOM(renderToStaticMarkup(h(ComponentDocs, { entry, blocks }))).window.document.querySelector('#anatomy-and-styling');
+    section.querySelector(selector).remove();
+    assert.throws(() => assertStylingShown(section, entry.styling), undefined, selector);
   }
 });

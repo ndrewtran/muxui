@@ -1,18 +1,10 @@
 ---
+import { SHARED_GUIDE_ROUTES } from '../lib/selected-guide-routes.ts';
 import GuidePage from '../components/GuidePage.astro';
 import InstallationPage from '../components/InstallationPage.astro';
 
 export function getStaticPaths() {
-	return [
-		{ slug: 'accessibility', id: 'muxui:guide:accessibility' },
-		{ slug: 'contribution', id: 'muxui:guide:contribution' },
-		{ slug: 'control-sizing', id: 'muxui:guide:control-sizing-usage' },
-		{ slug: 'discovery', id: 'muxui:guide:discovery' },
-		{ slug: 'installation', id: 'installation' },
-		{ slug: 'lifecycle', id: 'muxui:guide:lifecycle' },
-		{ slug: 'themes', id: 'muxui:guide:themes' },
-		{ slug: 'token-migration', id: 'muxui:guide:token-migration' },
-	].map((route) => ({ params: { guide: route.slug }, props: { id: route.id } }));
+	return SHARED_GUIDE_ROUTES.map((route) => ({ params: { guide: route.slug }, props: { id: route.id } }));
 }
 
 const { id } = Astro.props as { id: string };

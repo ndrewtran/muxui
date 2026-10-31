@@ -8,9 +8,14 @@ const limit = 160;
 export function TextAreaFormExample() {
   const [bio, setBio] = useState('');
   const [saved, setSaved] = useState('');
+  const [attempted, setAttempted] = useState(false);
+  const invalid = attempted && bio.trim() === '';
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setAttempted(true);
+    setSaved('');
+    if (bio.trim() === '') return;
     setSaved(String(new FormData(event.currentTarget).get('bio')));
   }
 
@@ -18,11 +23,12 @@ export function TextAreaFormExample() {
     <form onSubmit={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--muxui-reference-dimension-space-xs)' }}>
         {/* The value and its change callback belong to Root and use a string. */}
-        <TextArea.Root value={bio} onChange={setBio}>
+        <TextArea.Root value={bio} onChange={setBio} invalid={invalid}>
           <TextArea.Label>Bio</TextArea.Label>
           {/* Native attributes belong to the textarea. The browser stops input at maxLength, and TextArea has no counter. */}
           <TextArea.TextArea name="bio" rows={4} maxLength={limit} placeholder="What you work on" />
           <TextArea.Description>{`Shown on your profile card, which fits ${limit} characters. ${limit - bio.length} left.`}</TextArea.Description>
+          <TextArea.Error>Enter a bio to save your profile.</TextArea.Error>
         </TextArea.Root>
         <div>
           <Button type="submit">Save</Button>

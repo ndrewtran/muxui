@@ -330,8 +330,18 @@ test('Button-family labels keep their rest colour and 4.5:1 contrast while only 
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 600 } });
     await page.setContent(`<!doctype html><html data-muxui-motion="reduced"><head><style>${css}</style></head><body style="margin:0;background:var(--muxui-semantic-surface-canvas)">${markup}</body></html>`);
+    // This unhydrated fixture keeps the same elements through all 960 theme/state cases.
+    // Resolve each unique target once instead of repeating locator handle acquisition for every paint and state read.
+    const elements = new Map();
+    for (const selector of targets) {
+      const locator = page.locator(selector);
+      assert.equal(await locator.count(), 1, `${selector} has exactly one target`);
+      const element = await locator.elementHandle();
+      assert.ok(element, `${selector} exists`);
+      elements.set(selector, element);
+    }
     // Label and fill as painted: translucent fills are composited over the canvas.
-    const paint = (selector) => page.locator(selector).evaluate((element) => {
+    const paint = (selector) => elements.get(selector).evaluate((element) => {
       const context = Object.assign(document.createElement('canvas'), { width: 1, height: 1 }).getContext('2d', { willReadFrequently: true });
       const flatten = (layers) => {
         context.clearRect(0, 0, 1, 1);
@@ -342,17 +352,17 @@ test('Button-family labels keep their rest colour and 4.5:1 contrast while only 
       const fill = flatten([getComputedStyle(document.body).backgroundColor, getComputedStyle(element).backgroundColor]);
       return { label: flatten([fill, getComputedStyle(element).color]), fill };
     });
-    const setState = (selector, attributes) => page.locator(selector).evaluate((element, names) => {
+    const setState = (selector, attributes) => elements.get(selector).evaluate((element, names) => {
       for (const name of ['data-muxui-state-hovered', 'data-muxui-state-pressed', 'data-muxui-state-focus-visible']) element.removeAttribute(name);
       for (const name of names) element.setAttribute(name, '');
     }, attributes);
     const focus = async (selector, context) => {
       await page.keyboard.press('Shift');
-      await page.locator(selector).evaluate((element) => element.focus());
-      assert.equal(await page.locator(selector).evaluate((element) => element.matches(':focus-visible')), true, `${context} keyboard focus`);
+      await elements.get(selector).evaluate((element) => element.focus());
+      assert.equal(await elements.get(selector).evaluate((element) => element.matches(':focus-visible')), true, `${context} keyboard focus`);
       await setState(selector, ['data-muxui-state-focus-visible']);
       const value = await paint(selector);
-      await page.locator(selector).evaluate((element) => element.blur());
+      await elements.get(selector).evaluate((element) => element.blur());
       await setState(selector, []);
       return value;
     };
@@ -509,4 +519,22 @@ test('the focus-ring role alone moves the Sidebar and TextEditor focus rings', {
   } finally {
     await browser.close();
   }
+});
+
+test('a nested semantic assignment changes direct readers but does not recompute an inherited component alias', { timeout: 30_000 }, async () => {
+  const css = await readFile(resolve(packageRoot, 'generated/styles.css'), 'utf8');
+  const browser = await launchBrowser();
+  try {
+    const page = await browser.newPage();
+    for (const scheme of ['light', 'dark']) {
+      await page.setContent(`<!doctype html><html data-muxui-color-scheme="${scheme}"><head><style>${css}</style></head><body><div id="scope"><button class="muxui-button">Button</button><span id="direct" style="padding-inline:var(--muxui-semantic-control-padding-inline)">Direct reader</span></div></body></html>`);
+      const padding = (selector) => page.locator(selector).evaluate((node) => getComputedStyle(node).paddingInlineStart);
+      const before = await padding('button');
+      await page.locator('#scope').evaluate((node) => node.style.setProperty('--muxui-semantic-control-padding-inline', '41px'));
+      assert.equal(await padding('#direct'), '41px');
+      assert.equal(await padding('button'), before, 'inherited component alias was resolved at its declaration scope');
+      await page.locator('#scope').evaluate((node) => node.style.setProperty('--muxui-component-button-padding-inline', '41px'));
+      assert.equal(await padding('button'), '41px', 'assigning the consumed component role reaches the subtree');
+    }
+  } finally { await browser.close(); }
 });

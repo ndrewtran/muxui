@@ -60,7 +60,7 @@ const defaultRoot = resolve(import.meta.dirname, '../../../..');
  *   `.muxui-text-field .muxui-field-label`), or the attribute name; null for a part with no hook (internal, no element).
  * @property {string} [part] The part, for a class row.
  * @property {'class' | 'root-element' | 'field' | 'composed' | 'internal' | 'none'} [disposition]
- * @property {'part' | 'catalog' | 'interaction' | 'observed' | 'prop'} origin Where the row comes from.
+ * @property {'part' | 'catalog' | 'interaction' | 'observed' | 'selected' | 'prop'} origin Where the row comes from.
  * @property {string[]} selectedOn Parts whose documented hook a stylesheet rule selects this on (what the CSS says).
  * @property {string[]} emittedOn Parts an element of which carried this in a supplied render (what a render showed); empty when none.
  * @property {string[]} tags Observed element tags (class rows), in first-seen order.
@@ -128,8 +128,8 @@ const defaultRoot = resolve(import.meta.dirname, '../../../..');
  * @property {string} declaration As printed in `rules`, without its semicolon.
  * @property {string} target The element the effect is read on, a selector evaluated inside the scope wrapper.
  * @property {string} property The computed longhand to compare before and after.
- * @property {'wrapper' | 'unavailable'} scope `wrapper`: the target is in the Basic example at rest. `unavailable`: it is not, and
- *   `reason` says what the preview needs (a state step for a state the example does not show).
+ * @property {'wrapper' | 'unavailable' | 'document'} scope `wrapper`: the target is in the Basic example at rest. `unavailable`: it is not, and
+ *   `reason` says what the preview needs. `document`: a family rule reaches visible content anywhere in the document, including portals.
  * @property {string} [reason] Why a step is unavailable.
  * @property {boolean} observedText The target held text in the observation (else the change is computed only).
  */
@@ -141,6 +141,7 @@ const defaultRoot = resolve(import.meta.dirname, '../../../..');
  * @property {string} rules The recipe without the layer statement and the import, which the docs stylesheet already provides.
  * @property {string} markup The wrapper the tokens and rules are scoped to.
  * @property {'my-scope'} scope
+ * @property {boolean} preview Whether the Basic example can show the recipe in the existing comparison.
  * @property {RecipeStep[]} steps
  * @property {string[]} notes One sentence for each step that has no candidate (why: from what the Basic example renders), for roles the examples
  *   do not reach, and for a color role left out because no palette color reads on what it paints.
@@ -151,7 +152,7 @@ const defaultRoot = resolve(import.meta.dirname, '../../../..');
  * @typedef {object} FamilyStyling
  * @property {{ groups: { id: 'root' | 'part' | 'state' | 'reflected', rows: HookRow[] }[], notSet: HookRow[],
  *   renderedDom: { source: string, text: string, note: string } | null, observationNote: string }} hooks
- * @property {{ groups: { id: 'component' | 'semantic', label: string, caption: string, collapsed: boolean, rows: TokenRow[] }[] }} tokens
+ * @property {{ groups: { id: 'component' | 'semantic', label: string, caption: string, collapsed: boolean, rows: TokenRow[] }[], scopeNote: string, scopeSource: string }} tokens
  * @property {{ paragraphs: string[], layerIntro: string, layerCode: string, layerClosing: string, limit: string, motion: string,
  *   whoWins: WhoWinsRow[], important: { total: number, byCause: Record<string, number> } | null }} overrides
  * @property {Recipe} recipe
@@ -952,6 +953,7 @@ export async function readStylingFacts(root = defaultRoot) {
     motion,
     motionCauses,
     cascade,
+    aliasScope: text('catalog/guides/foundations-component-tokens.md').split('\n\n').find((paragraph) => paragraph.includes('Component roles resolve at the scheme or theme scope')),
     importantTotals: {
       declarations: stylesheet.rules.reduce((total, rule) => total + rule.declarations.filter(({ important: flag }) => flag).length, 0),
       rules: stylesheet.rules.filter((rule) => rule.declarations.some(({ important: flag }) => flag)).length,
@@ -1137,7 +1139,9 @@ function stateRows({ artifact, rows, observed, facts }) {
       on: onText(emitted.parts, selected.parts),
       ...(enumeration && { values: [...enumerated[enumeration]] }),
       ...(names && { catalog: names }),
-      note: note({ selected, emitted, names }),
+      note: facts.parts.nonEmittedStates[rows[0].family]?.[attribute.slice('data-muxui-state-'.length)]
+        ? `${names ? `Catalog state${names.length > 1 ? 's' : ''} ${listText(names)}. ` : ''}No emitted CSS state hook. ${facts.parts.nonEmittedStates[rows[0].family][attribute.slice('data-muxui-state-'.length)]}${selected.parts.length > 0 ? ' Selector only: Mux CSS selects this attribute, but the current public API does not produce it on these targets.' : ''}`
+        : note({ selected, emitted, names }),
       provenance: emitted.sources,
     };
   };
@@ -1166,15 +1170,16 @@ function stateRows({ artifact, rows, observed, facts }) {
   }
   for (const attribute of styled.wide.filter((candidate) => !declared.has(candidate) && !interactionStates.includes(named(candidate))).sort()) {
     const emitted = emittedParts({ attribute, rows, observed });
-    if (emitted.parts.length === 0) continue;
-    out.push(base({ attribute, origin: 'observed', note: () => `Styled by Mux and observed in ${listText(emitted.sources)}; not declared in the catalog.` }));
+    out.push(base({ attribute, origin: emitted.parts.length > 0 ? 'observed' : 'selected', note: () => emitted.parts.length > 0
+      ? `Styled by Mux and observed in ${listText(emitted.sources)}; not declared in the catalog.`
+      : 'Supported CSS state hook selected by Mux; not observed in these server renders. It appears only when the runtime reports the applicable state; CSS selection alone does not establish emission on every selected part. Not declared in the catalog.' }));
   }
   return out;
 }
 
 /**
  * Attributes a stylesheet selects on a documented hook of the family that the catalog does not declare, are not an interaction state
- * and that no supplied render shows. They are not printed; the derivation test reports them as drift between the catalog and the CSS.
+ * and that no supplied render shows. Every candidate must appear with a supported or explicit no-emitted-hook disposition in the shared reference.
  */
 export function undeclaredUnobservedStates({ slug, artifact, facts, observations = [] }) {
   const rows = facts.parts.partRows.filter((row) => row.family === slug);
@@ -1355,7 +1360,7 @@ function tokenGroups({ artifact, name, facts }) {
   };
   return [
     ...group('component', 'Component roles', `Override these to customize ${name}.`),
-    ...group('semantic', 'Semantic roles', `${name} reads these. They are shared, so changing one changes every family that reads it.`),
+    ...group('semantic', 'Semantic roles', `${name} reads these directly or through component aliases. Shared role overrides apply where read or where the consuming aliases are declared; inherited aliases do not recompute on a nested wrapper.`),
   ];
 }
 
@@ -1802,13 +1807,13 @@ function tokenSteps({ tokenRows, basic, rootElements, facts }) {
   return { steps, dropped: dropped.map((candidate) => ({ row: candidate.row, target: candidate.target, property: candidate.property, kind: paletteKind(candidate) })) };
 }
 
-/** The part step: the first part with text inside the root, else the root, else the first part inside the root. */
+/** The part step: prefer text inside the root. A rootless composition may use a public target rendered inside the consumer wrapper. */
 function partStep({ classRows, basic, rootElements, observed }) {
   const inRoot = (element) => rootElements.includes(element) || insideAny(element, rootElements);
   const rootPart = observed.rootRow?.part;
   const found = classRows.filter(({ hook }) => hook !== null).flatMap((row) => {
     const element = first(basic.parsed, row.hook);
-    return element && inRoot(element) ? [{ row, element }] : [];
+    return element && (inRoot(element) || rootElements.length === 0) ? [{ row, element }] : [];
   });
   const pick = found.find(({ row, element }) => row.part !== rootPart && hasText(element)) ?? found.find(({ row }) => row.part === rootPart) ?? found[0];
   if (!pick) return null;
@@ -1945,6 +1950,15 @@ function recipeFor({ name, states, tokenRows, classRows, stateRowList, observed,
     const { step: state, note } = stateStep({ name, states, stateRowList, classRows, basic, rootElements, observed, facts });
     if (!state) notes.push(note);
     steps.push(...tokens, ...[part, state].filter(Boolean));
+    if (steps.length === 0) {
+      const target = classRows.find(({ hook, part }) => hook !== null && part === 'message') ?? classRows.find(({ hook, part }) => hook !== null && part === 'title') ?? classRows.find(({ hook, disposition }) => hook !== null && ['class', 'root-element'].includes(disposition));
+      if (target) {
+        const missing = notes.findIndex((note) => note.startsWith('No part step:'));
+        if (missing >= 0) notes[missing] = notes[missing].replace('No part step:', 'No part step in the Basic preview:');
+        steps.push({ kind: 'part', selector: target.hook, declaration: recipePart.declaration, target: target.hook, property: recipePart.property, scope: 'document', reason: 'needs visible content', observedText: false });
+        notes.push(`This rule applies document-wide to ${target.hook}, including portaled content. Open ${name} or show its content first ${name === 'Toast' ? '(add a toast through useToast)' : '(use its existing trigger or controlled open state)'}. A wrapper around the trigger does not contain a portal. The Basic comparison cannot show this prerequisite.`);
+      }
+    }
   }
   const tokenStepList = steps.filter(({ kind }) => kind === 'token');
   const ruleSteps = steps.filter(({ kind }) => kind !== 'token');
@@ -1961,7 +1975,8 @@ function recipeFor({ name, states, tokenRows, classRows, stateRowList, observed,
   return {
     css: `${statement}\n${stylesImport}\n${rules === '' ? '' : `\n${rules}`}`,
     rules,
-    markup: `<div className="${recipeScope}">\n  {/* your ${name}, as in the Basic example */}\n</div>\n`,
+    preview: steps.length > 0 && steps.every(({ scope }) => scope !== 'document'),
+    markup: steps.some(({ scope }) => scope === 'document') ? `/* Render your ${name} composition and open or show its content.\n * The CSS rule is document-wide; no wrapper scope is required. */\n` : `<div className="${recipeScope}">\n  {/* your ${name}, as in the Basic example */}\n</div>\n`,
     scope: recipeScope,
     steps,
     notes,
@@ -1982,7 +1997,7 @@ function sourcePaths({ rows, observed, facts }) {
   const hooks = new Set([...rows.filter((row) => documentedDispositions.includes(row.disposition)).map((row) => row.hook), ...observed.companions.map(({ hook }) => hook)]);
   // A file styles a hook when a rule's subject is the hook or one of its modifiers (`muxui-text--sm`).
   const styles = facts.authored.filter(({ classes }) => [...hooks].some((name) => classes.has(name) || [...classes].some((candidate) => candidate.startsWith(`${name}--`)))).map(({ path }) => path);
-  return [partMapPath, referencePath, ...styles, tokenRecordPath, readmePath];
+  return [partMapPath, referencePath, ...styles, tokenRecordPath, readmePath, 'catalog/guides/foundations-component-tokens.md'];
 }
 
 /**
@@ -2022,7 +2037,7 @@ export function stylingFor({ slug, artifact, examples = [], facts, observations 
         ? 'Not observed: no example render was supplied.'
         : 'Tags are observed in this component\'s catalog examples (server render), not a guarantee: a part can render another element when you change its props.',
     },
-    tokens: { groups: tokens },
+    tokens: { groups: tokens, scopeNote: facts.aliasScope, scopeSource: 'catalog/guides/foundations-component-tokens.md' },
     overrides: {
       paragraphs: [...facts.cascade.paragraphs],
       layerIntro: facts.cascade.layerIntro,

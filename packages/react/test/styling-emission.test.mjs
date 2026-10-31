@@ -1,8 +1,8 @@
 // Decision 0031 item 19: every documented class is emitted, on the right element, in a fixture of its own family. The part map says
 // which class each of the 448 anatomy entries carries; this test renders the family and looks for `selectorOf(row)` in what it
 // rendered. 19 rows have no element (`none`). The other 429 are proven by
-//   - the family's canonical examples, server-rendered (302 rows), or else
-//   - an explicit fixture of support/styling-fixtures.mjs in the state that shows the part: invalid, open, with a selection (127 rows).
+//   - the family's canonical examples, server-rendered (305 rows), or else
+//   - an explicit fixture of support/styling-fixtures.mjs in the state that shows the part: invalid, open, with a selection (124 rows).
 // A fixture of another family never proves a row (a class on a DatePicker's button does not prove the button's own part), a
 // fixture that throws or logs a React error fails, and so does a row that no fixture reaches, an unknown row, and a fixture for a
 // family the table lacks. The classes every fixture renders are also held to the closed vocabulary, which is the check that sees
@@ -132,10 +132,10 @@ function unprovenRows(rows, byFamily) {
 
 test('every part-map row with an element is emitted by a fixture of its own family', () => {
   assert.deepEqual(unprovenRows(partRows, observations), []);
-  // The sizes the plan measured: 429 rows with an element, 302 by canonical examples and 127 by an explicit fixture.
+  // 429 rows with an element: 305 by canonical examples (including Sidebar's Divider, NavButton and FeatureCard), 124 by an explicit fixture.
   const withElement = partRows.filter((row) => row.disposition !== 'none');
   const byExample = withElement.filter((row) => exampleDocuments.some(({ family, document }) => family === row.family && document.querySelector(selectorOf(row)) !== null));
-  assert.deepEqual([withElement.length, byExample.length, withElement.length - byExample.length], [429, 302, 127]);
+  assert.deepEqual([withElement.length, byExample.length, withElement.length - byExample.length], [429, 305, 124]);
   assert.equal(exampleDocuments.length, 217);
 });
 
@@ -241,4 +241,34 @@ test('the emission check refuses a missing fixture, another family\'s fixture, a
   assert.match(qualified('code-block', 'code-block.status', (html) => html.replaceAll(' role="status"', '')), /code-block\.status: \.muxui-code-block__status\[role="status"\] is in none of/u);
   assert.match(qualified('card', 'card.button', (html) => html.replaceAll('<button', '<div').replaceAll('</button>', '</div>')), /card\.button: button\.muxui-card is in none of/u);
   assert.equal(qualified('card', 'card.button', (html) => html), '');
+});
+
+test('resolved CSS-selected hooks have runtime writers even when catalog SSR examples do not observe them', async () => {
+  const day = new Date().toISOString().slice(0, 10);
+  const cell = (family, states) => states.map((state) => `.muxui-${family}__cell[data-muxui-state-${state}]`);
+  const cases = [
+    { family: 'calendar', selectors: cell('calendar', ['outside-month', 'today', 'unavailable']), element: ({ h, M }) => h(M.Calendar, { label: 'Date', defaultValue: day, unavailableDateMatcher: () => true }) },
+    { family: 'range-calendar', selectors: cell('range-calendar', ['outside-month', 'today', 'unavailable', 'selection-start', 'selection-end']), element: ({ h, M }) => h(M.RangeCalendar, { label: 'Dates', defaultValue: { start: day, end: day }, unavailableDateMatcher: () => true }) },
+    { family: 'color-mode-toggle', selectors: ['.muxui-color-mode-toggle[data-muxui-state-selected]'], element: ({ h, M }) => h(M.ColorModeToggle, { mode: 'dark' }) },
+    { family: 'color-picker', selectors: ['.muxui-color-field[data-muxui-state-invalid]', '.muxui-color-field[data-muxui-state-required]'], element: ({ h, M }) => h(M.ColorPicker, null, h(M.ColorField, { label: 'Color', invalid: true, required: true })) },
+    { family: 'combo-box', selectors: ['.muxui-combo-box[data-muxui-state-required]', '.muxui-combo-box__option[data-muxui-state-selected]'], element: ({ h, M }) => h(M.ComboBox, { label: 'City', items: ['A'], defaultSelectedId: 'A', required: true }), steps: [({ window, document }) => {
+      const button = document.querySelector('.muxui-combo-box__trigger');
+      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) button.dispatchEvent(new window.MouseEvent(type, { bubbles: true }));
+    }] },
+    { family: 'command-palette', selectors: ['.muxui-command-palette__input[data-muxui-state-invalid]'], element: ({ h, M }) => {
+      const C = M.CommandPalette;
+      return h(C.Root, { open: true, onOpenChange() {} }, h(C.Trigger, null, 'Commands'), h(C.Backdrop, null, h(C.Popup, { 'aria-label': 'Commands' }, h(C.Title, null, 'Commands'), h(C.Content, null,
+        h(C.SearchField, null, h(C.Input, { 'aria-label': 'Search', 'aria-invalid': true })),
+        h(C.ListBox, { 'aria-label': 'Results' }, h(C.Item, { id: 'a', title: 'A' }))))));
+    } },
+    { family: 'prompt-composer', selectors: ['.muxui-prompt-composer[data-muxui-state-invalid]'], element: ({ h, M }) => h(M.PromptComposer, { 'aria-label': 'Message', error: 'Failed' }) },
+    { family: 'select', selectors: ['.muxui-select[data-muxui-state-required]'], element: ({ h, M }) => h(M.Select, { label: 'City', items: ['A'], required: true }) },
+  ];
+  // Resolved placement needs browser geometry; the two remaining supported hooks are proved with live portals in browser/styling-recipes.test.mjs.
+  assert.equal(cases.flatMap(({ selectors }) => selectors).length, 16);
+  for (const fixture of cases) {
+    const result = await renderFixture(fixture, fixture.selectors);
+    assert.deepEqual(result.errors, [], fixture.family);
+    assert.deepEqual([...result.matched].sort(), [...fixture.selectors].sort(), `${fixture.family}: supported public target actually emits each resolved hook`);
+  }
 });

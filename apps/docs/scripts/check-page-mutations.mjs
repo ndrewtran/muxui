@@ -921,6 +921,35 @@ const mutations = [
 		expect: ['Styling sub-blocks are'],
 		change: (root) => setAllText(elements(stylingOf(root)).find((node) => node.tagName === 'h3' && attributeValue(node, 'id') === 'styling-tokens'), 'Colours'),
 	},
+  {
+    label: 'the canonical alias scope caveat is omitted', slug: 'button', expect: ['canonical alias declaration-scope caveat'],
+    change: (root) => detach(withAttribute(root, 'data-styling-alias-scope')[0]),
+  },
+  {
+    label: 'the closed-content recipe loses its portal prerequisite', slug: 'dialog', expect: ['document-wide scope or visible-content prerequisite'],
+    change: (root) => withAttribute(root, 'data-styling-recipe-note').forEach(detach),
+  },
+  ...[
+    ['calendar', 'outside-month'], ['calendar', 'today'], ['calendar', 'unavailable'], ['color-mode-toggle', 'selected'],
+    ['color-picker', 'invalid'], ['color-picker', 'required'], ['combo-box', 'required'], ['combo-box', 'selected'], ['command-palette', 'invalid'],
+    ['preview-trigger', 'placement'], ['prompt-composer', 'invalid'],
+    ['range-calendar', 'outside-month'], ['range-calendar', 'selection-end'], ['range-calendar', 'selection-start'], ['range-calendar', 'today'], ['range-calendar', 'unavailable'],
+    ['select', 'required'], ['tooltip', 'placement'],
+  ].map(([slug, state]) => ({
+    label: `a supported SSR-unobserved state is omitted: ${slug}:${state}`, slug, expect: ['Hooks state rows are'],
+    change: (root) => {
+      const row = elements(stylingOf(root)).find((node) => node.tagName === 'tr' && textContent(node.childNodes.find((cell) => cell.tagName === 'th') ?? {}).trim() === `data-muxui-state-${state}`);
+      detach(row);
+    },
+  })),
+  ...[['menu', 'selected'], ['command-palette', 'selected'], ['form', 'invalid'], ['slider', 'selected'], ['input', 'empty'], ['payment-input', 'empty'], ['select-native', 'empty'], ['text-area', 'empty'], ['color-slider', 'invalid'], ['color-slider', 'required'], ['disclosure', 'pending'], ['markdown', 'current'], ['markdown', 'disabled'], ['slider', 'invalid'], ['slider', 'required']].map(([slug, state]) => ({
+    label: `a no-emitted-hook disposition is omitted: ${slug}:${state}`, slug, expect: ['omits its no-emitted-hook disposition'],
+    change: (root) => {
+      const row = elements(stylingOf(root)).find((node) => node.tagName === 'tr' && textContent(node.childNodes.find((cell) => cell.tagName === 'th') ?? {}).trim() === `data-muxui-state-${state}`);
+      setAllText(row.childNodes.find((cell) => cell.tagName === 'td' && textContent(cell).includes('No emitted CSS state hook.')), 'State hook.');
+    },
+  })),
+
 ];
 
 const unchanged = [...['virtualizer', 'icon-button', 'dialog', 'data-diff', 'text-editor', 'switch-field', 'text-area', 'button', 'text-field', 'tag-group', 'time-field', 'disclosure-group', 'menu', 'text', 'code-block'].flatMap((slug) => problemsOf(slug)), ...packageProblemsOf()];
