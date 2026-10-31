@@ -10,9 +10,9 @@
 // repository whose `packages/react/reference/` is the copy), and the real checkers, which read the committed reference, run
 // on that build. Each change must be named by a problem on its page, and each ledger record pin must fail on its record.
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { withTemporaryBuildDirectory } from './temporary-build.mjs';
 
 const docsRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(docsRoot, '../..');
@@ -95,8 +95,7 @@ const sourceMutations = [
 	},
 ];
 
-const temp = mkdtempSync(join(tmpdir(), 'muxui-reference-mutations-'));
-try {
+await withTemporaryBuildDirectory('muxui-reference-mutations-', (temp) => {
 	const mirror = join(temp, 'repository');
 	const reference = mirrorRepository(mirror, sourceMutations.flatMap(({ edits }) => edits));
 	const edit = (owner, change) => {
@@ -218,6 +217,4 @@ try {
 		throw new Error(`The typed reference checks missed a change, or reported one that was not made:\n${[...missed, ...unrelated.map((line) => `unexpected ${line}`)].map((line) => `- ${line}`).join('\n')}`);
 	}
 	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type, a payload field, a declaration module's source, the source of every shared type's module and a package-level value's) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact; ${sourceMutations.length} changes to a copy of a source of the Styling section (a README paragraph, a part-map hook, a state classification, an interaction state no rule selects, a stylesheet read, a token alias) each fail it on the page that shows them, the README change on all ${componentRoutes.length} (${reported.length} problems reported, none elsewhere).`);
-} finally {
-	rmSync(temp, { recursive: true, force: true });
-}
+});
