@@ -8,9 +8,10 @@
 // A default is also compared exactly: the printed parameter list of every generic form is recorded below, so a default that adds a member,
 // narrows a union or swaps the type for another that the witnesses happen to accept still changes the text, and each such copy has to fail
 // two checks, the printed forms and the test file.
+// Each project is compiled once per compiler, with every copy in a directory of its own (see diagnosticsWith), not once per copy.
 import assert from 'node:assert/strict';
 import { isDeepStrictEqual } from 'node:util';
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -69,20 +70,44 @@ test('the generic forms of the emitted declarations are the committed ones: para
   for (const module of Object.keys(FORMS)) assert.deepEqual(genericForms(emittedWith(module)), FORMS[module], module);
 });
 
-/** Diagnostics of `testFile` against the emitted declarations of `modules`, each text edited by `edits[module]` ([from, to] pairs, each present once). */
-function diagnosticsWith(tsc, { testFile, modules }, edits = {}) {
-  const directory = mkdtempSync(join(tmpdir(), 'muxui-generic-types-'));
+/**
+ * Diagnostics of `testFile` against the emitted declarations of `modules`, once for each of `variants` (`{ [module]: edits }`, each edits a
+ * list of [from, to] pairs present once), as one list of diagnostic lines per variant.
+ *
+ * Every variant is a directory of its own in one program, so a compiler is launched once, not once per variant: the directory holds the
+ * edited declarations, a copy of the witness, and a package.json that names it `@muxui/react`, so the witness imports its own
+ * declarations unchanged. A diagnostic line starts with its directory, which names the variant it belongs to.
+ *
+ * A compiler that finds a syntax error (or an error in the options) in any file reports only that and skips the semantic diagnostics of the
+ * whole program, so a variant that printed nothing might not have passed. When a declaration file has any diagnostic, each variant without
+ * one is therefore compiled again alone.
+ */
+function diagnosticsWith(tsc, project, variants) {
+  const { testFile, modules } = project;
+  // The real path, so that the compiler prints each file relative to its directory, whichever way tmpdir() spells it.
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), 'muxui-generic-types-')));
   try {
     mkdirSync(join(directory, 'node_modules/@types'), { recursive: true });
     symlinkSync(resolve(packageRoot, 'node_modules/@types/react'), join(directory, 'node_modules/@types/react'), 'junction');
-    for (const module of modules) writeFileSync(join(directory, `${module}.d.ts`), emittedWith(module, edits[module]));
-    writeFileSync(join(directory, 'index.d.ts'), modules.map((module) => `export * from './${module}.js';\n`).join(''));
-    copyFileSync(resolve(import.meta.dirname, testFile), join(directory, testFile));
+    variants.forEach((edits, index) => {
+      const variant = join(directory, `m${index}`);
+      mkdirSync(variant);
+      writeFileSync(join(variant, 'package.json'), JSON.stringify({ name: '@muxui/react', exports: { '.': { types: './index.d.ts' } } }));
+      for (const module of modules) writeFileSync(join(variant, `${module}.d.ts`), emittedWith(module, edits[module]));
+      writeFileSync(join(variant, 'index.d.ts'), modules.map((module) => `export * from './${module}.js';\n`).join(''));
+      copyFileSync(resolve(import.meta.dirname, testFile), join(variant, testFile));
+    });
     writeFileSync(join(directory, 'tsconfig.json'), JSON.stringify({
-      compilerOptions: { strict: true, target: 'ES2022', module: 'ESNext', moduleResolution: 'Bundler', jsx: 'react-jsx', types: ['react'], noEmit: true, paths: { '@muxui/react': ['./index.d.ts'] } },
-      files: [testFile],
+      compilerOptions: { strict: true, target: 'ES2022', module: 'ESNext', moduleResolution: 'Bundler', jsx: 'react-jsx', types: ['react'], noEmit: true },
+      files: variants.map((_, index) => `m${index}/${testFile}`),
     }));
-    return tscDiagnostics({ tsc, config: join(directory, 'tsconfig.json'), directory });
+    const diagnostics = tscDiagnostics({ tsc, config: join(directory, 'tsconfig.json'), directory });
+    const lines = variants.map((_, index) => diagnostics.filter((line) => line.startsWith(`m${index}/`)).map((line) => line.slice(`m${index}/`.length)));
+    const unplaced = diagnostics.filter((line) => !/^m\d+\//u.test(line));
+    if (variants.length === 1) return [[...unplaced, ...lines[0]]];
+    assert.deepEqual(unplaced, [], 'every diagnostic belongs to a variant');
+    if (!lines.some((own) => own.some((line) => !line.startsWith(`${testFile}(`)))) return lines;
+    return lines.map((own, index) => (own.length > 0 ? own : diagnosticsWith(tsc, project, [variants[index]])[0]));
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -198,13 +223,31 @@ const PROJECTS = [
 ];
 
 for (const [label, tsc] of compilers) {
+  test(`a copy with a syntax error is reported on its own and hides no other copy: ${label}`, () => {
+    const text = PROJECTS.find(({ testFile }) => testFile === 'text.types.test.tsx');
+    const malformed = { text: [["export type TextElement = ", 'export type TextElement = )) ']] };
+    const [held, broken, caught] = diagnosticsWith(tsc, text, [{}, malformed, text.mutations['Text: a changed constraint']]);
+    assert.deepEqual(held, []);
+    assert.ok(broken.some((diagnostic) => diagnostic.startsWith('text.d.ts(')), 'the malformed declaration is reported');
+    assert.ok(caught.some((diagnostic) => diagnostic.startsWith('text.types.test.tsx(')), 'the copy that the witness catches still fails there');
+  });
+
   for (const project of PROJECTS) {
+    // The unedited declarations, every mutation and every default compile together, once, in whichever of the tests below runs first.
+    const hold = 'the emitted declarations';
+    const entries = [[hold, {}], ...Object.entries(project.mutations), ...Object.entries(project.defaults)];
+    let compiled;
+    const diagnosticsOf = (name) => {
+      compiled ??= new Map(diagnosticsWith(tsc, project, entries.map(([, edits]) => edits)).map((lines, index) => [entries[index][0], lines]));
+      return compiled.get(name);
+    };
+
     test(`the ${project.label} types hold on the emitted declarations: ${label}`, () => {
-      assert.deepEqual(diagnosticsWith(tsc, project), []);
+      assert.deepEqual(diagnosticsOf(hold), []);
     });
 
-    const failsInTheTestFile = (name, edits) => {
-      const diagnostics = diagnosticsWith(tsc, project, edits);
+    const failsInTheTestFile = (name) => {
+      const diagnostics = diagnosticsOf(name);
       assert.notDeepEqual(diagnostics, [], name);
       // The copy is a valid declaration, and a witness in the test file is what catches it: a diagnostic in a declaration file would mean
       // the copy was merely malformed.
@@ -212,13 +255,13 @@ for (const [label, tsc] of compilers) {
     };
 
     test(`the ${project.label} types fail when the declarations lose the parameter in any of ${Object.keys(project.mutations).length} ways: ${label}`, () => {
-      for (const [name, edits] of Object.entries(project.mutations)) failsInTheTestFile(name, edits);
+      for (const name of Object.keys(project.mutations)) failsInTheTestFile(name);
     });
 
     test(`the ${project.label} types fail when a form takes another default, in any of ${Object.keys(project.defaults).length} ways, each failing the printed forms and the test file: ${label}`, () => {
       for (const [name, edits] of Object.entries(project.defaults)) {
         assert.ok(formsDiffer(project.modules, edits), `${name}: the printed forms differ from the committed ones`);
-        failsInTheTestFile(name, edits);
+        failsInTheTestFile(name);
       }
     });
   }
