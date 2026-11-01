@@ -156,20 +156,19 @@ function validateNormalizedInput(input) {
   for (const descriptor of input.rendererDescriptors) {
     assertClosed(descriptor, [
       'id', 'descriptorVersion', 'package', 'version', 'bindingSchemaRange',
-      'tokenContractRange', 'releaseProvenance', 'bindings',
+      'tokenContractRange', 'bindings',
     ], `descriptor ${descriptor.id ?? '<unknown>'}`);
     if (
       descriptor.bindings === null
       || typeof descriptor.bindings !== 'object'
       || Array.isArray(descriptor.bindings)
     ) inputError(`${descriptor.id}.bindings must be an object`);
+    // A field the renderer left out is a compatibility mismatch, reported by `compatibilityFor`, not invalid input.
     for (const [binding, definition] of Object.entries(descriptor.bindings)) {
       assertClosed(definition, [
         'specRevision', 'export', 'lifecycle', 'strategy', 'tokenRequirementSetDigests',
         'platformSafetyRequirementSetDigests',
       ], `${descriptor.id}.${binding}`);
-      assertClosedDigestMap(definition.tokenRequirementSetDigests, `${descriptor.id}.${binding}.tokenRequirementSetDigests`);
-      assertClosedDigestMap(definition.platformSafetyRequirementSetDigests, `${descriptor.id}.${binding}.platformSafetyRequirementSetDigests`);
     }
   }
   for (const release of input.releaseManifests) {
@@ -182,7 +181,7 @@ function validateNormalizedInput(input) {
     assertUnique(release.bindings, 'binding', `${release.id}.bindings`);
     for (const binding of release.bindings) {
       assertClosed(binding, [
-        'descriptor', 'binding', 'package', 'version', 'export', 'specRevision',
+        'descriptor', 'binding', 'package', 'versionRange', 'exportName', 'specRevision',
         'tokenRequirementSetDigests', 'platformSafetyRequirementSetDigests',
       ], `${release.id}.binding`);
       assertClosedDigestMap(binding.tokenRequirementSetDigests, `${release.id}.binding.tokenRequirementSetDigests`);
@@ -239,11 +238,34 @@ function rangeAllows(range, version) {
   if (!valid(version)) return false;
   if (range === 'workspace:*') return true;
   const normalized = range?.startsWith('workspace:') ? range.slice('workspace:'.length) : range;
+  // npm and pnpm resolve `*` to the `latest` dist-tag even when that is a prerelease, so `*` admits any installed version.
   if (normalized === '*') return true;
   if (['workspace:^', 'workspace:~'].includes(range)) return true;
   if (['^', '~'].includes(normalized)) return false;
-  return validRange(normalized) !== null
-    && satisfies(version, normalized, { includePrerelease: true });
+  return validRange(normalized) !== null && satisfies(version, normalized);
+}
+
+/** A descriptor field the renderer left out or emptied, shown as a non-empty diagnostic value. */
+function reported(value) {
+  return typeof value === 'string' && value.length > 0 ? value : 'missing';
+}
+
+function reportedDigests(value) {
+  return value === undefined ? 'missing' : canonicalJson(value);
+}
+
+/**
+ * A binding's export identity is `<package>[/<subpath>]#<Name>`: the member is the catalog's `exportName` and the module is
+ * the package or one of its subpaths. The subpath is renderer-owned; the installed package's own export map is checked
+ * where its manifest is read.
+ */
+function exportMatches(identity, { package: packageName, exportName }) {
+  if (typeof identity !== 'string') return false;
+  const [specifier, member, ...extra] = identity.split('#');
+  return extra.length === 0
+    && member !== undefined
+    && member === exportName
+    && (specifier === packageName || specifier.startsWith(`${packageName}/`));
 }
 
 function releaseFor(catalog, releases) {
@@ -287,6 +309,7 @@ function compatibilityFor({
   requestedQueryApiVersion,
 }) {
   const failures = [];
+  const renderers = new Map();
   let failingPackage = '@muxui/catalog';
   const supportedQueryApiVersions = catalog.supportedQueryApiVersions;
   const selectedQueryApiVersion = requestedQueryApiVersion ?? catalog.queryApiVersion;
@@ -342,6 +365,7 @@ function compatibilityFor({
     }
     failingPackage = expected.package;
     const installedVersion = installed[0].version;
+    renderers.set(expected.package, installedVersion);
     if (descriptor.id !== expected.descriptor) {
       failures.push({
         dimension: 'release-manifest',
@@ -361,45 +385,47 @@ function compatibilityFor({
     ) {
       failures.push({
         dimension: 'renderer-package',
-        required: `${expected.package}@${expected.version}:locked`,
+        required: `${expected.package}@${expected.versionRange}:locked`,
         actual: packageLocks.length === 1
           ? `${expected.package}@${installedVersion}:drift`
           : `${expected.package}@${installedVersion}:unlocked`,
       });
     }
-    if (descriptor.package !== expected.package || installedVersion !== expected.version) {
+    // Any build of the renderer inside the catalog's range may serve the binding; its content is judged below.
+    if (descriptor.package !== expected.package || !rangeAllows(expected.versionRange, installedVersion)) {
       failures.push({
         dimension: 'renderer-package',
-        required: `${expected.package}@${expected.version}`,
+        required: `${expected.package}@${expected.versionRange}`,
         actual: `${descriptor.package}@${installedVersion}`,
       });
     }
     const described = descriptor.bindings[binding];
-    if (described.export !== expected.export) {
-      failures.push({ dimension: 'export', required: expected.export, actual: described.export });
+    if (!exportMatches(described.export, expected)) {
+      failures.push({
+        dimension: 'export',
+        required: `${expected.package}[/<subpath>]#${expected.exportName}`,
+        actual: reported(described.export),
+      });
     }
     if (described.specRevision !== expected.specRevision) {
       failures.push({
         dimension: 'binding-spec',
         required: expected.specRevision,
-        actual: described.specRevision,
+        actual: reported(described.specRevision),
       });
     }
-    if (
-      descriptor.releaseProvenance !== release.id
-      || !rangeAllows(descriptor.bindingSchemaRange, release.schemaVersion)
-    ) {
+    if (!rangeAllows(descriptor.bindingSchemaRange, release.schemaVersion)) {
       failures.push({
-        dimension: 'release-manifest',
-        required: release.id,
-        actual: descriptor.releaseProvenance,
+        dimension: 'schema',
+        required: release.schemaVersion,
+        actual: reported(descriptor.bindingSchemaRange),
       });
     }
     if (!rangeAllows(descriptor.tokenContractRange, release.tokenContractVersion)) {
       failures.push({
         dimension: 'token',
         required: release.tokenContractVersion,
-        actual: descriptor.tokenContractRange,
+        actual: reported(descriptor.tokenContractRange),
       });
     }
     const catalogTokenDigests = bindingDigestMap(catalog.tokenRequirementSets, binding);
@@ -427,21 +453,21 @@ function compatibilityFor({
         actual: canonicalJson(expected.platformSafetyRequirementSetDigests),
       });
     }
-    if (canonicalJson(described.tokenRequirementSetDigests) !== canonicalJson(expected.tokenRequirementSetDigests)) {
+    if (reportedDigests(described.tokenRequirementSetDigests) !== canonicalJson(expected.tokenRequirementSetDigests)) {
       failures.push({
         dimension: 'token',
         required: canonicalJson(expected.tokenRequirementSetDigests),
-        actual: canonicalJson(described.tokenRequirementSetDigests),
+        actual: reportedDigests(described.tokenRequirementSetDigests),
       });
     }
     if (
-      canonicalJson(described.platformSafetyRequirementSetDigests)
+      reportedDigests(described.platformSafetyRequirementSetDigests)
       !== canonicalJson(expected.platformSafetyRequirementSetDigests)
     ) {
       failures.push({
         dimension: 'platform-safety',
         required: canonicalJson(expected.platformSafetyRequirementSetDigests),
-        actual: canonicalJson(described.platformSafetyRequirementSetDigests),
+        actual: reportedDigests(described.platformSafetyRequirementSetDigests),
       });
     }
   }
@@ -450,7 +476,7 @@ function compatibilityFor({
     || compareText(left.required, right.required)
     || compareText(left.actual, right.actual)
   ));
-  return { failures, failingPackage };
+  return { failures, failingPackage, renderers };
 }
 
 function diagnosticSpec(code) {
@@ -681,7 +707,7 @@ export function resolveCatalogGraph(input) {
     });
   }
 
-  let compatibility = { failures: [], failingPackage: '@muxui/catalog' };
+  let compatibility = { failures: [], failingPackage: '@muxui/catalog', renderers: new Map() };
   if (valid.length === 1) {
     compatibility = compatibilityFor({
       catalog: valid[0].catalog,
@@ -740,9 +766,7 @@ export function resolveCatalogGraph(input) {
   const [{ catalog, release }] = valid;
   const targetPackages = Object.fromEntries([
     ['@muxui/catalog', catalog.version],
-    ...release.bindings
-      .filter(({ binding }) => graph.request.bindings.includes(binding))
-      .map(({ package: name, version }) => [name, version]),
+    ...compatibility.renderers,
   ].sort(([left], [right]) => compareText(left, right)));
   return Object.freeze({
     type: 'success',

@@ -2,7 +2,9 @@
  * The compact compatibility descriptor the tooling resolver reads from an installed renderer package
  * (`muxUi.rendererDescriptor` in package.json). Nothing here is authored: bindings come from the binding records,
  * revisions and requirement digests from the compiled catalog bundle, and every export identity from the package's
- * own export map.
+ * own export map. The descriptor names no catalog release: the resolver judges a renderer by each binding's spec
+ * revision and digests and by the package version range the catalog records, so a catalog-only change leaves an
+ * unchanged package valid.
  */
 
 /** The version of the descriptor format, not of the package. */
@@ -32,8 +34,7 @@ function exportIdentity(manifest, { module, export: name }) {
 
 /**
  * `bindings` are the package's `web.react` bindings (`binding`, `export`, `module`, `lifecycle`, `strategy`); `bundle` is the
- * compiled catalog. The release id repeats the catalog generator's release manifest id for the catalog version and source
- * revision, and the resolver test compares it with the catalog package's own release manifest.
+ * compiled catalog. The catalog generator lists the same bindings in its release record, and the resolver test compares them.
  */
 export function buildRendererDescriptor({ manifest, bundle, bindings }) {
   const artifacts = new Map(bundle.artifacts.map((artifact) => [artifact.id, artifact]));
@@ -46,7 +47,6 @@ export function buildRendererDescriptor({ manifest, bundle, bindings }) {
     version: manifest.version,
     bindingSchemaRange: `^${bundle.schemaVersion}`,
     tokenContractRange: `^${tokenContractVersion}`,
-    releaseProvenance: `muxui-release:${bundle.catalogVersion}:${bundle.sourceRevision}`,
     bindings: Object.fromEntries(bindings.map((binding) => {
       const artifact = artifacts.get(binding.binding.slice(0, binding.binding.indexOf('#')));
       const specRevision = artifact?.bindingSpecRevisions[BINDING_ID];

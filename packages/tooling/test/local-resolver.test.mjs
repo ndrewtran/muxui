@@ -81,8 +81,13 @@ async function writeProjection(path, canonicalPath, value) {
 const tokenDigest = 'sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const safetyDigest = 'sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 
-/** The renderer descriptor and catalog identity for a renderer that installs `installed` (web.react binding refs). */
-function rendererDocuments(bundle, installed) {
+/**
+ * The renderer descriptor and catalog identity for a renderer that installs `installed` of the catalog's `bindings` (web.react
+ * binding refs). Like the real catalog, the release lists every binding; a renderer that lacks one is simply missing it.
+ */
+function rendererDocuments(bundle, bindings, installed) {
+  const artifactOf = (binding) => bundle.artifacts.find(({ id }) => id === binding.split('#')[0]);
+  const specRevisionOf = (binding) => artifactOf(binding).bindingSpecRevisions[binding.split('#')[1]];
   const descriptor = {
     id: 'renderer-react-compatible',
     descriptorVersion: '1.0.0',
@@ -90,12 +95,11 @@ function rendererDocuments(bundle, installed) {
     version: '1.0.1',
     bindingSchemaRange: '^3.0.0',
     tokenContractRange: '^2.0.0',
-    releaseProvenance: `muxui-release:1.0.1:${bundle.sourceRevision}`,
     bindings: Object.fromEntries(installed.map((binding) => {
-      const [id, bindingId] = binding.split('#');
+      const [id] = binding.split('#');
       return [binding, {
-        specRevision: bundle.artifacts.find((artifact) => artifact.id === id).bindingSpecRevisions[bindingId],
-        export: `@muxui/react/${id.split(':').at(-1)}`,
+        specRevision: specRevisionOf(binding),
+        export: `@muxui/react/${id.split(':').at(-1)}#${artifactOf(binding).name}`,
         lifecycle: 'experimental',
         strategy: 'direct',
         tokenRequirementSetDigests: { 'web.react': tokenDigest },
@@ -114,14 +118,14 @@ function rendererDocuments(bundle, installed) {
     schemaRange: '^3.0.0',
     sourceRevision: bundle.sourceRevision,
     provenance: { kind: 'source-revision', value: bundle.sourceRevision },
-    tokenRequirementSets: Object.fromEntries(installed.map((binding) => [`${binding}:web.react`, tokenDigest])),
+    tokenRequirementSets: Object.fromEntries(bindings.map((binding) => [`${binding}:web.react`, tokenDigest])),
     platformSafetyContract: {
       version: bundle.platformSafetyContract.contractVersion,
       digest: bundle.platformSafetyContractDigest,
     },
-    platformSafetyRequirementSets: Object.fromEntries(installed.map((binding) => [`${binding}:web.react`, safetyDigest])),
+    platformSafetyRequirementSets: Object.fromEntries(bindings.map((binding) => [`${binding}:web.react`, safetyDigest])),
     releaseManifest: {
-      id: descriptor.releaseProvenance,
+      id: `muxui-release:1.0.1:${bundle.sourceRevision}`,
       releaseVersion: '1.0.1',
       schemaVersion: '3.0.0',
       queryApiVersion: '2.1.0',
@@ -132,15 +136,15 @@ function rendererDocuments(bundle, installed) {
         version: '2.1.0',
         digest: bundle.catalogDigest,
       },
-      bindings: installed.map((binding) => ({
+      bindings: bindings.map((binding) => ({
         descriptor: descriptor.id,
         binding,
         package: '@muxui/react',
-        version: '1.0.1',
-        export: descriptor.bindings[binding].export,
-        specRevision: descriptor.bindings[binding].specRevision,
-        tokenRequirementSetDigests: descriptor.bindings[binding].tokenRequirementSetDigests,
-        platformSafetyRequirementSetDigests: descriptor.bindings[binding].platformSafetyRequirementSetDigests,
+        versionRange: '^1.0.0-0',
+        exportName: artifactOf(binding).name,
+        specRevision: specRevisionOf(binding),
+        tokenRequirementSetDigests: { 'web.react': tokenDigest },
+        platformSafetyRequirementSetDigests: { 'web.react': safetyDigest },
       })),
     },
     bundle: './catalog.json',
@@ -151,8 +155,8 @@ function rendererDocuments(bundle, installed) {
 /**
  * Writes a pnpm project under `fixtureRoot` whose catalog package holds `bundle`
  * (`writeBundle` copies its files) and whose renderer package can install any of
- * `bindings`. `installed` is the subset the renderer descriptor and release
- * provide. The returned `descriptor` and `identity` stay mutable: change them,
+ * `bindings`, all of which the release lists. `installed` is the subset the
+ * renderer descriptor provides. The returned `descriptor` and `identity` stay mutable: change them,
  * `write()` them back, or `install(list)` a different subset.
  */
 async function createRendererProject(fixtureRoot, { bundle, writeBundle, bindings, installed = bindings }) {
@@ -192,7 +196,7 @@ async function createRendererProject(fixtureRoot, { bundle, writeBundle, binding
   await writeBundle(generatedCatalog);
   const project = {
     path: relative(process.cwd(), fixtureRoot).split('\\').join('/'),
-    ...rendererDocuments(bundle, installed),
+    ...rendererDocuments(bundle, bindings, installed),
     async write() {
       await writeProjection(
         join(generatedCatalog, 'catalog-package.json'),
@@ -206,7 +210,7 @@ async function createRendererProject(fixtureRoot, { bundle, writeBundle, binding
       );
     },
     async install(list) {
-      Object.assign(project, rendererDocuments(bundle, list));
+      Object.assign(project, rendererDocuments(bundle, bindings, list));
       await project.write();
     },
   };
@@ -320,6 +324,122 @@ test('E-G1.0-04 compatibility rejects jointly stale descriptor and release maps'
       result.error.details.compatibilityFailures.some((failure) => failure.dimension === dimension),
       true,
     );
+  }
+});
+
+const directGraph = (value) => value.graphs.find(({ id }) => id === 'selected-direct-compatible');
+const reactDescriptor = (value) => value.rendererDescriptors.find(({ id }) => id === 'renderer-react-compatible');
+
+/** The renderer package of the corpus' direct graph, installed and locked at `version`. */
+function installRenderer(value, version) {
+  const graph = directGraph(value);
+  reactDescriptor(value).version = version;
+  for (const list of [graph.installed, graph.lockfile]) {
+    list.find(({ name }) => name === '@muxui/react').version = version;
+  }
+  return graph;
+}
+
+test('binding compatibility survives a catalog-only or renderer-only change', async () => {
+  // Catalog-only: rebuilt from other sources, so its source revision, release id and digest differ while the bindings do not.
+  const rebuilt = await corpus();
+  const graph = directGraph(rebuilt);
+  const catalog = rebuilt.catalogs.find(({ id }) => id === 'catalog-compatible');
+  const release = rebuilt.releaseManifests.find(({ id }) => id === catalog.releaseManifest);
+  const digest = `sha256:${'4'.repeat(64)}`;
+  const sourceRevision = `sha256:${'3'.repeat(64)}`;
+  Object.assign(catalog, { catalogDigest: digest, sourceRevision, releaseManifest: 'release-compatible-rebuilt' });
+  catalog.provenance.value = sourceRevision;
+  Object.assign(release, { id: 'release-compatible-rebuilt', sourceRevision });
+  release.catalog.digest = digest;
+  graph.installed.find(({ fixture }) => fixture === catalog.id).observedDigest = digest;
+  const catalogOnly = resolve(rebuilt, graph);
+  assert.equal(catalogOnly.type, 'success');
+  assert.equal(catalogOnly.releaseManifest.id, 'release-compatible-rebuilt');
+
+  // Renderer-only: a later build inside the binding's range, with the same descriptor content.
+  const upgraded = await corpus();
+  const rendererOnly = resolve(upgraded, installRenderer(upgraded, '1.0.7'));
+  assert.equal(rendererOnly.type, 'success');
+  assert.equal(rendererOnly.resolution.targetPackages['@muxui/react'], '1.0.7');
+});
+
+test('binding compatibility rejects a renderer build outside the binding version range', async () => {
+  // The range is `^1.0.0-0`: another major, an earlier minor line, and a prerelease of a later minor are all outside it.
+  for (const version of ['2.0.0', '0.9.0', '1.1.0-rc.1']) {
+    const value = await corpus();
+    const result = resolve(value, installRenderer(value, version));
+    assert.equal(result.error.code, 'MUXUI_CATALOG_INCOMPATIBLE', version);
+    assert.deepEqual(
+      result.error.details.compatibilityFailures.map(({ dimension, required, actual }) => [dimension, required, actual]),
+      [['renderer-package', '@muxui/react@^1.0.0-0', `@muxui/react@${version}`]],
+      version,
+    );
+    validateFamily('query-envelope', result);
+  }
+});
+
+test('binding compatibility requires the descriptor export to be the binding component', async () => {
+  for (const member of ['Slider', 'DefinitelyMissing']) {
+    for (const specifier of ['@muxui/react/button', '@muxui/react']) {
+      const value = await corpus();
+      reactDescriptor(value).bindings['muxui:component:button#web.react'].export = `${specifier}#${member}`;
+      const result = resolve(value, directGraph(value));
+      assert.equal(result.error.code, 'MUXUI_CATALOG_INCOMPATIBLE', `${specifier}#${member}`);
+      assert.deepEqual(
+        result.error.details.compatibilityFailures.map(({ dimension, required, actual }) => [dimension, required, actual]),
+        [['export', '@muxui/react[/<subpath>]#Button', `${specifier}#${member}`]],
+      );
+    }
+  }
+  // Another package, or no member at all, is not the binding either.
+  for (const identity of ['@muxui/other/button#Button', '@muxui/react/button']) {
+    const value = await corpus();
+    reactDescriptor(value).bindings['muxui:component:button#web.react'].export = identity;
+    assert.deepEqual(
+      resolve(value, directGraph(value)).error.details.compatibilityFailures.map(({ dimension }) => dimension),
+      ['export'],
+      identity,
+    );
+  }
+});
+
+test('binding compatibility reports a descriptor field the renderer left out as incompatible', async () => {
+  for (const [field, dimension] of [
+    ['specRevision', 'binding-spec'],
+    ['export', 'export'],
+    ['tokenRequirementSetDigests', 'token'],
+    ['platformSafetyRequirementSetDigests', 'platform-safety'],
+  ]) {
+    const value = await corpus();
+    delete reactDescriptor(value).bindings['muxui:component:button#web.react'][field];
+    const result = resolve(value, directGraph(value));
+    assert.equal(result.error.code, 'MUXUI_CATALOG_INCOMPATIBLE', field);
+    assert.deepEqual(
+      result.error.details.compatibilityFailures.map((failure) => [failure.dimension, failure.actual]),
+      [[dimension, 'missing']],
+      field,
+    );
+    validateFamily('query-envelope', result);
+  }
+});
+
+test('resolver ranges keep prerelease versions on their own line', async () => {
+  // `^2.1.0-rc.1` admits later builds of 2.1.0 but not the prerelease line of 2.2.0, for the project-declared catalog range too.
+  for (const [version, admitted] of [['2.1.0-rc.2', true], ['2.1.0', true], ['2.2.0-rc.1', false]]) {
+    const value = await corpus();
+    const graph = directGraph(value);
+    const consumer = graph.workspaces.find(({ path }) => path === graph.selectedWorkspace);
+    consumer.catalogRange = '^2.1.0-rc.1';
+    const catalog = value.catalogs.find(({ id }) => id === 'catalog-compatible');
+    Object.assign(catalog, { version, catalogVersion: version });
+    value.releaseManifests.find(({ id }) => id === catalog.releaseManifest).catalog.version = version;
+    for (const list of [graph.installed, graph.lockfile]) {
+      list.find(({ name, workspace }) => name === '@muxui/catalog' && workspace === graph.selectedWorkspace).version = version;
+    }
+    const result = resolve(value, graph);
+    if (admitted) assert.equal(result.type, 'success', version);
+    else assert.equal(result.error.code, 'MUXUI_CATALOG_DECLARATION_DRIFT', version);
   }
 });
 
@@ -633,7 +753,7 @@ test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver'
     ]);
     assert.equal(cliIncompatible.exitCode, 16);
 
-    descriptor.bindings[binding].export = '@muxui/react/button';
+    descriptor.bindings[binding].export = '@muxui/react/button#Button';
     identity.schema = 'muxui-catalog-package-v2-unknown';
     await fixture.write();
     const unknownIdentity = resolvePnpmProjectCatalog({ project, bindings: [binding] });
@@ -761,65 +881,38 @@ function importFromConsumer(root, checks) {
 }
 
 /**
- * A pnpm project over this repository's own catalog and the packed `@muxui/react`: `pnpm pack` output extracted with
- * its manifest untouched. The packed JavaScript is loaded separately, in an isolated consumer.
- *
- * The catalog's release tuple is FIXTURE DATA. The repository's release manifest lists no renderer bindings yet, so
- * the fixture lists every `web.react` component binding of the compiled catalog, with the catalog's own spec revisions
- * and requirement digests, as a future release would. Nothing in it is read from the descriptor under test.
+ * A pnpm project over this repository's own generated catalog, copied as an installed package is, and a `@muxui/react`
+ * linked from `rendererRoot`. Nothing about the release tuple is fixture data: the catalog's own release record lists
+ * the renderer's bindings, and the descriptor under test is the one at `rendererRoot`.
  */
-async function createPackedReactProject(fixtureRoot) {
+async function createReactProject(fixtureRoot, rendererRoot) {
   const catalogSource = resolvePath(import.meta.dirname, '../../catalog/generated');
   const catalogRoot = join(fixtureRoot, 'catalog');
-  const packedRoot = join(fixtureRoot, 'renderer');
   await mkdir(join(catalogRoot, 'generated'), { recursive: true });
-  await mkdir(packedRoot);
 
-  const tarball = packReact(fixtureRoot);
-  const extracted = spawnSync('tar', ['-xzf', tarball, '-C', packedRoot, '--strip-components=1'], { encoding: 'utf8' });
-  assert.equal(extracted.status, 0, extracted.stderr);
-  const manifest = parseJsonStrict(await readFile(join(packedRoot, 'package.json'), 'utf8'));
-
+  const manifest = parseJsonStrict(await readFile(join(rendererRoot, 'package.json'), 'utf8'));
   const bundle = parseJsonStrict(await readFile(join(catalogSource, 'catalog.json'), 'utf8'));
   const identity = parseJsonStrict(await readFile(join(catalogSource, 'catalog-package.json'), 'utf8'));
-  // The canonical binding set is the catalog's, and each binding's module is its packed binding record's.
-  const contract = JSON.parse((await readFile(join(packedRoot, 'generated/r1-6-contract.json'), 'utf8'))
+  // The canonical binding set is the release record's, and each binding's module is its packed binding record's.
+  const contract = JSON.parse((await readFile(join(rendererRoot, 'generated/r1-6-contract.json'), 'utf8'))
     .split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
   const moduleOf = new Map(contract.components.map(({ binding, module }) => [binding, module]));
-  const canonical = bundle.artifacts
-    .filter(({ kind, platforms }) => kind === 'component' && platforms.includes('web.react'))
-    .map((artifact) => {
-      const binding = `${artifact.id}#web.react`;
+  const nameOf = new Map(bundle.artifacts.map(({ id, name }) => [`${id}#web.react`, name]));
+  const canonical = identity.releaseManifest.bindings
+    .map(({ binding }) => {
       const module = moduleOf.get(binding);
-      assert.ok(module, `${binding} has a packed binding record`);
-      return {
-        binding,
-        module,
-        name: artifact.name,
-        export: `${manifest.name}${module === '.' ? '' : module.slice(1)}#${artifact.name}`,
-        specRevision: artifact.bindingSpecRevisions['web.react'],
-        tokenRequirementSetDigests: { 'web.react': identity.tokenRequirementSets[`${binding}:web.react`] },
-        platformSafetyRequirementSetDigests: { 'web.react': identity.platformSafetyRequirementSets[`${binding}:web.react`] },
-      };
+      assert.ok(module, `${binding} has a binding record`);
+      const name = nameOf.get(binding);
+      return { binding, module, name, export: `${manifest.name}${module === '.' ? '' : module.slice(1)}#${name}` };
     })
     .sort((left, right) => compareBindings(left.binding, right.binding));
-  identity.releaseManifest.bindings = canonical.map((entry) => ({
-    descriptor: `renderer:${manifest.name}`,
-    binding: entry.binding,
-    package: manifest.name,
-    version: manifest.version,
-    export: entry.export,
-    specRevision: entry.specRevision,
-    tokenRequirementSetDigests: entry.tokenRequirementSetDigests,
-    platformSafetyRequirementSetDigests: entry.platformSafetyRequirementSetDigests,
-  }));
 
   await writeJson(join(fixtureRoot, 'package.json'), {
     name: 'react-packed-fixture',
     version: '1.0.0',
     private: true,
     packageManager: 'pnpm@10.33.0',
-    dependencies: { '@muxui/catalog': 'workspace:*', [manifest.name]: 'link:./renderer' },
+    dependencies: { '@muxui/catalog': 'workspace:*', [manifest.name]: `link:./${relative(fixtureRoot, rendererRoot)}` },
   });
   await writeFile(join(fixtureRoot, 'pnpm-workspace.yaml'), 'packages:\n  - catalog\n');
   await writeJson(join(catalogRoot, 'package.json'), {
@@ -828,31 +921,34 @@ async function createPackedReactProject(fixtureRoot) {
     private: true,
     muxUi: { catalogPackage: './generated/catalog-package.json' },
   });
-  for (const file of ['catalog.json', 'catalog.json.provenance']) {
-    await cp(join(catalogSource, file), join(catalogRoot, 'generated', file));
+  for (const file of ['catalog.json', 'catalog-package.json']) {
+    for (const name of [file, `${file}.provenance`]) await cp(join(catalogSource, name), join(catalogRoot, 'generated', name));
   }
-  await writeProjection(
-    join(catalogRoot, 'generated/catalog-package.json'),
-    'packages/catalog/generated/catalog-package.json',
-    identity,
-  );
   const install = spawnSync('pnpm', ['install', '--offline', '--ignore-scripts'], {
     cwd: fixtureRoot,
     encoding: 'utf8',
   });
   assert.equal(install.status, 0, install.stderr);
+  return { path: relative(process.cwd(), fixtureRoot).split('\\').join('/'), manifest, canonical };
+}
+
+/** The same project over the packed `@muxui/react`: `pnpm pack` output extracted with its manifest untouched. */
+async function createPackedReactProject(fixtureRoot) {
+  const packedRoot = join(fixtureRoot, 'renderer');
+  await mkdir(packedRoot);
+  const tarball = packReact(fixtureRoot);
+  const extracted = spawnSync('tar', ['-xzf', tarball, '-C', packedRoot, '--strip-components=1'], { encoding: 'utf8' });
+  assert.equal(extracted.status, 0, extracted.stderr);
+  const project = await createReactProject(fixtureRoot, packedRoot);
 
   const descriptorFile = 'generated/renderer-descriptor.json';
   const originals = Object.fromEntries(await Promise.all([descriptorFile, `${descriptorFile}.provenance`].map(
     async (file) => [file, await readFile(join(packedRoot, file), 'utf8')],
   )));
   return {
-    path: relative(process.cwd(), fixtureRoot).split('\\').join('/'),
-    manifest,
+    ...project,
     tarball,
-    canonical,
     descriptor: parseJsonStrict(originals[descriptorFile]),
-    identity,
     /** Replaces the packed descriptor with `value`, under a provenance sidecar that matches it. */
     writeDescriptor: (value) => writeProjection(
       join(packedRoot, descriptorFile),
@@ -863,7 +959,7 @@ async function createPackedReactProject(fixtureRoot) {
       for (const [file, text] of Object.entries(originals)) await writeFile(join(packedRoot, file), text);
     },
     dropPointer: () => {
-      const { muxUi: _pointer, ...withoutPointer } = manifest;
+      const { muxUi: _pointer, ...withoutPointer } = project.manifest;
       return writeJson(join(packedRoot, 'package.json'), withoutPointer);
     },
   };
@@ -879,15 +975,15 @@ test('E-G0.4 pnpm adapter reads the packed @muxui/react renderer descriptor', as
   let consumer;
   try {
     const fixture = await createPackedReactProject(fixtureRoot);
-    const { canonical, descriptor, identity, manifest, path: project } = fixture;
+    const { canonical, descriptor, manifest, path: project } = fixture;
     const bindings = canonical.map(({ binding }) => binding);
 
-    // The packed descriptor describes the catalog's complete web.react binding set, at the catalog's own
-    // release, revisions and digests, and the packed manifest points at it.
+    // The packed descriptor describes exactly the bindings the catalog's own release record lists, and the packed
+    // manifest points at it. The descriptor names no catalog release.
     assert.ok(bindings.length > 0);
     assert.equal(manifest.muxUi.rendererDescriptor, './generated/renderer-descriptor.json');
     assert.deepEqual(Object.keys(descriptor.bindings).sort(compareBindings), bindings);
-    assert.equal(descriptor.releaseProvenance, identity.releaseManifest.id);
+    assert.equal(Object.hasOwn(descriptor, 'releaseProvenance'), false);
 
     // Every indexed export loads through the public specifiers (the package root and each subpath a binding uses),
     // by Node's own resolution of the export map, in a consumer that has only the tarball and its declared dependencies.
@@ -935,10 +1031,20 @@ test('E-G0.4 pnpm adapter reads the packed @muxui/react renderer descriptor', as
 
     await mutated((value) => { value.bindings[bindings[0]].specRevision = `sha256:${'0'.repeat(64)}`; });
     compatibilityFailure('binding-spec');
+    await mutated((value) => { delete value.bindings[bindings[0]].specRevision; });
+    compatibilityFailure('binding-spec');
 
     // An export identity the package's export map does not name hides the whole descriptor.
     await mutated((value) => { value.bindings[bindings[0]].export = '@muxui/react/unmapped#Button'; });
     compatibilityFailure('renderer-package');
+    await mutated((value) => { delete value.bindings[bindings[0]].export; });
+    compatibilityFailure('renderer-package');
+
+    // A member of the package's export map that is not the binding's component: another real member, or none at all.
+    for (const member of ['Slider', 'DefinitelyMissing']) {
+      await mutated((value) => { value.bindings[bindings[0]].export = `${manifest.name}#${member}`; });
+      compatibilityFailure('export');
+    }
 
     await fixture.restoreDescriptor();
     assert.equal(resolvePnpmProjectCatalog({ project, bindings }).type, 'success');
@@ -946,6 +1052,28 @@ test('E-G0.4 pnpm adapter reads the packed @muxui/react renderer descriptor', as
     compatibilityFailure('renderer-package');
   } finally {
     if (consumer) await rm(consumer, { recursive: true, force: true });
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('the real catalog resolves the workspace @muxui/react with no injected release bindings', async () => {
+  await mkdir(join(process.cwd(), 'fixtures'), { recursive: true });
+  const fixtureRoot = await mkdtemp(join(process.cwd(), 'fixtures/.react-workspace-'));
+  try {
+    const { canonical, manifest, path: project } = await createReactProject(fixtureRoot, reactPackageRoot);
+    const button = runCli(['get', 'muxui:component:button', '--project', project, '--platform', 'web.react', '--json']);
+    assert.equal(button.exitCode, 0);
+    assert.equal(JSON.parse(button.stdout).meta.resolution.targetPackages['@muxui/react'], manifest.version);
+
+    // Every binding the catalog lists resolves against the descriptor: its spec revision, digests and export member all agree.
+    const everything = resolvePnpmProjectCatalog({ project, bindings: canonical.map(({ binding }) => binding) });
+    assert.equal(everything.type, 'success');
+    assert.ok(canonical.length > 1);
+
+    // Project-wide discovery keeps the component now that the installed renderer provides its binding.
+    const listed = JSON.parse(runCli(['list', '--project', project, '--platform', 'web.react', '--json']).stdout);
+    assert.ok(listed.data.items.some(({ id }) => id === 'muxui:component:button'));
+  } finally {
     await rm(fixtureRoot, { recursive: true, force: true });
   }
 });

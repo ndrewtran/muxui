@@ -27,6 +27,12 @@ function catalogProfileMap(requirementSets, bindingIdentity) {
     .sort(([left], [right]) => compareText(left, right)));
 }
 
+// The catalog records a renderer's minor line, not one build of it.
+function compatibleVersionRange(version) {
+  const [major, minor] = version.split('.');
+  return `^${major}.${minor}.0-0`;
+}
+
 export function assertPackedCompatibilityFixture(fixture) {
   if (fixture.classification !== 'test-only-synthetic') fail('classification must remain test-only');
   if (
@@ -41,8 +47,10 @@ export function assertPackedCompatibilityFixture(fixture) {
     const descriptor = descriptors.get(releaseBinding.descriptor);
     const described = descriptor?.bindings[releaseBinding.binding];
     if (!described) fail(`missing descriptor binding ${releaseBinding.binding}`);
+    if (!described.export.endsWith(`#${releaseBinding.exportName}`)) {
+      fail(`${releaseBinding.binding} release exportName does not match its descriptor export`);
+    }
     for (const field of [
-      'export',
       'specRevision',
       'tokenRequirementSetDigests',
       'platformSafetyRequirementSetDigests',
@@ -84,7 +92,6 @@ export function createPackedCompatibilityFixture({ source, catalogPackage, catal
     version: input.version,
     bindingSchemaRange: input.bindingSchemaRange,
     tokenContractRange: input.tokenContractRange,
-    releaseProvenance: releaseId,
     bindings: Object.fromEntries(input.bindings.map((bindingInput) => {
       const artifact = catalogBundle.artifacts.find(({ id }) => id === bindingInput.artifact);
       const binding = artifact?.record.bindings[bindingInput.binding];
@@ -113,8 +120,8 @@ export function createPackedCompatibilityFixture({ source, catalogPackage, catal
       descriptor: descriptor.id,
       binding,
       package: descriptor.package,
-      version: descriptor.version,
-      export: definition.export,
+      versionRange: compatibleVersionRange(descriptor.version),
+      exportName: catalogBundle.artifacts.find(({ id }) => id === binding.split('#')[0]).name,
       specRevision: definition.specRevision,
       tokenRequirementSetDigests: definition.tokenRequirementSetDigests,
       platformSafetyRequirementSetDigests: definition.platformSafetyRequirementSetDigests,
