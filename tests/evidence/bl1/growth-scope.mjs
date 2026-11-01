@@ -243,9 +243,11 @@ async function withTree(cwd, revision, use) {
 // Decision 0031 item 10 moved the platform-safety dispositions out of every binding and into the registry's defaults. A tree from before it carries
 // a full declaration per binding and a registry without `defaults`, so the compiler would read each declaration as an override that restates a default.
 // The registry of such a tree gets the defaults its declarations were written against, and a binding's declaration is dropped when it states exactly
-// those dispositions (reason text is not an obligation, and the three spellings in use are not compared). A declaration that differs in any requirement
-// or profile, or names a profile the legacy defaults do not cover, throws, because dropping it would change what the tree required. A registry that
-// already carries `defaults` marks a current tree, which keeps the compiler's strict override rules.
+// those dispositions (reason text is not an obligation, and the three spellings in use are not compared). What the legacy schema and resolver rejected is
+// not dropped either: a binding without a declaration, a declaration or requirement entry with a field beyond the legacy ones, and a validation profile
+// other than the one the resolver associated with the profile. A declaration that differs in any requirement or profile, or names a profile the legacy
+// defaults do not cover, throws, because dropping it would change what the tree required. A registry that already carries `defaults` marks a current tree,
+// which keeps the compiler's strict override rules.
 const legacyRequiredByKind = {
   web: ['system.forced-colors', 'system.high-contrast', 'layout.direction', 'platform.accessibility-mapping'],
   native: ['native.dynamic-color', 'native.font-metrics', 'layout.direction', 'platform.accessibility-mapping'],
@@ -265,30 +267,48 @@ export function legacyPlatformSafetyDefaults(requirementIds) {
   };
 }
 
-/** Throws unless every profile of `binding` has one declaration stating exactly the legacy default dispositions of that profile. */
+/** The validation profile the legacy resolver associated with a nested runtime profile that names none of its own (6037b01a); a binding without nested profiles had none. */
+const legacyValidationProfiles = { ios: 'native.ios', android: 'native.android', 'native.react-native-web': 'native.react-native-web' };
+const isClosedObject = (value, fields) => value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every((field) => fields.includes(field));
+
+/**
+ * Throws unless `binding` is what the legacy schema and resolver accepted and states exactly the legacy default dispositions: a declaration (the schema required
+ * one on every binding) per profile, each closed to `profile`, `validationProfile`, and `requirements`, with the validation profile the resolver associated with its
+ * profile, and a requirement entry closed to `id`, `disposition`, and `reason`. Reason text is not compared.
+ */
 function assertLegacyDeclarationIsDefault({ path, bindingId, binding, defaults }) {
   const differs = (message) => {
-    throw new Error(`BL1_LEGACY_PLATFORM_SAFETY: ${path}#${bindingId} ${message}; a legacy declaration is dropped only when it states exactly the default of its profile`);
+    throw new Error(`BL1_LEGACY_PLATFORM_SAFETY: ${path}#${bindingId} ${message}; a legacy declaration is dropped only when it is one the legacy compiler accepted and states exactly the default of its profile`);
   };
-  const nested = Object.entries(binding.runtimeProfiles ?? {});
-  const unsupportedByProfile = new Map(nested.length === 0
-    ? [[bindingId, binding.strategy === 'unsupported']]
-    : nested.map(([profile, runtimeProfile]) => [profile, runtimeProfile.strategy === 'unsupported']));
+  if (binding === null || typeof binding !== 'object') differs('is not a binding');
+  if (!Object.hasOwn(binding, 'platformSafety')) differs('has no platformSafety declaration');
   if (!Array.isArray(binding.platformSafety)) differs('declares platformSafety that is not a list');
+  const nested = Object.entries(binding.runtimeProfiles ?? {});
+  const expectedByProfile = new Map(nested.length === 0
+    ? [[bindingId, { unsupported: binding.strategy === 'unsupported', validationProfile: undefined }]]
+    : nested.map(([profile, runtimeProfile]) => [profile, {
+      unsupported: runtimeProfile.strategy === 'unsupported',
+      validationProfile: runtimeProfile.validationProfile ?? (Object.hasOwn(legacyValidationProfiles, profile) ? legacyValidationProfiles[profile] : undefined),
+    }]));
   const seen = new Set();
-  for (const { profile, requirements } of binding.platformSafety) {
-    if (!unsupportedByProfile.has(profile) || seen.has(profile)) differs(`declares ${profile}, which it does not have or declares twice`);
+  for (const declaration of binding.platformSafety) {
+    if (!isClosedObject(declaration, ['profile', 'validationProfile', 'requirements'])) differs('has a declaration with fields beyond profile, validationProfile, and requirements');
+    const { profile, validationProfile, requirements } = declaration;
+    if (!expectedByProfile.has(profile) || seen.has(profile)) differs(`declares ${profile}, which it does not have or declares twice`);
     seen.add(profile);
+    const { unsupported, validationProfile: expectedValidationProfile } = expectedByProfile.get(profile);
+    if (validationProfile !== expectedValidationProfile) differs(`${profile} names the validation profile ${validationProfile ?? 'none'}, where it has ${expectedValidationProfile ?? 'none'}`);
     const entries = Array.isArray(requirements) ? requirements : [];
-    const expected = unsupportedByProfile.get(profile) ? defaults.unsupported : Object.hasOwn(defaults.profiles, profile) ? defaults.profiles[profile] : undefined;
+    if (!entries.every((entry) => isClosedObject(entry, ['id', 'disposition', 'reason']))) differs(`${profile} has a requirement entry with fields beyond id, disposition, and reason`);
+    const expected = unsupported ? defaults.unsupported : Object.hasOwn(defaults.profiles, profile) ? defaults.profiles[profile] : undefined;
     if (expected === undefined) differs(`${profile} has no legacy default`);
-    const declared = new Map(entries.map((entry) => [entry?.id, entry?.disposition]));
+    const declared = new Map(entries.map((entry) => [entry.id, entry.disposition]));
     if (entries.length !== expected.length || declared.size !== expected.length) differs(`${profile} does not declare each requirement once`);
     for (const { id, disposition } of expected) {
       if (declared.get(id) !== disposition) differs(`${profile} states ${id} as ${declared.get(id)}, where the default is ${disposition}`);
     }
   }
-  if (seen.size !== unsupportedByProfile.size) differs('misses the declaration of one of its profiles');
+  if (seen.size !== expectedByProfile.size) differs('misses the declaration of one of its profiles');
 }
 
 /** Gives a registry without `defaults` the legacy defaults, and drops each component binding's `platformSafety` after checking it is exactly the default. */
@@ -308,7 +328,6 @@ export async function normalizeLegacyPlatformSafety(directory) {
     const record = await readFile(recordPath, 'utf8').then(parseJsonStrict, () => undefined);
     let changed = false;
     for (const [bindingId, binding] of Object.entries(record?.bindings ?? {})) {
-      if (!Object.hasOwn(binding, 'platformSafety')) continue;
       assertLegacyDeclarationIsDefault({ path, bindingId, binding, defaults });
       delete binding.platformSafety;
       changed = true;

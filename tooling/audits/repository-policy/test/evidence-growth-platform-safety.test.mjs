@@ -114,8 +114,13 @@ test('normalization drops a declaration that is exactly the default and refuses 
     ['a requirement that differs from the default', { 'web.react': webBinding({ platformSafety: [declaration('web.react', ['n', 'r', 'n', 'n', 'r', 'r'])] }) }, /web\.react states system\.forced-colors as not-applicable, where the default is required/u],
     ['a requirement that is missing', { 'web.react': webBinding({ platformSafety: [{ profile: 'web.react', requirements: declaration('web.react', web).requirements.slice(1) }] }) }, /does not declare each requirement once/u],
     ['a profile the binding does not have', { 'web.react': webBinding({ platformSafety: [declaration('web.react', web), declaration('web.html', web)] }) }, /declares web\.html, which it does not have/u],
-    ['a profile of the binding that is not declared', { 'web.react': webBinding({ runtimeProfiles: { ios: { strategy: 'adapted' }, android: { strategy: 'adapted' } }, platformSafety: [declaration('ios', ['n', 'n', 'r', 'r', 'r', 'r'])] }) }, /misses the declaration of one of its profiles/u],
+    ['a profile of the binding that is not declared', { 'web.react': webBinding({ runtimeProfiles: { ios: { strategy: 'adapted' }, android: { strategy: 'adapted' } }, platformSafety: [{ ...declaration('ios', ['n', 'n', 'r', 'r', 'r', 'r']), validationProfile: 'native.ios' }] }) }, /misses the declaration of one of its profiles/u],
     ['an implemented profile the legacy defaults do not cover', { 'native.react-native': webBinding({ platformSafety: [declaration('native.react-native', web)] }) }, /native\.react-native has no legacy default/u],
+    ['a binding with no declaration', { 'web.react': (({ platformSafety: _declared, ...binding }) => binding)(webBinding()) }, /web\.react has no platformSafety declaration/u],
+    ['a validation profile that is not the one of its profile', { 'web.react': webBinding({ platformSafety: [{ ...declaration('web.react', web), validationProfile: 'native.android' }] }) }, /web\.react names the validation profile native\.android, where it has none/u],
+    ['a requirement entry with a field beyond the legacy ones', { 'web.react': webBinding({ platformSafety: [{ profile: 'web.react', requirements: declaration('web.react', web).requirements.map((entry, index) => (index === 0 ? { ...entry, consumerMayDisable: true } : entry)) }] }) }, /web\.react has a requirement entry with fields beyond id, disposition, and reason/u],
+    ['a declaration with a field beyond the legacy ones', { 'web.react': webBinding({ platformSafety: [{ ...declaration('web.react', web), consumerMayDisable: true }] }) }, /has a declaration with fields beyond profile, validationProfile, and requirements/u],
+    ['a nested profile naming another profile\'s validation profile', { 'native.react-native': { strategy: 'adapted', runtimeProfiles: { ios: { strategy: 'adapted', validationProfile: 'native.ios' } }, platformSafety: [{ ...declaration('ios', ['n', 'n', 'r', 'r', 'r', 'r']), validationProfile: 'native.android' }] } }, /ios names the validation profile native\.android, where it has native\.ios/u],
     ['an unsupported binding that requires something', { 'web.html': { strategy: 'unsupported', platformSafety: [declaration('web.html', ['r', 'n', 'n', 'n', 'n', 'n'])] } }, /web\.html states system\.forced-colors as required, where the default is not-applicable/u],
   ];
   for (const [name, bindings, message] of refused) {
@@ -123,6 +128,14 @@ test('normalization drops a declaration that is exactly the default and refuses 
       await assert.rejects(normalizeLegacyPlatformSafety(directory), (error) => error.message.startsWith('BL1_LEGACY_PLATFORM_SAFETY: ') && message.test(error.message), `${name} is refused, not dropped`);
     });
   }
+
+  // The nested shape the legacy resolver accepted: a supported profile with its own validation profile, and an unsupported one that gets the resolver's.
+  const nested = { strategy: 'adapted', runtimeProfiles: { ios: { strategy: 'adapted', validationProfile: 'native.ios' }, 'native.react-native-web': { strategy: 'unsupported' } }, platformSafety: [{ ...declaration('ios', ['n', 'n', 'r', 'r', 'r', 'r']), validationProfile: 'native.ios' }, { ...declaration('native.react-native-web', ['n', 'n', 'n', 'n', 'n', 'n']), validationProfile: 'native.react-native-web' }] };
+  await withLegacyTree({ 'native.react-native': nested }, async (directory) => {
+    await normalizeLegacyPlatformSafety(directory);
+    const record = parseJsonStrict(await readFile(join(directory, 'catalog/components/a/artifact.json'), 'utf8'));
+    assert.equal(Object.hasOwn(record.bindings['native.react-native'], 'platformSafety'), false);
+  });
 
   // A registry that already carries defaults marks a current tree: nothing is dropped, so the compiler's strict override rules apply.
   await withLegacyTree({ 'web.react': webBinding() }, async (directory) => {
