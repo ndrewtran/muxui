@@ -2231,6 +2231,11 @@ test('the full React package check is not followed by reruns of the top-level te
   // Without the full package check, every selected file runs.
   const scoped = reactCommands({ ...react, reactPackageFull: false, reactTestFiles: selected });
   assert.deepEqual(scoped.filter((command) => command.startsWith(exec)), selected.map((file) => `${exec} ${file}`));
+
+  // The theme proof's two styling files are in the package check too, so only a theme plan without it runs them.
+  const themeTests = '--filter @muxui/react exec node --test test/style-scopes.test.mjs test/styling-tokens.test.mjs';
+  assert.ok(!reactCommands({ ...react, reactTheme: true, reactTestFiles: [] }).includes(themeTests));
+  assert.ok(reactCommands({ ...react, reactPackageFull: false, reactTheme: true, reactTestFiles: [] }).includes(themeTests));
 });
 
 test('each browser group is reused on its own routing', () => {
@@ -2600,7 +2605,7 @@ test('a selection CI would shard, or cannot bound, keeps the full local audit wi
   const filler = { family: 'Filler', stories: Array.from({ length: storyShardPageBudget }, (_, index) => ({ id: `filler--${index}`, exportName: 'Default' })) };
   const wideIndex = [...pageIndex, filler];
   const shared = await plan(['apps/react-storybook/src/storybook-factory.mjs'], { pageIndex: wideIndex });
-  assert.match(storybookSelection(shared, { packages, environment: {}, pageIndex: wideIndex }).reason, /shard the selection of \d+ pages \(more than 80 per shard\)/u);
+  assert.match(storybookSelection(shared, { packages, environment: {}, pageIndex: wideIndex }).reason, new RegExp(`shard the selection of \\d+ pages \\(more than ${storyShardPageBudget} per shard\\)`, 'u'));
   assert.equal(storybookSelection(shared, { packages, environment: {}, pageIndex: wideIndex }).full, true);
 
   // Chrome proof audits the manager UI, not pages, so a wide index never shards it.

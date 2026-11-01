@@ -1992,8 +1992,10 @@ function storyProofEnvironment(storyRun, environment) {
 
 // CI shards large Storybook page selections by family so one job stays inside
 // the scoped audit timeouts in apps/react-storybook/test.
-// 80 pages keeps the scoped formula (120 s + 6 s/page) near its 600 s cap.
-export const storyShardPageBudget = 80;
+// 120 pages assumes the audit collects the colour paints during the axe visit, which
+// costs a third less per page than the 6 s/page its timeout formula (120 s + 6 s/page,
+// capped at 600 s) allows, so a full shard lands near that cap.
+export const storyShardPageBudget = 120;
 
 const sharedGroup = '*';
 // The limit on a group's checks step, per kind.
@@ -2098,12 +2100,13 @@ const scaleBrowserGroup = 'browser-scale';
 // puts every shard near 8 minutes beside the React job and Scale's group.
 //
 // Job budget: GitHub Free runs 20 jobs at once, and a job over the ceiling queues
-// rather than fails. Main plans 15 groups. A full-proof React pull request plans 21
-// run jobs (23 when a theme change adds the two Storybook theme groups), among them
-// 6 cross-engine shards, 2 Chromium-only shards, Scale's group, and 7 Storybook
-// component shards. The Storybook groups come last in the matrix and are short,
-// so they are the ones that wait. The Tailwind fixture rides in checks-tooling
-// instead of a job of its own, to keep those counts down.
+// rather than fails. Main plans 15 groups. A full-proof React pull request plans 19
+// run jobs (21 when a theme change adds the two Storybook theme groups): the 3 check
+// groups and the React job, 6 cross-engine shards, 2 Chromium-only shards, Scale's
+// group, and the Storybook groups (5 component shards of up to storyShardPageBudget
+// pages, and the story group). The Storybook groups come last in
+// the matrix and are short, so they are the ones that wait. The Tailwind fixture rides
+// in checks-tooling instead of a job of its own, to keep those counts down.
 const browserShardLimit = { crossEngine: 6, chromiumOnly: 18 };
 const browserShardCap = {
   selected: { crossEngine: 2, chromiumOnly: 3 },
@@ -2406,7 +2409,10 @@ function plannedCommands(plan, {
   }
   if (plan.reactTheme) {
     add('react', ['--filter', '@muxui/react', 'run', 'generate:check']);
-    add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', 'test/style-scopes.test.mjs', 'test/styling-tokens.test.mjs']);
+    // The full package check runs these two files as well.
+    if (!plan.reactPackageFull) {
+      add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', 'test/style-scopes.test.mjs', 'test/styling-tokens.test.mjs']);
+    }
   }
   if (plan.reactProjectionCheck && !plan.reactPackageFull && !plan.reactTheme) {
     add('react', ['--filter', '@muxui/react', 'run', 'generate:check']);

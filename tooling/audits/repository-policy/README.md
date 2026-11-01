@@ -65,10 +65,10 @@ one family: a change routed to any shard reruns its siblings, and a shard is
 reused only when its id and file list match.
 
 GitHub's Free plan runs 20 jobs at once, and a job over that queues instead of
-failing. Main plans 15 groups. A full-proof React pull request plans 21 run jobs
-(23 with the two Storybook theme groups). The Storybook groups come last in the
-matrix and are the shortest browser-driven jobs, so they are the ones that wait
-for a free slot.
+failing. Main plans 15 groups. A full-proof React pull request plans 19 run jobs,
+and 21 when a theme change adds the two Storybook theme groups; the Storybook
+groups come last in the matrix and are the shortest browser-driven jobs, so they
+are the ones that wait for a free slot.
 
 Each group's `timeoutMinutes` limits its checks step. A group that installs
 Firefox or WebKit (`browserEngines` is set) also gets a 30 minute setup
@@ -106,7 +106,7 @@ page index is current; `--preview` plans from the existing index. Other
 dependents of the selected paths keep their full package checks. If CI plans no
 Storybook proof for the paths, the lane is skipped with a printed notice. The
 lane keeps the full Storybook audit, with a printed notice naming the cause,
-when the selection is more than one CI shard (80 pages in total), when the
+when the selection is more than one CI shard (120 pages in total), when the
 planner widens to the full workspace, needs a page index that is missing, or
 throws, or, in the default scope, when a forced-full Storybook event is active
 (`--files` rejects that event with `MUXUI_TASK_SCOPE_CONFLICT`). `pnpm check:all`,
