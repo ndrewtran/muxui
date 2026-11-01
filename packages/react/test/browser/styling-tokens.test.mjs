@@ -315,7 +315,7 @@ test('immediate action labels and selection marks retain contrast in every inter
 });
 
 test('Button-family labels keep their rest colour and 4.5:1 contrast while only fills change', { timeout: 120_000 }, async () => {
-  const css = (await Promise.all(['generated/styles.css', 'generated/supplemental.css', 'generated/themes.css']
+  const css = (await Promise.all(['generated/styles.css', 'generated/themes.css']
     .map((path) => readFile(resolve(packageRoot, path), 'utf8')))).join('\n');
   const variants = ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'];
   const h = React.createElement;

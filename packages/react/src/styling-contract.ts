@@ -1,6 +1,6 @@
 // The states half of the Stage 2 styling contract (Decision 0031 item 16): the closed state list the substrate adapter
-// reads, and the spelling React Aria uses for each state. The part map and the class scheme stay in test/support until
-// the class PR. Keep it erasable (no enums, no namespaces) and free of import-time work.
+// reads, and the spelling React Aria uses for each state. test/support/styling-parts.ts owns the part map and class scheme,
+// checked against catalog anatomy by the styling tests. Keep this module erasable (no enums, no namespaces) and free of import-time work.
 
 /**
  * The presence states, each set as `data-muxui-state-<name>` by React Aria through the substrate adapter and by Mux on

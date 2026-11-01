@@ -275,8 +275,9 @@ Part 3, React owns its public CSS contract, in two stages and one stylesheet:
       computed style is written with the first.
     The Button-only surface compiler
     (`packages/react/test/support/compile-surface.mjs`) and the Button tests in
-    `public-surface.test.mjs` that depend on it are now redundant. Retiring them
-    is remaining code work; the layer, style-entry, and `instance` checks stay.
+    `public-surface.test.mjs` that depended on it were redundant and were
+    retired on 1 November 2026; the layer, style-entry, and `instance` checks
+    stay.
 20. **Order.** The intended order was the parking pull request (moving the surface
     check first), Stage 1, the TypeScript move tranche by tranche, and Stage 2.
     All four are in `main`, with every `web.react` API block derived from

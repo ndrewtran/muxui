@@ -903,7 +903,6 @@ if (!componentCssRecords.some(({ slug }) => slug === sharedStyleAnchorSlug)) {
 const componentCssBody = `${authoredCss}${componentCssRecords.map(({ slug, styleSource, style }) => `${style && styleSource !== sharedStyleSource ? `\n\n${style.trim()}` : ''}${slug === sharedStyleAnchorSlug ? `\n\n${supplementalStylesSource.trim()}` : ''}`).join('')}`;
 const layeredStylesCss = `${cssLayerOrder}\n\n${cssLayer('muxui.tokens', cssBody)}\n\n${cssLayer('muxui.components', componentCssBody)}`;
 const layeredThemeCss = `${cssLayerOrder}\n\n${cssLayer('muxui.tokens', themeCssBody)}`;
-const layeredSupplementalCss = `${cssLayerOrder}\n\n${cssLayer('muxui.components', supplementalStylesSource.trim())}`;
 assertReactR15GeneratedContracts({
   closure: r15ClosureSource,
   snapshot: familySnapshot,
@@ -947,7 +946,6 @@ const outputs = new Map([
   ['release.json.provenance', provenance('release.json', release)],
   ['r1-5-closure.json', r15Closure],
   ['r1-5-closure.json.provenance', provenance('r1-5-closure.json', r15Closure)],
-  ['supplemental.css', generatedCss('packages/react/src/supplemental/styles.css', layeredSupplementalCss)],
   ['r1-6-contract.json', r16Contract],
   ['r1-6-contract.json.provenance', provenance('r1-6-contract.json', r16Contract)],
   ['choice-context.mjs', shippedModule('packages/react/src/choice-context.mjs', choiceContextSource)],
