@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { catalogAcrossCommit } from '../../../../tests/evidence/bl1/growth-scope.mjs';
-import { growthRepository, jsonEdit, summaryEdit } from './evidence-growth-repository.mjs';
+import { catalogAcrossCommit, growthRepository, jsonEdit, summaryEdit } from './evidence-growth-repository.mjs';
 
 // BL1 growth, E-BL1-08: the catalog is compiled on both sides of each growth commit with the sources of the blocks it added or changed left
-// out. Each comparison compiles two full extracted trees, so this file and `evidence-growth-normalization.test.mjs` are the slow half of the
-// growth audit, and `node --test` runs them as separate files in parallel.
+// out. Each comparison compiles two full extracted trees (once per tree, however many comparisons share it), so this file and
+// `evidence-growth-normalization.test.mjs` are the slow half of the growth audit, and `node --test` runs them as separate files in parallel.
 test('the catalog without the sources a growth commit adds or changes has one digest on both sides, and any other change moves it or fails the commit', async () => {
   const repo = await growthRepository();
   const { cwd, second, directoryB, derive } = repo;

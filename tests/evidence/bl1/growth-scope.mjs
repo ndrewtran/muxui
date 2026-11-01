@@ -338,25 +338,30 @@ export async function normalizeLegacyPlatformSafety(directory) {
 }
 
 /**
- * E-BL1-08 across one growth commit (an entry of `growthCommits`): the catalog digest of the tree at `parent` and of
- * the tree at `commit`, each compiled by this checkout's compiler without the sources of the blocks the commit added or
- * changed (`excludedDirectories`). The commit holds when the digests are equal, so the digest changed only for those
- * sources, and when it changed no `digestAffectingPaths` file, which the same-compiler comparison cannot see. A
- * growth commit that edits any other source, a close-out block included, or the catalog package version, moves the digest.
- * A tree from before Decision 0028, before block categories became catalog data, before they carried labels, before a spring transition
- * named no easing, or before platform safety resolved from registry defaults is normalized first (`normalizeLegacyManifest`,
- * `normalizeCategoryRegistry`, `normalizeLegacySpringTransitions`, and `normalizeLegacyPlatformSafety`).
+ * The catalog digest of the tree at `revision`, compiled by this checkout's compiler without the sources under
+ * `excludedDirectories`. A tree from before Decision 0028, before block categories became catalog data, before they carried labels,
+ * before a spring transition named no easing, or before platform safety resolved from registry defaults is normalized first
+ * (`normalizeLegacyManifest`, `normalizeCategoryRegistry`, `normalizeLegacySpringTransitions`, and `normalizeLegacyPlatformSafety`).
  */
-export async function catalogAcrossCommit({ cwd = repositoryRoot, commit, parent, excludedDirectories, digestAffectingPathsChanged }) {
-  const excluded = ({ path }) => excludedDirectories.some((directory) => path.startsWith(directory));
-  const digestAt = (revision) => withTree(cwd, revision, async (directory) => {
-    await normalizeLegacyManifest(directory);
-    await normalizeCategoryRegistry(directory);
-    await normalizeLegacySpringTransitions(directory);
-    await normalizeLegacyPlatformSafety(directory);
-    return (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest;
-  });
-  const [digestBefore, digestAfter] = await Promise.all([digestAt(parent), digestAt(commit)]);
+export const catalogDigestAt = ({ cwd = repositoryRoot, revision, excludedDirectories }) => withTree(cwd, revision, async (directory) => {
+  await normalizeLegacyManifest(directory);
+  await normalizeCategoryRegistry(directory);
+  await normalizeLegacySpringTransitions(directory);
+  await normalizeLegacyPlatformSafety(directory);
+  const excluded = ({ path }) => excludedDirectories.some((excludedDirectory) => path.startsWith(excludedDirectory));
+  return (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest;
+});
+
+/**
+ * E-BL1-08 across one growth commit (an entry of `growthCommits`): the catalog digest of the tree at `parent` and of
+ * the tree at `commit` (`catalogDigestAt`, or `digestAt` when a caller supplies one, as the tests do to compile each
+ * tree once), each without the sources of the blocks the commit added or changed (`excludedDirectories`). The commit
+ * holds when the digests are equal, so the digest changed only for those sources, and when it changed no
+ * `digestAffectingPaths` file, which the same-compiler comparison cannot see. A growth commit that edits any other
+ * source, a close-out block included, or the catalog package version, moves the digest.
+ */
+export async function catalogAcrossCommit({ cwd = repositoryRoot, commit, parent, excludedDirectories, digestAffectingPathsChanged, digestAt = catalogDigestAt }) {
+  const [digestBefore, digestAfter] = await Promise.all([parent, commit].map((revision) => digestAt({ cwd, revision, excludedDirectories })));
   const identical = digestBefore === digestAfter;
   return { digestBefore, digestAfter, identical, holds: identical && digestAffectingPathsChanged.length === 0 };
 }
