@@ -5,6 +5,8 @@
 - Decision: `muxui:decision:0030`
 - Amends: the root `AGENTS.md` Verification wording of `pnpm release:prepare`
 - Satisfies for item 9 only: the "waive required proof" stop in Decision 0028 item 6
+- Amended by: [Decision 0033](./0033-publish-without-environment-approval.md), which removes the
+  `npm-publish` environment approval that "Non-goals and preserved stops" kept
 - Effective: on merge
 
 ## Gap
@@ -53,7 +55,7 @@ Item 8, the release builds once:
    The step summary, the log, and the release manifest's `preparation` record
    which path ran and, for a reuse, the main run's id and the attempt judged.
 2. **The publish run promotes the dry run's candidate.** `mode=publish` takes a
-   `dry-run-id` and does not run `release:prepare`. Before the approval gate it
+   `dry-run-id` and does not run `release:prepare`. Before the `publish` job it
    fails closed unless the named run, read as its latest attempt, is a
    successful `workflow_dispatch` dry run of `.github/workflows/npm-publish.yml`
    in this repository, on `main`, at the same `github.sha`, whose `prepare` job
@@ -129,11 +131,12 @@ repository-policy README are updated to match.
 ## Non-goals and preserved stops
 
 This decision publishes no package, changes no dist-tag, and runs no registry
-write. Andrew's `npm-publish` environment approval and exact `tarball-sha512`
-authorization for each rc stay. The registry preflight, the drift recheck
-before `npm publish`, the provenance and integrity read-back, and the clean
-published-consumer evidence (`E-R1-EXIT-03`) stay. `mode=dry-run` still needs no
-approval and `mode=publish` still runs only from `main`. It does not weaken
+write. Andrew's exact `tarball-sha512` authorization for each rc stays. His
+`npm-publish` environment approval, which this decision preserved, was removed by
+Decision 0033. The registry preflight, the drift recheck before `npm publish`,
+the provenance and integrity read-back, and the clean published-consumer
+evidence (`E-R1-EXIT-03`) stay. `mode=dry-run` still needs no environment and
+`mode=publish` still runs only from `main`. It does not weaken
 `check:all`, narrow the main push plan beyond the four proofs, change the
 required `check` aggregate or per-group reuse, add or change a package, or
 claim any check result or release.

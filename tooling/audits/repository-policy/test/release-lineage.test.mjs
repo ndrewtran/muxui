@@ -592,7 +592,7 @@ test('npm-publish.yml promotes in publish mode, prepares only in dry-run mode, a
   }
   assert.match(step('Validate release versions'), /release-set\.mjs validate-versions/u);
   assert.match(step('Check candidate against inputs'), /release-lineage\.mjs prepared/u);
-  // The ordered publish job replaced the refusal: publish mode promotes and then publishes, behind one approval.
+  // The ordered publish job replaced the refusal: publish mode promotes and then publishes in one job.
   assert.equal(step('Refuse publishing a package set'), undefined);
   const stepNames = [...prepare.matchAll(/^      - (?:name|uses): (.+)$/gmu)].map(([, title]) => title);
   assert.equal(stepNames[0], 'Require main for publish mode');
@@ -617,13 +617,13 @@ test('npm-publish.yml promotes in publish mode, prepares only in dry-run mode, a
   assert.doesNotMatch(publish, /actions: read|release:prepare|release-prepare|release-lineage/u);
 });
 
-// The ordered publish job (E-P2.1-06): one approval and one OIDC identity for the set, every input through the environment.
-test('npm-publish.yml publishes the set in one approved job and keeps every input out of shell text', () => {
+// The ordered publish job (E-P2.1-06): one job and one OIDC identity for the set, every input through the environment.
+test('npm-publish.yml publishes the set in one job and keeps every input out of shell text', () => {
   const workflow = readFileSync(resolve(import.meta.dirname, '../../../../.github/workflows/npm-publish.yml'), 'utf8');
   const job = (name) => new RegExp(`^  ${name}:\\n([\\s\\S]*?)(?=^  [a-z-]+:\\n|(?![\\s\\S]))`, 'mu').exec(workflow)[1];
   const publish = job('publish');
   assert.match(publish, /if: inputs\.mode == 'publish' && github\.ref == 'refs\/heads\/main'\n    needs: prepare\n/u);
-  // One environment approval covers every package, and only this job holds the OIDC identity.
+  // One job in the npm-publish environment publishes every package, and only it holds the OIDC identity.
   assert.equal(publish.match(/^    environment: npm-publish$/gmu)?.length, 1);
   assert.equal(workflow.match(/^ +id-token: write$/gmu)?.length, 1);
   assert.doesNotMatch(job('prepare') + job('registry-preflight'), /environment:|id-token/u);
