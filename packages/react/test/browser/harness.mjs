@@ -49,6 +49,18 @@ export async function launchBrowser(engine = 'chromium') {
   return engines[engine].launch({ headless: true });
 }
 
+/**
+ * Settles a page opened with `waitUntil: 'load'` once its ready element is in view.
+ * `load` covers the static module graph (module scripts block it), so `networkidle`
+ * only added a fixed 500 ms quiet window per open. What it hid is the
+ * `font-display: swap` web fonts, which can still be loading at `load` and move
+ * layout when they land: wait for them, then two frames so layout and paint have
+ * used them. Call it after the ready-element wait, since first render requests the fonts.
+ */
+export async function awaitFontsAndFrames(page) {
+  await page.evaluate(() => document.fonts.ready.then(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))));
+}
+
 // The union of bare dependencies the browser fixtures import.
 const optimizeDepsInclude = [
   'react',
