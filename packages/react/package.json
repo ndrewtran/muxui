@@ -28,6 +28,9 @@
   "sideEffects": [
     "*.css"
   ],
+  "muxUi": {
+    "rendererDescriptor": "./generated/renderer-descriptor.json"
+  },
   "exports": {
     ".": {
       "types": "./generated/index.d.ts",

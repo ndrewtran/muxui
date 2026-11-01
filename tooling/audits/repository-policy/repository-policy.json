@@ -79,6 +79,10 @@
     {
       "path": "packages/react/generated/release.json",
       "provenance": "packages/react/generated/release.json.provenance"
+    },
+    {
+      "path": "packages/react/generated/renderer-descriptor.json",
+      "provenance": "packages/react/generated/renderer-descriptor.json.provenance"
     }
   ],
   "globalTaskInputs": [

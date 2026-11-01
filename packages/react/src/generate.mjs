@@ -9,10 +9,12 @@ import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
+import { compileCatalog } from '../../catalog/src/compiler.mjs';
 import { syncDeclarationReference } from '../reference-reader/sync.mjs';
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, carriesUpstreamPropName, compatibilityUpstream } from './r1-contracts.mjs';
 import { assertFlatImports, flatModuleName, flattenImports } from './flat-modules.mjs';
 import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
+import { buildRendererDescriptor } from './renderer-descriptor.mjs';
 import { readRuntimeSources, runtimeSourceFor } from './runtime-sources.mjs';
 import { readSupplementalMapping } from './supplemental-mapping.mjs';
 
@@ -918,6 +920,11 @@ assertReactR15GeneratedContracts({
 });
 const descriptor = `${canonicalJson(currentDescriptorRecord)}\n`;
 const release = `${canonicalJson(currentReleaseRecord)}\n`;
+// The renderer descriptor carries the compiled catalog's spec revisions and requirement digests. The compiler merges
+// packages/react/api/ into its bindings, so those documents are written (or checked) before it reads them.
+if (!listing) await syncDerivedApis({ packageRoot, documents: derivedApis, checking });
+const { bundle: catalogBundle } = await compileCatalog({ repositoryRoot });
+const rendererDescriptor = `${canonicalJson(buildRendererDescriptor({ manifest, bundle: catalogBundle, bindings: currentBindings }))}\n`;
 const r15Closure = generatedText(
   'catalog/react-r1-5/closure.json',
   `${canonicalJson(r15ClosureRecord)}\n`,
@@ -944,6 +951,8 @@ const outputs = new Map([
   ['descriptor.json.provenance', provenance('descriptor.json', descriptor)],
   ['release.json', release],
   ['release.json.provenance', provenance('release.json', release)],
+  ['renderer-descriptor.json', rendererDescriptor],
+  ['renderer-descriptor.json.provenance', provenance('renderer-descriptor.json', rendererDescriptor)],
   ['r1-5-closure.json', r15Closure],
   ['r1-5-closure.json.provenance', provenance('r1-5-closure.json', r15Closure)],
   ['r1-6-contract.json', r16Contract],
@@ -1024,7 +1033,6 @@ if (listing) {
 }
 
 if (!listing) {
-  await syncDerivedApis({ packageRoot, documents: derivedApis, checking });
   // reference/ is read from the declarations in `outputs`, which are the ones this run emitted, so it is written
   // after them and never from a generated/ left over from an earlier build.
   await syncDeclarationReference({
