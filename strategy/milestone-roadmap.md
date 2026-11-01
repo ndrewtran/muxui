@@ -526,8 +526,8 @@ change the final R1-exit merge stop.
 ### P2.1 Public package graph and portfolio release
 
 **Objective:** Publish the compatible `@muxui/schema`, `@muxui/catalog`, and
-`@muxui/tooling` packages beside `@muxui/react` as one verifiable release, so a
-consumer can install an exact schema, catalog, tooling, and renderer tuple and
+`@muxui/tooling` packages beside `@muxui/react` in a first verifiable portfolio
+release, so a consumer can install an exact schema, catalog, tooling, and renderer tuple and
 verify it. Decision 0032 accepts the graph. `@muxui/tokens` stays private.
 
 **Entry conditions**
@@ -555,20 +555,29 @@ verify it. Decision 0032 accepts the graph. `@muxui/tokens` stays private.
   workspace-only and absent from every tarball.
 - For each new package, a `files` allowlist, licence, repository field, and
   README.
-- `-rc.N` versions on `next` with independent numbers. The catalog package
+- `-rc.N` versions on `next` for the three new packages, with independent
+  numbers; `@muxui/react` keeps its existing sequence. The catalog package
   version equals `catalogVersion`, and tooling's dependency on the catalog is a
   range bound to the query API major.
 - The React compatibility descriptor in the shape the tooling resolver reads,
   generated after packing from the actual exports, binding-spec revisions,
   lifecycle and strategy, schema and token ranges, token requirement digests,
   and provenance.
-- One immutable release manifest for the set from one commit, aggregating the
-  package versions and digests, the catalog digest, descriptors, evidence
-  digests, provenance, and active exception digests. Release preparation
-  rejects inconsistent ranges, missing exports, digest drift, and version
-  effects that do not match the change.
-- Ordered publishing: schema, catalog, tooling, then React, with the Decision
-  0023 deprecate and fix-forward rollback prepared per package.
+- CLI-as-documentation from the packed `muxui` binary: the discovery baseline
+  (`manifest`, `list`, `search`, `get`) for the React tuple, with human, JSON,
+  and dense output (Architecture, "CLI is the Productization documentation
+  interface").
+- One immutable release manifest per release, from one commit, correlating the
+  whole tuple of the set: package versions and digests, the catalog digest,
+  descriptors, evidence digests, provenance, and active exception digests. The
+  first portfolio release publishes all four packages; a later release
+  publishes only the packages whose version units changed (Architecture,
+  "Version units and compatibility"). Release preparation rejects inconsistent
+  ranges, missing exports, digest drift, and version effects that do not match
+  the change.
+- Ordered publishing of the packages a release includes: schema, catalog,
+  tooling, then React, with the Decision 0023 deprecate and fix-forward rollback
+  prepared per package.
 - An npm trusted publisher for each new package, set up with Andrew's browser
   2FA close to its first publish.
 
@@ -577,11 +586,11 @@ verify it. Decision 0032 accepts the graph. `@muxui/tokens` stays private.
 | ID | Required assertion | Retained evidence |
 | --- | --- | --- |
 | `E-P2.1-01` | Every public tarball (schema, catalog, tooling, React) installs from its packed artifact and exposes only its declared exports, types, files, and supported engines. It holds no workspace-only entry, no `workspace:` specifier, no dependency outside the registry and the publish set, and no `@muxui/tokens`. | Packed consumer matrix with negative fixtures: a leaked compiler or authoring entry, a `workspace:` dependency, an unlisted dependency, and a tokens dependency each fail. |
-| `E-P2.1-02` | The tooling resolver reads the packed React descriptor from the installed tarballs, and descriptor bindings match the actual tarball exports and exact binding and token revisions. Source-tree-only success fails. | Pack-time descriptor audit, and the packed `muxui` binary run against the installed tarballs, with a negative fixture whose descriptor the resolver rejects with its typed error. |
-| `E-P2.1-03` | One release manifest covers the whole publish set from one commit and verifies every package, catalog, descriptor, evidence, and exception digest. It rejects repacked bytes under the same version, a missing or extra package, and a package built from another commit. | Manifest integrity fixture. |
-| `E-P2.1-04` | Representative compatible, incompatible, editorial, implementation-only, token, and schema changes produce the required version effects. Every new package version is a prerelease, the catalog package version equals `catalogVersion`, and tooling's catalog range admits exactly the catalog releases whose supported query API versions the tooling reads. | SemVer classification corpus with range admission cases. |
-| `E-P2.1-05` | The current contract is accepted and a superseded one is rejected with a typed error and no old-format reader (Decision 0016). Published catalogs answer for their supported installed tuples, and hosted or latest data stays advisory. | Multi-version query matrix. |
-| `E-P2.1-06` | For each package of the set, in order: a publish rehearsal; a configured trusted publisher; and a registry read-back of the exact version, integrity, provenance, and `next` at the verified rc. `latest` is not claimed (the registry sets it on a first publish; Decision 0023), and the rollback is prepared, not exercised. | Release dry run, registry read-back, and the rollback plan in the release manifest. |
+| `E-P2.1-02` | The tooling resolver reads the packed React descriptor from the installed tarballs, and descriptor bindings match the actual tarball exports and exact binding and token revisions. Source-tree-only success fails. From the packed `muxui` binary installed from those tarballs: `manifest`, `list`, `search`, and `get` discover and retrieve the React tuple's artifacts; human, `--json`, and `--dense` output normalize to the same response as the catalog API, with dense output inside its token budget; an invalid request returns a structured error with a stable code and `nextCommand`; and each capability P2.1 does not enable (G2.4 to G2.6 and consumer validation) is absent or explicitly unavailable in the manifest. This satisfies Architecture "Command surface", "Query envelopes", "Dense output", and "Self-describing manifest". | Pack-time descriptor audit; the packed `muxui` binary run against the installed tarballs with golden human, JSON, and dense output for the discovery baseline, an invalid-request corpus, and a manifest availability check; a negative fixture whose descriptor the resolver rejects with its typed error. |
+| `E-P2.1-03` | One release manifest per release correlates the whole tuple of the publish set from one commit and verifies every package, catalog, descriptor, evidence, and exception digest. The first portfolio release lists all four packages; a later release publishes only the packages whose version units changed and records the unchanged ones by version and digest. It rejects repacked bytes under the same version, a package missing from the tuple, and a package built from another commit. | Manifest integrity fixture. |
+| `E-P2.1-04` | Representative compatible, incompatible, editorial, implementation-only, token, and schema changes produce the required version effects. Each version of the three new packages is a prerelease, the catalog package version equals `catalogVersion`, and the candidate set satisfies tooling's own range on the catalog. | SemVer classification corpus, and an install of the candidate set that resolves tooling's catalog range. |
+| `E-P2.1-05` | The current contract is accepted and a superseded one is rejected with a typed error and no old-format reader (Decision 0016). Resolver negotiation against the project-declared catalog is tested apart from tooling's range: fixture catalogs for supported older tuples are read, a schema-incompatible catalog and an unsupported query API major return `MUXUI_CATALOG_INCOMPATIBLE`, and prerelease catalogs with different base versions (for example `2.1.0-rc.2` and `2.2.0-rc.1`) resolve by declared compatibility, not by the range. Hosted or latest data stays advisory. | Multi-version query matrix. |
+| `E-P2.1-06` | For each package of the release, in order: a publish rehearsal; a configured trusted publisher; and a registry read-back of the exact version, integrity, provenance, and `next` at the verified rc. `latest` is not claimed (the registry sets it on a first publish; Decision 0023), and the rollback is prepared, not exercised. Simulated refusals, with no registry mutation: a version collision, an artifact-integrity mismatch, and an invalid promotion lineage (a dry-run candidate from another commit, workflow, or version) each stop the release before any publish. A partial-publication rehearsal in which a later package in the order fails proves the recovery: each package already published is deprecated and fixed forward on its own, the tuple is verified again, and no record is rewritten. | Release dry run, registry read-back, the rollback plan in the release manifest, a refusal corpus, and the partial-publication rehearsal against a registry fake. |
 
 **Scope controls**
 
@@ -597,9 +606,9 @@ verify it. Decision 0032 accepts the graph. `@muxui/tokens` stays private.
 - No P2.2 or P2.3 content: consumer validation, clean-consumer offline proof,
   docs, explorer, or MCP.
 
-**Exit condition:** The four published packages and one verifiable release
-manifest describe the same implemented binding, token, evidence, and
-compatibility reality, and no workspace-only code reaches a consumer.
+**Exit condition:** The four published packages and the release manifest that
+correlates them describe the same implemented binding, token, evidence, and
+compatibility reality, and no workspace-only entry (Decision 0032 item 5) reaches a consumer.
 
 ### BL1 Blocks showcase
 

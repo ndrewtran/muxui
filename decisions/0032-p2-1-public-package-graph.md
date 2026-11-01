@@ -93,12 +93,14 @@ Part 1, the publish set and its edges:
    diff, revision explanation, affected closure, and change-intent previews. It
    moves out of tooling's `.` entry into an entry that is not published. The
    repository's generators, tests, and maintainers keep using these entries from
-   the workspace.
+   the workspace. `@muxui/schema`'s authoring helpers stay public, as
+   `SCOPE-PKG-SCHEMA` commits.
 
 Part 2, versions and release:
 
-6. **Versions.** Every new package publishes only `-rc.N` prereleases, to
-   `next`, with its own number. The first rc of a package is a prerelease of the
+6. **Versions.** Each of the three new packages publishes only `-rc.N`
+   prereleases, to `next`, with its own number. `@muxui/react` keeps its
+   existing sequence (Decision 0023 and its amendment 01). The first rc of a package is a prerelease of the
    version its source manifest carries at the release commit, so the catalog
    starts at `2.1.0-rc.1`. Its package version must equal `catalogVersion`, so
    its `catalogVersion` is also a prerelease. The registry sets `latest` on a
@@ -114,16 +116,24 @@ Part 2, versions and release:
    version unit: its package version is `catalogVersion`.
 8. **Tooling's range on the catalog.** `@muxui/tooling` declares
    `@muxui/catalog` as a semver range bound to the query API major it reads,
-   not an exact pin, so a newer CLI reads an older installed catalog whose
-   supported query API versions include one the CLI reads and returns
-   `MUXUI_CATALOG_INCOMPATIBLE` for the rest. While only prereleases exist the
-   range names a prerelease comparator, because a plain range excludes
-   prereleases. Release preparation proves that the range admits exactly those
-   catalog releases (`E-P2.1-04`).
-9. **One release.** The four packages release together from one commit under
-   one release manifest. The single publish workflow is extended with a declared
-   publish set and publishes in order: schema, catalog, tooling, React. A bad
-   package is deprecated and fixed forward under Decision 0023, with its own
+   not an exact pin. The candidate set satisfies its own range (`E-P2.1-04`).
+   What a CLI reads is a separate question that the resolver decides against the
+   project-declared catalog: a newer CLI reads an older installed catalog whose
+   supported query API versions include one the CLI reads, and returns
+   `MUXUI_CATALOG_INCOMPATIBLE` for a schema-incompatible or unsupported one
+   (`E-P2.1-05`). While only prereleases exist the range names a prerelease
+   comparator. Under node-semver, `^2.1.0-rc.1` admits `2.1.0-rc.2` but not
+   `2.2.0-rc.1`, so a prerelease with a new base version needs its own
+   comparator.
+9. **One release.** The first P2.1 portfolio release publishes all four
+   packages from one commit under one release manifest. The single publish
+   workflow is extended with a declared publish set and publishes in order:
+   schema, catalog, tooling, React. Every later release keeps the existing
+   rule that only the version units that changed are released (Architecture,
+   "Version units and compatibility"). It publishes those packages in the same
+   order, still from one commit under one release manifest that correlates the
+   whole tuple. No rule makes all four publish every time. A bad package is
+   deprecated and fixed forward under Decision 0023, with its own
    authorization.
 10. **Trusted publishers.** Each of the three new packages needs its own npm
     trusted publisher. Setting them up takes Andrew's browser 2FA, and it is
@@ -159,8 +169,10 @@ Part 2, versions and release:
     alignment rows state the publish set.
   - No Scope ID is added, renumbered, reused, or removed.
   - Product outcome: a consumer installs a compatible schema, catalog, tooling,
-    and React tuple from the registry and can verify it, with no
-    maintainer-only code in any of them.
+    and React tuple from the registry and can verify it, with none of the
+    workspace-only entries (the catalog's `./compiler` and `./pattern-*`, and
+    tooling's authoring entry) in any of them. The schema's public authoring
+    helpers stay public.
   - Release additions: `@muxui/schema`, `@muxui/catalog`, and `@muxui/tooling`
     join the Productization release scope. Removals: `@muxui/tokens` leaves it.
   - Evidence effect: `E-P2.1-01…06` get text. No evidence ID is removed or
@@ -212,6 +224,41 @@ npm's 72-hour no-dependents window (Decision 0023), so leaving the set later
 means deprecating the package. Publishing `@muxui/tokens`, or a package from the
 rejected alternatives below, needs a successor decision and its own activation.
 
+## Drafting choices for Andrew
+
+These calls follow from the seven answers and add no commitment. The pull
+request review is where Andrew confirms or changes them.
+
+1. The first rc of the schema and tooling is a prerelease of the version their
+   source manifests carry at the release commit (item 6).
+2. `@muxui/react` keeps its existing prerelease sequence (item 6).
+3. Tooling's range and resolver negotiation are separate. The range is a
+   package-manager request that the candidate satisfies, and what a CLI reads is
+   decided by the resolver (item 8).
+4. A range that must admit a prerelease names one, and a prerelease with a new
+   base version needs its own comparator (item 8).
+5. "One release for all four" is read as the first portfolio release. Later
+   releases publish only the version units that changed, still from one commit
+   under one manifest (item 9).
+6. Rollback is Decision 0023's deprecate and fix forward, per package (item 9).
+7. A packed manifest may depend only on a registry package or a member of the
+   publish set (item 3).
+8. The excluded entries are named, and the schema's public authoring helpers
+   stay public (item 5).
+9. `SCOPE-PKG-TOKENS` keeps its ID and `committed` state, and publishing tokens
+   is a later activation, not a new Scope ID.
+10. The `SCOPE-PKG-TOOLING` row and the Architecture package table mark
+    maintainer authoring and change-intent previews as a workspace-only entry.
+11. The source manifests keep `private: true` until an implementation pull
+    request (Non-goals).
+12. CLI-as-documentation has no assertion of its own: `E-P2.1-02` carries it, so
+    the six evidence IDs stay six. The text of `E-P2.1-01…06` is modelled on the
+    retired `E-G2.1-01…05`, with a sixth assertion for publication that adds
+    simulated refusals and a partial-publication rehearsal.
+13. Decision 0031 item 20 is brought up to date, and Architecture says
+    "workspace build authorities" where it said "private build authorities".
+    Both are wording, with no change of rule.
+
 ## Acceptance
 
 - Owner: Andrew / `ndrewtran`
@@ -231,7 +278,7 @@ The seven, and where this record states each:
 3. Versions: `-rc.N` on `next`, independent numbers, the catalog at
    `2.1.0-rc.1`, and no `latest` claim (items 6 and 7).
 4. Release shape: one release for all four from one commit, one manifest, and
-   ordered publishing (item 9).
+   ordered publishing, read as the first portfolio release (item 9).
 5. The catalog compiler and the tooling authoring entry stay unpublished
    (item 5).
 6. Tooling's dependency on the catalog is a range bound to the query API major
@@ -243,18 +290,6 @@ The alternatives the draft weighed and this record does not adopt: publishing
 tokens as a fifth package, vendoring the schema into the catalog so that three
 packages publish, and, rejected in the draft, publishing tooling alone with the
 catalog bundled, which breaks the project-declared catalog rule.
-
-Beyond the seven answers, this record makes these calls. Each follows from an
-answer, and none adds a commitment:
-
-- The first rc of the schema and tooling is a prerelease of the version their
-  source manifests carry at the release commit (item 6).
-- A range that must admit a prerelease names one (item 8).
-- Rollback is Decision 0023's deprecate and fix forward, per package (item 9).
-- `SCOPE-PKG-TOKENS` keeps its ID and `committed` state, and publishing tokens
-  is a later activation, not a new Scope ID.
-- A packed manifest may depend only on a registry package or a member of the
-  publish set (item 3).
 
 This record does not claim that any check passed, that any package, release
 candidate, or dist-tag changed, or that P2.1 is ready or active. Where it

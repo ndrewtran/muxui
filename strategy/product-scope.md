@@ -457,9 +457,9 @@ the site.
 
 At R1, only `@muxui/react` is publishable; schema, tokens, catalog, and
 tooling remain private build/proof authorities and are not runtime edges. At
-P2.1 the Productization portfolio publishes `@muxui/react`, `@muxui/schema`,
-`@muxui/catalog`, and `@muxui/tooling` in one release, each as a prerelease
-under `next` (Decision 0032). `@muxui/tokens` stays a private build authority.
+P2.1 the first Productization release publishes `@muxui/react`, `@muxui/schema`,
+`@muxui/catalog`, and `@muxui/tooling` together, each as a prerelease under
+`next` (Decision 0032). `@muxui/tokens` stays a private build authority.
 The catalog compiler and the tooling maintainer-authoring entry are
 workspace-only and never published. Renderer packages do not depend on the
 catalog at runtime.

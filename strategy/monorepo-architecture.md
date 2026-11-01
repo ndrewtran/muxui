@@ -1401,8 +1401,11 @@ manifest carries. The rules:
 - Token data reaches consumers inside the catalog bundle's token sections.
   Token transforms for a consumer build or a design tool stay unpublished until
   a later activation publishes `@muxui/tokens`.
-- The set releases together, in order: schema, catalog, tooling, then React
-  ("Version units and compatibility").
+- The first portfolio release publishes the set together, in order: schema,
+  catalog, tooling, then React. Every later release publishes only the packages
+  whose version units changed, in the same order, from one commit under one
+  release manifest that correlates the whole tuple ("Version units and
+  compatibility").
 
 ### Catalog distribution and resolution
 
@@ -1423,8 +1426,10 @@ no consumer installs `@muxui/tokens`. `@muxui/tooling` depends on
 `@muxui/schema` and on `@muxui/catalog`. It builds the query API with its own
 catalog dependency over the bundle of the catalog the project declares. That
 dependency is a version range bound to the query API major the tooling reads,
-not an exact pin, so a newer CLI reads an older installed catalog whose
-supported query API versions include one it reads, and gets
+not an exact pin, so one tooling release installs beside more than one catalog
+release. The range does not decide what the CLI reads. The resolver decides that
+against the project-declared catalog: a newer CLI reads an older installed
+catalog whose supported query API versions include one it reads, and gets
 `MUXUI_CATALOG_INCOMPATIBLE` otherwise. Tooling's maintainer-authoring entry is
 workspace-only and is not in the published package.
 
@@ -2043,15 +2048,26 @@ move independently. The catalog is the one package whose version is a version
 unit: its package version is `catalogVersion`. Negotiation compares version
 units and the renderer package ranges that bindings declare. A dependency range
 between published Mux UI packages is a package-manager request, not
-negotiation, and tooling's range on `@muxui/catalog` admits exactly the catalog
-releases whose supported query API versions the tooling reads.
+negotiation. Tooling's range on `@muxui/catalog` is bound to the query API major
+the tooling reads, and the catalog release a tooling release ships with
+satisfies it. Which catalog a CLI reads is resolver negotiation, tested apart
+from the range.
 
-Before a package's stable release it publishes only `-rc.N` prereleases under
-`next`, with its own numbers, and nothing claims `latest` (Decision 0023). A
-catalog `-rc.N` package version makes `catalogVersion` a prerelease SemVer too,
-so a bare `X.Y.Z` never names an rc. A range that must admit a prerelease names
-one, because a plain range excludes them. A portfolio release publishes its
-packages from one commit under one release manifest, so the descriptor and the
+Before their stable release, `@muxui/schema`, `@muxui/catalog`, and
+`@muxui/tooling` publish only `-rc.N` prereleases under `next`, with their own
+numbers. `@muxui/react` keeps its existing prerelease sequence (Product Scope,
+"React `0.1` prerelease boundary"; Decision 0023 and its amendment 01), and
+nothing claims `latest` (Decision 0023). A catalog `-rc.N` package version makes
+`catalogVersion` a prerelease SemVer too, so a bare `X.Y.Z` never names an rc. A
+plain range admits a prerelease only when one of its comparators names a
+prerelease of the same base version. Under node-semver, `^2.1.0-rc.1` admits
+`2.1.0-rc.2` but not `2.2.0-rc.1`, so a range that must admit a prerelease with
+a new base version names it.
+
+The first portfolio release publishes all four packages from one commit under
+one release manifest. A later release publishes only the packages whose version
+units changed, as the table below requires, still from one commit under one
+release manifest that correlates the whole tuple, so the descriptor and the
 catalog it pairs with come from the same source.
 
 Every implementation query resolves under an explicit compatibility context:
