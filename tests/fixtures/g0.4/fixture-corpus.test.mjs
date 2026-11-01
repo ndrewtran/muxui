@@ -104,7 +104,7 @@ function validateCatalog(catalog) {
 function validateDescriptor(descriptor) {
   const fields = [
     'id', 'descriptorVersion', 'package', 'version', 'bindingSchemaRange',
-    'tokenContractRange', 'releaseProvenance', 'bindings',
+    'tokenContractRange', 'bindings',
   ];
   closed(descriptor, fields, `descriptor ${descriptor.id ?? '<unknown>'}`);
   required(descriptor, fields, `descriptor ${descriptor.id ?? '<unknown>'}`);
@@ -161,7 +161,7 @@ function validateRelease(release, catalogs, descriptors) {
   }
   for (const binding of release.bindings) {
     const bindingFields = [
-      'descriptor', 'binding', 'package', 'version', 'export', 'specRevision',
+      'descriptor', 'binding', 'package', 'versionRange', 'specRevision',
       'tokenRequirementSetDigests',
       'platformSafetyRequirementSetDigests',
     ];
@@ -169,12 +169,12 @@ function validateRelease(release, catalogs, descriptors) {
     required(binding, bindingFields, `${release.id}.binding`);
     const descriptor = descriptors.get(binding.descriptor);
     const described = descriptor?.bindings[binding.binding];
+    // The catalog records the renderer's minor line (`^X.Y.0-0`), not one build of it.
+    const [major, minor] = descriptor?.version.split('.') ?? [];
     if (
       !descriptor
-      || descriptor.releaseProvenance !== release.id
       || descriptor.package !== binding.package
-      || descriptor.version !== binding.version
-      || described?.export !== binding.export
+      || binding.versionRange !== `^${major}.${minor}.0-0`
       || described?.specRevision !== binding.specRevision
       || JSON.stringify(described?.tokenRequirementSetDigests) !== JSON.stringify(binding.tokenRequirementSetDigests)
       || JSON.stringify(described?.platformSafetyRequirementSetDigests) !== JSON.stringify(binding.platformSafetyRequirementSetDigests)
@@ -384,6 +384,7 @@ test('G0.4 entry corpus rejects malformed or duplicate fixture authority', async
     (value) => { value.packageManager.name = 'npm'; },
     (value) => { value.catalogs[0].catalogVersion = '2.0.0'; },
     (value) => { value.releaseManifests[0].bindings[0].specRevision = 'sha256:0000000000000000000000000000000000000000000000000000000000000000'; },
+    (value) => { value.releaseManifests[0].bindings[0].versionRange = '^2.0.0-0'; },
     (value) => { value.graphs[0].selectedWorkspace = '/private/consumer'; },
     (value) => { value.graphs[0].expected.code = 'CORE_UNDECLARED_ERROR'; },
     (value) => { value.graphs.push(structuredClone(value.graphs[0])); },

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { canonicalDigest, parseJsonStrict, validateFamily } from '@muxui/schema';
+import { canonicalDigest, canonicalJson, parseJsonStrict, validateFamily } from '@muxui/schema';
 import { createCatalogApi } from '../src/index.mjs';
 import {
   assertPackedCompatibilityFixture,
@@ -55,8 +55,26 @@ test('E-G0.4 package layout binds package, catalog, API, schema, digest, and sou
     identity.releaseManifest.tokenContractVersion,
     tokenSource.record.tokenContractVersion,
   );
-  assert.deepEqual(identity.releaseManifest.bindings, []);
   const component = bundle.artifacts.find(({ id }) => id === 'muxui:component:button');
+  // The release record lists every web.react binding by content and by the renderer's minor line, never one build or export.
+  const reactPackage = await readJson('../../react/package.json');
+  const [reactMajor, reactMinor] = reactPackage.version.split('.');
+  assert.deepEqual(
+    identity.releaseManifest.bindings.map(({ binding }) => binding),
+    bundle.artifacts
+      .filter(({ kind, platforms }) => kind === 'component' && platforms.includes('web.react'))
+      .map(({ id }) => `${id}#web.react`)
+      .sort(),
+  );
+  assert.equal(canonicalJson(identity.releaseManifest.bindings.find(({ binding }) => binding === 'muxui:component:button#web.react')), canonicalJson({
+    descriptor: `renderer:${reactPackage.name}`,
+    binding: 'muxui:component:button#web.react',
+    package: reactPackage.name,
+    versionRange: `^${reactMajor}.${reactMinor}.0-0`,
+    specRevision: component.bindingSpecRevisions['web.react'],
+    tokenRequirementSetDigests: { 'web.react': component.tokenRequirementSets['web.react:web.react'].digest },
+    platformSafetyRequirementSetDigests: { 'web.react': component.platformSafetyRequirementSets['web.react:web.react'].digest },
+  }));
   for (const [key, set] of Object.entries(component.tokenRequirementSets)) {
     const [bindingId, profile] = key.split(':');
     assert.equal(

@@ -68,6 +68,66 @@ const platformSafetyDescriptors = bundle.artifacts
       digest: requirementSet.digest,
     })))
   .sort((left, right) => left.key.localeCompare(right.key));
+const tokenRequirementSets = Object.fromEntries(bindingDescriptors.map((descriptor) => [
+  `${descriptor.ref}:${descriptor.profile}`,
+  descriptor.tokenRequirementSetDigest,
+]));
+const platformSafetyRequirementSets = Object.fromEntries(platformSafetyDescriptors.map(({ key, digest }) => [
+  key,
+  digest,
+]));
+
+// The package that renders each binding id, by directory. The release record lists a binding only when its renderer is
+// declared here, and derives the package name and compatible version range from that package's source manifest.
+const rendererPackageRoots = { 'web.react': 'packages/react' };
+const rendererPackages = Object.fromEntries(await Promise.all(
+  Object.entries(rendererPackageRoots).map(async ([bindingId, root]) => [
+    bindingId,
+    parseJsonStrict(await readFile(join(repositoryRoot, root, 'package.json'), 'utf8')),
+  ]),
+));
+
+/** `^X.Y.0-0`: the renderer's own minor line, from the first prerelease of X.Y.0, so its later builds stay compatible. */
+function compatibleVersionRange(version) {
+  const match = /^(\d+)\.(\d+)\.\d+(?:[-+].*)?$/u.exec(version);
+  if (match === null) throw new Error(`CATALOG_RENDERER_VERSION_INVALID: ${version} is not a semantic version`);
+  return `^${match[1]}.${match[2]}.0-0`;
+}
+
+// The digests of one binding, keyed by profile, from the package-level `<binding>:<profile>` requirement-set map.
+function profileDigests(requirementSets, ref) {
+  const prefix = `${ref}:`;
+  return Object.fromEntries(Object.entries(requirementSets)
+    .filter(([key]) => key.startsWith(prefix))
+    .map(([key, digest]) => [key.slice(prefix.length), digest]));
+}
+
+// A renderer's compatibility with the catalog is judged per binding, by content: the revision of its spec and the digests
+// of its requirement sets. The package version range says which builds of the renderer may be asked, never one build.
+const releaseBindings = bundle.artifacts
+  .filter(({ kind }) => kind === 'component')
+  .flatMap((artifact) => artifact.platforms
+    .filter((bindingId) => Object.hasOwn(rendererPackages, bindingId))
+    .map((bindingId) => {
+      const renderer = rendererPackages[bindingId];
+      const ref = `${artifact.id}#${bindingId}`;
+      const tokenRequirementSetDigests = profileDigests(tokenRequirementSets, ref);
+      const platformSafetyRequirementSetDigests = profileDigests(platformSafetyRequirementSets, ref);
+      if (Object.keys(tokenRequirementSetDigests).length === 0 || Object.keys(platformSafetyRequirementSetDigests).length === 0) {
+        throw new Error(`CATALOG_RELEASE_BINDING_UNCOMPILED: ${ref} has no compiled requirement set`);
+      }
+      return {
+        // The descriptor id a renderer package publishes for itself (`renderer:<package>`).
+        descriptor: `renderer:${renderer.name}`,
+        binding: ref,
+        package: renderer.name,
+        versionRange: compatibleVersionRange(renderer.version),
+        specRevision: artifact.bindingSpecRevisions[bindingId],
+        tokenRequirementSetDigests,
+        platformSafetyRequirementSetDigests,
+      };
+    }))
+  .sort((left, right) => (left.binding < right.binding ? -1 : left.binding > right.binding ? 1 : 0));
 const releaseManifest = {
   id: `muxui-release:${packageManifest.version}:${bundle.sourceRevision}`,
   releaseVersion: packageManifest.version,
@@ -80,7 +140,7 @@ const releaseManifest = {
     version: packageManifest.version,
     digest: bundle.catalogDigest,
   },
-  bindings: [],
+  bindings: releaseBindings,
 };
 const packageData = {
   schema: 'muxui-catalog-package-v2',
@@ -92,18 +152,12 @@ const packageData = {
   supportedQueryApiVersions: bundle.supportedQueryApiVersions,
   schemaRange: '^3.0.0',
   sourceRevision: bundle.sourceRevision,
-  tokenRequirementSets: Object.fromEntries(bindingDescriptors.map((descriptor) => [
-    `${descriptor.ref}:${descriptor.profile}`,
-    descriptor.tokenRequirementSetDigest,
-  ])),
+  tokenRequirementSets,
   platformSafetyContract: {
     version: bundle.platformSafetyContract.contractVersion,
     digest: bundle.platformSafetyContractDigest,
   },
-  platformSafetyRequirementSets: Object.fromEntries(platformSafetyDescriptors.map(({ key, digest }) => [
-    key,
-    digest,
-  ])),
+  platformSafetyRequirementSets,
   provenance: {
     kind: 'source-revision',
     value: bundle.sourceRevision,
