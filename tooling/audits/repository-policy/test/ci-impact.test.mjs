@@ -2132,6 +2132,26 @@ test('the full React proof runs a browser test that the plan also selects only o
   ]);
 });
 
+test('the full React package check is not followed by reruns of the top-level test files it runs', async () => {
+  const react = await plan(['packages/react/src/generate.mjs']);
+  assert.equal(react.reactPackageFull, true);
+  const crossEngine = 'test/cross-engine-unit.test.mjs';
+  const optIn = "import { browserEngines } from './harness.mjs'; browserEngines();";
+  const selected = ['test/styling-emission.test.mjs', 'test/styling-recipes.test.mjs', 'test/helpers/shared.test.mjs', crossEngine];
+  const reactCommands = (result) => ownCommands(executionGroups(result, {
+    packages, environment: {}, pageIndex, testSources: { [crossEngine]: optIn },
+  }).find(({ id }) => id === 'react')).map(({ args }) => args.join(' '));
+  const exec = '--filter @muxui/react exec node --test --test-concurrency=1';
+
+  // Only a test the package check runs differently (every engine) or does not run (below test/) keeps its command.
+  const full = reactCommands({ ...react, reactTestFiles: selected });
+  assert.ok(full.includes('--filter @muxui/react run check'));
+  assert.deepEqual(full.filter((command) => command.startsWith(exec)), [`${exec} test/helpers/shared.test.mjs`, `${exec} ${crossEngine}`]);
+  // Without the full package check, every selected file runs.
+  const scoped = reactCommands({ ...react, reactPackageFull: false, reactTestFiles: selected });
+  assert.deepEqual(scoped.filter((command) => command.startsWith(exec)), selected.map((file) => `${exec} ${file}`));
+});
+
 test('each browser group is reused on its own routing', () => {
   const group = (id) => ({ id, kind: 'browser', packageDirectories: ['packages/react'] });
   const delta = (groupIds) => ({ changedPaths: ['apps/docs/src/index.md'], groupIds, storyRuns: [], storyTooling: false });

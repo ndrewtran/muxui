@@ -45,8 +45,10 @@ deduplicate those scopes.
 React browser tests run in per-engine groups, in pull requests and in the full
 plan. A test that calls the harness's `browserEngines()` runs once in each of
 `browser-chromium`, `browser-firefox`, and `browser-webkit`; every other browser
-test runs once, in `browser-chromium-only`; unit tests stay in `react`. A group
-installs only its own engine. A component check leaves its browser tests to
+test runs once, in `browser-chromium-only`; unit tests stay in `react`. The full
+React package check runs every top-level test file once, so a plan that has it
+adds a separate command only for a selected unit test below `test/` or one that
+runs in every engine. A group installs only its own engine. A component check leaves its browser tests to
 these groups (`MUXUI_COMPONENT_SKIP_BROWSER_TESTS=1`) and keeps their case
 filters. A long list splits into numbered shards, such as `browser-firefox-2`:
 more than six cross-engine files, or more than 18 Chromium-only files. A file's

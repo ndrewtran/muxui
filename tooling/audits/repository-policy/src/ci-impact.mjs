@@ -2355,6 +2355,9 @@ function pullRequestBrowserRuns(plan, packages) {
   return [...runs.values()].sort((left, right) => (left.file < right.file ? -1 : 1));
 }
 
+// A test file the React package check runs: its `test/*.test.mjs` glob plus the serial list.
+const topLevelReactTest = /^test\/[^/]+\.test\.mjs$/u;
+
 function plannedCommands(plan, {
   packages = [], metadataPrepared = false, environment = process.env, pageIndex = [], testSources = {},
 } = {}) {
@@ -2429,8 +2432,12 @@ function plannedCommands(plan, {
   }
   if (plan.docs || plan.scale) addScaleDocsBrowserCommand(add);
   for (const testFile of plan.reactTestFiles.filter((file) => !isBrowserTestFile(file))) {
+    const everyEngine = runsInEveryEngine(testFile, testSources);
+    // The full package check already runs each top-level test file, once and in the default
+    // engine, so a separate command only adds a test it runs differently or does not run.
+    if (plan.reactPackageFull && !everyEngine && topLevelReactTest.test(testFile)) continue;
     add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', testFile], {
-      env: runsInEveryEngine(testFile, testSources) ? crossEngineEnvironment : {},
+      env: everyEngine ? crossEngineEnvironment : {},
     });
   }
   addBrowserLayout(add, browser);
