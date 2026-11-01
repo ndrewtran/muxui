@@ -122,6 +122,8 @@ const releaseBindings = bundle.artifacts
         binding: ref,
         package: renderer.name,
         versionRange: compatibleVersionRange(renderer.version),
+        // The renderer exports the component under its artifact name; the subpath it lives at stays renderer-owned.
+        exportName: artifact.name,
         specRevision: artifact.bindingSpecRevisions[bindingId],
         tokenRequirementSetDigests,
         platformSafetyRequirementSetDigests,

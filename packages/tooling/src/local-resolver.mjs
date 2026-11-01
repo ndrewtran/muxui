@@ -181,7 +181,7 @@ function validateNormalizedInput(input) {
     assertUnique(release.bindings, 'binding', `${release.id}.bindings`);
     for (const binding of release.bindings) {
       assertClosed(binding, [
-        'descriptor', 'binding', 'package', 'versionRange', 'specRevision',
+        'descriptor', 'binding', 'package', 'versionRange', 'exportName', 'specRevision',
         'tokenRequirementSetDigests', 'platformSafetyRequirementSetDigests',
       ], `${release.id}.binding`);
       assertClosedDigestMap(binding.tokenRequirementSetDigests, `${release.id}.binding.tokenRequirementSetDigests`);
@@ -238,6 +238,7 @@ function rangeAllows(range, version) {
   if (!valid(version)) return false;
   if (range === 'workspace:*') return true;
   const normalized = range?.startsWith('workspace:') ? range.slice('workspace:'.length) : range;
+  // npm and pnpm resolve `*` to the `latest` dist-tag even when that is a prerelease, so `*` admits any installed version.
   if (normalized === '*') return true;
   if (['workspace:^', 'workspace:~'].includes(range)) return true;
   if (['^', '~'].includes(normalized)) return false;
@@ -254,14 +255,16 @@ function reportedDigests(value) {
 }
 
 /**
- * A binding's export identity is `<package>[/<subpath>][#<Name>]` and names the package that renders it. The installed
- * package's own export map is checked where its manifest is read.
+ * A binding's export identity is `<package>[/<subpath>]#<Name>`: the member is the catalog's `exportName` and the module is
+ * the package or one of its subpaths. The subpath is renderer-owned; the installed package's own export map is checked
+ * where its manifest is read.
  */
-function exportBelongsTo(identity, packageName) {
+function exportMatches(identity, { package: packageName, exportName }) {
   if (typeof identity !== 'string') return false;
   const [specifier, member, ...extra] = identity.split('#');
   return extra.length === 0
-    && (member === undefined || /^[A-Za-z_$][\w$]*$/u.test(member))
+    && member !== undefined
+    && member === exportName
     && (specifier === packageName || specifier.startsWith(`${packageName}/`));
 }
 
@@ -397,10 +400,10 @@ function compatibilityFor({
       });
     }
     const described = descriptor.bindings[binding];
-    if (!exportBelongsTo(described.export, expected.package)) {
+    if (!exportMatches(described.export, expected)) {
       failures.push({
         dimension: 'export',
-        required: `${expected.package}[/<subpath>][#<Name>]`,
+        required: `${expected.package}[/<subpath>]#${expected.exportName}`,
         actual: reported(described.export),
       });
     }

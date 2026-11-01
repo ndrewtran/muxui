@@ -77,7 +77,7 @@
       "bindings": {
         "core:component:button#native.react-native": {
           "specRevision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-          "export": "@core-ui/react-native/button",
+          "export": "@core-ui/react-native/button#Button",
           "lifecycle": "experimental",
           "strategy": "direct",
           "tokenRequirementSetDigests": {
@@ -102,7 +102,7 @@
       "bindings": {
         "core:component:button#web.react": {
           "specRevision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-          "export": "@core-ui/react/button",
+          "export": "@core-ui/react/button#Button",
           "lifecycle": "experimental",
           "strategy": "direct",
           "tokenRequirementSetDigests": {
@@ -124,7 +124,7 @@
       "bindings": {
         "core:component:button#web.react": {
           "specRevision": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
-          "export": "@core-ui/react/button",
+          "export": "@core-ui/react/button#Button",
           "lifecycle": "experimental",
           "strategy": "direct",
           "tokenRequirementSetDigests": {
@@ -156,6 +156,7 @@
           "binding": "core:component:button#native.react-native",
           "package": "@core-ui/react-native",
           "versionRange": "^1.0.0-0",
+          "exportName": "Button",
           "specRevision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
           "tokenRequirementSetDigests": {
             "native.ios": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
@@ -172,6 +173,7 @@
           "binding": "core:component:button#web.react",
           "package": "@core-ui/react",
           "versionRange": "^1.0.0-0",
+          "exportName": "Button",
           "specRevision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
           "tokenRequirementSetDigests": {
             "web.react": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
@@ -200,6 +202,7 @@
           "binding": "core:component:button#web.react",
           "package": "@core-ui/react",
           "versionRange": "^1.1.0-0",
+          "exportName": "Button",
           "specRevision": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
           "tokenRequirementSetDigests": {
             "web.react": "sha256:8888888888888888888888888888888888888888888888888888888888888888"

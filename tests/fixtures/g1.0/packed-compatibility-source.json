@@ -19,7 +19,7 @@
         {
           "artifact": "core:component:button",
           "binding": "web.react",
-          "export": "@core-ui/react/button",
+          "export": "@core-ui/react/button#Button",
           "tokenProfiles": ["web.react"],
           "platformSafetyProfiles": ["web.react"]
         }

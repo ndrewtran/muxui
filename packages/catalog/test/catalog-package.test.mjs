@@ -71,6 +71,7 @@ test('E-G0.4 package layout binds package, catalog, API, schema, digest, and sou
     binding: 'muxui:component:button#web.react',
     package: reactPackage.name,
     versionRange: `^${reactMajor}.${reactMinor}.0-0`,
+    exportName: component.name,
     specRevision: component.bindingSpecRevisions['web.react'],
     tokenRequirementSetDigests: { 'web.react': component.tokenRequirementSets['web.react:web.react'].digest },
     platformSafetyRequirementSetDigests: { 'web.react': component.platformSafetyRequirementSets['web.react:web.react'].digest },

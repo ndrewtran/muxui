@@ -47,6 +47,9 @@ export function assertPackedCompatibilityFixture(fixture) {
     const descriptor = descriptors.get(releaseBinding.descriptor);
     const described = descriptor?.bindings[releaseBinding.binding];
     if (!described) fail(`missing descriptor binding ${releaseBinding.binding}`);
+    if (!described.export.endsWith(`#${releaseBinding.exportName}`)) {
+      fail(`${releaseBinding.binding} release exportName does not match its descriptor export`);
+    }
     for (const field of [
       'specRevision',
       'tokenRequirementSetDigests',
@@ -118,6 +121,7 @@ export function createPackedCompatibilityFixture({ source, catalogPackage, catal
       binding,
       package: descriptor.package,
       versionRange: compatibleVersionRange(descriptor.version),
+      exportName: catalogBundle.artifacts.find(({ id }) => id === binding.split('#')[0]).name,
       specRevision: definition.specRevision,
       tokenRequirementSetDigests: definition.tokenRequirementSetDigests,
       platformSafetyRequirementSetDigests: definition.platformSafetyRequirementSetDigests,

@@ -130,7 +130,7 @@ function validateDescriptor(descriptor) {
     ) {
       fail(`${descriptor.id}.${bindingId} has an invalid revision`);
     }
-    if (!binding.export.startsWith(`${descriptor.package}/`)) {
+    if (!binding.export.startsWith(`${descriptor.package}/`) || !/#[A-Za-z_$][\w$]*$/u.test(binding.export)) {
       fail(`${descriptor.id}.${bindingId} export does not belong to its package`);
     }
   }
@@ -161,7 +161,7 @@ function validateRelease(release, catalogs, descriptors) {
   }
   for (const binding of release.bindings) {
     const bindingFields = [
-      'descriptor', 'binding', 'package', 'versionRange', 'specRevision',
+      'descriptor', 'binding', 'package', 'versionRange', 'exportName', 'specRevision',
       'tokenRequirementSetDigests',
       'platformSafetyRequirementSetDigests',
     ];
@@ -175,6 +175,7 @@ function validateRelease(release, catalogs, descriptors) {
       !descriptor
       || descriptor.package !== binding.package
       || binding.versionRange !== `^${major}.${minor}.0-0`
+      || !described?.export.endsWith(`#${binding.exportName}`)
       || described?.specRevision !== binding.specRevision
       || JSON.stringify(described?.tokenRequirementSetDigests) !== JSON.stringify(binding.tokenRequirementSetDigests)
       || JSON.stringify(described?.platformSafetyRequirementSetDigests) !== JSON.stringify(binding.platformSafetyRequirementSetDigests)

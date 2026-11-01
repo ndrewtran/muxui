@@ -86,10 +86,8 @@ const safetyDigest = 'sha256:ddddddddddddddddddddddddddddddddddddddddddddddddddd
  * binding refs). Like the real catalog, the release lists every binding; a renderer that lacks one is simply missing it.
  */
 function rendererDocuments(bundle, bindings, installed) {
-  const specRevisionOf = (binding) => {
-    const [id, bindingId] = binding.split('#');
-    return bundle.artifacts.find((artifact) => artifact.id === id).bindingSpecRevisions[bindingId];
-  };
+  const artifactOf = (binding) => bundle.artifacts.find(({ id }) => id === binding.split('#')[0]);
+  const specRevisionOf = (binding) => artifactOf(binding).bindingSpecRevisions[binding.split('#')[1]];
   const descriptor = {
     id: 'renderer-react-compatible',
     descriptorVersion: '1.0.0',
@@ -101,7 +99,7 @@ function rendererDocuments(bundle, bindings, installed) {
       const [id] = binding.split('#');
       return [binding, {
         specRevision: specRevisionOf(binding),
-        export: `@muxui/react/${id.split(':').at(-1)}`,
+        export: `@muxui/react/${id.split(':').at(-1)}#${artifactOf(binding).name}`,
         lifecycle: 'experimental',
         strategy: 'direct',
         tokenRequirementSetDigests: { 'web.react': tokenDigest },
@@ -143,6 +141,7 @@ function rendererDocuments(bundle, bindings, installed) {
         binding,
         package: '@muxui/react',
         versionRange: '^1.0.0-0',
+        exportName: artifactOf(binding).name,
         specRevision: specRevisionOf(binding),
         tokenRequirementSetDigests: { 'web.react': tokenDigest },
         platformSafetyRequirementSetDigests: { 'web.react': safetyDigest },
@@ -377,6 +376,31 @@ test('binding compatibility rejects a renderer build outside the binding version
       version,
     );
     validateFamily('query-envelope', result);
+  }
+});
+
+test('binding compatibility requires the descriptor export to be the binding component', async () => {
+  for (const member of ['Slider', 'DefinitelyMissing']) {
+    for (const specifier of ['@muxui/react/button', '@muxui/react']) {
+      const value = await corpus();
+      reactDescriptor(value).bindings['muxui:component:button#web.react'].export = `${specifier}#${member}`;
+      const result = resolve(value, directGraph(value));
+      assert.equal(result.error.code, 'MUXUI_CATALOG_INCOMPATIBLE', `${specifier}#${member}`);
+      assert.deepEqual(
+        result.error.details.compatibilityFailures.map(({ dimension, required, actual }) => [dimension, required, actual]),
+        [['export', '@muxui/react[/<subpath>]#Button', `${specifier}#${member}`]],
+      );
+    }
+  }
+  // Another package, or no member at all, is not the binding either.
+  for (const identity of ['@muxui/other/button#Button', '@muxui/react/button']) {
+    const value = await corpus();
+    reactDescriptor(value).bindings['muxui:component:button#web.react'].export = identity;
+    assert.deepEqual(
+      resolve(value, directGraph(value)).error.details.compatibilityFailures.map(({ dimension }) => dimension),
+      ['export'],
+      identity,
+    );
   }
 });
 
@@ -729,7 +753,7 @@ test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver'
     ]);
     assert.equal(cliIncompatible.exitCode, 16);
 
-    descriptor.bindings[binding].export = '@muxui/react/button';
+    descriptor.bindings[binding].export = '@muxui/react/button#Button';
     identity.schema = 'muxui-catalog-package-v2-unknown';
     await fixture.write();
     const unknownIdentity = resolvePnpmProjectCatalog({ project, bindings: [binding] });
@@ -1016,6 +1040,12 @@ test('E-G0.4 pnpm adapter reads the packed @muxui/react renderer descriptor', as
     await mutated((value) => { delete value.bindings[bindings[0]].export; });
     compatibilityFailure('renderer-package');
 
+    // A member of the package's export map that is not the binding's component: another real member, or none at all.
+    for (const member of ['Slider', 'DefinitelyMissing']) {
+      await mutated((value) => { value.bindings[bindings[0]].export = `${manifest.name}#${member}`; });
+      compatibilityFailure('export');
+    }
+
     await fixture.restoreDescriptor();
     assert.equal(resolvePnpmProjectCatalog({ project, bindings }).type, 'success');
     await fixture.dropPointer();
@@ -1035,10 +1065,14 @@ test('the real catalog resolves the workspace @muxui/react with no injected rele
     assert.equal(button.exitCode, 0);
     assert.equal(JSON.parse(button.stdout).meta.resolution.targetPackages['@muxui/react'], manifest.version);
 
+    // Every binding the catalog lists resolves against the descriptor: its spec revision, digests and export member all agree.
+    const everything = resolvePnpmProjectCatalog({ project, bindings: canonical.map(({ binding }) => binding) });
+    assert.equal(everything.type, 'success');
+    assert.ok(canonical.length > 1);
+
     // Project-wide discovery keeps the component now that the installed renderer provides its binding.
     const listed = JSON.parse(runCli(['list', '--project', project, '--platform', 'web.react', '--json']).stdout);
     assert.ok(listed.data.items.some(({ id }) => id === 'muxui:component:button'));
-    assert.ok(canonical.length > 1);
   } finally {
     await rm(fixtureRoot, { recursive: true, force: true });
   }
