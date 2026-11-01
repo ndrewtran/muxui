@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { appendFile, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { appendFile, cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, relative, resolve as resolvePath } from 'node:path';
+import { tmpdir } from 'node:os';
+import { dirname, join, relative, resolve as resolvePath } from 'node:path';
 import test from 'node:test';
 import { canonicalJson, parseJsonStrict, validateFamily } from '@muxui/schema';
 import {
@@ -705,5 +706,264 @@ test('E-BL1-07 an installed tuple that lacks a required participant binding hide
     );
   } finally {
     await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+const reactPackageRoot = resolvePath(import.meta.dirname, '../../react');
+
+/** `pnpm pack` of the checkout's @muxui/react into `destination`, without lifecycle scripts; returns the tarball path. */
+function packReact(destination) {
+  const packed = spawnSync('pnpm', [
+    '--config.ignore-scripts=true', '--config.engine-strict=false',
+    'pack', '--json', '--pack-destination', destination,
+  ], { cwd: reactPackageRoot, encoding: 'utf8' });
+  assert.equal(packed.status, 0, packed.stderr);
+  return JSON.parse(packed.stdout).filename;
+}
+
+/**
+ * A consumer that has only the tarball and the runtime `dependencies` and `peerDependencies` it declares, in a fresh
+ * directory under the OS temp directory (no checkout `node_modules` above it). Each dependency is linked on its own
+ * from the checkout's install, whose store layout resolves its transitive dependencies; `withheld` leaves one out.
+ */
+async function createIsolatedConsumer(tarball, withheld) {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-packed-consumer-'));
+  const modules = join(root, 'node_modules');
+  const packageRoot = join(modules, '@muxui/react');
+  await mkdir(packageRoot, { recursive: true });
+  const extracted = spawnSync('tar', ['-xzf', tarball, '-C', packageRoot, '--strip-components=1'], { encoding: 'utf8' });
+  assert.equal(extracted.status, 0, extracted.stderr);
+  const { dependencies = {}, peerDependencies = {} } = parseJsonStrict(await readFile(join(packageRoot, 'package.json'), 'utf8'));
+  for (const name of Object.keys({ ...dependencies, ...peerDependencies }).filter((dependency) => dependency !== withheld)) {
+    await mkdir(dirname(join(modules, name)), { recursive: true });
+    await symlink(await realpath(join(reactPackageRoot, 'node_modules', name)), join(modules, name));
+  }
+  await writeJson(join(root, 'package.json'), { type: 'module' });
+  return root;
+}
+
+/** Imports each `[specifier, names]` from the consumer through Node's own resolution, reporting missing names or the import error. */
+function importFromConsumer(root, checks) {
+  const script = `
+    const report = [];
+    for (const [specifier, names] of ${JSON.stringify(checks)}) {
+      try {
+        const loaded = await import(specifier);
+        report.push({ specifier, missing: names.filter((name) => loaded[name] === undefined) });
+      } catch (error) {
+        report.push({ specifier, error: error.code, message: error.message });
+      }
+    }
+    console.log(JSON.stringify(report));`;
+  const run = spawnSync(process.execPath, ['--input-type=module', '-e', script], { cwd: root, encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stderr);
+  return JSON.parse(run.stdout.trim().split('\n').at(-1));
+}
+
+/**
+ * A pnpm project over this repository's own catalog and the packed `@muxui/react`: `pnpm pack` output extracted with
+ * its manifest untouched. The packed JavaScript is loaded separately, in an isolated consumer.
+ *
+ * The catalog's release tuple is FIXTURE DATA. The repository's release manifest lists no renderer bindings yet, so
+ * the fixture lists every `web.react` component binding of the compiled catalog, with the catalog's own spec revisions
+ * and requirement digests, as a future release would. Nothing in it is read from the descriptor under test.
+ */
+async function createPackedReactProject(fixtureRoot) {
+  const catalogSource = resolvePath(import.meta.dirname, '../../catalog/generated');
+  const catalogRoot = join(fixtureRoot, 'catalog');
+  const packedRoot = join(fixtureRoot, 'renderer');
+  await mkdir(join(catalogRoot, 'generated'), { recursive: true });
+  await mkdir(packedRoot);
+
+  const tarball = packReact(fixtureRoot);
+  const extracted = spawnSync('tar', ['-xzf', tarball, '-C', packedRoot, '--strip-components=1'], { encoding: 'utf8' });
+  assert.equal(extracted.status, 0, extracted.stderr);
+  const manifest = parseJsonStrict(await readFile(join(packedRoot, 'package.json'), 'utf8'));
+
+  const bundle = parseJsonStrict(await readFile(join(catalogSource, 'catalog.json'), 'utf8'));
+  const identity = parseJsonStrict(await readFile(join(catalogSource, 'catalog-package.json'), 'utf8'));
+  // The canonical binding set is the catalog's, and each binding's module is its packed binding record's.
+  const contract = JSON.parse((await readFile(join(packedRoot, 'generated/r1-6-contract.json'), 'utf8'))
+    .split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
+  const moduleOf = new Map(contract.components.map(({ binding, module }) => [binding, module]));
+  const canonical = bundle.artifacts
+    .filter(({ kind, platforms }) => kind === 'component' && platforms.includes('web.react'))
+    .map((artifact) => {
+      const binding = `${artifact.id}#web.react`;
+      const module = moduleOf.get(binding);
+      assert.ok(module, `${binding} has a packed binding record`);
+      return {
+        binding,
+        module,
+        name: artifact.name,
+        export: `${manifest.name}${module === '.' ? '' : module.slice(1)}#${artifact.name}`,
+        specRevision: artifact.bindingSpecRevisions['web.react'],
+        tokenRequirementSetDigests: { 'web.react': identity.tokenRequirementSets[`${binding}:web.react`] },
+        platformSafetyRequirementSetDigests: { 'web.react': identity.platformSafetyRequirementSets[`${binding}:web.react`] },
+      };
+    })
+    .sort((left, right) => compareBindings(left.binding, right.binding));
+  identity.releaseManifest.bindings = canonical.map((entry) => ({
+    descriptor: `renderer:${manifest.name}`,
+    binding: entry.binding,
+    package: manifest.name,
+    version: manifest.version,
+    export: entry.export,
+    specRevision: entry.specRevision,
+    tokenRequirementSetDigests: entry.tokenRequirementSetDigests,
+    platformSafetyRequirementSetDigests: entry.platformSafetyRequirementSetDigests,
+  }));
+
+  await writeJson(join(fixtureRoot, 'package.json'), {
+    name: 'react-packed-fixture',
+    version: '1.0.0',
+    private: true,
+    packageManager: 'pnpm@10.33.0',
+    dependencies: { '@muxui/catalog': 'workspace:*', [manifest.name]: 'link:./renderer' },
+  });
+  await writeFile(join(fixtureRoot, 'pnpm-workspace.yaml'), 'packages:\n  - catalog\n');
+  await writeJson(join(catalogRoot, 'package.json'), {
+    name: '@muxui/catalog',
+    version: identity.version,
+    private: true,
+    muxUi: { catalogPackage: './generated/catalog-package.json' },
+  });
+  for (const file of ['catalog.json', 'catalog.json.provenance']) {
+    await cp(join(catalogSource, file), join(catalogRoot, 'generated', file));
+  }
+  await writeProjection(
+    join(catalogRoot, 'generated/catalog-package.json'),
+    'packages/catalog/generated/catalog-package.json',
+    identity,
+  );
+  const install = spawnSync('pnpm', ['install', '--offline', '--ignore-scripts'], {
+    cwd: fixtureRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(install.status, 0, install.stderr);
+
+  const descriptorFile = 'generated/renderer-descriptor.json';
+  const originals = Object.fromEntries(await Promise.all([descriptorFile, `${descriptorFile}.provenance`].map(
+    async (file) => [file, await readFile(join(packedRoot, file), 'utf8')],
+  )));
+  return {
+    path: relative(process.cwd(), fixtureRoot).split('\\').join('/'),
+    manifest,
+    tarball,
+    canonical,
+    descriptor: parseJsonStrict(originals[descriptorFile]),
+    identity,
+    /** Replaces the packed descriptor with `value`, under a provenance sidecar that matches it. */
+    writeDescriptor: (value) => writeProjection(
+      join(packedRoot, descriptorFile),
+      'packages/react/generated/renderer-descriptor.json',
+      value,
+    ),
+    async restoreDescriptor() {
+      for (const [file, text] of Object.entries(originals)) await writeFile(join(packedRoot, file), text);
+    },
+    dropPointer: () => {
+      const { muxUi: _pointer, ...withoutPointer } = manifest;
+      return writeJson(join(packedRoot, 'package.json'), withoutPointer);
+    },
+  };
+}
+
+function compareBindings(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+test('E-G0.4 pnpm adapter reads the packed @muxui/react renderer descriptor', async () => {
+  await mkdir(join(process.cwd(), 'fixtures'), { recursive: true });
+  const fixtureRoot = await mkdtemp(join(process.cwd(), 'fixtures/.g0-4-react-packed-'));
+  let consumer;
+  try {
+    const fixture = await createPackedReactProject(fixtureRoot);
+    const { canonical, descriptor, identity, manifest, path: project } = fixture;
+    const bindings = canonical.map(({ binding }) => binding);
+
+    // The packed descriptor describes the catalog's complete web.react binding set, at the catalog's own
+    // release, revisions and digests, and the packed manifest points at it.
+    assert.ok(bindings.length > 0);
+    assert.equal(manifest.muxUi.rendererDescriptor, './generated/renderer-descriptor.json');
+    assert.deepEqual(Object.keys(descriptor.bindings).sort(compareBindings), bindings);
+    assert.equal(descriptor.releaseProvenance, identity.releaseManifest.id);
+
+    // Every indexed export loads through the public specifiers (the package root and each subpath a binding uses),
+    // by Node's own resolution of the export map, in a consumer that has only the tarball and its declared dependencies.
+    const checks = new Map();
+    for (const { export: identity, name } of canonical) {
+      const [specifier] = identity.split('#');
+      checks.set(specifier, [...(checks.get(specifier) ?? []), name]);
+    }
+    consumer = await createIsolatedConsumer(fixture.tarball);
+    assert.deepEqual(
+      importFromConsumer(consumer, [...checks]),
+      [...checks.keys()].map((specifier) => ({ specifier, missing: [] })),
+    );
+
+    const resolved = resolvePnpmProjectCatalog({ project, bindings });
+    assert.equal(resolved.type, 'success');
+    assert.equal(
+      resolved.api.getArtifact({
+        id: 'muxui:component:button',
+        platform: 'web.react',
+        detail: 'compact',
+        purpose: null,
+        section: null,
+      }).meta.resolution.targetPackages['@muxui/react'],
+      manifest.version,
+    );
+
+    const compatibilityFailure = (dimension) => {
+      const result = resolvePnpmProjectCatalog({ project, bindings });
+      assert.equal(result.type, 'error');
+      assert.equal(result.error.code, 'MUXUI_CATALOG_INCOMPATIBLE');
+      assert.deepEqual(
+        [...new Set(result.error.details.compatibilityFailures.map((failure) => failure.dimension))],
+        [dimension],
+      );
+    };
+    const mutated = (mutate) => {
+      const value = structuredClone(descriptor);
+      mutate(value);
+      return fixture.writeDescriptor(value);
+    };
+
+    await mutated((value) => { value.extra = true; });
+    assert.throws(() => resolvePnpmProjectCatalog({ project, bindings }), /MUXUI_RESOLVER_INPUT_INVALID: .* unknown field extra/u);
+
+    await mutated((value) => { value.bindings[bindings[0]].specRevision = `sha256:${'0'.repeat(64)}`; });
+    compatibilityFailure('binding-spec');
+
+    // An export identity the package's export map does not name hides the whole descriptor.
+    await mutated((value) => { value.bindings[bindings[0]].export = '@muxui/react/unmapped#Button'; });
+    compatibilityFailure('renderer-package');
+
+    await fixture.restoreDescriptor();
+    assert.equal(resolvePnpmProjectCatalog({ project, bindings }).type, 'success');
+    await fixture.dropPointer();
+    compatibilityFailure('renderer-package');
+  } finally {
+    if (consumer) await rm(consumer, { recursive: true, force: true });
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+// The control for the isolated consumer: the same setup, minus one dependency the package declares and imports.
+test('E-G0.4 a packed consumer without a declared dependency cannot import the package', async () => {
+  const scratch = await mkdtemp(join(tmpdir(), 'muxui-packed-tarball-'));
+  const consumers = [];
+  try {
+    const tarball = packReact(scratch);
+    const check = [['@muxui/react/markdown', ['Markdown']]];
+    consumers.push(await createIsolatedConsumer(tarball));
+    assert.deepEqual(importFromConsumer(consumers[0], check), [{ specifier: '@muxui/react/markdown', missing: [] }]);
+    consumers.push(await createIsolatedConsumer(tarball, 'marked'));
+    const [report] = importFromConsumer(consumers[1], check);
+    assert.equal(report.error, 'ERR_MODULE_NOT_FOUND');
+    assert.match(report.message, /'marked'/u);
+  } finally {
+    await Promise.all([scratch, ...consumers].map((path) => rm(path, { recursive: true, force: true })));
   }
 });

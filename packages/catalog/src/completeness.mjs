@@ -1,5 +1,6 @@
-import { readdir } from 'node:fs/promises';
-import { join, relative, sep } from 'node:path';
+import { readFile, readdir } from 'node:fs/promises';
+import { join, relative, resolve, sep } from 'node:path';
+import { parseJsonStrict } from '@muxui/schema';
 
 // Canonical component, pattern, or example records that stay out of the manifest on
 // purpose. Keys are repository-relative record paths; values give the reason.
@@ -78,4 +79,18 @@ export async function syncSourceRecords(repositoryRoot, listed, exclusions = MAN
     .map((entry) => ({ ...entry, family: familyOf.get(entry.path) }));
   const keptPaths = new Set(kept.map(({ path }) => path));
   return [...kept, ...derived.filter(({ path }) => !keptPaths.has(path))];
+}
+
+/**
+ * The source manifest the catalog generator writes: the committed settings with
+ * `records` synced against disk. Read-only, so a caller that compiles before the
+ * generator has written the file (React generation runs first) passes this to
+ * `compileCatalog({ sourceManifest })` and sees the same inventory.
+ */
+export async function synchronizedSourceManifest(
+  repositoryRoot,
+  sourceManifestPath = 'packages/catalog/catalog-sources.json',
+) {
+  const listed = parseJsonStrict(await readFile(resolve(repositoryRoot, sourceManifestPath), 'utf8'));
+  return { ...listed, records: await syncSourceRecords(repositoryRoot, listed.records) };
 }

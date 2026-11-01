@@ -302,6 +302,21 @@ function loadCatalogCandidate(packageRoot) {
   };
 }
 
+/**
+ * A binding's export identity is `<package>[/<subpath>][#<Name>]`: the module the
+ * package exports (the root when there is no subpath), then the member it names.
+ * It resolves only when that module is in the package's export map.
+ */
+function exportResolves(identity, { name, exports }) {
+  if (typeof identity !== 'string') return false;
+  const [specifier, member, ...extra] = identity.split('#');
+  if (extra.length > 0 || (member !== undefined && !/^[A-Za-z_$][\w$]*$/u.test(member))) return false;
+  const module = specifier === name
+    ? '.'
+    : specifier.startsWith(`${name}/`) ? `./${specifier.slice(name.length + 1)}` : null;
+  return module !== null && Object.hasOwn(exports ?? {}, module);
+}
+
 function loadRendererCandidate(packageRoot, expectedDescriptorId) {
   try {
     const packageManifest = readJson(join(packageRoot, 'package.json'));
@@ -320,11 +335,9 @@ function loadRendererCandidate(packageRoot, expectedDescriptorId) {
       || descriptor.package !== packageManifest.name
       || descriptor.version !== packageManifest.version
     ) return null;
-    if (Object.values(descriptor.bindings ?? {}).some(({ export: exportName }) => {
-      const prefix = `${packageManifest.name}/`;
-      if (typeof exportName !== 'string' || !exportName.startsWith(prefix)) return true;
-      return !Object.hasOwn(packageManifest.exports ?? {}, `./${exportName.slice(prefix.length)}`);
-    })) return null;
+    if (Object.values(descriptor.bindings ?? {}).some(({ export: identity }) => (
+      !exportResolves(identity, packageManifest)
+    ))) return null;
     return descriptor;
   } catch {
     return null;

@@ -79,6 +79,10 @@
     {
       "path": "packages/react/generated/release.json",
       "provenance": "packages/react/generated/release.json.provenance"
+    },
+    {
+      "path": "packages/react/generated/renderer-descriptor.json",
+      "provenance": "packages/react/generated/renderer-descriptor.json.provenance"
     }
   ],
   "globalTaskInputs": [
@@ -111,7 +115,16 @@
     "apps/component-reference.mjs": ["@muxui/docs", "@muxui/react-storybook"],
     "apps/guide-links.mjs": ["@muxui/docs", "@muxui/react-storybook"],
     "apps/scale/src/": ["@muxui/docs"],
-    "catalog/": ["@muxui/react"]
+    "catalog/": ["@muxui/react"],
+    "packages/catalog/catalog-sources.json": ["@muxui/react"],
+    "packages/catalog/package.json": ["@muxui/react"],
+    "packages/catalog/src/compiler.mjs": ["@muxui/react"],
+    "packages/catalog/src/completeness.mjs": ["@muxui/react"],
+    "packages/catalog/src/pattern-content.mjs": ["@muxui/react"],
+    "packages/catalog/src/pattern-imports.mjs": ["@muxui/react"],
+    "packages/catalog/token-section-page-budget-profile.json": ["@muxui/react"],
+    "packages/tooling/command-registry.json": ["@muxui/react"],
+    "strategy/platform-safety-contract.json": ["@muxui/react"]
   },
   "generationPrerequisites": {
     "@muxui/repository-policy": ["@muxui/react"]
@@ -197,6 +210,21 @@
       "packages/react/src/supplemental/styles.css",
       "packages/react/test/browser/pattern-",
       "pnpm-lock.yaml"
+    ],
+    "reactCatalogCompileInputs": [
+      "packages/catalog/catalog-sources.json",
+      "packages/catalog/package.json",
+      "packages/catalog/src/compiler.mjs",
+      "packages/catalog/src/completeness.mjs",
+      "packages/catalog/src/pattern-content.mjs",
+      "packages/catalog/src/pattern-imports.mjs",
+      "packages/catalog/token-section-page-budget-profile.json",
+      "packages/tooling/command-registry.json",
+      "strategy/platform-safety-contract.json"
+    ],
+    "packedReactResolverInputs": [
+      "packages/react/src/generate.mjs",
+      "packages/react/src/renderer-descriptor.mjs"
     ],
     "packageFixtureOwners": {
       "packages/catalog/test/fixtures/": ["@muxui/catalog", "@muxui/tooling"],
