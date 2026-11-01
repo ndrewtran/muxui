@@ -117,6 +117,36 @@ async function importClosure(name, entries) {
   return reached;
 }
 
+/**
+ * Decision 0032 item 3: a field a consumer can install names a Mux UI package only along an allowed edge, so
+ * `@muxui/tokens` and parked packages never appear there; no field keeps a `workspace:` specifier. `devDependencies`
+ * stay free of the edge rule because no package manager installs a dependency's development dependencies.
+ */
+function dependencyProblems(manifest, allowedEdges) {
+  const problems = [];
+  for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies', 'devDependencies']) {
+    for (const [dependency, range] of Object.entries(manifest[field] ?? {})) {
+      if (range.startsWith('workspace:')) problems.push(`${field} ${dependency} keeps its workspace specifier`);
+      if (field !== 'devDependencies' && dependency.startsWith('@muxui/') && !allowedEdges.includes(dependency)) {
+        problems.push(`${field} ${dependency} is not an allowed Mux UI edge`);
+      }
+    }
+  }
+  return problems;
+}
+
+test('P2.1 the packed dependency rule refuses Mux UI edges outside Decision 0032 in every installable field', () => {
+  const allowed = ['@muxui/schema'];
+  for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+    assert.deepEqual(dependencyProblems({ [field]: { '@muxui/tokens': '0.6.0' } }, allowed), [`${field} @muxui/tokens is not an allowed Mux UI edge`]);
+    assert.deepEqual(dependencyProblems({ [field]: { '@muxui/scale': '1.0.0' } }, allowed), [`${field} @muxui/scale is not an allowed Mux UI edge`]);
+    assert.deepEqual(dependencyProblems({ [field]: { '@muxui/schema': 'workspace:*' } }, allowed), [`${field} @muxui/schema keeps its workspace specifier`]);
+    assert.deepEqual(dependencyProblems({ [field]: { '@muxui/schema': '0.6.0', semver: '7.8.5' } }, allowed), []);
+  }
+  assert.deepEqual(dependencyProblems({ devDependencies: { '@muxui/tokens': '0.6.0' } }, allowed), []);
+  assert.deepEqual(dependencyProblems({ devDependencies: { '@muxui/tokens': 'workspace:*' } }, allowed), ['devDependencies @muxui/tokens keeps its workspace specifier']);
+});
+
 for (const [slug, spec] of Object.entries(specs)) {
   test(`P2.1 packed ${spec.name} exposes only its public entries and the files they need`, async () => {
     const { manifest, files } = packed[spec.name];
@@ -132,11 +162,7 @@ for (const [slug, spec] of Object.entries(specs)) {
     assert.deepEqual([...files].filter((file) => /^(?:test|node_modules)\//u.test(file)), []);
 
     assert.deepEqual(Object.keys(manifest.dependencies ?? {}).sort(), spec.dependencies);
-    for (const field of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
-      for (const [dependency, range] of Object.entries(manifest[field] ?? {})) {
-        assert.equal(range.startsWith('workspace:'), false, `${field} ${dependency} keeps its workspace specifier`);
-      }
-    }
+    assert.deepEqual(dependencyProblems(manifest, spec.dependencies.filter((name) => name.startsWith('@muxui/'))), []);
 
     // Everything packed is metadata, an entry, a file an entry imports, or a declared sidecar.
     const { code, data } = entryFiles(packed[spec.name]);
