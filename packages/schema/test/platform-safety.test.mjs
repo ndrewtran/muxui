@@ -88,6 +88,21 @@ test('E-G1.0-07 the registry carries defaults and generated types read the same 
   expectCode('MUXUI_PLATFORM_SAFETY_CONTRACT_INVALID', () => validatePlatformSafetyContract(unknownDefault));
 });
 
+test('E-G1.0-07 a default names only a binding ID or nested runtime-profile key the schemas declare', () => {
+  // The vocabulary is the schemas' BindingId and RuntimeProfileId, so a typo cannot define a default nothing reads.
+  for (const profile of ['web.recat', 'windows']) {
+    const unknownProfile = structuredClone(contract);
+    unknownProfile.defaults.profiles[profile] = structuredClone(unknownProfile.defaults.profiles['web.react']);
+    expectCode(
+      'MUXUI_PLATFORM_SAFETY_CONTRACT_INVALID',
+      () => validatePlatformSafetyContract(unknownProfile),
+      new RegExp(`unknown profile ${profile.replace('.', '\\.')};`),
+    );
+  }
+  // The binding IDs and nested keys the schemas do declare are accepted.
+  assert.doesNotThrow(() => validatePlatformSafetyContract(nativeContract));
+});
+
 test('E-G1.0-07 a binding that states nothing takes the registry default', () => {
   const binding = webBinding();
   assert.equal(Object.hasOwn(binding, 'platformSafety'), false);

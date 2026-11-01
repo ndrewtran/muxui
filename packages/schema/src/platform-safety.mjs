@@ -1,4 +1,5 @@
 import { canonicalDigest, canonicalJson } from './canonical.mjs';
+import { loadJsonDocument, resolveJsonPointer } from './contracts.mjs';
 
 const CONTRACT_SCHEMA = 'muxui-platform-safety-contract-v1';
 const REQUIREMENT_SET_SCHEMA_VERSION = '1.0.0';
@@ -33,7 +34,12 @@ function fail(code, message, details) {
   throw new PlatformSafetyContractError(code, message, details);
 }
 
-const PROFILE_KEY = /^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/;
+// The profile identities a default can name: the binding IDs and the nested runtime-profile keys the schemas
+// declare, the same sources the generated BindingId and RuntimeProfileId types read.
+const PROFILE_IDS = new Set([
+  ...Object.keys(resolveJsonPointer(loadJsonDocument('component.schema.json'), '#/properties/bindings/properties')),
+  ...Object.keys(resolveJsonPointer(loadJsonDocument('binding.schema.json'), '#/properties/runtimeProfiles/properties')),
+]);
 
 /**
  * Returns the first problem with one disposition entry, or undefined. A registry default or a resolved
@@ -118,8 +124,12 @@ function readDefaults(defaults, registryIds) {
     fail('MUXUI_PLATFORM_SAFETY_CONTRACT_INVALID', 'the registry defaults are malformed');
   }
   const profiles = new Map(Object.entries(defaults.profiles).map(([profile, entries]) => {
-    if (!PROFILE_KEY.test(profile)) {
-      fail('MUXUI_PLATFORM_SAFETY_CONTRACT_INVALID', `defaults name an invalid profile ${profile}`, { profile });
+    if (!PROFILE_IDS.has(profile)) {
+      fail(
+        'MUXUI_PLATFORM_SAFETY_CONTRACT_INVALID',
+        `defaults name an unknown profile ${profile}; a profile is a binding ID or a nested runtime-profile key`,
+        { profile },
+      );
     }
     return [profile, readDefaultSet(entries, registryIds, profile, { unsupported: false })];
   }));

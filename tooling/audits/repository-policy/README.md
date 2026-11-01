@@ -120,7 +120,9 @@ The `test/evidence-*.test.mjs` files were four minutes of this package's five
 when they were one file: `evidence-integrity.test.mjs` (the retained BL1 and R1
 evidence and the capture tools) and the growth audit over an archive of HEAD,
 split into `evidence-growth-scope`, `-catalog`, and `-normalization` around the
-fixture they share, `evidence-growth-repository.mjs`. The package has two
+fixture they share, `evidence-growth-repository.mjs`. `evidence-growth-platform-safety`
+compiles real trees from history instead, so the normalization of trees from before
+platform safety resolved from registry defaults is held to what history holds. The package has two
 scripts. `check` runs the repository audit, `evidence-verify.mjs`, and every other
 test file. `check:evidence` runs `evidence-verify.mjs` and the evidence files, one
 process each, with `--test-concurrency` set to their count so a small runner still
