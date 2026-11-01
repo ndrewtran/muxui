@@ -14,9 +14,9 @@ name: npm publish
 #   release manifest, and uploads the tarballs and the manifest. When main's
 #   push CI already passed the full plan for this exact commit, it runs only
 #   `generate:check` and `release-prepare.mjs`; otherwise it runs the full
-#   `pnpm release:prepare` (Decision 0030). No environment or secret, so no
-#   approval. tarball-sha512 (the @muxui/react tarball) may be empty here; when
-#   given it must match.
+#   `pnpm release:prepare` (Decision 0030). No environment or secret.
+#   tarball-sha512 (the @muxui/react tarball) may be empty here; when given it
+#   must match.
 #   The dry run also says which release it compares with: `prior-release` names
 #   the prior portfolio release manifest (a tracked tests/evidence path), or
 #   `first-portfolio-release` declares the first one (E-P2.1-04). Exactly one of
@@ -27,8 +27,8 @@ name: npm publish
 #   (verifies it, downloads its artifact by id, and checks the candidate set
 #   against the commit and the inputs) without building anything, so the prior
 #   release setting is the dry run's, recorded in its manifest and never
-#   re-derived from these inputs. Then one
-#   `publish` job, behind one `npm-publish` environment approval, publishes the
+#   re-derived from these inputs. Then one `publish` job, in the `npm-publish`
+#   environment (main only, no required reviewer; Decision 0033), publishes the
 #   set to `next` in publish order. It is the only job with `id-token: write`.
 #   A package that exists on npm publishes through trusted publishing: its
 #   `npm publish` exchanges that identity for a short-lived token scoped to the
@@ -45,8 +45,8 @@ name: npm publish
 #   first failure and never continues to a later package. A failure prints a
 #   recovery plan (Decision 0023 amendment 01) and executes none of it.
 # - mode=registry-preflight: the publish preflight alone for every version
-#   input, read-only against the public registry, with no environment,
-#   credentials, or approval.
+#   input, read-only against the public registry, with no environment or
+#   credentials.
 #
 # Preflight, per package: the version must be absent from the registry. A first
 # publish (package absent) must be its rc.1. Otherwise the dist-tags must be
@@ -104,7 +104,7 @@ on:
         type: string
         default: ''
       mode:
-        description: dry-run prepares and checks only; publish also publishes after approval; registry-preflight only reads the public registry
+        description: dry-run prepares and checks only; publish promotes the named dry run and publishes it; registry-preflight only reads the public registry
         required: true
         type: choice
         options: [dry-run, publish, registry-preflight]
@@ -262,8 +262,8 @@ jobs:
           fi
 
       # Publish promotes the dry run's candidate instead of rebuilding it. These
-      # steps run before the approval gate, so a run that cannot publish never
-      # asks for approval.
+      # steps run before the publish job, so a run that cannot publish stops
+      # before any registry write.
       - name: Verify dry run
         id: dryrun
         if: inputs.mode == 'publish'
@@ -374,7 +374,8 @@ jobs:
     runs-on: ubuntu-latest
     # The read-back allows about 5 minutes for a version and 10 for its dist-tags, for each of the four packages.
     timeout-minutes: 90
-    # One approval for the whole set: every package's publish runs inside this one approved job.
+    # The environment scopes the temporary NPM_TOKEN secret, limits deployments to main, and records
+    # them. It has no required reviewer (Decision 0033). One job publishes the whole set.
     environment: npm-publish
     permissions:
       contents: read

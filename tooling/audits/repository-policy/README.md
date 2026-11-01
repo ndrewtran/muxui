@@ -246,19 +246,22 @@ extracts them itself into a fresh directory outside the checkout; and `candidate
 verifies the versions, the `@muxui/react` sha512, and the manifest against the
 commit. All of that runs in the `prepare` job, which has no OIDC access, so a
 candidate from another commit, another workflow, or other versions ends the run
-before the environment approval is asked for.
+before the `publish` job starts.
 
 ### Ordered publication and recovery
 
-One `publish` job, behind one `npm-publish` environment approval, publishes the set
-to `next` in publish order. It is the only job with `id-token: write`. A package
-that exists on npm publishes through trusted publishing: its `npm publish`
-exchanges that identity for a short-lived token scoped to the package, so each
-needs its own trusted publisher (Decision 0032 item 10). `npm trust` needs an
-existing package, so a package that does not exist yet cannot: its first publish
-alone uses the temporary `NPM_TOKEN` secret of the `npm-publish` environment.
-The token is referenced only by the `Publish the set in order` step's `env:`, is
-taken out of the process environment when read, and reaches only the one
+One `publish` job, in the `npm-publish` environment, publishes the set to `next` in
+publish order. The environment has no required reviewer (Decision 0033): starting
+`mode=publish` on `main` publishes, so the exact per-release-candidate authorization
+Decision 0028 requires is a process rule that GitHub does not check. The environment
+still allows only `main`, and scopes the temporary `NPM_TOKEN`. The job is the only job
+with `id-token: write`. A package that exists on npm publishes through trusted
+publishing: its `npm publish` exchanges that identity for a short-lived token scoped
+to the package, so each needs its own trusted publisher (Decision 0032 item 10).
+`npm trust` needs an existing package, so a package that does not exist yet cannot:
+its first publish alone uses the temporary `NPM_TOKEN` secret of the `npm-publish`
+environment. The token is referenced only by the `Publish the set in order` step's
+`env:`, is taken out of the process environment when read, and reaches only the one
 `npm publish` of a package the whole-set preflight found absent (as npm's
 `//registry.npmjs.org/:_authToken` config in that child's environment, never an
 `.npmrc`). Every other `npm publish` runs with every npm credential removed, so an
