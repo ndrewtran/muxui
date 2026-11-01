@@ -22,7 +22,7 @@ import {
   previewChangeIntent,
   scaffoldPattern,
   semanticDiff,
-} from '../src/index.mjs';
+} from '../src/authoring.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const patternId = 'muxui:pattern:poster-grid';

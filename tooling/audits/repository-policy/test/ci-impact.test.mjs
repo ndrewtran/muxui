@@ -131,7 +131,7 @@ const blockPages = [
 
 // Workspace links mirror the real package.json files.
 const packages = [
-  { name: '@muxui/catalog', path: 'packages/catalog', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, devDependencies: { '@muxui/react': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
+  { name: '@muxui/catalog', path: 'packages/catalog', manifest: { dependencies: { '@muxui/schema': 'workspace:*' }, devDependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/docs', path: 'apps/docs', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/react': 'workspace:*' }, devDependencies: { '@muxui/tooling': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && check' } } },
   { name: '@muxui/figma', path: 'tooling/generators/figma', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { check: 'check' } } },
   { name: '@muxui/react', path: 'packages/react', manifest: { devDependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:browser': 'node --test --test-concurrency=1 test/browser/*.test.mjs', 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' } } },

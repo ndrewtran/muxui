@@ -255,11 +255,11 @@ function loadCatalogCandidate(packageRoot) {
       'schemaVersion', 'sourceRevision', 'tokenContractVersion',
     ];
     const bindingFields = [
-      'binding', 'descriptor', 'export', 'package', 'specRevision',
-      'tokenRequirementSetDigests', 'platformSafetyRequirementSetDigests', 'version',
+      'binding', 'descriptor', 'exportName', 'package', 'specRevision',
+      'tokenRequirementSetDigests', 'platformSafetyRequirementSetDigests', 'versionRange',
     ];
     const bindingScalarFields = [
-      'binding', 'descriptor', 'export', 'package', 'specRevision', 'version',
+      'binding', 'descriptor', 'exportName', 'package', 'specRevision', 'versionRange',
     ];
     const releaseValid = hasExactFields(release, releaseFields)
       && hasExactFields(release.catalog, ['digest', 'id', 'version'])

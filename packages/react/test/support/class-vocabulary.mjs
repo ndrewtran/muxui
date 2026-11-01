@@ -22,7 +22,6 @@ export const sharedHelpers = Object.freeze([
 export const nonClassTokens = Object.freeze({
   'button.ts': { 'muxui-button-label': 1 },
   'button-fixture.mjs': { 'muxui-r1-button': 1 },
-  'renderer-descriptor.mjs': { 'muxui-release': 1 },
   'r1-contracts.mjs': { 'muxui-react-r1-5-closure-v1': 2, 'muxui-renderer-descriptor-v1': 1, 'muxui-react-release-candidate-v1': 1, 'muxui-react-r1-6-contract-v1': 1 },
   'supplemental-mapping.mjs': { 'muxui-react-r1-6-supplemental-components-v2': 1 },
   'supplemental/color-mode-toggle.ts': { 'muxui-color-mode': 1 },

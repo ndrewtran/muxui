@@ -2,10 +2,37 @@
   "name": "@muxui/schema",
   "version": "0.6.0",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ndrewtran/muxui.git",
+    "directory": "packages/schema"
+  },
+  "homepage": "https://github.com/ndrewtran/muxui/tree/main/packages/schema#readme",
+  "bugs": {
+    "url": "https://github.com/ndrewtran/muxui/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=24.19.0 <25"
   },
+  "files": [
+    "generated",
+    "schemas",
+    "src/authoring.mjs",
+    "src/canonical.mjs",
+    "src/contracts.mjs",
+    "src/derived-api.mjs",
+    "src/evolution.mjs",
+    "src/field-ownership.mjs",
+    "src/index.mjs",
+    "src/platform-safety.mjs",
+    "src/revisions.mjs",
+    "src/validation.mjs",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
   "exports": {
     ".": "./src/index.mjs",
     "./schemas/*": "./schemas/*",
