@@ -21,9 +21,60 @@ export const QUERY_SELECTORS = Object.freeze(
   ),
 );
 export const SCHEMA_VERSION = '3.0.0';
+const [schemaMajor, schemaMinor] = SCHEMA_VERSION.split('.');
+/**
+ * The schema versions this build reads: its own major up to its own minor. A later minor may add optional fields that
+ * this build's closed schemas reject, so it is out of range until a build that implements it reads it.
+ */
+export const SCHEMA_READ_RANGE = `>=${schemaMajor}.0.0 <${schemaMajor}.${Number(schemaMinor) + 1}.0`;
 export const API_VERSION = '2.1.0';
 export const QUERY_SCHEMA_VERSION = '2.1.0';
+/** The query API versions this build reads. */
 export const QUERY_API_VERSIONS = Object.freeze([API_VERSION]);
+
+const QUERY_API_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
+
+/** Whether `value` is a SemVer `X.Y.Z[-prerelease][+build]` string, the syntax of every query API version. */
+export function isQueryApiVersion(value) {
+  return typeof value === 'string' && QUERY_API_VERSION_PATTERN.test(value);
+}
+
+/** Numeric identifiers have no leading zeros, so a longer one is larger, and equal lengths compare as text: exact at any size. */
+const compareNumeric = (left, right) => left.length - right.length || (left < right ? -1 : left > right ? 1 : 0);
+
+/** SemVer precedence of two valid versions: numeric core, then a prerelease sorts below its release, then identifiers. Build metadata is ignored. */
+function compareQueryApiVersions(left, right) {
+  const [leftCore, leftPre] = left.split('+')[0].split(/-(.*)/su);
+  const [rightCore, rightPre] = right.split('+')[0].split(/-(.*)/su);
+  const core = leftCore.split('.');
+  const other = rightCore.split('.');
+  for (let index = 0; index < 3; index += 1) {
+    const order = compareNumeric(core[index], other[index]);
+    if (order !== 0) return Math.sign(order);
+  }
+  if (leftPre === undefined || rightPre === undefined) {
+    return (leftPre === undefined) - (rightPre === undefined);
+  }
+  const leftIds = leftPre.split('.');
+  const rightIds = rightPre.split('.');
+  for (let index = 0; index < Math.min(leftIds.length, rightIds.length); index += 1) {
+    const [a, b] = [leftIds[index], rightIds[index]];
+    if (a === b) continue;
+    const [aNumeric, bNumeric] = [/^\d+$/u.test(a), /^\d+$/u.test(b)];
+    if (aNumeric && bNumeric) return Math.sign(compareNumeric(a, b));
+    if (aNumeric !== bNumeric) return aNumeric ? -1 : 1;
+    return a < b ? -1 : 1;
+  }
+  return Math.sign(leftIds.length - rightIds.length);
+}
+
+/**
+ * The highest query API version, by SemVer precedence, that a reader and a catalog both support, or undefined when
+ * they share none. Versions the catalog lists that the reader does not read (older or newer) are ignored, never an error.
+ */
+export function negotiateQueryApiVersion(supported, readable = QUERY_API_VERSIONS) {
+  return readable.filter((version) => supported.includes(version)).sort(compareQueryApiVersions).at(-1);
+}
 
 /** The group a pattern category belongs to in `patternCategories` (the validated category registry), or undefined. */
 export function patternGroup(patternCategories, category) {
