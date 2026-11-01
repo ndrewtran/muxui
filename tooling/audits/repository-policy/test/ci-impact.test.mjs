@@ -1188,7 +1188,7 @@ test('a group takes the plan job\'s restored metadata without regenerating it, a
   assert.deepEqual(await run({ environment: ready, files: [], needsMetadata: false }), { result: false, calls: [] });
 });
 
-test('the plan job hands its generated metadata to the pull request groups through one short-lived artifact', () => {
+test('the plan job hands its generated metadata to the pull request groups through one short-lived artifact', (t) => {
   const workflow = readFileSync(resolve(repositoryRoot, '.github/workflows/ci.yml'), 'utf8');
   const [planJob, runJob] = workflow.split(/\n {2}run:\n/u);
   const steps = (job) => job.split('\n      - ');
@@ -1203,7 +1203,39 @@ test('the plan job hands its generated metadata to the pull request groups throu
   const upload = step(planJob, 'Upload plan metadata');
   assert.ok(position(planJob, 'Plan check groups') < position(planJob, 'Upload plan metadata'));
   assert.match(upload, /\n {8}id: metadata\n/u);
-  assert.match(upload, /\n {8}if: github\.event_name == 'pull_request'\n/u);
+  // It also waits for the clean-tree check below: a group that generated locally ran on regenerated tracked files.
+  assert.match(upload, /\n {8}if: github\.event_name == 'pull_request' && steps\.clean\.outputs\.clean == '1'\n/u);
+  const clean = step(planJob, 'Check that generation left the tracked tree clean');
+  assert.ok(position(planJob, 'Plan check groups') < position(planJob, 'Check that generation left the tracked tree clean'));
+  assert.ok(position(planJob, 'Check that generation left the tracked tree clean') < position(planJob, 'Upload plan metadata'));
+  assert.match(clean, /\n {8}id: clean\n/u);
+  assert.match(clean, /\n {8}if: github\.event_name == 'pull_request'\n/u);
+  // Run its shell in a scratch repository: only a clean tracked tree (ignored output aside) sets the output, and drift is a notice, not a failure.
+  const shell = clean.match(/\n {8}run: \|\n((?: {10}[^\n]*\n)+)/u)?.[1].replace(/^ {10}/gmu, '');
+  assert.ok(shell, 'execute the actual clean-tree shell');
+  const scratch = mkdtempSync(join(tmpdir(), 'muxui-clean-tree-'));
+  t.after(() => rmSync(scratch, { recursive: true, force: true }));
+  const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { cwd: scratch, stdio: 'ignore' });
+  git('init', '-q');
+  writeFileSync(join(scratch, '.gitignore'), '/generated/\n');
+  writeFileSync(join(scratch, 'tracked.txt'), 'a\n');
+  git('add', '.');
+  git('commit', '-qm', 'init');
+  mkdirSync(join(scratch, 'generated'));
+  writeFileSync(join(scratch, 'generated/out.json'), '{}\n');
+  const runClean = () => {
+    const output = join(scratch, 'github-output');
+    rmSync(output, { force: true });
+    const result = spawnSync('bash', ['-e', '-c', shell], { cwd: scratch, env: { ...process.env, GITHUB_OUTPUT: output }, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return { stdout: result.stdout, outputs: existsSync(output) ? readFileSync(output, 'utf8') : '' };
+  };
+  assert.deepEqual(runClean(), { stdout: '', outputs: 'clean=1\n' });
+  writeFileSync(join(scratch, 'tracked.txt'), 'b\n');
+  const drifted = runClean();
+  assert.equal(drifted.outputs, '');
+  assert.match(drifted.stdout, /^::notice title=Metadata handoff skipped::.*tracked\.txt/u);
+  assert.doesNotMatch(drifted.stdout, /generated/u);
   // The groups restore only what was uploaded: a plan without metadata leaves no artifact to fail to find.
   assert.match(planJob, /\n {6}metadata: \$\{\{ steps\.metadata\.outputs\.artifact-id \}\}\n/u);
   assert.match(upload, /\n {8}continue-on-error: true\n/u);

@@ -82,14 +82,32 @@ jobs:
           fi
 
       # Planning generated the React and Storybook metadata (ignored projections) that every
-      # group of a pull request needs, so the groups restore it instead of generating it again,
-      # which takes 20 to 40 seconds in each. The directories are the planner's
-      # generatedMetadataDirectories; a missing one is skipped. The artifact lives for the run
-      # only, and a group that cannot restore it generates the metadata itself. Hidden files
-      # are included because Storybook's directory sits under `.storybook`.
+      # group of a pull request needs, so the groups can restore it instead of generating it
+      # again, which takes 20 to 40 seconds in each. Generation also rewrites tracked outputs
+      # (the React README, the API and reference files, the catalog source manifest) when the
+      # head is stale, and a group that generated locally would have run on those rewrites.
+      # A restored group cannot, so the metadata is handed over only when generation left the
+      # tracked tree clean; otherwise every group generates for itself, as before. Drift is
+      # not failed here: the plans that prove tracked freshness still do.
+      - name: Check that generation left the tracked tree clean
+        id: clean
+        if: github.event_name == 'pull_request'
+        run: |
+          changed=$(git status --porcelain)
+          if [ -z "$changed" ]; then
+            echo "clean=1" >> "$GITHUB_OUTPUT"
+          else
+            changed=${changed//'%'/'%25'}
+            echo "::notice title=Metadata handoff skipped::Planning changed tracked files, so each group generates its own metadata: ${changed//$'\n'/%0A}"
+          fi
+
+      # The directories are the planner's generatedMetadataDirectories; a missing one is
+      # skipped. The artifact lives for the run only, and a group that cannot restore it
+      # generates the metadata itself. Hidden files are included because Storybook's
+      # directory sits under `.storybook`.
       - name: Upload plan metadata
         id: metadata
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.clean.outputs.clean == '1'
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
