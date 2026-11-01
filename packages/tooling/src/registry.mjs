@@ -54,7 +54,7 @@ function optionMap(registry) {
   );
 }
 
-export function validateCommandRegistry(registry) {
+function validateCommandRegistry(registry) {
   assert(
     registry && typeof registry === 'object' && !Array.isArray(registry),
     'CLI_REGISTRY_INVALID',

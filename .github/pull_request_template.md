@@ -20,10 +20,10 @@ Model and harness that did the work, e.g. `Opus 5.5, Claude Code`.
 
 ## Authority change
 
-Keep this section only for a PR that changes strategy, decisions, or protection
-or publishing machinery (see the protected files in
-`.github/scripts/validate-planning-pr.cjs`). Delete it otherwise. Add the
-`type:decision` or `type:architecture-maintenance` label.
+Keep this section only for a PR that changes a file listed in
+`.github/scripts/validate-planning-pr.cjs`: the strategy documents, the platform
+safety contract, or the protection and publishing machinery. Delete it
+otherwise. Add the `type:decision` or `type:architecture-maintenance` label.
 
 - Authority change record: <#issue or an existing decisions/NNNN-name.md path>
 - Scope version effect: <none, patch, minor, or major; only if strategy/product-scope.md changes>

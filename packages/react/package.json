@@ -86,7 +86,6 @@
   "devDependencies": {
     "@muxui/schema": "workspace:*",
     "@muxui/tokens": "workspace:*",
-    "@types/jsdom": "30.0.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "jsdom": "30.0.1",

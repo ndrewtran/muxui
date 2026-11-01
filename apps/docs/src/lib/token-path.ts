@@ -6,7 +6,7 @@ import type { FoundationToken } from './foundations.ts';
  * Hyphenated leaves (for example `font-size` or `brand-60`) stay together so
  * the syntax explains the source path instead of inventing a second hierarchy.
  */
-export type TokenPathSegmentKind = 'prefix' | 'separator' | 'layer' | 'category' | 'group' | 'property' | 'scale' | 'state';
+type TokenPathSegmentKind = 'prefix' | 'separator' | 'layer' | 'category' | 'group' | 'property' | 'scale' | 'state';
 
 export type TokenPathMetadata = Pick<FoundationToken, 'id' | 'cssName' | 'layer' | 'type'>;
 

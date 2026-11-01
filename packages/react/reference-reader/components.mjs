@@ -88,7 +88,7 @@ function modelTypeParameters(typeParameters) {
  * alternative only what differs. A member that is declared in some alternatives and not in others is
  * listed in the alternatives that declare it, so "not declared" stays distinct from a declared `never`.
  */
-export function modelProps(arms, types) {
+function modelProps(arms, types) {
   const members = arms.map((arm) => arm.members);
   const finals = members.map((map) => new Map([...map].map(([name, member]) => [name, modelMember(member, types)])));
   // A member the arms declare identically is shared, whatever their comments say: two arms may differ in

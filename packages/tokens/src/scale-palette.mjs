@@ -235,7 +235,7 @@ export const generateMonochromePalette = (baseHex, { whiteAnchor = false } = {})
 /**
  * WCAG relative luminance for a hex colour.
  */
-export const getRelativeLuminance = (hex) => {
+const getRelativeLuminance = (hex) => {
   return getHexRelativeLuminance(hex);
 };
 

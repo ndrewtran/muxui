@@ -24,7 +24,7 @@ const STALE_IDENTITY_PATTERNS = Object.freeze([
   { label: 'legacy active object key', pattern: /\bcore(?:Source|Input|Commit|Tree|RawClassification|RawExports|PublicFamily|StateCoverage|Tokens?|TokenIds?)\b\s*:/u },
 ]);
 
-export function isIgnoredRepositoryEntry(name) {
+function isIgnoredRepositoryEntry(name) {
   return name === '.DS_Store' || IGNORED_DIRECTORIES.has(name);
 }
 

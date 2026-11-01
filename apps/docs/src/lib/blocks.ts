@@ -17,7 +17,7 @@ import {
  * to the fields the site reads; nothing here is authored or ranked.
  */
 
-export interface BlockSummary {
+interface BlockSummary {
 	id: string;
 	kind: 'pattern';
 	name: string;
@@ -29,21 +29,21 @@ export interface BlockSummary {
 	group: string;
 }
 
-export interface BlockParticipant {
+interface BlockParticipant {
 	role: string;
 	component: string;
 	requirement: string;
 }
 
 /** A pattern's `get` record, narrowed to what the Blocks pages read. */
-export interface BlockRecord extends BlockSummary {
+interface BlockRecord extends BlockSummary {
 	participants: readonly BlockParticipant[];
 	variants: readonly { example: string }[];
 	accessibility: readonly string[];
 }
 
 /** A variant example from `get <pattern> --section examples`, with its exact source bytes in `code`. */
-export interface BlockExample {
+interface BlockExample {
 	id: string;
 	kind: 'example';
 	name: string;
@@ -194,7 +194,7 @@ export interface BlockVariant {
 	code: string;
 }
 
-export interface BlockParticipantLink extends BlockParticipant {
+interface BlockParticipantLink extends BlockParticipant {
 	name: string;
 	href: string;
 }
@@ -280,7 +280,7 @@ export function compareBlocks(left: Pick<Block, 'category' | 'name'>, right: Pic
 
 export const blocks: readonly Block[] = Object.freeze(blockSummaries.map(buildBlock).sort(compareBlocks));
 
-export interface BlockCategoryGroup {
+interface BlockCategoryGroup {
 	category: string;
 	label: string;
 	blocks: readonly Block[];

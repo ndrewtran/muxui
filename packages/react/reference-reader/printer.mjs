@@ -27,7 +27,7 @@ function precedence(type) {
 
 const wrap = (type, minimum, text) => (precedence(type) < minimum ? `(${text})` : text);
 
-export function printTypeParameters(typeParameters) {
+function printTypeParameters(typeParameters) {
   if (typeParameters === undefined) return '';
   return `<${typeParameters.map((parameter) => `${parameter.name}${parameter.constraint ? ` extends ${printType(parameter.constraint)}` : ''}${parameter.default ? ` = ${printType(parameter.default)}` : ''}`).join(', ')}>`;
 }
@@ -48,7 +48,7 @@ export function printCallSignature(signature) {
 }
 
 /** One member as the declaration wrote it, without its comment or terminating semicolon. */
-export function printMember(member) {
+function printMember(member) {
   switch (member.member) {
     case 'property': return `${member.readonly ? 'readonly ' : ''}${memberKey(member.name)}${member.optional ? '?' : ''}: ${printType(member.type)}`;
     case 'method': return `${memberKey(member.name)}${member.optional ? '?' : ''}${printCallSignature(member)}`;

@@ -9,8 +9,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-export const textEditorEntry = './text-editor';
-
 export const textEditorRef = 'TextEditorHandle';
 
 export const textEditorNative = { type: 'React.HTMLAttributes<HTMLDivElement>', omit: ['value', 'defaultValue', 'onChange'] };

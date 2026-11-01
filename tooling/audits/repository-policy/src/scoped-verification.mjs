@@ -178,7 +178,7 @@ const SHARED_FAMILY_GROUPS = Object.freeze([
   ['Calendar', 'RangeCalendar', 'DateField', 'DatePicker', 'DateRangePicker'],
 ]);
 
-export function expandRelatedFamilies(records, selected) {
+function expandRelatedFamilies(records, selected) {
   const selectedNames = new Set(selected.map(({ family }) => family));
   for (const group of SHARED_FAMILY_GROUPS) {
     if (group.some((family) => selectedNames.has(family))) {
@@ -395,11 +395,11 @@ export function generationArgs(plan) {
 //   resource contention; scoped plans keep them beside the remaining checks.
 // Checks use --no-bail so one run reports every failing package; pnpm still
 // exits non-zero. Generation stays fail-fast because checks depend on it.
-export const isolatedCheckPackages = ['@muxui/react'];
+const isolatedCheckPackages = ['@muxui/react'];
 export const storybookPackage = '@muxui/react-storybook';
-export const laneCheckPackages = [storybookPackage];
-export const evidencePackage = '@muxui/repository-policy';
-export const checkConcurrency = 2;
+const laneCheckPackages = [storybookPackage];
+const evidencePackage = '@muxui/repository-policy';
+const checkConcurrency = 2;
 
 function checkCommand(concurrency, filters, task) {
   return ['--recursive', '--sort', `--workspace-concurrency=${concurrency}`, '--if-present', '--no-bail', ...filters, 'run', task];

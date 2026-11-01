@@ -6,7 +6,7 @@ import { ReferenceReadError } from './errors.mjs';
 const packageRoot = resolve(import.meta.dirname, '..');
 
 /** The entry points of an export map that carry types, as `{ key, file }` with `file` relative to the package. */
-export function typedEntryPoints(manifest) {
+function typedEntryPoints(manifest) {
   return Object.entries(manifest.exports)
     .filter(([, target]) => typeof target?.types === 'string')
     .map(([key, target]) => ({ key, file: target.types.replace(/^\.\//u, '') }));

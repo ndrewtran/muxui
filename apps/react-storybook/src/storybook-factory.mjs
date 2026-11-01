@@ -393,10 +393,6 @@ function familySlug(family) {
   return family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-function kebabCase(value) {
-  return value.replace(/([a-z])([A-Z])/g, '$1-$2').replaceAll('_', '-').toLowerCase();
-}
-
 function sampleControlledValue(binding, family, controlled, uncontrolled, sourceArgs) {
   const defaults = seedDefaults(binding);
   const sourceValue = firstDefined(sourceArgs[controlled], sourceArgs[uncontrolled], defaults[controlled], defaults[uncontrolled]);
@@ -440,11 +436,11 @@ function pairArgs(binding, family, sourceArgs, mode) {
   return args;
 }
 
-export function controlledStoryArgsForBinding(binding, family, sourceArgs = normalizeDefaultArgs(binding)) {
+function controlledStoryArgsForBinding(binding, family, sourceArgs = normalizeDefaultArgs(binding)) {
   return pairArgs(binding, family, sourceArgs, 'controlled');
 }
 
-export function uncontrolledStoryArgsForBinding(binding, family, sourceArgs = normalizeDefaultArgs(binding)) {
+function uncontrolledStoryArgsForBinding(binding, family, sourceArgs = normalizeDefaultArgs(binding)) {
   return pairArgs(binding, family, sourceArgs, 'uncontrolled');
 }
 

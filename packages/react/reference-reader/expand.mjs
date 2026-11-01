@@ -100,7 +100,7 @@ function sameMember(left, right) {
     && memberTypeText(left) === memberTypeText(right);
 }
 
-export function memberTypeText(member) {
+function memberTypeText(member) {
   return member.member === 'method'
     ? printType({ kind: 'function', typeParameters: member.typeParameters, parameters: member.parameters, returnType: member.returnType })
     : printType(member.type);

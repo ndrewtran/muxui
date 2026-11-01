@@ -26,10 +26,6 @@ export function selectedStorybookFamilies(environment = process.env) {
   return [...new Set(values.map((value) => byKey.get(value.toLowerCase()).family))].sort();
 }
 
-export function isFocusedStorybookSelection(environment = process.env) {
-  return selectedStorybookFamilies(environment) !== null;
-}
-
 export function filterStorybookEntries(entries, families = selectedStorybookFamilies()) {
   if (!families) return entries;
   const selected = new Set(families);

@@ -95,7 +95,7 @@ export const LONGHAND_SOURCES = (() => {
 })();
 
 /** Split `text` on top-level commas or whitespace, ignoring separators inside parentheses. */
-export function splitTop(text, separator) {
+function splitTop(text, separator) {
   const parts = [];
   let depth = 0;
   let current = '';
@@ -145,7 +145,7 @@ const CURRENT_COLOR_DEFAULT = new Set([...SIDES.map((side) => `border-${side}-co
  * The part of a declaration's value that sets `longhand`, or undefined when
  * the declaration does not set it. Shorthands that omit a part reset it.
  */
-export function longhandValue(longhand, declaration) {
+function longhandValue(longhand, declaration) {
   const { name, value } = declaration;
   if (name === longhand) return value;
   if (KEYWORDS.has(value.trim().toLowerCase())) return value.trim().toLowerCase();
@@ -220,7 +220,7 @@ function atLeast(a, b) {
 }
 
 /** The winning declaration for `longhand` within one level, or undefined. */
-export function winningDeclaration(level, longhand) {
+function winningDeclaration(level, longhand) {
   const names = longhand.startsWith('--') ? [longhand] : LONGHAND_SOURCES[longhand];
   if (!names) throw new Error(`MUXUI_FIGMA_COMPONENTS_PROPERTY_UNKNOWN: ${longhand} is not a measured longhand`);
   let best;
@@ -384,10 +384,4 @@ export function resolveProperty(context, longhand, tokens) {
   const terminal = longhand === 'box-shadow' ? shadowValue : plainValue;
   const resolved = resolveText(found.value, context, found.index, tokens, via, terminal);
   return { ...resolved, rule: found.rule, ...(via.length ? { via } : {}) };
-}
-
-/** A resolution without its diagnostics, for comparing modes. */
-export function resolutionValue(measured) {
-  const { rule, via, ...value } = measured;
-  return value;
 }

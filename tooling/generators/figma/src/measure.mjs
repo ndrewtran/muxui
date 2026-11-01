@@ -312,7 +312,7 @@ function sortKeys(object) {
  * Keep only the glyph geometry and stroke attributes; colour is bound in
  * Figma. The CSS stroke width replaces the SVG attribute because CSS wins.
  */
-export function normalizeSvg(svg, strokeWidth) {
+function normalizeSvg(svg, strokeWidth) {
   if (!svg) throw new Error('MUXUI_FIGMA_COMPONENTS_GLYPH_MISSING: a GLYPH part must select an <svg> element');
   const width = /^\d+(?:\.\d+)?(?:px)?$/u.test(strokeWidth ?? '') ? strokeWidth.replace('px', '') : undefined;
   return svg

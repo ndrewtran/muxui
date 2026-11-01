@@ -51,9 +51,10 @@ Typical causes, as examples only: the token catalog under `catalog/tokens/`,
 global or selector-free rules in shared stylesheets,
 and the `reactStorybookSharedPaths` in
 `tooling/audits/repository-policy/repository-policy.json` such as the story
-factory and Storybook preview. Breadth alone never needs approval; ask Andrew
-only if the change itself alters the product's visual direction, a public
-contract, or a safety rule.
+factory and Storybook preview. Breadth alone never needs approval; visual and
+pre-release contract changes are ordinary work (Decisions 0028 and 0031). Ask
+Andrew only when the work crosses a stop in `SKILL.md` section 4 (Decision 0028
+item 6).
 
 ## Main and releases
 

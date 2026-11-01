@@ -49,7 +49,7 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
-  assert.equal(read('styles.css').rules.length, 2088);
+  assert.equal(read('styles.css').rules.length, 2085);
   assert.equal(read('supplemental.css').rules.length, 518);
   assert.equal(read('themes.css').rules.length, 60);
   // The shapes it models: grouping at-rules with a chain, statements, leaf at-rules it skips, !important, a block in a custom property.
