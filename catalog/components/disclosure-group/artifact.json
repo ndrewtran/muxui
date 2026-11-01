@@ -35,44 +35,7 @@
     "web.html": {
       "schemaVersion": "2.0.0",
       "strategy": "unsupported",
-      "reason": "Parked by Decision 0031: no responsible implementation until W1.0 restores @muxui/web.",
-      "platformSafety": [
-        {
-          "profile": "web.html",
-          "requirements": [
-            {
-              "id": "system.forced-colors",
-              "disposition": "not-applicable",
-              "reason": "web.html is unsupported, so no platform-safety requirement applies."
-            },
-            {
-              "id": "system.high-contrast",
-              "disposition": "not-applicable",
-              "reason": "web.html is unsupported, so no platform-safety requirement applies."
-            },
-            {
-              "id": "native.dynamic-color",
-              "disposition": "not-applicable",
-              "reason": "web.html is unsupported, so no platform-safety requirement applies."
-            },
-            {
-              "id": "native.font-metrics",
-              "disposition": "not-applicable",
-              "reason": "web.html is unsupported, so no platform-safety requirement applies."
-            },
-            {
-              "id": "layout.direction",
-              "disposition": "not-applicable",
-              "reason": "web.html is unsupported, so no platform-safety requirement applies."
-            },
-            {
-              "id": "platform.accessibility-mapping",
-              "disposition": "not-applicable",
-              "reason": "web.html is unsupported, so no platform-safety requirement applies."
-            }
-          ]
-        }
-      ]
+      "reason": "Parked by Decision 0031: no responsible implementation until W1.0 restores @muxui/web."
     },
     "web.react": {
       "schemaVersion": "2.0.0",
@@ -142,39 +105,6 @@
           }
         ]
       },
-      "platformSafety": [
-        {
-          "profile": "web.react",
-          "requirements": [
-            {
-              "id": "system.forced-colors",
-              "disposition": "required"
-            },
-            {
-              "id": "system.high-contrast",
-              "disposition": "required"
-            },
-            {
-              "id": "native.dynamic-color",
-              "disposition": "not-applicable",
-              "reason": "Native dynamic colors do not apply to web.react."
-            },
-            {
-              "id": "native.font-metrics",
-              "disposition": "not-applicable",
-              "reason": "Native font metrics do not apply to web.react."
-            },
-            {
-              "id": "layout.direction",
-              "disposition": "required"
-            },
-            {
-              "id": "platform.accessibility-mapping",
-              "disposition": "required"
-            }
-          ]
-        }
-      ],
       "runtimeProfiles": {}
     }
   }

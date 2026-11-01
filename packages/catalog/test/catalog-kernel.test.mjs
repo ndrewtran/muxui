@@ -72,7 +72,6 @@ function preimage(bundle) {
 function implementedNativeBinding() {
   const tokens = ['background', 'foreground', 'min-height', 'padding-inline', 'radius'];
   const profiles = { ios: 'native.ios', android: 'native.android', 'native.react-native-web': 'native.react-native-web' };
-  const webOnly = (id) => id === 'system.forced-colors' || id === 'system.high-contrast';
   return {
     schemaVersion: '2.0.0',
     lifecycle: 'experimental',
@@ -88,14 +87,6 @@ function implementedNativeBinding() {
         profiles: ['native.ios', 'native.android'],
       })),
     },
-    platformSafety: Object.entries(profiles).map(([profile, validationProfile]) => ({
-      profile,
-      validationProfile,
-      requirements: ['system.forced-colors', 'system.high-contrast', 'native.dynamic-color', 'native.font-metrics', 'layout.direction', 'platform.accessibility-mapping']
-        .map((id) => (webOnly(id)
-          ? { id, disposition: 'not-applicable', reason: 'Web system modes do not apply to the native runtime.' }
-          : { id, disposition: 'required' })),
-    })),
     runtimeProfiles: Object.fromEntries(Object.entries(profiles).map(([profile, validationProfile]) => [
       profile,
       { strategy: 'adapted', lifecycle: 'experimental', validationProfile },

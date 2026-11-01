@@ -46,60 +46,7 @@ export function tokenSource() {
   };
 }
 
-function required(id) {
-  return { id, disposition: 'required' };
-}
-
-function notApplicable(id, reason) {
-  return { id, disposition: 'not-applicable', reason };
-}
-
-export function webPlatformSafety(profile) {
-  return [{
-    profile,
-    requirements: [
-      required('system.forced-colors'),
-      required('system.high-contrast'),
-      notApplicable('native.dynamic-color', 'Native dynamic colors do not apply to web.'),
-      notApplicable('native.font-metrics', 'Native font metrics do not apply to web.'),
-      required('layout.direction'),
-      required('platform.accessibility-mapping'),
-    ],
-  }];
-}
-
-export function nativePlatformSafety() {
-  const supported = (profile, validationProfile) => ({
-    profile,
-    validationProfile,
-    requirements: [
-      notApplicable('system.forced-colors', 'Web forced colors do not apply to native.'),
-      notApplicable('system.high-contrast', 'Web high contrast does not apply to native.'),
-      required('native.dynamic-color'),
-      required('native.font-metrics'),
-      required('layout.direction'),
-      required('platform.accessibility-mapping'),
-    ],
-  });
-  return [
-    supported('ios', 'native.ios'),
-    supported('android', 'native.android'),
-    {
-      profile: 'native.react-native-web',
-      validationProfile: 'native.react-native-web',
-      requirements: [
-        'system.forced-colors',
-        'system.high-contrast',
-        'native.dynamic-color',
-        'native.font-metrics',
-        'layout.direction',
-        'platform.accessibility-mapping',
-      ].map((id) => notApplicable(id, 'The runtime profile is unsupported in G1.0.')),
-    },
-  ];
-}
-
-function webBinding(profile = 'web.react') {
+function webBinding() {
   return {
     schemaVersion: '2.0.0',
     lifecycle: 'experimental',
@@ -116,7 +63,6 @@ function webBinding(profile = 'web.react') {
       source: 'muxui:token:default-theme',
       requirements: [{ token: 'semantic.action.background', requirement: 'required' }],
     },
-    platformSafety: webPlatformSafety(profile),
     runtimeProfiles: {},
   };
 }
@@ -140,12 +86,11 @@ export function component() {
       obligations: ['Expose disabled state'],
     },
     bindings: {
-      'web.html': webBinding('web.html'),
-      'web.react': webBinding('web.react'),
+      'web.html': webBinding(),
+      'web.react': webBinding(),
       'native.react-native': {
         ...webBinding(),
         strategy: 'adapted',
-        platformSafety: nativePlatformSafety(),
         runtimeProfiles: {
           ios: {
             strategy: 'adapted',

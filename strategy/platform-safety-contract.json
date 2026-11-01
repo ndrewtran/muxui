@@ -32,5 +32,69 @@
       "meaning": "The binding supplies the platform-required roles, states, values, actions, relationships, and announcement mappings affected by the theme and platform context.",
       "boundary": "Theme values cannot override those semantics."
     }
-  ]
+  ],
+  "defaults": {
+    "profiles": {
+      "web.react": [
+        {
+          "id": "system.forced-colors",
+          "disposition": "required"
+        },
+        {
+          "id": "system.high-contrast",
+          "disposition": "required"
+        },
+        {
+          "id": "native.dynamic-color",
+          "disposition": "not-applicable",
+          "reason": "Native dynamic colors do not apply to the React web binding."
+        },
+        {
+          "id": "native.font-metrics",
+          "disposition": "not-applicable",
+          "reason": "Native font metrics do not apply to the React web binding."
+        },
+        {
+          "id": "layout.direction",
+          "disposition": "required"
+        },
+        {
+          "id": "platform.accessibility-mapping",
+          "disposition": "required"
+        }
+      ]
+    },
+    "unsupported": [
+      {
+        "id": "system.forced-colors",
+        "disposition": "not-applicable",
+        "reason": "The binding is unsupported, so no platform-safety requirement applies."
+      },
+      {
+        "id": "system.high-contrast",
+        "disposition": "not-applicable",
+        "reason": "The binding is unsupported, so no platform-safety requirement applies."
+      },
+      {
+        "id": "native.dynamic-color",
+        "disposition": "not-applicable",
+        "reason": "The binding is unsupported, so no platform-safety requirement applies."
+      },
+      {
+        "id": "native.font-metrics",
+        "disposition": "not-applicable",
+        "reason": "The binding is unsupported, so no platform-safety requirement applies."
+      },
+      {
+        "id": "layout.direction",
+        "disposition": "not-applicable",
+        "reason": "The binding is unsupported, so no platform-safety requirement applies."
+      },
+      {
+        "id": "platform.accessibility-mapping",
+        "disposition": "not-applicable",
+        "reason": "The binding is unsupported, so no platform-safety requirement applies."
+      }
+    ]
+  }
 }

@@ -240,14 +240,112 @@ async function withTree(cwd, revision, use) {
   }
 }
 
+// Decision 0031 item 10 moved the platform-safety dispositions out of every binding and into the registry's defaults. A tree from before it carries
+// a full declaration per binding and a registry without `defaults`, so the compiler would read each declaration as an override that restates a default.
+// The registry of such a tree gets the defaults its declarations were written against, and a binding's declaration is dropped when it states exactly
+// those dispositions (reason text is not an obligation, and the three spellings in use are not compared). What the legacy schema and resolver rejected is
+// not dropped either: a binding without a declaration, a declaration or requirement entry with a field beyond the legacy ones, and a validation profile
+// other than the one the resolver associated with the profile. A declaration that differs in any requirement or profile, or names a profile the legacy
+// defaults do not cover, throws, because dropping it would change what the tree required. A registry that already carries `defaults` marks a current tree,
+// which keeps the compiler's strict override rules.
+const legacyRequiredByKind = {
+  web: ['system.forced-colors', 'system.high-contrast', 'layout.direction', 'platform.accessibility-mapping'],
+  native: ['native.dynamic-color', 'native.font-metrics', 'layout.direction', 'platform.accessibility-mapping'],
+};
+/** The kinds of profile the legacy declarations covered: both web bindings, and the iOS and Android runtime profiles of the React Native binding. */
+const legacyProfileKinds = { 'web.react': 'web', 'web.html': 'web', ios: 'native', android: 'native' };
+const legacyNotApplicableReason = 'Not applicable to this profile before the registry carried defaults.';
+
+/** The defaults a legacy registry with the given requirement IDs is given: the dispositions every legacy declaration stated, and all `not-applicable` for an unsupported profile. */
+export function legacyPlatformSafetyDefaults(requirementIds) {
+  const set = (required) => requirementIds.map((id) => (required.includes(id)
+    ? { id, disposition: 'required' }
+    : { id, disposition: 'not-applicable', reason: legacyNotApplicableReason }));
+  return {
+    profiles: Object.fromEntries(Object.entries(legacyProfileKinds).map(([profile, kind]) => [profile, set(legacyRequiredByKind[kind])])),
+    unsupported: set([]),
+  };
+}
+
+/** The validation profile the legacy resolver associated with a nested runtime profile that names none of its own (6037b01a); a binding without nested profiles had none. */
+const legacyValidationProfiles = { ios: 'native.ios', android: 'native.android', 'native.react-native-web': 'native.react-native-web' };
+const isClosedObject = (value, fields) => value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every((field) => fields.includes(field));
+
+/**
+ * Throws unless `binding` is what the legacy schema and resolver accepted and states exactly the legacy default dispositions: a declaration (the schema required
+ * one on every binding) per profile, each closed to `profile`, `validationProfile`, and `requirements`, with the validation profile the resolver associated with its
+ * profile, and a requirement entry closed to `id`, `disposition`, and `reason`. Reason text is not compared.
+ */
+function assertLegacyDeclarationIsDefault({ path, bindingId, binding, defaults }) {
+  const differs = (message) => {
+    throw new Error(`BL1_LEGACY_PLATFORM_SAFETY: ${path}#${bindingId} ${message}; a legacy declaration is dropped only when it is one the legacy compiler accepted and states exactly the default of its profile`);
+  };
+  if (binding === null || typeof binding !== 'object') differs('is not a binding');
+  if (!Object.hasOwn(binding, 'platformSafety')) differs('has no platformSafety declaration');
+  if (!Array.isArray(binding.platformSafety)) differs('declares platformSafety that is not a list');
+  const nested = Object.entries(binding.runtimeProfiles ?? {});
+  const expectedByProfile = new Map(nested.length === 0
+    ? [[bindingId, { unsupported: binding.strategy === 'unsupported', validationProfile: undefined }]]
+    : nested.map(([profile, runtimeProfile]) => [profile, {
+      unsupported: runtimeProfile.strategy === 'unsupported',
+      validationProfile: runtimeProfile.validationProfile ?? (Object.hasOwn(legacyValidationProfiles, profile) ? legacyValidationProfiles[profile] : undefined),
+    }]));
+  const seen = new Set();
+  for (const declaration of binding.platformSafety) {
+    if (!isClosedObject(declaration, ['profile', 'validationProfile', 'requirements'])) differs('has a declaration with fields beyond profile, validationProfile, and requirements');
+    const { profile, validationProfile, requirements } = declaration;
+    if (!expectedByProfile.has(profile) || seen.has(profile)) differs(`declares ${profile}, which it does not have or declares twice`);
+    seen.add(profile);
+    const { unsupported, validationProfile: expectedValidationProfile } = expectedByProfile.get(profile);
+    if (validationProfile !== expectedValidationProfile) differs(`${profile} names the validation profile ${validationProfile ?? 'none'}, where it has ${expectedValidationProfile ?? 'none'}`);
+    const entries = Array.isArray(requirements) ? requirements : [];
+    if (!entries.every((entry) => isClosedObject(entry, ['id', 'disposition', 'reason']))) differs(`${profile} has a requirement entry with fields beyond id, disposition, and reason`);
+    const expected = unsupported ? defaults.unsupported : Object.hasOwn(defaults.profiles, profile) ? defaults.profiles[profile] : undefined;
+    if (expected === undefined) differs(`${profile} has no legacy default`);
+    const declared = new Map(entries.map((entry) => [entry.id, entry.disposition]));
+    if (entries.length !== expected.length || declared.size !== expected.length) differs(`${profile} does not declare each requirement once`);
+    for (const { id, disposition } of expected) {
+      if (declared.get(id) !== disposition) differs(`${profile} states ${id} as ${declared.get(id)}, where the default is ${disposition}`);
+    }
+  }
+  if (seen.size !== expectedByProfile.size) differs('misses the declaration of one of its profiles');
+}
+
+/** Gives a registry without `defaults` the legacy defaults, and drops each component binding's `platformSafety` after checking it is exactly the default. */
+export async function normalizeLegacyPlatformSafety(directory) {
+  const manifest = await readFile(join(directory, manifestPath), 'utf8').then(parseJsonStrict, () => undefined);
+  if (typeof manifest?.platformSafetyContractPath !== 'string' || !Array.isArray(manifest.records)) return;
+  const inside = (path) => !relative(directory, path).startsWith('..');
+  const contractPath = resolve(directory, manifest.platformSafetyContractPath);
+  if (!inside(contractPath)) return;
+  // A registry the compiler cannot read, or one that already carries defaults, is the compiler's to report.
+  const contract = await readFile(contractPath, 'utf8').then(parseJsonStrict, () => undefined);
+  if (contract === null || typeof contract !== 'object' || Array.isArray(contract) || Object.hasOwn(contract, 'defaults') || !Array.isArray(contract.requirements)) return;
+  const defaults = legacyPlatformSafetyDefaults(contract.requirements.map(({ id }) => id));
+  for (const { family, path } of manifest.records) {
+    const recordPath = resolve(directory, path);
+    if (family !== 'component' || !inside(recordPath)) continue;
+    const record = await readFile(recordPath, 'utf8').then(parseJsonStrict, () => undefined);
+    let changed = false;
+    for (const [bindingId, binding] of Object.entries(record?.bindings ?? {})) {
+      assertLegacyDeclarationIsDefault({ path, bindingId, binding, defaults });
+      delete binding.platformSafety;
+      changed = true;
+    }
+    if (changed) await writeFile(recordPath, `${JSON.stringify(record, null, 2)}\n`);
+  }
+  await writeFile(contractPath, `${JSON.stringify({ ...contract, defaults }, null, 2)}\n`);
+}
+
 /**
  * E-BL1-08 across one growth commit (an entry of `growthCommits`): the catalog digest of the tree at `parent` and of
  * the tree at `commit`, each compiled by this checkout's compiler without the sources of the blocks the commit added or
  * changed (`excludedDirectories`). The commit holds when the digests are equal, so the digest changed only for those
  * sources, and when it changed no `digestAffectingPaths` file, which the same-compiler comparison cannot see. A
  * growth commit that edits any other source, a close-out block included, or the catalog package version, moves the digest.
- * A tree from before Decision 0028, before block categories became catalog data, before they carried labels, or before a spring transition
- * named no easing is normalized first (`normalizeLegacyManifest`, `normalizeCategoryRegistry`, and `normalizeLegacySpringTransitions`).
+ * A tree from before Decision 0028, before block categories became catalog data, before they carried labels, before a spring transition
+ * named no easing, or before platform safety resolved from registry defaults is normalized first (`normalizeLegacyManifest`,
+ * `normalizeCategoryRegistry`, `normalizeLegacySpringTransitions`, and `normalizeLegacyPlatformSafety`).
  */
 export async function catalogAcrossCommit({ cwd = repositoryRoot, commit, parent, excludedDirectories, digestAffectingPathsChanged }) {
   const excluded = ({ path }) => excludedDirectories.some((directory) => path.startsWith(directory));
@@ -255,6 +353,7 @@ export async function catalogAcrossCommit({ cwd = repositoryRoot, commit, parent
     await normalizeLegacyManifest(directory);
     await normalizeCategoryRegistry(directory);
     await normalizeLegacySpringTransitions(directory);
+    await normalizeLegacyPlatformSafety(directory);
     return (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest;
   });
   const [digestBefore, digestAfter] = await Promise.all([digestAt(parent), digestAt(commit)]);
