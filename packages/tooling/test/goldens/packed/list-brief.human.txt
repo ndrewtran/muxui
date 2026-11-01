@@ -1,0 +1,6 @@
+Mux UI artifact.list
+apiVersion: "2.1.0"
+type: "artifact.list"
+data: {"items":[{"id":"muxui:component:activity","kind":"component","lifecycle":"experimental","name":"Activity","platforms":["web.react"],"source":{"derivedApis":{"web.react":{"digest":"sha256:<digest>","path":"packages/react/api/activity.json"}},"record":"catalog/components/activity/artifact.json"},"summary":"Present caller-owned task statuses as dense rows with aggregate and item disclosures."},{"id":"muxui:component:alert-dialog","kind":"component","lifecycle":"experimental","name":"AlertDialog","platforms":["web.react"],"source":{"derivedApis":{"web.react":{"digest":"sha256:<digest>","path":"packages/react/api/alert-dialog.json"}},"record":"catalog/components/alert-dialog/artifact.json"},"summary":"Confirm a destructive or high-impact action in a modal alert."}]}
+meta: {"authority":"installed-local","catalogDigest":"sha256:<digest>","catalogVersion":"2.1.0","detail":"brief","muxuiVersion":"1.0.0","nextCursor":"<cursor>","platform":"web.react","resolution":{"authority":"installed-local","catalogSource":"project","compatibility":"exact","revisions":{},"sourceRevision":"sha256:<digest>","targetPackages":{"@muxui/catalog":"2.1.0","@muxui/react":"0.1.0-alpha.0"}},"revisions":{},"schemaVersion":"2.1.0","sourceRevision":"sha256:<digest>","truncated":true}
+warnings: []
