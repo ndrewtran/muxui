@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { appendFile, cp, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -14,6 +13,7 @@ import {
 import { resolvePnpmProjectCatalog } from '../src/pnpm-adapter.mjs';
 import { runCli } from '../src/cli.mjs';
 import { compileFixtureBundle } from './pattern-fixture.mjs';
+import { packWorkspacePackage, writeProjection } from './support/packed-tuple.mjs';
 
 const repositoryRoot = resolvePath(import.meta.dirname, '../../..');
 
@@ -60,22 +60,8 @@ function resolve(value, graph) {
   });
 }
 
-function sha256(value) {
-  return `sha256:${createHash('sha256').update(value).digest('hex')}`;
-}
-
 async function writeJson(path, value) {
   await writeFile(path, `${canonicalJson(value)}\n`);
-}
-
-async function writeProjection(path, canonicalPath, value) {
-  const bytes = `${canonicalJson(value)}\n`;
-  const body = `${canonicalJson({ path: canonicalPath, sha256: sha256(bytes) })}\n`;
-  await writeFile(path, bytes);
-  await writeFile(
-    `${path}.provenance`,
-    `// @generated-from: synthetic-g0.4-adapter-fixture\n// @generated-content-sha256: ${sha256(body)}\n${body}`,
-  );
 }
 
 const tokenDigest = 'sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
@@ -560,6 +546,37 @@ test('G0.4 production resolver input rejects duplicate or undeclared normalized 
   );
 });
 
+test('E-G0.4 resolver takes pnpm store paths as relative paths and still rejects escapes', async () => {
+  const value = await corpus();
+  // pnpm's isolated layout: node_modules/.pnpm/@muxui+catalog@2.1.0/node_modules/@muxui/catalog
+  const storePath = ({ workspace, name, version }) => (
+    `${workspace === '.' ? '' : `${workspace}/`}node_modules/.pnpm/${name.replace('/', '+')}@${version}/node_modules/${name}`
+  );
+
+  const direct = structuredClone(value.graphs.find(({ id }) => id === 'selected-direct-compatible'));
+  for (const item of direct.installed) item.relativePath = storePath(item);
+  assert.equal(resolve(value, direct).type, 'success');
+
+  // A rejected path is reported as a placeholder, an accepted one verbatim.
+  const reportedPaths = (paths) => {
+    const ambiguous = structuredClone(value.graphs.find(({ id }) => id === 'catalog-resolution-ambiguous'));
+    ambiguous.installed.filter(({ kind }) => kind === 'catalog').forEach((item, index) => { item.relativePath = paths[index]; });
+    return resolve(value, ambiguous).error.details.candidates.map(({ relativePath }) => relativePath);
+  };
+  const catalogs = value.graphs.find(({ id }) => id === 'catalog-resolution-ambiguous').installed.filter(({ kind }) => kind === 'catalog');
+  const stored = catalogs.map(storePath);
+  assert.deepEqual(reportedPaths(stored), [...stored].sort());
+  assert.deepEqual(
+    reportedPaths(['apps/../../escape/node_modules/@muxui/catalog', '/abs/node_modules/@muxui/catalog']),
+    ['invalid-relative-path', 'invalid-relative-path'],
+  );
+
+  // The adapter's project path check shares the rule.
+  for (const project of ['../escape', '/abs/project']) {
+    assert.equal(resolvePnpmProjectCatalog({ project }).error.code, 'MUXUI_PROJECT_NOT_FOUND', project);
+  }
+});
+
 test('E-G0.4 resolver diagnostics are relative and privacy-safe', async () => {
   const value = await corpus();
   for (const graph of value.graphs) {
@@ -850,16 +867,6 @@ test('E-BL1-07 an installed tuple that lacks a required participant binding hide
 
 const reactPackageRoot = resolvePath(import.meta.dirname, '../../react');
 
-/** `pnpm pack` of the checkout's @muxui/react into `destination`, without lifecycle scripts; returns the tarball path. */
-function packReact(destination) {
-  const packed = spawnSync('pnpm', [
-    '--config.ignore-scripts=true', '--config.engine-strict=false',
-    'pack', '--json', '--pack-destination', destination,
-  ], { cwd: reactPackageRoot, encoding: 'utf8' });
-  assert.equal(packed.status, 0, packed.stderr);
-  return JSON.parse(packed.stdout).filename;
-}
-
 /**
  * A consumer that has only the tarball and the runtime `dependencies` and `peerDependencies` it declares, in a fresh
  * directory under the OS temp directory (no checkout `node_modules` above it). Each dependency is linked on its own
@@ -955,7 +962,7 @@ async function createReactProject(fixtureRoot, rendererRoot) {
 async function createPackedReactProject(fixtureRoot) {
   const packedRoot = join(fixtureRoot, 'renderer');
   await mkdir(packedRoot);
-  const tarball = packReact(fixtureRoot);
+  const tarball = packWorkspacePackage('react', fixtureRoot);
   const extracted = spawnSync('tar', ['-xzf', tarball, '-C', packedRoot, '--strip-components=1'], { encoding: 'utf8' });
   assert.equal(extracted.status, 0, extracted.stderr);
   const project = await createReactProject(fixtureRoot, packedRoot);
@@ -1102,7 +1109,7 @@ test('E-G0.4 a packed consumer without a declared dependency cannot import the p
   const scratch = await mkdtemp(join(tmpdir(), 'muxui-packed-tarball-'));
   const consumers = [];
   try {
-    const tarball = packReact(scratch);
+    const tarball = packWorkspacePackage('react', scratch);
     const check = [['@muxui/react/markdown', ['Markdown']]];
     consumers.push(await createIsolatedConsumer(tarball));
     assert.deepEqual(importFromConsumer(consumers[0], check), [{ specifier: '@muxui/react/markdown', missing: [] }]);
