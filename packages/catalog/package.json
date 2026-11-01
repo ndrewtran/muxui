@@ -2,10 +2,30 @@
   "name": "@muxui/catalog",
   "version": "2.1.0",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ndrewtran/muxui.git",
+    "directory": "packages/catalog"
+  },
+  "homepage": "https://github.com/ndrewtran/muxui/tree/main/packages/catalog#readme",
+  "bugs": {
+    "url": "https://github.com/ndrewtran/muxui/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=24.19.0 <25"
   },
+  "files": [
+    "generated",
+    "src/index.mjs",
+    "src/search.mjs",
+    "src/search.d.mts",
+    "token-section-page-budget-profile.json",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
   "exports": {
     ".": "./src/index.mjs",
     "./compiler": "./src/compiler.mjs",
@@ -30,10 +50,23 @@
     "generate:check": "node src/generate.mjs --check"
   },
   "dependencies": {
-    "@muxui/schema": "workspace:*",
-    "@muxui/tokens": "workspace:*"
+    "@muxui/schema": "workspace:*"
   },
   "devDependencies": {
-    "@muxui/react": "workspace:*"
+    "@muxui/react": "workspace:*",
+    "@muxui/tokens": "workspace:*"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./src/index.mjs",
+      "./search": {
+        "types": "./src/search.d.mts",
+        "default": "./src/search.mjs"
+      },
+      "./bundle": "./generated/catalog.mjs",
+      "./catalog.json": "./generated/catalog.json",
+      "./catalog-package.json": "./generated/catalog-package.json",
+      "./token-section-page-budget-profile.json": "./token-section-page-budget-profile.json"
+    }
   }
 }

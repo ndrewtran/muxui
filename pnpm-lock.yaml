@@ -190,13 +190,13 @@ importers:
       '@muxui/schema':
         specifier: workspace:*
         version: link:../schema
-      '@muxui/tokens':
-        specifier: workspace:*
-        version: link:../tokens
     devDependencies:
       '@muxui/react':
         specifier: workspace:*
         version: link:../react
+      '@muxui/tokens':
+        specifier: workspace:*
+        version: link:../tokens
 
   packages/react:
     dependencies:
