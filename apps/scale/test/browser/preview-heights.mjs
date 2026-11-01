@@ -1,4 +1,4 @@
-// How tall a component page's Styling previews are, for record-preview-heights.mjs (which records it) and docs-styling.test.mjs (which holds the
+// How tall a component page's Styling previews are, for record-preview-heights.mjs (which records it) and docs-styling-heights.test.mjs (which holds the
 // page to it). One rule for both, so that they cannot disagree about when an example has settled.
 //
 // The page must be opened with `reducedMotion: 'reduce'` (`motionOff`). Mux's springs (the DisclosureGroup and Activity panels re-measure when
@@ -36,7 +36,8 @@ export async function measureIntrinsicHeights(page) {
 /**
  * The layout once it has stopped changing: the same column count and height on every animation frame for 200ms (and three frames, so that a
  * frame stalled by load does not count as 200ms of quiet). A resize reaches an example a frame or two later, through its ResizeObserver and
- * React, which is what this waits out. A layout that has not settled in 5s throws: an unsettled reading must never be recorded.
+ * React, which is what this waits out. A layout that has not settled in 15s (the proof shares its machine with other browsers) throws: an
+ * unsettled reading must never be recorded.
  */
 function settledLayout(page) {
 	return page.evaluate(() => new Promise((resolve, reject) => {
@@ -57,7 +58,7 @@ function settledLayout(page) {
 				frames = 0;
 			} else frames += 1;
 			if (frames >= 3 && now - since >= 200) resolve(last);
-			else if (now - start > 5000) reject(new Error(`the previews were still changing after 5s (${last.height}px, ${last.columns} columns)`));
+			else if (now - start > 15000) reject(new Error(`the previews were still changing after 15s (${last.height}px, ${last.columns} columns)`));
 			else requestAnimationFrame(look);
 		};
 		requestAnimationFrame(look);

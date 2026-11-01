@@ -5,47 +5,20 @@
 // report there, each image at the full height of the block. The test reads blocks
 // from the built rail, so it covers any number of patterns and categories without naming one.
 import assert from 'node:assert/strict';
-import { createReadStream } from 'node:fs';
-import { access, mkdir, writeFile } from 'node:fs/promises';
-import { createServer } from 'node:http';
-import { extname, join, normalize, resolve } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import test from 'node:test';
-import { chromium } from 'playwright-core';
 import { pageWidths, toolbarPresets } from '../../../docs/src/lib/block-presets.ts';
-import { chromeExecutable } from './chrome.mjs';
+import { openSite } from './docs-site.mjs';
 
-const docsRoot = resolve(import.meta.dirname, '../../../docs/dist');
 const captureDir = process.env.MUXUI_BLOCKS_CAPTURE_DIR;
-const mimeTypes = { '.css': 'text/css', '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.woff2': 'font/woff2' };
 // The toolbar presets and the marketing page widths come from the one module the toolbar reads.
 const THEMES = ['light', 'dark'];
 // The old header's theme picker overshot its content box by its own 8px inline margin; a phone header may not do worse.
 const OLD_HEADER_OVERFLOW = 8;
 
-function staticDocsServer() {
-	return createServer(async (request, response) => {
-		const pathname = decodeURIComponent(new URL(request.url, 'http://127.0.0.1').pathname);
-		const file = normalize(join(docsRoot, pathname.endsWith('/') ? `${pathname}index.html` : pathname));
-		if (!file.startsWith(`${docsRoot}/`)) {
-			response.writeHead(403).end();
-			return;
-		}
-		try {
-			await access(file);
-			response.writeHead(200, { 'content-type': mimeTypes[extname(file)] ?? 'application/octet-stream' });
-			createReadStream(file).pipe(response);
-		} catch {
-			response.writeHead(404).end();
-		}
-	});
-}
-
 async function withSite(run) {
-	await access(join(docsRoot, 'blocks/index.html'));
-	const server = staticDocsServer();
-	await new Promise((ready) => server.listen(0, '127.0.0.1', ready));
-	const origin = `http://127.0.0.1:${server.address().port}`;
-	const browser = await chromium.launch({ executablePath: await chromeExecutable(), headless: true });
+	const { origin, browser, close } = await openSite('blocks/index.html');
 	const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 	await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin });
 	const page = await context.newPage();
@@ -55,8 +28,7 @@ async function withSite(run) {
 		await run({ page, origin, errors });
 		assert.deepEqual(errors, [], 'the Blocks section raised no page errors');
 	} finally {
-		await browser.close();
-		await new Promise((done) => server.close(done));
+		await close();
 	}
 }
 

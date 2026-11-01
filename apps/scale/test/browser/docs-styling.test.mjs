@@ -4,72 +4,16 @@
 // fragment, the tables' header associations, keyboard focus on the collapsed groups and on the scrollers, a 360 px layout without page
 // overflow, print with every closed group showing, the contrast of the quiet text in both schemes, and the previews measured in the
 // browser (a value pair where the table promises one, an honest label where it cannot), the headings of the examples kept out of the page's
-// outline, the state rows read once a preview shows the state, the contrast of everything the previews paint, the measurement whichever of the shared script and
-// the previews comes last, and a page that does not move when the previews render (every family reserves the height of its example; the
-// worst of them are loaded with their scripts delayed).
+// outline, the state rows read once a preview shows the state, the contrast of everything the previews paint, and the measurement whichever
+// of the shared script and the previews comes last. The reserved heights of the previews are docs-styling-heights.test.mjs.
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { createReadStream, readFileSync } from 'node:fs';
-import { access } from 'node:fs/promises';
-import { createServer } from 'node:http';
-import { extname, join, normalize, resolve } from 'node:path';
 import test from 'node:test';
-import { chromium } from 'playwright-core';
-import { chromeExecutable } from './chrome.mjs';
-import { measureIntrinsicHeights, motionOff, previewMargin } from './preview-heights.mjs';
+import { measured, pool, reservedHeights, withSite as withDocsSite } from './docs-site.mjs';
 
-const docsRoot = resolve(import.meta.dirname, '../../../docs/dist');
-const mimeTypes = { '.css': 'text/css', '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 // One page for each risk the section has: a plain component, a shared field, a portal, a provider with no element, a textless root, the long
 // collapsed groups and the long principal group.
 const sample = ['button', 'text-field', 'date-picker', 'alert-dialog', 'separator', 'code-block', 'data-diff', 'text', 'tag-group'];
-
-function staticDocsServer() {
-	return createServer(async (request, response) => {
-		const pathname = decodeURIComponent(new URL(request.url, 'http://127.0.0.1').pathname);
-		const file = normalize(join(docsRoot, pathname.endsWith('/') ? `${pathname}index.html` : pathname));
-		if (!file.startsWith(`${docsRoot}/`)) {
-			response.writeHead(403).end();
-			return;
-		}
-		try {
-			await access(file);
-			response.writeHead(200, { 'content-type': mimeTypes[extname(file)] ?? 'application/octet-stream' });
-			createReadStream(file).pipe(response);
-		} catch {
-			response.writeHead(404).end();
-		}
-	});
-}
-
-async function withSite(run) {
-	await access(join(docsRoot, 'components/button/index.html'));
-	const server = staticDocsServer();
-	await new Promise((ready) => server.listen(0, '127.0.0.1', ready));
-	const origin = `http://127.0.0.1:${server.address().port}`;
-	const browser = await chromium.launch({ executablePath: await chromeExecutable(), headless: true });
-	const errors = [];
-	const newPage = async ({ width = 1280, height = 900, colorScheme = 'dark', reducedMotion = 'no-preference' } = {}) => {
-		const page = await (await browser.newContext({ viewport: { width, height }, colorScheme, reducedMotion })).newPage();
-		page.on('pageerror', (error) => errors.push(error.message));
-		return page;
-	};
-	try {
-		await run({ origin, newPage });
-		assert.deepEqual(errors, [], 'the pages raised no page errors');
-	} finally {
-		await browser.close();
-		await new Promise((done) => server.close(done));
-	}
-}
-
-/** Waits until the previews have hydrated and the computed table holds a measurement in every cell the page can measure. */
-async function measured(page) {
-	await page.waitForFunction(() => {
-		const cells = [...document.querySelectorAll('#styling [data-styling-table="computed"] td[data-measure="before"], #styling [data-styling-table="computed"] td[data-measure="after"]')];
-		return cells.length > 0 && cells.every((cell) => cell.textContent !== 'Not measured yet.');
-	}, undefined, { timeout: 15000 });
-}
+const withSite = (run) => withDocsSite('components/button/index.html', run);
 
 /** The rows of the computed-change table: the declaration each prints, and the text of the cells a reader sees (a hidden cell is not one). */
 const computedRows = (page) => page.evaluate(() => [...document.querySelectorAll('#styling [data-styling-table="computed"] tbody > tr')].map((row) => ({
@@ -88,17 +32,6 @@ function computedOf(declaration) {
 	const hex = /^#([0-9a-f]{6})$/iu.exec(value)?.[1];
 	if (hex !== undefined) return `rgb(${[0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)).join(', ')})`;
 	return /^\d+(\.\d+)?px$/u.test(value) ? value : null;
-}
-
-/** The families whose page has previews, and the heights their previews reserve. */
-const reserved = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../../docs/src/lib/preview-heights.json'), 'utf8'));
-
-/** Runs `work` over `items`, a few at a time: the work is waiting for pages. */
-async function pool(items, size, work) {
-	const queue = [...items];
-	await Promise.all(Array.from({ length: size }, async () => {
-		for (let item = queue.shift(); item !== undefined; item = queue.shift()) await work(item);
-	}));
 }
 
 test('the Styling section has one heading structure, and the earlier fragment reaches it', async () => {
@@ -330,12 +263,6 @@ test('the quiet text of the section has at least 4.5:1 contrast in light and dar
 	});
 });
 
-/** Waits until both previews have rendered their example (a client-only island is empty, then shows "Loading example"). */
-const previewsRendered = (page) => page.waitForFunction(() => {
-	const islands = [...document.querySelectorAll('#styling [data-styling-pane] astro-island')];
-	return islands.length === 2 && islands.every((island) => island.firstElementChild !== null && island.querySelector('.example-loading') === null);
-}, undefined, { timeout: 30000 });
-
 test('the examples in the previews keep their headings out of the outline, once they have rendered', async () => {
 	await withSite(async ({ origin, newPage }) => {
 		for (const slug of ['text', 'button', 'tag-group']) {
@@ -477,88 +404,6 @@ test('the previews are measured in the browser: every step the table claims chan
 	});
 });
 
-test('every family reserves the height of its example: a preview does not grow when it renders', async () => {
-	await withSite(async ({ origin, newPage }) => {
-		const grown = [];
-		await pool(Object.keys(reserved), 6, async (slug) => {
-			const page = await newPage();
-			await page.goto(`${origin}/components/${slug}/`);
-			await previewsRendered(page);
-			for (const width of [360, 768, 1280]) {
-				await page.setViewportSize({ width, height: 900 });
-				await page.waitForTimeout(250);
-				const frames = await page.evaluate(() => [...document.querySelectorAll('#styling .styling-frame')].map((frame) => ({ height: frame.getBoundingClientRect().height, reserved: Number.parseFloat(getComputedStyle(frame).minHeight) })));
-				for (const frame of frames) if (frame.height > frame.reserved + 0.5) grown.push(`${slug} at ${width}px: the frame is ${frame.height}px, it reserves ${frame.reserved}px`);
-			}
-			await page.context().close();
-		});
-		assert.deepEqual(grown, [], 'record-preview-heights.mjs records the heights again when an example changes');
-	});
-});
-
-test('a family reserves the intrinsic height of its example plus the fixed margin, not the height of its own reservation', async () => {
-	await withSite(async ({ origin, newPage }) => {
-		// Measured with the rule record-preview-heights.mjs records with (preview-heights.mjs: the reservation taken off, motion off), against what the
-		// page prints.
-		const off = [];
-		await pool(Object.keys(reserved), 6, async (slug) => {
-			const page = await newPage(motionOff);
-			await page.goto(`${origin}/components/${slug}/`);
-			await previewsRendered(page);
-			const printed = await page.evaluate(() => {
-				const style = document.querySelector('#styling [data-styling-compare]').style;
-				return { narrow: Number.parseFloat(style.getPropertyValue('--preview-h-narrow')), wide: Number.parseFloat(style.getPropertyValue('--preview-h-wide')) };
-			});
-			const intrinsic = await measureIntrinsicHeights(page);
-			const wanted = { narrow: intrinsic.narrow + previewMargin, wide: intrinsic.wide + previewMargin };
-			for (const key of ['narrow', 'wide']) if (Math.abs(printed[key] - wanted[key]) > 1) off.push(`${slug} ${key}: reserves ${printed[key]}px, the example needs ${wanted[key] - previewMargin}px (+${previewMargin}px)`);
-			assert.deepEqual(printed, reserved[slug], `${slug}: the page prints the recorded heights`);
-			await page.context().close();
-		});
-		assert.deepEqual(off, [], 'a reservation that is not the example\'s own height plus the margin within 1px');
-	});
-});
-
-test('recording the preview heights again gives the committed file', { timeout: 300_000 }, () => {
-	// A sample that has the tall, the wrapping (Text at 320px), the short and the two-column families; the page already reserves its heights, which is what
-	// a re-recording measures: it has to read the example and not its own reservation, or each recording would grow the file.
-	const sample = ['text', 'calendar', 'sidebar', 'disclosure-group', 'activity', 'button', 'tag-group', 'separator'];
-	const run = spawnSync(process.execPath, [resolve(import.meta.dirname, 'record-preview-heights.mjs'), '--check', sample.join(',')], { encoding: 'utf8', timeout: 280_000 });
-	assert.equal(run.status, 0, `${run.stdout}${run.stderr}`);
-	assert.match(run.stdout, /gives the committed heights for 8 pages/u);
-});
-
-test('the page does not move when the previews render, even when its scripts come late', async () => {
-	await withSite(async ({ origin, newPage }) => {
-		// The tallest examples, and the two a review measured moving the page most before the heights were reserved.
-		const tallest = Object.entries(reserved).sort(([, left], [, right]) => right.narrow - left.narrow).slice(0, 4).map(([slug]) => slug);
-		const moved = [];
-		for (const slug of new Set([...tallest, 'calendar', 'code-block'])) {
-			for (const width of [360, 1280]) {
-				const page = await newPage({ width, height: 800, colorScheme: 'light' });
-				await page.route('**/*.js', async (route) => {
-					await new Promise((done) => setTimeout(done, 1800));
-					await route.continue();
-				});
-				await page.addInitScript(() => {
-					window.__shift = 0;
-					new PerformanceObserver((list) => {
-						for (const entry of list.getEntries()) if (!entry.hadRecentInput) window.__shift += entry.value;
-					}).observe({ type: 'layout-shift', buffered: true });
-				});
-				// Open on the previews, so that they are on screen when they render.
-				await page.goto(`${origin}/components/${slug}/#styling-pane-default`);
-				await measured(page);
-				await page.waitForTimeout(300);
-				const shift = await page.evaluate(() => window.__shift);
-				if (shift >= 0.1) moved.push(`${slug} at ${width}px: ${shift.toFixed(3)}`);
-				await page.context().close();
-			}
-		}
-		assert.deepEqual(moved, [], 'a shift of 0.1 or more');
-	});
-});
-
 test('the measurement waits for whichever comes last, the shared script or the previews, and a page without the script says "Not measured yet."', async () => {
 	await withSite(async ({ origin, newPage }) => {
 		const delayed = async (pattern, milliseconds) => {
@@ -598,7 +443,7 @@ test('the recipe lowers nothing a preview paints under the contrast rule, in lig
 		// an element that is already under the rule (Mux's own, not the recipe's) has to stay where it was.
 		const worse = [];
 		const painted = new Map();
-		await pool(Object.keys(reserved), 6, async (slug) => {
+		await pool(Object.keys(reservedHeights), 6, async (slug) => {
 			for (const colorScheme of ['light', 'dark']) {
 				const page = await newPage({ colorScheme });
 				await page.goto(`${origin}/components/${slug}/`);
@@ -693,7 +538,7 @@ test('the recipe lowers nothing a preview paints under the contrast rule, in lig
 			}
 		});
 		// A part drawn only by a background image or a border (ColorModeToggle's icon) is not an element this reads; the selector must still find most.
-		assert.ok([...painted.values()].filter((count) => count > 0).length >= Object.keys(reserved).length * 0.9, `most previews paint elements this reads: ${[...painted].filter(([, count]) => count === 0).map(([slug]) => slug)} paint none`);
+		assert.ok([...painted.values()].filter((count) => count > 0).length >= Object.keys(reservedHeights).length * 0.9, `most previews paint elements this reads: ${[...painted].filter(([, count]) => count === 0).map(([slug]) => slug)} paint none`);
 		assert.deepEqual(worse, [], 'the recipe lowers what a preview paints under the contrast rule');
 	});
 });
