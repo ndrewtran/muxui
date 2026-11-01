@@ -2,15 +2,39 @@
   "name": "@muxui/tooling",
   "version": "1.1.0",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ndrewtran/muxui.git",
+    "directory": "packages/tooling"
+  },
+  "homepage": "https://github.com/ndrewtran/muxui/tree/main/packages/tooling#readme",
+  "bugs": {
+    "url": "https://github.com/ndrewtran/muxui/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=24.19.0 <25"
   },
+  "files": [
+    "bin",
+    "generated",
+    "src/index.mjs",
+    "src/cli.mjs",
+    "src/parser.mjs",
+    "src/pnpm-adapter.mjs",
+    "src/local-resolver.mjs",
+    "src/renderers.mjs",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
   "bin": {
     "muxui": "./bin/muxui.mjs"
   },
   "exports": {
     ".": "./src/index.mjs",
+    "./authoring": "./src/authoring.mjs",
     "./resolver": "./src/local-resolver.mjs",
     "./registry": "./generated/command-surface.mjs",
     "./types": "./generated/response-types.d.ts"
@@ -26,5 +50,13 @@
     "@muxui/catalog": "workspace:*",
     "@muxui/schema": "workspace:*",
     "semver": "7.8.5"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./src/index.mjs",
+      "./resolver": "./src/local-resolver.mjs",
+      "./registry": "./generated/command-surface.mjs",
+      "./types": "./generated/response-types.d.ts"
+    }
   }
 }

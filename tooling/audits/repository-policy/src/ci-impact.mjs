@@ -835,6 +835,9 @@ const scopedDependents = {
 
 const linkSpec = /^(?:workspace|link):/u;
 
+// Build-time edges that still pass a change on: the catalog compiler embeds token data in the bundle every catalog dependent reads.
+const propagatingDevelopmentEdges = { '@muxui/tokens': ['@muxui/catalog'] };
+
 // Workspaces that depend on a changed package through a `workspace:` or
 // `link:` spec in their package.json. A runtime edge (`dependencies`,
 // `peerDependencies`) plans the dependent as if it changed (`scope: 'package'`)
@@ -849,7 +852,8 @@ export function workspaceDependentRoutes(packages, changedNames) {
   while (queue.length > 0) {
     const { upstream, origin } = queue.shift();
     for (const { name, manifest } of packages) {
-      const runtime = ['dependencies', 'peerDependencies'].some((field) => linkSpec.test(manifest[field]?.[upstream] ?? ''));
+      const runtime = ['dependencies', 'peerDependencies'].some((field) => linkSpec.test(manifest[field]?.[upstream] ?? ''))
+        || (propagatingDevelopmentEdges[upstream]?.includes(name) && linkSpec.test(manifest.devDependencies?.[upstream] ?? ''));
       if (!runtime && !linkSpec.test(manifest.devDependencies?.[upstream] ?? '')) continue;
       if (![upstream, origin].some((source) => scopedDependents[source]?.includes(name))) {
         if (runtime && routes.get(name)?.scope !== 'package') routes.set(name, { via: upstream, scope: 'package' });

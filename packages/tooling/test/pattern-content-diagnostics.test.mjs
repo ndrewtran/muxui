@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { SchemaValidationError } from '@muxui/schema';
-import { diagnoseCompileFailure } from '../src/index.mjs';
+import { diagnoseCompileFailure } from '../src/authoring.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const patternPath = 'catalog/patterns/poster-grid/artifact.json';
