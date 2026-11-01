@@ -135,10 +135,10 @@ Part 2, versions and release:
    tuple. The one-commit rule covers the packages a release publishes. A
    package it reuses keeps its original recorded version, digest, and
    provenance, and the manifest verifies its compatibility with the new tuple.
-   No rule makes all four publish every time. A bad version is deprecated, and
-   only that version, and fixed forward, as under Decision 0023 and its
-   amendment 01, with its own authorization. A healthy published version stays
-   published and is not deprecated. The prior tuple stays installable and
+   No rule makes all four publish every time. Only a bad version is deprecated
+   and fixed forward, as under Decision 0023 and its amendment 01, with its
+   own authorization. A healthy published version stays published and is not
+   deprecated. The prior tuple stays installable and
    verifiable by exact version: nothing is unpublished and the prior release
    manifests are retained. The first portfolio release has no prior tuple.
    Restoring the prior verifiable tuple, which Product Scope requires for
