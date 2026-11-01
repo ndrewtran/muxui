@@ -226,9 +226,10 @@ source manifests keep their `private: true` flags until an implementation pull
 request.
 
 Implementation is separate pull requests: the entry split and the publication
-metadata of each new package, the React descriptor in the shape the resolver
-reads, the declared publish set with the release preparation and publish
-workflow changes, and the P2.1 activation packet.
+metadata of each new package, the declared publish set with the release
+preparation and publish workflow changes, and the P2.1 activation packet. The
+React descriptor in the shape the resolver reads is already in source (#411)
+and first ships in the next React rc.
 
 ## Reversal
 
