@@ -498,7 +498,11 @@ change the final R1-exit merge stop.
   adapters and fixtures but never satisfies this public surface. Evidence:
   `E-P2.3-01…05`.
 - `P2 exit` completes React Productization without claiming another renderer.
-  Evidence: `E-P2-EXIT-01…05`.
+  Evidence: `E-P2-EXIT-01…05`. It owes the Product Scope proof that release
+  rollback restores the prior verifiable tuple without rewriting historical
+  records ("Productization is product-complete only when"). P2.1 proves only
+  that the prior tuple stays installable and verifiable by exact version
+  (Decision 0032).
 - `BL1` delivers the private Blocks showcase after R1 exit, independently of
   P2.1 through P2.3 and without satisfying any of their evidence (Decision
   0026). Evidence: `E-BL1-01…11`.
@@ -567,17 +571,19 @@ verify it. Decision 0032 accepts the graph. `@muxui/tokens` stays private.
   (`manifest`, `list`, `search`, `get`) for the React tuple, with human, JSON,
   and dense output (Architecture, "CLI is the Productization documentation
   interface").
-- One immutable release manifest per release, from one commit, correlating the
-  whole tuple of the set: package versions and digests, the catalog digest,
-  descriptors, evidence digests, provenance, and active exception digests. The
-  first portfolio release publishes all four packages; a later release
-  publishes only the packages whose version units changed (Architecture,
-  "Version units and compatibility"). Release preparation rejects inconsistent
-  ranges, missing exports, digest drift, and version effects that do not match
-  the change.
+- One immutable release manifest per release, correlating the whole tuple of
+  the set: package versions and digests, the catalog digest, descriptors,
+  evidence digests, provenance, and active exception digests. The first
+  portfolio release publishes all four packages from one commit; a later release
+  publishes only the packages whose version units changed, from one commit
+  (Architecture, "Version units and compatibility"). A reused package keeps its
+  original recorded version, digest, and provenance, and the manifest verifies
+  its compatibility with the new tuple. Release preparation rejects
+  inconsistent ranges, missing exports, digest drift, and version effects that
+  do not match the change.
 - Ordered publishing of the packages a release includes: schema, catalog,
-  tooling, then React, with the Decision 0023 deprecate and fix-forward rollback
-  prepared per package.
+  tooling, then React. Recovery is prepared per package as under Decision 0023:
+  deprecate only a bad version and fix forward.
 - An npm trusted publisher for each new package, set up with Andrew's browser
   2FA close to its first publish.
 
@@ -587,10 +593,10 @@ verify it. Decision 0032 accepts the graph. `@muxui/tokens` stays private.
 | --- | --- | --- |
 | `E-P2.1-01` | Every public tarball (schema, catalog, tooling, React) installs from its packed artifact and exposes only its declared exports, types, files, and supported engines. It holds no workspace-only entry, no `workspace:` specifier, no dependency outside the registry and the publish set, and no `@muxui/tokens`. | Packed consumer matrix with negative fixtures: a leaked compiler or authoring entry, a `workspace:` dependency, an unlisted dependency, and a tokens dependency each fail. |
 | `E-P2.1-02` | The tooling resolver reads the packed React descriptor from the installed tarballs, and descriptor bindings match the actual tarball exports and exact binding and token revisions. Source-tree-only success fails. From the packed `muxui` binary installed from those tarballs: `manifest`, `list`, `search`, and `get` discover and retrieve the React tuple's artifacts; human, `--json`, and `--dense` output normalize to the same response as the catalog API, with dense output inside its token budget; an invalid request returns a structured error with a stable code and `nextCommand`; and each capability P2.1 does not enable (G2.4 to G2.6 and consumer validation) is absent or explicitly unavailable in the manifest. This satisfies Architecture "Command surface", "Query envelopes", "Dense output", and "Self-describing manifest". | Pack-time descriptor audit; the packed `muxui` binary run against the installed tarballs with golden human, JSON, and dense output for the discovery baseline, an invalid-request corpus, and a manifest availability check; a negative fixture whose descriptor the resolver rejects with its typed error. |
-| `E-P2.1-03` | One release manifest per release correlates the whole tuple of the publish set from one commit and verifies every package, catalog, descriptor, evidence, and exception digest. The first portfolio release lists all four packages; a later release publishes only the packages whose version units changed and records the unchanged ones by version and digest. It rejects repacked bytes under the same version, a package missing from the tuple, and a package built from another commit. | Manifest integrity fixture. |
+| `E-P2.1-03` | One release manifest per release correlates the whole tuple of the publish set and verifies every package, catalog, descriptor, evidence, and exception digest. Every package the release publishes is built from the release commit, and the first portfolio release publishes all four. A later release publishes only the packages whose version units changed. Each reused package keeps its original recorded version, digest, and provenance, and the manifest verifies its compatibility with the new tuple. It rejects repacked bytes under the same version, a package missing from the tuple, a newly published package built from another commit, and a reused package whose recorded digest or compatibility does not hold. | Manifest integrity fixture. |
 | `E-P2.1-04` | Representative compatible, incompatible, editorial, implementation-only, token, and schema changes produce the required version effects. Each version of the three new packages is a prerelease, the catalog package version equals `catalogVersion`, and the candidate set satisfies tooling's own range on the catalog. | SemVer classification corpus, and an install of the candidate set that resolves tooling's catalog range. |
 | `E-P2.1-05` | The current contract is accepted and a superseded one is rejected with a typed error and no old-format reader (Decision 0016). Resolver negotiation against the project-declared catalog is tested apart from tooling's range: fixture catalogs for supported older tuples are read, a schema-incompatible catalog and an unsupported query API major return `MUXUI_CATALOG_INCOMPATIBLE`, and prerelease catalogs with different base versions (for example `2.1.0-rc.2` and `2.2.0-rc.1`) resolve by declared compatibility, not by the range. Hosted or latest data stays advisory. | Multi-version query matrix. |
-| `E-P2.1-06` | For each package of the release, in order: a publish rehearsal; a configured trusted publisher; and a registry read-back of the exact version, integrity, provenance, and `next` at the verified rc. `latest` is not claimed (the registry sets it on a first publish; Decision 0023), and the rollback is prepared, not exercised. Simulated refusals, with no registry mutation: a version collision, an artifact-integrity mismatch, and an invalid promotion lineage (a dry-run candidate from another commit, workflow, or version) each stop the release before any publish. A partial-publication rehearsal in which a later package in the order fails proves the recovery: each package already published is deprecated and fixed forward on its own, the tuple is verified again, and no record is rewritten. | Release dry run, registry read-back, the rollback plan in the release manifest, a refusal corpus, and the partial-publication rehearsal against a registry fake. |
+| `E-P2.1-06` | For each package of the release, in order: a publish rehearsal; a configured trusted publisher; and a registry read-back of the exact version, integrity, provenance, and `next` at the verified rc. `latest` is not claimed (the registry sets it on a first publish; Decision 0023), and recovery is prepared, not exercised. Simulated refusals, with no registry mutation: a version collision, an artifact-integrity mismatch, and an invalid promotion lineage (a dry-run candidate from another commit, workflow, or version) each stop the release before any publish. A partial-publication rehearsal fails a later package in the order after earlier packages published, by a refused publish or a failed registry read-back. It proves the recovery: only a version that published bad bytes is deprecated and fixed forward, a package that never published needs no deprecation, healthy published versions stay published and are not deprecated (Decision 0023 amendment 01), the tuple is verified again, and no record is rewritten. For each later release, the prior tuple stays installable and verifiable by exact version: nothing is unpublished and the prior release manifests are retained. The first portfolio release has no prior tuple, and the rehearsal shows the same for the packages already published. Restoring the prior tuple stays owed by P2 exit. | Release dry run, registry read-back, the rollback plan in the release manifest, a refusal corpus, and the partial-publication rehearsal against a registry fake. |
 
 **Scope controls**
 

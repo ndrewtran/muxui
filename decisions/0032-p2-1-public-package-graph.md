@@ -131,10 +131,18 @@ Part 2, versions and release:
    schema, catalog, tooling, React. Every later release keeps the existing
    rule that only the version units that changed are released (Architecture,
    "Version units and compatibility"). It publishes those packages in the same
-   order, still from one commit under one release manifest that correlates the
-   whole tuple. No rule makes all four publish every time. A bad package is
-   deprecated and fixed forward under Decision 0023, with its own
-   authorization.
+   order, from one commit under one release manifest that correlates the whole
+   tuple. The one-commit rule covers the packages a release publishes. A
+   package it reuses keeps its original recorded version, digest, and
+   provenance, and the manifest verifies its compatibility with the new tuple.
+   No rule makes all four publish every time. A bad version is deprecated, and
+   only that version, and fixed forward, as under Decision 0023 and its
+   amendment 01, with its own authorization. A healthy published version stays
+   published and is not deprecated. The prior tuple stays installable and
+   verifiable by exact version: nothing is unpublished and the prior release
+   manifests are retained. The first portfolio release has no prior tuple.
+   Restoring the prior verifiable tuple, which Product Scope requires for
+   Productization to be complete, stays owed by P2 exit.
 10. **Trusted publishers.** Each of the three new packages needs its own npm
     trusted publisher. Setting them up takes Andrew's browser 2FA, and it is
     done close to each package's first publish.
@@ -153,8 +161,10 @@ Part 2, versions and release:
 - **The Roadmap** names the packages in "Later tracks and Productization", adds
   a P2.1 section with its locked deliverables and the text of `E-P2.1-01…06`,
   cites this decision in the milestone register, and names `E-P2.1-01` and
-  `E-P2.1-02` in the packed-descriptor row of the fixture ledger. P2.1 is not
-  made ready or active: its entry conditions and the activation packet stay.
+  `E-P2.1-02` in the packed-descriptor row of the fixture ledger. Its `P2 exit`
+  entry gains one sentence pointing to the Product Scope rollback line that P2
+  exit owes. P2.1 is not made ready or active: its entry conditions and the
+  activation packet stay.
 - **Product Scope** takes a major version, `23.0.0`, under its own rule: "Add,
   remove, replace, or materially redefine a committed outcome, platform,
   release boundary, package, public surface, or non-goal". The transitions:
@@ -166,7 +176,9 @@ Part 2, versions and release:
     data and transforms. Its publication at Productization, which "the
     compatible portfolio" implied, is removed. It is a later activation.
   - The "Public package scope" paragraph and the Productization and roadmap
-    alignment rows state the publish set.
+    alignment rows state the publish set. The Productization completeness line
+    "release rollback restores the prior verifiable tuple without rewriting
+    historical records" is unchanged and stays owed by P2 exit.
   - No Scope ID is added, renumbered, reused, or removed.
   - Product outcome: a consumer installs a compatible schema, catalog, tooling,
     and React tuple from the registry and can verify it, with none of the
@@ -205,9 +217,11 @@ It changes no R1 exit evidence, release candidate, or rc sequence
 proposals stay absent or explicitly unavailable in every manifest. It does not
 publish `@muxui/tokens`, `@muxui/foundation`, `@muxui/web`, or
 `@muxui/react-native`, and it changes no token value or `@muxui/react`
-dependency rule. It edits Decision 0031 only to bring item 20 up to date. It
-changes no manifest, so the source manifests keep their `private: true` flags
-until an implementation pull request.
+dependency rule. It does not satisfy the Product Scope proof that release
+rollback restores the prior verifiable tuple, which P2 exit owes. It edits
+Decision 0031 only to bring item 20 up to date. It changes no manifest, so the
+source manifests keep their `private: true` flags until an implementation pull
+request.
 
 Implementation is separate pull requests: the entry split and the publication
 metadata of each new package, the React descriptor in the shape the resolver
@@ -226,7 +240,7 @@ rejected alternatives below, needs a successor decision and its own activation.
 
 ## Drafting choices for Andrew
 
-These calls follow from the seven answers and add no commitment. The pull
+These calls follow from Andrew's answers and add no commitment. The pull
 request review is where Andrew confirms or changes them.
 
 1. The first rc of the schema and tooling is a prerelease of the version their
@@ -238,9 +252,15 @@ request review is where Andrew confirms or changes them.
 4. A range that must admit a prerelease names one, and a prerelease with a new
    base version needs its own comparator (item 8).
 5. "One release for all four" is read as the first portfolio release. Later
-   releases publish only the version units that changed, still from one commit
-   under one manifest (item 9).
-6. Rollback is Decision 0023's deprecate and fix forward, per package (item 9).
+   releases publish only the version units that changed, from one commit under
+   one manifest. A reused package keeps its original version, digest, and
+   provenance, and the manifest verifies its compatibility with the new tuple
+   (item 9).
+6. Recovery is per package, as under Decision 0023 and its amendment 01: only a
+   bad version is deprecated and fixed forward, and healthy published versions
+   stay. P2.1 proves the prior tuple stays installable by exact version, and
+   the restore proof stays owed by P2 exit, as Andrew's second answer settles
+   (item 9).
 7. A packed manifest may depend only on a registry package or a member of the
    publish set (item 3).
 8. The excluded entries are named, and the schema's public authoring helpers
@@ -265,11 +285,12 @@ request review is where Andrew confirms or changes them.
 - Outcome: Accepted user direction; repository adoption through a protected pull request
 - Acceptance date: 1 November 2026
 
-Andrew's choice, in his words, given as the recommended option of its question:
+Andrew's choices, in his words, each given as the recommended option of its question:
 
 - "The P2.1 package-graph draft needs seven decisions (package shape, the tokens scope effect, versions, release shape, unpublished compiler, the tooling-to-catalog range, trusted-publisher timing). How do you want to settle them?" answered "Take all seven (Recommended)", whose option text was: "Publish schema, catalog and tooling beside react; tokens private (Product Scope 23.0.0); rc.N on next; one release for all four; compiler unpublished; ranged dependency; publishers at first publish. I draft the decision PR for your review. Nothing publishes."
+- A second question, also on 1 November 2026: "Product Scope says Productization is complete only when "release rollback restores the prior verifiable tuple", but the P2.1 draft recovers a bad release by deprecating it and publishing a fix (as React does under Decision 0023). How should the decision reconcile them?" answered "Defer restore to P2 exit (Recommended)", whose option text was: "P2.1 deprecates only the bad version and fixes forward, like React. Its evidence also proves the prior set stays installable and verifiable by exact version. The restore proof stays owed by P2 exit. No Product Scope commitment changes."
 
-The seven, and where this record states each:
+The first answer's seven, and where this record states each:
 
 1. Package shape: schema, catalog, and tooling become public beside React, and
    tokens stay private (items 1 to 4).
@@ -285,6 +306,9 @@ The seven, and where this record states each:
    (item 8).
 7. Trusted publishers are set up with Andrew's browser 2FA close to the first
    publish (item 10).
+
+The second answer is stated in item 9, and in the Non-goals and preserved
+stops.
 
 The alternatives the draft weighed and this record does not adopt: publishing
 tokens as a fifth package, vendoring the schema into the catalog so that three

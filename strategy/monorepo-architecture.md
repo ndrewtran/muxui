@@ -1404,7 +1404,8 @@ manifest carries. The rules:
 - The first portfolio release publishes the set together, in order: schema,
   catalog, tooling, then React. Every later release publishes only the packages
   whose version units changed, in the same order, from one commit under one
-  release manifest that correlates the whole tuple ("Version units and
+  release manifest that correlates the whole tuple. A package it does not
+  publish keeps its recorded version, digest, and provenance ("Version units and
   compatibility").
 
 ### Catalog distribution and resolution
@@ -2066,9 +2067,11 @@ a new base version names it.
 
 The first portfolio release publishes all four packages from one commit under
 one release manifest. A later release publishes only the packages whose version
-units changed, as the table below requires, still from one commit under one
-release manifest that correlates the whole tuple, so the descriptor and the
-catalog it pairs with come from the same source.
+units changed, as the table below requires, from one commit under one release
+manifest that correlates the whole tuple. The one-commit rule covers the
+packages a release publishes. A package it reuses keeps its original recorded
+version, digest, and provenance, and the manifest verifies that it is
+compatible with the new tuple.
 
 Every implementation query resolves under an explicit compatibility context:
 
