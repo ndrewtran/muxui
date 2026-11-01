@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, posix, resolve } from 'node:path';
 import { parse } from 'acorn';
 import test from 'node:test';
 import {
@@ -4325,21 +4325,22 @@ test('a catalog record edit runs the tooling package check but not the React pac
 
 // React generation compiles the catalog in process (the renderer descriptor carries its revisions and digests) with no
 // workspace edge to it, and the catalog's own devDependency on React points the other way. What the compile reads
-// outside catalog/ records is derived here, so a new import or setting cannot slip past the planners.
-async function reactCatalogCompileInputs() {
-  const read = (path) => readFile(resolve(repositoryRoot, path), 'utf8');
+// outside catalog/ records is derived here, so a new import or setting cannot slip past the planners. The walk starts
+// from every catalog module React generation imports, so those modules' own local imports count too.
+async function reactCatalogCompileInputs(root = repositoryRoot) {
+  const read = (path) => readFile(resolve(root, path), 'utf8');
   const manifest = JSON.parse(await read('packages/catalog/catalog-sources.json'));
+  const generator = await read('packages/react/src/generate.mjs');
+  const pending = ['compiler.mjs', ...[...generator.matchAll(/from '\.\.\/\.\.\/catalog\/src\/([^']+\.mjs)'/gu)].map(([, file]) => file)];
   const modules = new Set();
-  const pending = ['compiler.mjs'];
   while (pending.length > 0) {
     const file = pending.pop();
     if (modules.has(file)) continue;
     modules.add(file);
-    for (const [, local] of (await read(`packages/catalog/src/${file}`)).matchAll(/from '\.\/([^']+\.mjs)'/gu)) pending.push(local);
+    for (const [, local] of (await read(`packages/catalog/src/${file}`)).matchAll(/(?:from|import)\s*'(\.\/[^']+\.mjs)'/gu)) {
+      pending.push(posix.join(posix.dirname(file), local));
+    }
   }
-  // The React generator also imports the inventory derivation the catalog generator writes from.
-  const generator = await read('packages/react/src/generate.mjs');
-  for (const [, local] of generator.matchAll(/from '\.\.\/\.\.\/catalog\/src\/([^']+\.mjs)'/gu)) modules.add(local);
   return [
     'packages/catalog/catalog-sources.json',
     'packages/catalog/package.json',
@@ -4360,6 +4361,31 @@ test('the catalog compile inputs React generation reads are the planners\' decla
     .map(([prefix]) => prefix)
     .sort();
   assert.deepEqual(consumed, inputs);
+});
+
+test('a helper behind the inventory derivation changes the derived inputs, so the declared lists must grow', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'muxui-compile-inputs-'));
+  try {
+    for (const path of [
+      'packages/catalog/catalog-sources.json',
+      'packages/react/src/generate.mjs',
+      ...(await reactCatalogCompileInputs()).filter((path) => path.startsWith('packages/catalog/src/')),
+    ]) {
+      mkdirSync(dirname(join(root, path)), { recursive: true });
+      cpSync(resolve(repositoryRoot, path), join(root, path));
+    }
+    // The scratch copy derives what the checkout does, so the helper below is the only difference.
+    assert.deepEqual(await reactCatalogCompileInputs(root), await reactCatalogCompileInputs());
+    // completeness.mjs is imported by the React generator, not by the compiler; its own import must still be walked.
+    appendFileSync(join(root, 'packages/catalog/src/completeness.mjs'), "import './inventory-helper.mjs';\n");
+    writeFileSync(join(root, 'packages/catalog/src/inventory-helper.mjs'), 'export {};\n');
+    const derived = await reactCatalogCompileInputs(root);
+    assert.ok(derived.includes('packages/catalog/src/inventory-helper.mjs'));
+    assert.ok(!config.reactCatalogCompileInputs.includes('packages/catalog/src/inventory-helper.mjs'));
+    assert.notDeepEqual(derived, [...config.reactCatalogCompileInputs].sort());
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('a catalog compile input plans the React package check and generation identity beside its owner', async () => {
