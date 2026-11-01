@@ -1,9 +1,10 @@
 import { createCatalogDiagnostic } from '@muxui/catalog';
 import {
-  API_VERSION,
   QUERY_API_VERSIONS,
+  SCHEMA_READ_RANGE,
   SCHEMA_VERSION,
   canonicalJson,
+  negotiateQueryApiVersion,
 } from '@muxui/schema';
 import { satisfies, valid, validRange } from 'semver';
 
@@ -18,8 +19,8 @@ export const RESOLVER_ERROR_PRECEDENCE = Object.freeze([
   'MUXUI_CATALOG_INCOMPATIBLE',
 ]);
 
-const TOOLING_API_VERSION = API_VERSION;
 const TOOLING_SCHEMA_VERSION = SCHEMA_VERSION;
+const EXACT_VERSION = /^\d+\.\d+\.\d+$/u;
 const TOOLING_VERSION = '1.0.0';
 
 function compareText(left, right) {
@@ -140,11 +141,10 @@ function validateNormalizedInput(input) {
     ], `catalog ${catalog.id ?? '<unknown>'}`);
     assertClosed(catalog.provenance, ['kind', 'value'], `${catalog.id}.provenance`);
     assertArray(catalog.supportedQueryApiVersions, `${catalog.id}.supportedQueryApiVersions`);
+    // Versions tooling does not read are valid here: `compatibilityFor` negotiates the list, it does not police it.
     if (
-      new Set(catalog.supportedQueryApiVersions).size !== catalog.supportedQueryApiVersions.length
-      || catalog.supportedQueryApiVersions.some((version) => (
-        !QUERY_API_VERSIONS.includes(version)
-      ))
+      catalog.supportedQueryApiVersions.some((version) => typeof version !== 'string')
+      || new Set(catalog.supportedQueryApiVersions).size !== catalog.supportedQueryApiVersions.length
       || !catalog.supportedQueryApiVersions.includes(catalog.queryApiVersion)
     ) inputError(`${catalog.id}.supportedQueryApiVersions is inconsistent`);
     assertCatalogDigestMap(catalog.tokenRequirementSets, `${catalog.id}.tokenRequirementSets`);
@@ -235,8 +235,8 @@ function validateNormalizedInput(input) {
   }
   if (
     graph.request.queryApiVersion != null
-    && !QUERY_API_VERSIONS.includes(graph.request.queryApiVersion)
-  ) inputError('resolver request queryApiVersion must be an admitted exact version');
+    && !(typeof graph.request.queryApiVersion === 'string' && EXACT_VERSION.test(graph.request.queryApiVersion))
+  ) inputError('resolver request queryApiVersion must be an exact version');
 }
 
 function rangeAllows(range, version) {
@@ -316,19 +316,24 @@ function compatibilityFor({
   const failures = [];
   const renderers = new Map();
   let failingPackage = '@muxui/catalog';
-  const supportedQueryApiVersions = catalog.supportedQueryApiVersions;
-  const selectedQueryApiVersion = requestedQueryApiVersion ?? catalog.queryApiVersion;
-  if (
-    !Array.isArray(supportedQueryApiVersions)
-    || new Set(supportedQueryApiVersions).size !== supportedQueryApiVersions.length
-    || !supportedQueryApiVersions.includes(catalog.queryApiVersion)
-    || !supportedQueryApiVersions.includes(selectedQueryApiVersion)
-    || catalog.queryApiVersion !== TOOLING_API_VERSION
-  ) {
+  const supported = catalog.supportedQueryApiVersions;
+  let requestUnsupported = false;
+  if (requestedQueryApiVersion != null) {
+    // An explicit request must be a version tooling reads that the catalog also supports.
+    requestUnsupported = !QUERY_API_VERSIONS.includes(requestedQueryApiVersion)
+      || !supported.includes(requestedQueryApiVersion);
+    if (requestUnsupported) {
+      failures.push({
+        dimension: 'query-api',
+        required: canonicalJson(QUERY_API_VERSIONS),
+        actual: requestedQueryApiVersion,
+      });
+    }
+  } else if (negotiateQueryApiVersion(supported) === undefined) {
     failures.push({
       dimension: 'query-api',
-      required: canonicalJson(supportedQueryApiVersions ?? []),
-      actual: selectedQueryApiVersion,
+      required: canonicalJson(QUERY_API_VERSIONS),
+      actual: canonicalJson(supported),
     });
   }
   if (!rangeAllows(catalog.schemaRange, TOOLING_SCHEMA_VERSION)) {
@@ -345,10 +350,10 @@ function compatibilityFor({
       actual: release?.id ?? 'missing',
     });
   }
-  if (release && release.schemaVersion !== TOOLING_SCHEMA_VERSION) {
+  if (release && !rangeAllows(SCHEMA_READ_RANGE, release.schemaVersion)) {
     failures.push({
       dimension: 'schema',
-      required: TOOLING_SCHEMA_VERSION,
+      required: SCHEMA_READ_RANGE,
       actual: release.schemaVersion,
     });
   }
@@ -481,7 +486,7 @@ function compatibilityFor({
     || compareText(left.required, right.required)
     || compareText(left.actual, right.actual)
   ));
-  return { failures, failingPackage, renderers };
+  return { failures, failingPackage, renderers, requestUnsupported };
 }
 
 function diagnosticSpec(code) {
@@ -516,7 +521,7 @@ function diagnosticSpec(code) {
     },
     MUXUI_QUERY_API_VERSION_UNSUPPORTED: {
       ruleId: 'resolver.query-api.supported',
-      message: 'The selected catalog does not support the requested query API version.',
+      message: 'The requested query API version is not supported by both tooling and the selected catalog.',
     },
   }[code];
 }
@@ -712,7 +717,12 @@ export function resolveCatalogGraph(input) {
     });
   }
 
-  let compatibility = { failures: [], failingPackage: '@muxui/catalog', renderers: new Map() };
+  let compatibility = {
+    failures: [],
+    failingPackage: '@muxui/catalog',
+    renderers: new Map(),
+    requestUnsupported: false,
+  };
   if (valid.length === 1) {
     compatibility = compatibilityFor({
       catalog: valid[0].catalog,
@@ -727,7 +737,7 @@ export function resolveCatalogGraph(input) {
     });
     if (compatibility.failures.length > 0) {
       failures.push({
-        code: compatibility.failures.some(({ dimension }) => dimension === 'query-api')
+        code: compatibility.requestUnsupported
           ? 'MUXUI_QUERY_API_VERSION_UNSUPPORTED'
           : 'MUXUI_CATALOG_INCOMPATIBLE',
         reason: compatibility.failures.map(({ dimension }) => dimension).join(', '),

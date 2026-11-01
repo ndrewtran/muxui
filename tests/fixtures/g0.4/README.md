@@ -14,3 +14,7 @@ Passing the fixture-shape test proves only that the G0.4 synthetic inputs exist
 and agree internally. It does not satisfy `E-G0.4-01` through `E-G0.4-05` or
 prove resolver behavior. Activation and later completion remain separate human
 workflow decisions.
+
+`current-corpus.mjs` loads the corpus under the current product identity for the
+resolver tests. It keeps every older tuple, including the query API versions a
+current reader ignores.

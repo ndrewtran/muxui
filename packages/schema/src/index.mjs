@@ -21,9 +21,20 @@ export const QUERY_SELECTORS = Object.freeze(
   ),
 );
 export const SCHEMA_VERSION = '3.0.0';
+/** The schema versions this build reads: every version of the major it was built for. */
+export const SCHEMA_READ_RANGE = '^3.0.0';
 export const API_VERSION = '2.1.0';
 export const QUERY_SCHEMA_VERSION = '2.1.0';
+/** The query API versions this build reads, ascending. */
 export const QUERY_API_VERSIONS = Object.freeze([API_VERSION]);
+
+/**
+ * The highest query API version a reader and a catalog both support, or undefined when they share none. Versions the
+ * catalog lists that the reader does not read (older or newer majors) are ignored, never an error.
+ */
+export function negotiateQueryApiVersion(supported, readable = QUERY_API_VERSIONS) {
+  return readable.findLast((version) => supported.includes(version));
+}
 
 /** The group a pattern category belongs to in `patternCategories` (the validated category registry), or undefined. */
 export function patternGroup(patternCategories, category) {

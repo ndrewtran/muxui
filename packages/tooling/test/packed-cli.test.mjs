@@ -205,6 +205,12 @@ test('E-P2.1-02 dense output stays inside every locked token budget', async () =
   const fixtures = { manifest: [], list: ['--limit', '1'], search: ['button', '--limit', '1'], get: [BUTTON] };
   const cases = ['brief', 'compact', 'full'].flatMap((detail) => Object.entries(fixtures)
     .map(([command, args]) => ({ command, detail, args: [command, ...args, '--detail', detail, '--dense'] })));
+  // `get --platform web.react` also fits brief and compact. Its full detail exceeds the 2048 budget, so it is not enforced.
+  cases.push(...['brief', 'compact'].map((detail) => ({
+    command: 'get',
+    detail,
+    args: ['get', BUTTON, '--platform', 'web.react', '--detail', detail, '--dense'],
+  })));
   const outputs = await Promise.all(cases.map(({ args }) => tuple.muxui(args)));
   outputs.forEach(({ status, stderr }, index) => assert.deepEqual({ status, stderr }, { status: 0, stderr: '' }, cases[index].args.join(' ')));
 

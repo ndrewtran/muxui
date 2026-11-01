@@ -4,7 +4,6 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { createCatalogApi, createCatalogDiagnostic } from '@muxui/catalog';
 import {
-  QUERY_API_VERSIONS,
   canonicalDigest,
   canonicalJson,
   parseJsonStrict,
@@ -438,7 +437,8 @@ export function resolvePnpmProjectCatalog({
     || (artifact !== null && typeof artifact !== 'string')
     || (platform !== null && typeof platform !== 'string')
     || typeof filterBindings !== 'boolean'
-    || (queryApiVersion !== null && !QUERY_API_VERSIONS.includes(queryApiVersion))
+    // Any exact version passes: the resolver answers MUXUI_QUERY_API_VERSION_UNSUPPORTED for one tooling cannot serve.
+    || (queryApiVersion !== null && !(typeof queryApiVersion === 'string' && /^\d+\.\d+\.\d+$/u.test(queryApiVersion)))
     || (project !== null && !isSafeRelative(project))
   ) return projectFailure('pnpm@0.0.0');
   const selectedPath = resolve(process.cwd(), project ?? '.');
