@@ -598,6 +598,20 @@ verify it. Decision 0032 accepts the graph. `@muxui/tokens` stays private.
 | `E-P2.1-05` | The current contract is accepted and a superseded one is rejected with a typed error and no old-format reader (Decision 0016). Resolver negotiation against the project-declared catalog is tested apart from tooling's range: fixture catalogs for supported older tuples are read, a schema-incompatible catalog and an unsupported query API major return `MUXUI_CATALOG_INCOMPATIBLE`, and prerelease catalogs with different base versions (for example `2.1.0-rc.2` and `2.2.0-rc.1`) resolve by declared compatibility, not by the range. Hosted or latest data stays advisory. | Multi-version query matrix. |
 | `E-P2.1-06` | For each package of the release, in order: a publish rehearsal; a configured trusted publisher; and a registry read-back of the exact version, integrity, provenance, and `next` at the verified rc. `latest` is not claimed (the registry sets it on a first publish; Decision 0023), and recovery is prepared, not exercised. Simulated refusals, with no registry mutation: a version collision, an artifact-integrity mismatch, and an invalid promotion lineage (a dry-run candidate from another commit, workflow, or version) each stop the release before any publish. A partial-publication rehearsal fails a later package in the order after earlier packages published, by a refused publish or a failed registry read-back. It proves the recovery: only a version that published bad bytes is deprecated and fixed forward, a package that never published needs no deprecation, healthy published versions stay published and are not deprecated (Decision 0023 amendment 01), the tuple is verified again, and no record is rewritten. For each later release, the prior tuple stays installable and verifiable by exact version: nothing is unpublished and the prior release manifests are retained. The first portfolio release has no prior tuple. Restoring the prior tuple stays owed by P2 exit. | Release dry run, registry read-back, the rollback plan in the release manifest, a refusal corpus, and the partial-publication rehearsal against a registry fake. |
 
+**Cross-cutting evidence ownership**
+
+Product Scope "Cross-cutting product commitments" needs a Roadmap evidence
+owner for each applicable commitment before P2.1 becomes `ready`:
+
+| Scope ID | P2.1 evidence owner |
+| --- | --- |
+| `SCOPE-QUALITY-COMPAT-PROFILE` | `E-P2.1-03`: the release manifest correlates the digest of the React compatibility and evidence profile the packed `@muxui/react` exports, so the published tuple names the profile it was proved against. P2 exit enforces the Productization profile. |
+| `SCOPE-QUALITY-GENERATOR-CONTRACT` | `E-P2.1-02` and `E-P2.1-03`: the React descriptor generator stays under `pnpm generate:check`, and two preparations of the same commit produce the same release-manifest digest, with stable ordering and no wall-clock field in its canonical preimage. |
+| `SCOPE-QUALITY-PERFORMANCE` | Not P2.1: P2 exit owns the Productization policy. P2.1 keeps the dense-output token budget of `E-P2.1-02`. |
+| `SCOPE-TRUST-CACHE-PROVENANCE` | `E-P2.1-02`: the resolver reads the catalog from its installed tarball and rejects bytes whose integrity or provenance sidecar does not match, with `MUXUI_CATALOG_INTEGRITY_MISMATCH`. Explicitly downloaded catalogs stay with P2.2. |
+| `SCOPE-TRUST-EVIDENCE-PRIVACY` | Not applicable: P2.1 captures registry, CI, and packed-artifact data, and no consumer code, prompts, screens, or traces. The activation packet states each record's disclosure class and retention. |
+| `SCOPE-THEME-PLATFORM-SAFETY` | `E-P2.1-02`: descriptor bindings carry their platform-safety requirement-set digests, and the resolver rejects a descriptor whose digests differ from the catalog's. |
+
 **Scope controls**
 
 - No publish, dist-tag change, deprecation, trusted-publisher setup, or new
