@@ -10,6 +10,7 @@ import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import { deriveApis, syncDerivedApis, withDerivedApi } from '../api-extraction/derived-apis.mjs';
 import { compileCatalog } from '../../catalog/src/compiler.mjs';
+import { synchronizedSourceManifest } from '../../catalog/src/completeness.mjs';
 import { syncDeclarationReference } from '../reference-reader/sync.mjs';
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, carriesUpstreamPropName, compatibilityUpstream } from './r1-contracts.mjs';
 import { assertFlatImports, flatModuleName, flattenImports } from './flat-modules.mjs';
@@ -921,9 +922,11 @@ assertReactR15GeneratedContracts({
 const descriptor = `${canonicalJson(currentDescriptorRecord)}\n`;
 const release = `${canonicalJson(currentReleaseRecord)}\n`;
 // The renderer descriptor carries the compiled catalog's spec revisions and requirement digests. The compiler merges
-// packages/react/api/ into its bindings, so those documents are written (or checked) before it reads them.
+// packages/react/api/ into its bindings, so those documents are written (or checked) before it reads them. This runs
+// before catalog generation, so it compiles the synchronized record inventory rather than the committed file, which only the
+// catalog generator writes.
 if (!listing) await syncDerivedApis({ packageRoot, documents: derivedApis, checking });
-const { bundle: catalogBundle } = await compileCatalog({ repositoryRoot });
+const { bundle: catalogBundle } = await compileCatalog({ repositoryRoot, sourceManifest: await synchronizedSourceManifest(repositoryRoot) });
 const rendererDescriptor = `${canonicalJson(buildRendererDescriptor({ manifest, bundle: catalogBundle, bindings: currentBindings }))}\n`;
 const r15Closure = generatedText(
   'catalog/react-r1-5/closure.json',

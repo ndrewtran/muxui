@@ -1228,6 +1228,19 @@ export async function buildPullRequestImpact({
       plan.reactTestFiles.add(testFile);
       plan.reasons.push(`${path} is read by the React test ${testFile}`);
     }
+    // React generation compiles the catalog in process, with no workspace dependency on it, so the compiler
+    // and the settings it reads plan the React package check and the generation identity beside their owner's route.
+    if (matches(path, config.reactCatalogCompileInputs)) {
+      plan.packageChecks.add('@muxui/react');
+      plan.generationIdentity = true;
+      plan.reasons.push(`${path} is read by React generation, which compiles the catalog; run the React package check and the generation identity`);
+    }
+    // The tooling resolver test packs @muxui/react and reads the descriptor and the exports it indexes, which a React
+    // change reaches only through a scoped devDependency edge.
+    if (matches(path, config.packedReactResolverInputs)) {
+      plan.packageChecks.add('@muxui/tooling');
+      plan.reasons.push(`${path} shapes the packed React descriptor and exports; run the tooling check that resolves the packed package`);
+    }
     if (config.fullInputPaths.includes(path)) {
       plan.fullReasons.push(`${path} is a workspace-wide execution input`);
       continue;
@@ -1396,6 +1409,12 @@ export async function buildPullRequestImpact({
         continue;
       }
       const impact = reactPackageWideChanges(reactPackageBefore, reactPackageAfter);
+      // The tooling resolver test reads the packed manifest's exports, files, and descriptor pointer.
+      const descriptorPointer = (text) => JSON.stringify(text === null ? null : parseJson(text, 'React package.json').muxUi ?? null);
+      if (impact.pagesAffected || descriptorPointer(reactPackageBefore) !== descriptorPointer(reactPackageAfter)) {
+        plan.packageChecks.add('@muxui/tooling');
+        plan.reasons.push(`${path} shapes the packed React descriptor and exports; run the tooling check that resolves the packed package`);
+      }
       if (impact.pagesAffected) {
         plan.reactPackageFull = true;
         addEveryStoryPage(plan, records, pageIndex);

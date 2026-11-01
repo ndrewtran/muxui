@@ -56,7 +56,7 @@ import {
 import { componentTestSelection, isBrowserTestFile, testNamePattern } from '../src/component-test-selection.mjs';
 import { verifyGenerationState } from '../src/generation-proof.mjs';
 import { loadPolicy } from '../src/policy.mjs';
-import { dependencyClosure, familyRecordsFromContract } from '../src/scoped-verification.mjs';
+import { changedPackageSelection, dependencyClosure, familyRecordsFromContract } from '../src/scoped-verification.mjs';
 import { discoverWorkspacePackages } from '../src/workspace-packages.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -1179,7 +1179,7 @@ test('a failed CI prerequisite stops the run before dependent checks', () => {
 
 test('generation and install commands are marked as CI prerequisites', async () => {
   const catalogCommands = executionCommands(await plan(['packages/catalog/src/compiler.mjs']), { packages });
-  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, ...Array(6).fill(false)]);
+  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, ...Array(8).fill(false)]);
 });
 
 test('clean owner checks schedule only their generation dependencies before checks', async () => {
@@ -1187,8 +1187,9 @@ test('clean owner checks schedule only their generation dependencies before chec
   const catalogCommands = executionCommands(catalog, { packages });
   // Catalog changes also run the tooling dense goldens that snapshot catalog
   // responses and plan its runtime dependents (docs, tooling, and policy through
-  // tooling) as if they changed. React's catalog devDependency is scoped:
-  // React never imports @muxui/catalog.
+  // tooling) as if they changed. React's catalog devDependency is scoped: React
+  // never imports @muxui/catalog, but its generation compiles the catalog compiler's
+  // source, so a compiler change also plans the React check and generation identity.
   // This matches the real `ci-impact.mjs --preview` for this change.
   assert.deepEqual(catalog.generationPackages, [
     '@muxui/catalog', '@muxui/react', '@muxui/repository-policy',
@@ -1205,7 +1206,9 @@ test('clean owner checks schedule only their generation dependencies before chec
     ['--filter', '@muxui/tooling', 'run', 'check'],
     ['--filter', '@muxui/catalog', 'run', 'check'],
     ['--filter', '@muxui/docs', 'run', 'check'],
+    ['generate:check'],
     ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
+    ['--filter', '@muxui/react', 'run', 'check'],
   ]);
   assert.equal(catalog.reactPackageFull, false);
   assert.deepEqual(catalog.storyRuns, []);
@@ -4310,13 +4313,97 @@ test('a React lockfile importer change plans the React runtime dependents', asyn
   assert.equal(result.docs && result.scale, true);
 });
 
-test('catalog edits run the tooling package check but not the React package check', async () => {
-  for (const path of ['catalog/guides/accessibility.md', 'packages/catalog/src/compiler.mjs']) {
+test('a catalog record edit runs the tooling package check but not the React package check', async () => {
+  const path = 'catalog/guides/accessibility.md';
+  const result = await plan([path], { packages: workspacePackages });
+  const commands = executionCommands(result, { packages: workspacePackages }).map(({ args }) => args.join(' '));
+  assert.ok(!commands.includes('--filter @muxui/react run check'), path);
+  assert.equal(result.reactPackageFull, false, path);
+  assert.equal(result.generationIdentity, false, path);
+  assert.ok(result.packageChecks.includes('@muxui/tooling'), path);
+});
+
+// React generation compiles the catalog in process (the renderer descriptor carries its revisions and digests) with no
+// workspace edge to it, and the catalog's own devDependency on React points the other way. What the compile reads
+// outside catalog/ records is derived here, so a new import or setting cannot slip past the planners.
+async function reactCatalogCompileInputs() {
+  const read = (path) => readFile(resolve(repositoryRoot, path), 'utf8');
+  const manifest = JSON.parse(await read('packages/catalog/catalog-sources.json'));
+  const modules = new Set();
+  const pending = ['compiler.mjs'];
+  while (pending.length > 0) {
+    const file = pending.pop();
+    if (modules.has(file)) continue;
+    modules.add(file);
+    for (const [, local] of (await read(`packages/catalog/src/${file}`)).matchAll(/from '\.\/([^']+\.mjs)'/gu)) pending.push(local);
+  }
+  // The React generator also imports the inventory derivation the catalog generator writes from.
+  const generator = await read('packages/react/src/generate.mjs');
+  for (const [, local] of generator.matchAll(/from '\.\.\/\.\.\/catalog\/src\/([^']+\.mjs)'/gu)) modules.add(local);
+  return [
+    'packages/catalog/catalog-sources.json',
+    'packages/catalog/package.json',
+    ...[...modules].map((file) => `packages/catalog/src/${file}`),
+    manifest.commandRegistryPath,
+    manifest.pageBudgetProfilePath,
+    manifest.platformSafetyContractPath,
+  ].sort();
+}
+
+test('the catalog compile inputs React generation reads are the planners\' declared inputs', async () => {
+  const inputs = await reactCatalogCompileInputs();
+  assert.ok(inputs.includes('packages/catalog/src/completeness.mjs') && inputs.includes('packages/catalog/src/pattern-content.mjs'));
+  assert.deepEqual([...config.reactCatalogCompileInputs].sort(), inputs);
+  const policy = await loadPolicy(repositoryRoot);
+  const consumed = Object.entries(policy.affectedPathConsumers)
+    .filter(([prefix, names]) => prefix !== 'catalog/' && names.includes('@muxui/react'))
+    .map(([prefix]) => prefix)
+    .sort();
+  assert.deepEqual(consumed, inputs);
+});
+
+test('a catalog compile input plans the React package check and generation identity beside its owner', async () => {
+  for (const path of await reactCatalogCompileInputs()) {
     const result = await plan([path], { packages: workspacePackages });
-    const commands = executionCommands(result, { packages: workspacePackages }).map(({ args }) => args.join(' '));
-    assert.ok(!commands.includes('--filter @muxui/react run check'), path);
+    assert.ok(result.packageChecks.includes('@muxui/react'), path);
+    assert.equal(result.generationIdentity, true, path);
     assert.equal(result.reactPackageFull, false, path);
+    const commands = executionCommands(result, { packages: workspacePackages }).map(({ args }) => args.join(' '));
+    assert.ok(commands.includes('--filter @muxui/react run check'), path);
+  }
+  // The owner's own route is kept: the compiler still plans the catalog and tooling checks.
+  const compiler = await plan(['packages/catalog/src/compiler.mjs'], { packages: workspacePackages });
+  assert.equal(compiler.catalog, true);
+  assert.ok(compiler.packageChecks.includes('@muxui/tooling'));
+});
+
+test('what shapes the packed React descriptor and exports plans the tooling check that resolves the packed package', async () => {
+  const generator = 'packages/react/src/generate.mjs';
+  const descriptorBuilder = 'packages/react/src/renderer-descriptor.mjs';
+  const source = { before: "import './renderer-descriptor.mjs';\n", after: "import './renderer-descriptor.mjs';\n// changed\n" };
+  const builder = { before: 'export {};\n', after: 'export {}; // changed\n' };
+  const moduleSources = { [generator]: source, [descriptorBuilder]: builder };
+  assert.deepEqual([...config.packedReactResolverInputs].sort(), [generator, descriptorBuilder].sort());
+  for (const path of [generator, descriptorBuilder]) {
+    const result = await plan([path], { packages: workspacePackages, moduleSources });
     assert.ok(result.packageChecks.includes('@muxui/tooling'), path);
+  }
+  // The packed manifest's export map and descriptor pointer count; scripts and development dependencies do not.
+  const manifest = (fields) => JSON.stringify({ name: '@muxui/react', exports: { '.': './generated/index.mjs' }, ...fields });
+  const planned = (before, after) => plan(['packages/react/package.json'], {
+    packages: workspacePackages, reactPackageBefore: manifest(before), reactPackageAfter: manifest(after),
+  });
+  const pointer = { muxUi: { rendererDescriptor: './generated/renderer-descriptor.json' } };
+  assert.ok((await planned({}, { exports: { '.': './generated/index.mjs', './markdown': './generated/markdown.js' } })).packageChecks.includes('@muxui/tooling'));
+  assert.ok((await planned(pointer, {})).packageChecks.includes('@muxui/tooling'));
+  assert.ok(!(await planned({ scripts: { check: 'old' } }, { scripts: { check: 'new' } })).packageChecks.includes('@muxui/tooling'));
+});
+
+test('scoped selection of a catalog compile input includes the React package', async () => {
+  const policy = await loadPolicy(repositoryRoot);
+  for (const path of await reactCatalogCompileInputs()) {
+    const selection = changedPackageSelection({ changedPaths: [path], packages: workspacePackages, policy });
+    assert.ok(selection.directPackages.some(({ name }) => name === '@muxui/react'), path);
   }
 });
 

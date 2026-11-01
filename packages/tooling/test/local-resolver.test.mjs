@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { appendFile, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { appendFile, cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, relative, resolve as resolvePath } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import { canonicalJson, parseJsonStrict, validateFamily } from '@muxui/schema';
 import {
@@ -709,40 +710,75 @@ test('E-BL1-07 an installed tuple that lacks a required participant binding hide
 });
 
 /**
- * A pnpm project over this repository's own catalog and `@muxui/react`: the React manifest fields and generated
- * renderer descriptor exactly as generation wrote them, beside the catalog package with a release manifest that lists
- * every binding that descriptor describes (the repository's own release manifest lists none yet). The descriptor's
- * dependencies are left out of the copied manifest because resolution never reads them.
+ * A pnpm project over this repository's own catalog and the packed `@muxui/react`: `pnpm pack` output extracted with
+ * its manifest untouched and its dependencies linked from the checkout's install, so the packed JavaScript can load.
+ *
+ * The catalog's release tuple is FIXTURE DATA. The repository's release manifest lists no renderer bindings yet, so
+ * the fixture lists every `web.react` component binding of the compiled catalog, with the catalog's own spec revisions
+ * and requirement digests, as a future release would. Nothing in it is read from the descriptor under test.
  */
-async function createReactProject(fixtureRoot) {
+async function createPackedReactProject(fixtureRoot) {
   const reactRoot = resolvePath(import.meta.dirname, '../../react');
   const catalogSource = resolvePath(import.meta.dirname, '../../catalog/generated');
   const catalogRoot = join(fixtureRoot, 'catalog');
-  const rendererRoot = join(fixtureRoot, 'renderer');
+  const packedRoot = join(fixtureRoot, 'renderer');
   await mkdir(join(catalogRoot, 'generated'), { recursive: true });
-  await mkdir(join(rendererRoot, 'generated'), { recursive: true });
-  const { name, version, exports, muxUi } = parseJsonStrict(await readFile(join(reactRoot, 'package.json'), 'utf8'));
-  const descriptorFile = 'generated/renderer-descriptor.json';
-  const descriptor = parseJsonStrict(await readFile(join(reactRoot, descriptorFile), 'utf8'));
+  await mkdir(packedRoot);
+
+  const packed = spawnSync('pnpm', [
+    '--config.ignore-scripts=true', '--config.engine-strict=false',
+    'pack', '--json', '--pack-destination', fixtureRoot,
+  ], { cwd: reactRoot, encoding: 'utf8' });
+  assert.equal(packed.status, 0, packed.stderr);
+  const { filename, files } = JSON.parse(packed.stdout);
+  const extracted = spawnSync('tar', ['-xzf', filename, '-C', packedRoot, '--strip-components=1'], { encoding: 'utf8' });
+  assert.equal(extracted.status, 0, extracted.stderr);
+  await symlink(join(reactRoot, 'node_modules'), join(packedRoot, 'node_modules'));
+  const manifest = parseJsonStrict(await readFile(join(packedRoot, 'package.json'), 'utf8'));
+  const packedPaths = new Set(files.map(({ path }) => path));
+
+  const bundle = parseJsonStrict(await readFile(join(catalogSource, 'catalog.json'), 'utf8'));
   const identity = parseJsonStrict(await readFile(join(catalogSource, 'catalog-package.json'), 'utf8'));
-  identity.releaseManifest.bindings = Object.entries(descriptor.bindings).map(([binding, described]) => ({
-    descriptor: descriptor.id,
-    binding,
-    package: name,
-    version,
-    export: described.export,
-    specRevision: described.specRevision,
-    tokenRequirementSetDigests: described.tokenRequirementSetDigests,
-    platformSafetyRequirementSetDigests: described.platformSafetyRequirementSetDigests,
+  // The canonical binding set is the catalog's, and each binding's module is its packed binding record's.
+  const contract = JSON.parse((await readFile(join(packedRoot, 'generated/r1-6-contract.json'), 'utf8'))
+    .split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
+  const moduleOf = new Map(contract.components.map(({ binding, module }) => [binding, module]));
+  const canonical = bundle.artifacts
+    .filter(({ kind, platforms }) => kind === 'component' && platforms.includes('web.react'))
+    .map((artifact) => {
+      const binding = `${artifact.id}#web.react`;
+      const module = moduleOf.get(binding);
+      assert.ok(module, `${binding} has a packed binding record`);
+      return {
+        binding,
+        module,
+        name: artifact.name,
+        export: `${manifest.name}${module === '.' ? '' : module.slice(1)}#${artifact.name}`,
+        specRevision: artifact.bindingSpecRevisions['web.react'],
+        tokenRequirementSetDigests: { 'web.react': identity.tokenRequirementSets[`${binding}:web.react`] },
+        platformSafetyRequirementSetDigests: { 'web.react': identity.platformSafetyRequirementSets[`${binding}:web.react`] },
+      };
+    })
+    .sort((left, right) => compareBindings(left.binding, right.binding));
+  identity.releaseManifest.bindings = canonical.map((entry) => ({
+    descriptor: `renderer:${manifest.name}`,
+    binding: entry.binding,
+    package: manifest.name,
+    version: manifest.version,
+    export: entry.export,
+    specRevision: entry.specRevision,
+    tokenRequirementSetDigests: entry.tokenRequirementSetDigests,
+    platformSafetyRequirementSetDigests: entry.platformSafetyRequirementSetDigests,
   }));
+
   await writeJson(join(fixtureRoot, 'package.json'), {
-    name: 'react-descriptor-fixture',
+    name: 'react-packed-fixture',
     version: '1.0.0',
     private: true,
     packageManager: 'pnpm@10.33.0',
-    dependencies: { '@muxui/catalog': 'workspace:*', [name]: 'workspace:*' },
+    dependencies: { '@muxui/catalog': 'workspace:*', [manifest.name]: 'link:./renderer' },
   });
-  await writeFile(join(fixtureRoot, 'pnpm-workspace.yaml'), 'packages:\n  - catalog\n  - renderer\n');
+  await writeFile(join(fixtureRoot, 'pnpm-workspace.yaml'), 'packages:\n  - catalog\n');
   await writeJson(join(catalogRoot, 'package.json'), {
     name: '@muxui/catalog',
     version: identity.version,
@@ -757,52 +793,71 @@ async function createReactProject(fixtureRoot) {
     'packages/catalog/generated/catalog-package.json',
     identity,
   );
-  const writeManifest = (pointer) => writeJson(join(rendererRoot, 'package.json'), {
-    name, version, private: true, exports, ...(pointer ? { muxUi } : {}),
-  });
-  await writeManifest(true);
-  for (const file of [descriptorFile, `${descriptorFile}.provenance`]) {
-    await cp(join(reactRoot, file), join(rendererRoot, file));
-  }
   const install = spawnSync('pnpm', ['install', '--offline', '--ignore-scripts'], {
     cwd: fixtureRoot,
     encoding: 'utf8',
   });
   assert.equal(install.status, 0, install.stderr);
+
+  const descriptorFile = 'generated/renderer-descriptor.json';
+  const originals = Object.fromEntries(await Promise.all([descriptorFile, `${descriptorFile}.provenance`].map(
+    async (file) => [file, await readFile(join(packedRoot, file), 'utf8')],
+  )));
   return {
     path: relative(process.cwd(), fixtureRoot).split('\\').join('/'),
-    descriptor,
+    manifest,
+    packedPaths,
+    packedRoot,
+    canonical,
+    descriptor: parseJsonStrict(originals[descriptorFile]),
     identity,
-    bindings: Object.keys(descriptor.bindings),
-    /** Replaces the installed descriptor with `value`, under a provenance sidecar that matches it. */
+    /** Replaces the packed descriptor with `value`, under a provenance sidecar that matches it. */
     writeDescriptor: (value) => writeProjection(
-      join(rendererRoot, descriptorFile),
+      join(packedRoot, descriptorFile),
       'packages/react/generated/renderer-descriptor.json',
       value,
     ),
-    writeManifest,
+    async restoreDescriptor() {
+      for (const [file, text] of Object.entries(originals)) await writeFile(join(packedRoot, file), text);
+    },
+    dropPointer: () => {
+      const { muxUi: _pointer, ...withoutPointer } = manifest;
+      return writeJson(join(packedRoot, 'package.json'), withoutPointer);
+    },
   };
 }
 
-test('E-G0.4 pnpm adapter reads the generated @muxui/react renderer descriptor', async () => {
+function compareBindings(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+test('E-G0.4 pnpm adapter reads the packed @muxui/react renderer descriptor', async () => {
   await mkdir(join(process.cwd(), 'fixtures'), { recursive: true });
-  const fixtureRoot = await mkdtemp(join(process.cwd(), 'fixtures/.g0-4-react-descriptor-'));
+  const fixtureRoot = await mkdtemp(join(process.cwd(), 'fixtures/.g0-4-react-packed-'));
   try {
-    const fixture = await createReactProject(fixtureRoot);
-    const { bindings, descriptor, identity, path: project } = fixture;
-    const bundle = parseJsonStrict(await readFile(
-      resolvePath(import.meta.dirname, '../../catalog/generated/catalog.json'),
-      'utf8',
-    ));
+    const fixture = await createPackedReactProject(fixtureRoot);
+    const { canonical, descriptor, identity, manifest, packedPaths, path: project } = fixture;
+    const bindings = canonical.map(({ binding }) => binding);
+
+    // The packed descriptor describes the catalog's complete web.react binding set, at the catalog's own
+    // release, revisions and digests, and the packed manifest points at it.
     assert.ok(bindings.length > 0);
+    assert.equal(manifest.muxUi.rendererDescriptor, './generated/renderer-descriptor.json');
+    assert.deepEqual(Object.keys(descriptor.bindings).sort(compareBindings), bindings);
     assert.equal(descriptor.releaseProvenance, identity.releaseManifest.id);
-    for (const [binding, described] of Object.entries(descriptor.bindings)) {
-      const [id, bindingId] = binding.split('#');
-      assert.equal(
-        described.specRevision,
-        bundle.artifacts.find((artifact) => artifact.id === id).bindingSpecRevisions[bindingId],
-        binding,
-      );
+
+    // Every indexed export exists in the packed files: its module is mapped, shipped, and exports the name.
+    const modules = new Map();
+    for (const { module, name, binding } of canonical) {
+      const mapped = manifest.exports[module];
+      const target = typeof mapped === 'string' ? mapped : mapped?.default;
+      assert.ok(target, `${binding} names a module the export map lacks`);
+      assert.ok(packedPaths.has(target.slice(2)), `${target} is not in the packed files`);
+      modules.set(target, [...(modules.get(target) ?? []), name]);
+    }
+    for (const [target, names] of modules) {
+      const loaded = await import(pathToFileURL(join(fixture.packedRoot, target)).href);
+      assert.deepEqual(names.filter((name) => loaded[name] === undefined), [], `${target} lacks exports`);
     }
 
     const resolved = resolvePnpmProjectCatalog({ project, bindings });
@@ -815,11 +870,8 @@ test('E-G0.4 pnpm adapter reads the generated @muxui/react renderer descriptor',
         purpose: null,
         section: null,
       }).meta.resolution.targetPackages['@muxui/react'],
-      descriptor.version,
+      manifest.version,
     );
-    assert.equal(runCli([
-      'get', 'muxui:component:button', '--project', project, '--platform', 'web.react', '--json',
-    ]).exitCode, 0);
 
     const compatibilityFailure = (dimension) => {
       const result = resolvePnpmProjectCatalog({ project, bindings });
@@ -846,9 +898,9 @@ test('E-G0.4 pnpm adapter reads the generated @muxui/react renderer descriptor',
     await mutated((value) => { value.bindings[bindings[0]].export = '@muxui/react/unmapped#Button'; });
     compatibilityFailure('renderer-package');
 
-    await fixture.writeDescriptor(descriptor);
+    await fixture.restoreDescriptor();
     assert.equal(resolvePnpmProjectCatalog({ project, bindings }).type, 'success');
-    await fixture.writeManifest(false);
+    await fixture.dropPointer();
     compatibilityFailure('renderer-package');
   } finally {
     await rm(fixtureRoot, { recursive: true, force: true });
