@@ -139,7 +139,9 @@ A pull request's `checks-policy` group runs `check:evidence` only when the chang
 reaches what the tests load or read, through imports or as data:
 
 - `pullRequestImpact.evidenceInputs` lists path prefixes (a trailing slash is a
-  directory): `tests/evidence/`, the policy modules the suite imports, the
+  directory): `tests/evidence/`, the policy modules the suite imports (the release
+  modules and `publish-set.json` that the portfolio capture fixture builds a
+  release from, with the registry fake and tuple fixture under `test/`), the
   `test/evidence-` files (the tests and the fixture they share),
   `apps/docs/src/lib/block-presets.ts`, `packages/react/src/r1-deferred-evidence.mjs`,
   Decision 0022, which the R1 exit capture reads, and the data the growth audit
@@ -223,16 +225,104 @@ checks the candidate set. A dry run asks `main-ci` for the push run of `ci.yml` 
 `main` at its exact commit. It reuses that run only when the run succeeded and every
 group of the full plan, recomputed from the commit, has a successful job; otherwise
 it runs the full `pnpm release:prepare`. It then verifies its own candidate with
-`prepared` and uploads the four tarballs and the manifest. Publish mode refuses a
-package set before it reads anything, because the publish job still publishes one
-tarball; the ordered publish job is a later change. The promotion steps are written
-for the set: `dry-run` verifies the dry run named by `dry-run-id`, read as one
-attempt; `fetch-candidate` downloads that artifact's ZIP by the verified id, checks
-it against the API digest, accepts only the expected file names, and extracts them
-itself into a fresh directory outside the checkout; and `candidate` verifies the
-versions, the `@muxui/react` sha512, and the manifest against the commit. The tests are
-`test/release-set.test.mjs`, `test/release-manifest.test.mjs`, and
-`test/release-lineage.test.mjs`.
+`prepared` and uploads the four tarballs and the manifest. Publish mode promotes
+that dry run without building: `dry-run` verifies the dry run named by `dry-run-id`,
+read as one attempt; `fetch-candidate` downloads that artifact's ZIP by the verified
+id, checks it against the API digest, accepts only the expected file names, and
+extracts them itself into a fresh directory outside the checkout; and `candidate`
+verifies the versions, the `@muxui/react` sha512, and the manifest against the
+commit. All of that runs in the `prepare` job, which has no OIDC access, so a
+candidate from another commit, another workflow, or other versions ends the run
+before the environment approval is asked for.
+
+### Ordered publication and recovery
+
+One `publish` job, behind one `npm-publish` environment approval, publishes the set
+to `next` in publish order. It is the only job with `id-token: write`. A package
+that exists on npm publishes through trusted publishing: its `npm publish`
+exchanges that identity for a short-lived token scoped to the package, so each
+needs its own trusted publisher (Decision 0032 item 10). `npm trust` needs an
+existing package, so a package that does not exist yet cannot: its first publish
+alone uses the temporary `NPM_TOKEN` secret of the `npm-publish` environment.
+The token is referenced only by the `Publish the set in order` step's `env:`, is
+taken out of the process environment when read, and reaches only the one
+`npm publish` of a package the whole-set preflight found absent (as npm's
+`//registry.npmjs.org/:_authToken` config in that child's environment, never an
+`.npmrc`). Every other `npm publish` runs with every npm credential removed, so an
+existing package can only publish through OIDC. Provenance is signed with the
+job's OIDC identity in both cases, and the read-back requires it for every
+package. If the preflight finds a first publish and no token, the run refuses
+before the first publish, naming the packages; it never falls back.
+
+First publish of a new package, in order (Andrew's steps): add the temporary
+`NPM_TOKEN` secret to the `npm-publish` environment; run the publish; set up the
+package's trusted publisher; revoke the token on npm; delete the secret. Later
+rcs of that package then publish through OIDC with no token.
+
+It checks out only `src/npm-publication.mjs`, `src/release-set.mjs`, and
+`publish-set.json`; every workflow input reaches it through `env:`, never inside a
+`run:` script, and the script validates each before use.
+
+`src/npm-publication.mjs` does the work in two steps:
+
+- `verify-candidate` (the `Re-verify candidate` step) reads the downloaded
+  artifact the way the job must trust it: exactly the set's tarballs and manifest,
+  the manifest for this commit and listing the set in publish order, every
+  published tarball the manifest's recorded sha512 and built from this commit and
+  release, the versions the inputs name, and `@muxui/react` the digest the
+  operator authorized (`tarball-sha512`). A package the manifest marks `reused` is
+  skipped.
+- `publish-set` (the `Publish the set in order` step) preflights every package
+  read-only first, so a collision or a broken `next` lineage anywhere in the set
+  stops the release before the first publish. Then, for each package in order, it
+  rechecks the registry for drift, runs `npm publish --tag next --provenance
+  --access public` (with the token for a first publish only), and reads back the version document (integrity and SLSA
+  provenance) and the dist-tags (`next` is the candidate, `latest` unchanged or set
+  by the registry on a first publish). The first failure stops the set and no later
+  package is attempted.
+
+Each package has its own version rule: `<base>-rc.N`, where a first publish
+(package absent) is its `rc.1` and a later one is the number after the rc `next`
+points at, on the same base version. `@muxui/react` stays `0.1.0-rc.N` (Roadmap R1
+exit) with its existing history. A new base version, a missing `latest` or `next`,
+or any other dist-tag stops for a decision. `registry-preflight` mode runs the same
+read-only classification for every version input and holds no credential.
+
+A failure prints the recovery plan of Decision 0023 amendment 01 and executes none
+of it. It reads the registry for each package the run attempted, because a failed
+`npm publish` can still have landed: a version with the candidate's bytes and
+provenance is `healthy` and stays published and is not deprecated; only one the
+registry holds other bytes for (`bad-bytes`) is deprecated, with Andrew's separate
+explicit authorization, and fixed forward to its next rc; one that never published
+or was never attempted needs nothing; a version that is unreadable or still
+propagating, or that has the candidate's bytes without provenance, stops for a
+decision. The plan ends with verifying the tuple again against a new release
+manifest, and no record is rewritten. The workflow publishes the set a candidate
+declares, so a fix forward is a new dispatch at versions the registry does not hold
+yet for the packages that did publish.
+
+The tests are `test/release-set.test.mjs`, `test/release-manifest.test.mjs`,
+`test/release-lineage.test.mjs`, and `test/npm-publication.test.mjs`, whose
+`E-P2.1-06` refusal corpus (a version collision, an artifact-integrity mismatch, and
+a promotion lineage from another commit, workflow, or version, each stopping before
+any publish) and partial-publication rehearsals (a refused publish and a failed
+read-back after earlier packages published) run against an in-process registry
+(`test/registry-fake.mjs`), with no network and no registry mutation.
+
+### Release evidence capture
+
+`tests/evidence/capture-r1-exit.mjs` captures the R1 exit evidence of the
+`@muxui/react` candidate from `npm-publish.yml` runs, and parses four workflow
+formats: the token workflow that published rc.1, the trusted-publishing workflow,
+the build-once workflow, and the portfolio workflow. The earlier three keep their
+adapters, and `test/evidence-integrity.test.mjs` rebuilds the committed rc.1 to rc.4
+routes byte for byte. For a portfolio run the candidate is `@muxui/react`, so the
+`E-R1-EXIT` records keep their shape; the dry run's portfolio manifest (schema,
+digest, source commit and tree, and every tarball's recorded bytes) and each
+package's preflight, publish, and workflow read-back ride along under `portfolio`.
+`test/evidence-integrity.test.mjs` also captures a hosted portfolio release
+built by `test/evidence-portfolio-fixture.mjs`, whose publish job log is what
+`npm-publication.mjs` prints against the registry fake.
 
 Evidence capture and disclosure remain owned by the architecture, Product Scope,
 package, and evidence references. See

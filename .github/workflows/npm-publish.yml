@@ -17,23 +17,37 @@ name: npm publish
 #   `pnpm release:prepare` (Decision 0030). No environment or secret, so no
 #   approval. tarball-sha512 (the @muxui/react tarball) may be empty here; when
 #   given it must match.
-# - mode=publish (main only): refused. The publish job below still publishes one
-#   tarball, so it cannot publish a package set; the ordered publish job, with
-#   per-package preflight and read-back, is a later change. Nothing is published.
-#   The promotion steps below are already written for the set and stay behind
-#   the refusal until then.
-# - mode=registry-preflight: the publish preflight alone for the @muxui/react
-#   version, read-only against the public registry, with no environment,
+# - mode=publish (main only): `prepare` promotes the dry run named by dry-run-id
+#   (verifies it, downloads its artifact by id, and checks the candidate set
+#   against the commit and the inputs) without building anything. Then one
+#   `publish` job, behind one `npm-publish` environment approval, publishes the
+#   set to `next` in publish order. It is the only job with `id-token: write`.
+#   A package that exists on npm publishes through trusted publishing: its
+#   `npm publish` exchanges that identity for a short-lived token scoped to the
+#   package, so each needs its own trusted publisher (Decision 0032 item 10).
+#   A package that does not exist yet cannot (`npm trust` needs an existing
+#   package), so its first publish alone uses the temporary NPM_TOKEN secret of
+#   the npm-publish environment, which only the `Publish the set in order` step
+#   sees; the run refuses before any publish when a first publish has no token
+#   and never falls back. Provenance is signed with the OIDC identity either way,
+#   and trust is set up and the token revoked after the first publish. Per
+#   package the publish job preflights
+#   the registry, rechecks for drift, publishes with provenance, and reads back
+#   the version, integrity, provenance attestation, and `next`; it stops at the
+#   first failure and never continues to a later package. A failure prints a
+#   recovery plan (Decision 0023 amendment 01) and executes none of it.
+# - mode=registry-preflight: the publish preflight alone for every version
+#   input, read-only against the public registry, with no environment,
 #   credentials, or approval.
 #
-# Preflight: the version must be absent from the registry. A first publish
-# (package absent) must be rc.1. Otherwise the dist-tags must be exactly
-# latest and next, the version must be the next release candidate after next
-# (next = rc.N, the version rc.N+1), and latest is recorded; after publishing,
-# next must be the candidate and latest unchanged. Any other state stops for a
-# decision. The registry sets `latest` on a first publish; nothing here claims
-# or moves a dist-tag, and no deprecate, unpublish, dist-tag, or owner command
-# runs anywhere.
+# Preflight, per package: the version must be absent from the registry. A first
+# publish (package absent) must be its rc.1. Otherwise the dist-tags must be
+# exactly latest and next, the version must be the next release candidate after
+# next (next = rc.N, the version rc.N+1, same base version), and latest is
+# recorded; after publishing, next must be the candidate and latest unchanged.
+# Any other state stops for a decision. The registry sets `latest` on a first
+# publish; nothing here claims or moves a dist-tag, and no deprecate,
+# unpublish, dist-tag, or owner command runs anywhere.
 #
 # Record `tarball-sha512` from a dry run of this workflow, not a local run. The
 # archive is byte-stable across Linux runners, but Node's gzip header stores
@@ -47,17 +61,17 @@ on:
         required: true
         type: string
       schema-version:
-        description: "@muxui/schema candidate version, <source version>-rc.N (e.g. 0.6.0-rc.1); dry-run and publish"
+        description: "@muxui/schema candidate version, <source version>-rc.N (e.g. 0.6.0-rc.1); every mode"
         required: false
         type: string
         default: ''
       catalog-version:
-        description: "@muxui/catalog candidate version, <source version>-rc.N (e.g. 2.1.0-rc.1); dry-run and publish"
+        description: "@muxui/catalog candidate version, <source version>-rc.N (e.g. 2.1.0-rc.1); every mode"
         required: false
         type: string
         default: ''
       tooling-version:
-        description: "@muxui/tooling candidate version, <source version>-rc.N (e.g. 1.1.0-rc.1); dry-run and publish"
+        description: "@muxui/tooling candidate version, <source version>-rc.N (e.g. 1.1.0-rc.1); every mode"
         required: false
         type: string
         default: ''
@@ -81,8 +95,13 @@ on:
 permissions:
   contents: read
 
+# One version for every member of the publish set, as release-set.mjs, release-lineage.mjs, and
+# npm-publication.mjs read them. Inputs reach scripts only through the environment.
+env:
+  MUXUI_RELEASE_VERSIONS: '@muxui/schema=${{ inputs.schema-version }},@muxui/catalog=${{ inputs.catalog-version }},@muxui/tooling=${{ inputs.tooling-version }},@muxui/react=${{ inputs.version }}'
+
 jobs:
-  # Read-only public registry state for the version input: what the publish
+  # Read-only public registry state for every version input: what the publish
   # preflight would accept or stop on. Trusted publishing has no stored
   # credential to verify; OIDC is exchanged only inside the publish job.
   registry-preflight:
@@ -95,7 +114,9 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             .node-version
+            tooling/audits/repository-policy/publish-set.json
             tooling/audits/repository-policy/src/npm-publication.mjs
+            tooling/audits/repository-policy/src/release-set.mjs
           sparse-checkout-cone-mode: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -103,9 +124,7 @@ jobs:
           node-version-file: .node-version
 
       - name: Registry preflight (read-only)
-        env:
-          VERSION: ${{ inputs.version }}
-        run: node tooling/audits/repository-policy/src/npm-publication.mjs preflight
+        run: node tooling/audits/repository-policy/src/npm-publication.mjs preflight-set
 
   prepare:
     if: inputs.mode == 'dry-run' || inputs.mode == 'publish'
@@ -120,9 +139,6 @@ jobs:
       actions: read
     outputs:
       node-version: ${{ steps.node.outputs.version }}
-    # One version for every member of the publish set, as release-prepare.mjs and release-lineage.mjs read them.
-    env:
-      MUXUI_RELEASE_VERSIONS: '@muxui/schema=${{ inputs.schema-version }},@muxui/catalog=${{ inputs.catalog-version }},@muxui/tooling=${{ inputs.tooling-version }},@muxui/react=${{ inputs.version }}'
     steps:
       - name: Require main for publish mode
         if: inputs.mode == 'publish' && github.ref != 'refs/heads/main'
@@ -130,14 +146,6 @@ jobs:
           REF: ${{ github.ref }}
         run: |
           echo "::error title=Publish needs main::mode=publish only runs from refs/heads/main, not $REF."
-          exit 1
-
-      # Release preparation now writes a package set, and the publish job publishes one tarball. Refuse before any
-      # approval is requested or any package is published; the ordered publish job replaces this step.
-      - name: Refuse publishing a package set
-        if: inputs.mode == 'publish'
-        run: |
-          echo "::error title=Package set not publishable yet::mode=publish does not publish the package set (schema, catalog, tooling, react) until the ordered publish job lands. Run mode=dry-run. Nothing was published."
           exit 1
 
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -319,34 +327,40 @@ jobs:
     if: inputs.mode == 'publish' && github.ref == 'refs/heads/main'
     needs: prepare
     runs-on: ubuntu-latest
-    # The read-back allows about 5 minutes for the version and 10 for dist-tags.
-    timeout-minutes: 30
+    # The read-back allows about 5 minutes for a version and 10 for its dist-tags, for each of the four packages.
+    timeout-minutes: 90
+    # One approval for the whole set: every package's publish runs inside this one approved job.
     environment: npm-publish
     permissions:
       contents: read
       # npm trusted publishing exchanges this OIDC identity for a short-lived
-      # publish token, and provenance is signed with it. No other job has it.
+      # publish token for each `npm publish`, and provenance is signed with it.
+      # No other job has it.
       id-token: write
     # Never run two publishes at once, and never cancel one mid-flight.
     concurrency:
       group: npm-publish
       cancel-in-progress: false
     steps:
-      # Only the read-only registry check script; the candidate comes from the
-      # uploaded artifact.
+      # Only the publication script, the set reader it imports, and the set it
+      # reads; the candidate comes from the uploaded artifact.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
-          sparse-checkout: tooling/audits/repository-policy/src/npm-publication.mjs
+          sparse-checkout: |
+            tooling/audits/repository-policy/publish-set.json
+            tooling/audits/repository-policy/src/npm-publication.mjs
+            tooling/audits/repository-policy/src/release-set.mjs
           sparse-checkout-cone-mode: false
 
-      # No registry-url, so no .npmrc and no _authToken placeholder: npm >= 11.5.1
-      # exchanges the GitHub OIDC identity for a short-lived token scoped to
-      # @muxui/react and holds it in memory for this command only (its CLI config
-      # layer, never written to a file). If the exchange fails, npm has no token
-      # and stops with ENEEDAUTH before signing provenance, so nothing reaches the
-      # transparency log. --registry and the candidate's publishConfig pin the
-      # registry.
+      # No registry-url, so no .npmrc and no _authToken placeholder: for an existing
+      # package npm >= 11.5.1 exchanges the GitHub OIDC identity for a short-lived
+      # token scoped to the package being published and holds it in memory for that
+      # command only (its CLI config layer, never written to a file). If the exchange
+      # fails, npm has no token and stops with ENEEDAUTH before signing provenance, so
+      # nothing reaches the transparency log. A first publish gets the temporary token
+      # as npm config in that one child process's environment. --registry and the
+      # candidate's publishConfig pin the registry.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ needs.prepare.outputs.node-version }}
@@ -360,62 +374,26 @@ jobs:
           name: npm-candidate
           path: ${{ runner.temp }}/npm-candidate
 
+      # The candidate as the publish job must trust it: exactly the set's
+      # tarballs and manifest, every tarball the manifest's recorded bytes, built
+      # from this commit and this release, the versions the inputs name, and the
+      # authorized @muxui/react digest.
       - name: Re-verify candidate
-        id: candidate
         env:
-          EXPECTED_VERSION: ${{ inputs.version }}
+          CANDIDATE_DIR: ${{ runner.temp }}/npm-candidate
           EXPECTED_SHA512: ${{ inputs.tarball-sha512 }}
-        run: |
-          set -euo pipefail
-          tarballs=("$RUNNER_TEMP"/npm-candidate/*.tgz)
-          if [ "${#tarballs[@]}" -ne 1 ] || [ ! -f "${tarballs[0]}" ]; then
-            echo "::error title=Candidate missing::Expected exactly one tarball in the npm-candidate artifact."
-            exit 1
-          fi
-          tarball=${tarballs[0]}
-          version=$(tar -xzOf "$tarball" package/package.json | jq -r .version)
-          integrity="sha512-$(openssl dgst -sha512 -binary "$tarball" | base64 -w 0)"
-          if [ "$version" != "$EXPECTED_VERSION" ]; then
-            echo "::error title=Version mismatch::Artifact is $version; the version input is $EXPECTED_VERSION."
-            exit 1
-          fi
-          if [ -z "$EXPECTED_SHA512" ] || [ "$integrity" != "$EXPECTED_SHA512" ]; then
-            echo "::error title=Integrity mismatch::Artifact is $integrity; the tarball-sha512 input is ${EXPECTED_SHA512:-empty}."
-            exit 1
-          fi
-          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+        run: node tooling/audits/repository-policy/src/npm-publication.mjs verify-candidate
 
-      # Read-only public registry reads. Records the dist-tags the publish and
-      # read-back must preserve.
-      - name: Registry preflight (read-only)
-        id: preflight
+      # Preflights every package read-only, then for each in publish order:
+      # drift recheck, `npm publish --tag next --provenance`, and registry
+      # read-back of its version, integrity, provenance, and next. The first
+      # failure stops the set and prints the recovery plan, which it does not run.
+      # The version document is read first; the packument's dist-tags can stay
+      # CDN-cached for minutes after a publish, so both reads retry.
+      - name: Publish the set in order
         env:
-          VERSION: ${{ inputs.version }}
-        run: node tooling/audits/repository-policy/src/npm-publication.mjs preflight
-
-      - name: Publish to next
-        env:
-          VERSION: ${{ inputs.version }}
-          TARBALL: ${{ steps.candidate.outputs.tarball }}
-          PRE_KIND: ${{ steps.preflight.outputs.kind }}
-          PRE_LATEST: ${{ steps.preflight.outputs.latest }}
-          PRE_NEXT: ${{ steps.preflight.outputs.next }}
-          npm_config_engine_strict: 'false'
-        run: |
-          set -euo pipefail
-          # Stop on registry drift since the preflight.
-          node tooling/audits/repository-policy/src/npm-publication.mjs recheck
-          cd "$RUNNER_TEMP"
-          npm publish "$TARBALL" --tag next --provenance --access public \
-            --registry=https://registry.npmjs.org
-
-      # Read-only. The version document is read first; the packument's dist-tags
-      # can stay CDN-cached for minutes after a publish, so both reads retry.
-      - name: Read back registry state
-        env:
-          VERSION: ${{ inputs.version }}
+          CANDIDATE_DIR: ${{ runner.temp }}/npm-candidate
           EXPECTED_SHA512: ${{ inputs.tarball-sha512 }}
-          PRE_KIND: ${{ steps.preflight.outputs.kind }}
-          PRE_LATEST: ${{ steps.preflight.outputs.latest }}
-          PRE_NEXT: ${{ steps.preflight.outputs.next }}
-        run: node tooling/audits/repository-policy/src/npm-publication.mjs read-back
+          # Temporary: used for a package that does not exist on npm yet, never for an existing one.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: node tooling/audits/repository-policy/src/npm-publication.mjs publish-set

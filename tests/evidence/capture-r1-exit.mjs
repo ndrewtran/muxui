@@ -24,13 +24,19 @@
 //   --registry          read-only registry observations plus a clean consumer
 //                       installed from the registry. Writes E-R1-EXIT-03 and 04.
 //
-// Three npm-publish.yml formats are parsed: the token workflow that published
+// Four npm-publish.yml formats are parsed: the token workflow that published
 // rc.1 (shell preflight and read-back, npm whoami), the trusted-publishing
-// workflow (npm-publication.mjs preflight, recheck, and read-back output), and
-// the build-once workflow of Decision 0030, where the dry run reports the main
-// CI run it reused (or its fallback to the full release:prepare) and the publish
-// run promotes the dry run's npm-candidate artifact instead of preparing its own.
-// An older run keeps the binding it was captured with.
+// workflow (npm-publication.mjs preflight, recheck, and read-back output), the
+// build-once workflow of Decision 0030, where the dry run reports the main CI run
+// it reused (or its fallback to the full release:prepare) and the publish run
+// promotes the dry run's npm-candidate artifact instead of preparing its own, and
+// the portfolio workflow of Decision 0032, where the same two runs carry the
+// publish set (schema, catalog, tooling, React): one npm-candidate artifact of
+// four tarballs and a portfolio release manifest, and a publish job that
+// publishes the set in order (npm-publication.mjs publish-set). A portfolio
+// capture is still the E-R1-EXIT evidence of the @muxui/react candidate; the other
+// packages' facts ride along under `portfolio`. An older run keeps the binding it
+// was captured with.
 //
 // Options: --out=<dir> writes the route elsewhere (default: the version's route).
 // --rehearsal accepts a non-main run and an uncommitted tool for development
@@ -263,7 +269,7 @@ export function tarballFacts(bytes, entries) {
   };
 }
 
-const prepareSummary = /^(?:R1 exit |R1\.5 packed |\[E-G0\.0-04\] )/u;
+const prepareSummary = /^(?:R1 exit |R1\.5 packed |P2\.1 |\[E-G0\.0-04\] )/u;
 const prepareSteps = [
   { name: 'Prepare release candidate', marker: 'pnpm release:prepare', filter: prepareSummary },
   { name: 'Collect candidate', marker: 'source_dir=' },
@@ -382,7 +388,9 @@ function bindCandidateArtifact(artifacts, runId, headRevision) {
  * needs that run (`mainCi`: { run, jobs }), and every dry run of the build-once workflow needs its
  * `artifacts` list. Pure: every input is already fetched.
  */
-export function bindDryRun({ run, jobs, prepareLog, artifact, sourceTree, credentials, mainCi, artifacts, rehearsal = false }) {
+export function bindDryRun(input) {
+  if (input.artifact?.packages) return bindPortfolioDryRun(input);
+  const { run, jobs, prepareLog, artifact, sourceTree, credentials, mainCi, artifacts, rehearsal = false } = input;
   const execution = assertRun(run, { mode: 'dry-run', rehearsal });
   const job = successfulJob(jobs, 'prepare', run.id);
   const lines = prepareLog.split('\n');
@@ -428,6 +436,113 @@ export function bindDryRun({ run, jobs, prepareLog, artifact, sourceTree, creden
     },
     manifest,
     ...(credentials ? { credentials: bindCredentials(credentials) } : {}),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The portfolio workflow (Decision 0032): the publish set's tarballs and one portfolio release manifest.
+
+const portfolioSchema = 'muxui-portfolio-release-v1';
+const reactName = '@muxui/react';
+const preparedSet = /^Prepared candidate set (.+); release manifest (sha256:[0-9a-f]{64}); @muxui\/react (sha512-\S+)$/u;
+
+// A portfolio manifest's digest covers everything except the digest itself and how the checks ran.
+const portfolioDigest = ({ digest: _digest, preparation: _preparation, ...body }) => sha256(canonicalJson(body));
+
+/**
+ * Binds the portfolio dry run: its manifest (digest recomputed, source commit and tree), one tarball per package of the set
+ * in the manifest's order with the recorded bytes, and the log's own `prepared` line. The candidate is @muxui/react, whose
+ * facts the R1 exit records carry; every package's facts ride along under `portfolio`. Pure: every input is already fetched.
+ */
+function bindPortfolioDryRun({ run, jobs, prepareLog, artifact, sourceTree, mainCi, artifacts, rehearsal = false }) {
+  const execution = assertRun(run, { mode: 'dry-run', rehearsal });
+  const job = successfulJob(jobs, 'prepare', run.id);
+  const prepareJob = jobs.find((candidate) => candidate.name === 'prepare');
+  // The portfolio log prints no MODE: a dry run prepares its own candidate and promotes none, and its publish job is skipped.
+  const publishJob = jobs.find((candidate) => candidate.name === 'publish');
+  if (stepOf(prepareJob, 'Prepare release candidate')?.conclusion !== 'success' || stepOf(prepareJob, 'Verify dry run')?.conclusion === 'success'
+    || (publishJob && publishJob.conclusion !== 'skipped')) {
+    fail('R1_EXIT_RUN_INVALID', `run ${run.id} is not mode=dry-run`);
+  }
+  const lines = prepareLog.split('\n');
+  const revision = executedRevision(lines, execution.headRevision, `run ${run.id}`);
+  const manifest = JSON.parse(artifact.manifest.bytes.toString('utf8'));
+  const problems = [];
+  if (manifest.schema !== portfolioSchema) problems.push(`schema ${manifest.schema}`);
+  if (manifest.digest !== portfolioDigest(manifest)) problems.push('digest does not match its content');
+  if (manifest.source?.revision !== execution.headRevision) {
+    fail('R1_EXIT_SOURCE_REVISION_MISMATCH', `manifest source.revision ${manifest.source?.revision} differs from run head ${execution.headRevision}`);
+  }
+  if (manifest.source?.tree !== sourceTree) fail('R1_EXIT_SOURCE_REVISION_MISMATCH', `manifest source tree ${manifest.source?.tree} differs from ${sourceTree}`);
+  const records = manifest.packages ?? [];
+  if (records.length === 0 || records.length !== artifact.packages.length) problems.push(`${records.length} package records for ${artifact.packages.length} tarballs`);
+  // Each tarball is the recorded bytes of the package the manifest lists at its position.
+  const packages = records.map((record, index) => {
+    const tarball = artifact.packages[index];
+    const facts = tarball ? tarballFacts(tarball.bytes, tarball.entries) : {};
+    const packed = tarball?.packageJson ?? {};
+    if (!tarball || tarball.file !== record.file || facts.integrity !== record.integrity || facts.sha256 !== record.sha256
+      || packed.name !== record.name || packed.version !== record.version) {
+      problems.push(`${record.name}@${record.version} is not ${tarball?.file ?? 'a tarball'} with the recorded bytes`);
+    }
+    return { name: record.name, version: record.version, role: record.role, file: record.file, ...facts, packageJson: packed, entries: tarball?.entries };
+  });
+  if (problems.length > 0) fail('R1_EXIT_TUPLE_MISMATCH', `the portfolio candidate disagrees with its manifest: ${problems.join('; ')}`);
+  const react = packages.find(({ name }) => name === reactName);
+  if (react?.role !== 'published') fail('R1_EXIT_TUPLE_MISMATCH', `the portfolio release does not publish ${reactName}`);
+  const published = packages.filter(({ role }) => role === 'published');
+  if (canonicalJson(manifest.publication?.order) !== canonicalJson(published.map(({ name }) => name))) {
+    fail('R1_EXIT_TUPLE_MISMATCH', 'the manifest publication order is not its published packages in order');
+  }
+  // The dry run's own check of the candidate prints the set, the manifest digest, and the React digest.
+  const prepared = lines.map((line) => content(line).match(preparedSet)).find(Boolean);
+  if (!prepared || prepared[2] !== manifest.digest || prepared[3] !== react.integrity
+    || prepared[1] !== packages.map(({ name, version }) => `${name}@${version}`).join(', ')) {
+    fail('R1_EXIT_DIGEST_MISMATCH', 'the log\'s prepared candidate set differs from the portfolio manifest and tarballs');
+  }
+  // Every published package's rehearsed `npm publish --dry-run` reported its version.
+  const [rehearseStart, rehearseEnd] = findStep(lines, 'Rehearse npm publish (dry run)', '--dry-run');
+  const rehearsed = lines.slice(rehearseStart, rehearseEnd).map(content);
+  const preflightChecks = published.map(({ name, version }) => {
+    if (!rehearsed.includes(`+ ${name}@${version}`)) fail('R1_EXIT_RUN_INVALID', `run ${run.id} did not rehearse npm publish for ${name}@${version}`);
+    return { name: `npm publish --dry-run ${name}@${version}`, command: 'npm publish <tarball> --tag next --provenance --access public --dry-run', status: 'passed' };
+  });
+  const preparation = bindPreparation({ lines, manifest, execution, mainCi });
+  if (!preparation) fail('R1_EXIT_PREPARATION_MISMATCH', `run ${run.id} reports neither a main CI proof nor a full release:prepare`);
+  const candidateArtifact = bindCandidateArtifact(artifacts, run.id, execution.headRevision);
+  const excerpt = stepExcerpt(lines, [mainCiStep, ...prepareSteps]);
+  const { entries: reactEntries, packageJson: reactJson, ...reactFacts } = react;
+  const verification = manifest.preparation?.verification;
+  return {
+    execution: { ...execution, ...job, executedRevision: revision, executedTree: sourceTree },
+    environment: environmentFrom(lines),
+    rawLog: rawLog(prepareLog),
+    preparation,
+    candidateArtifact,
+    excerpt,
+    candidate: {
+      name: reactName,
+      version: react.version,
+      tarball: { file: react.file, bytes: reactFacts.bytes, files: reactFacts.files, integrity: reactFacts.integrity, sha256: reactFacts.sha256, shasum: reactFacts.shasum, retained: false },
+      manifest: { file: artifact.manifest.file, bytes: artifact.manifest.bytes.length, sha256: sha256(artifact.manifest.bytes) },
+    },
+    manifest,
+    portfolio: {
+      id: manifest.id,
+      digest: manifest.digest,
+      packages: packages.map(({ name, version, role, file, bytes, files, integrity, sha256: packageSha256, shasum }) => ({ name, version, role, file, bytes, files, integrity, sha256: packageSha256, shasum, retained: false })),
+      published: published.map(({ name, version, integrity }) => ({ name, version, integrity })),
+      preflightChecks,
+      // What the retained facts of the R1 exit records come from: the React tarball, and the consumer proofs of the dry run.
+      react: {
+        exports: reactJson.exports,
+        dependencies: reactJson.dependencies,
+        peerDependencies: reactJson.peerDependencies,
+        files: reactEntries.length,
+        onlineConsumerMatrix: verification?.reactOnlineMatrix ?? [],
+        consumerWarnings: { duplicateDependencyVersions: verification?.warnings?.duplicateDependencyVersions ?? [] },
+      },
+    },
   };
 }
 
@@ -585,7 +700,9 @@ function bindPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal }) {
  * propagated the package is accepted and recorded as such. Registry proof is
  * the --registry phase.
  */
-export function bindPublish({ dryRun, run, jobs, prepareLog, publishLog, approvals = [], approvalMethod, rehearsal = false }) {
+export function bindPublish(input) {
+  if (input.dryRun.portfolio) return bindPortfolioPublish(input);
+  const { dryRun, run, jobs, prepareLog, publishLog, approvals = [], approvalMethod, rehearsal = false } = input;
   const attempt = bindPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal });
   const prepareLines = prepareLog.split('\n');
   if (envValue(prepareLines, 'MODE') !== 'publish') fail('R1_EXIT_RUN_INVALID', `run ${run.id} is not mode=publish`);
@@ -655,11 +772,180 @@ export function bindPublish({ dryRun, run, jobs, prepareLog, publishLog, approva
   };
 }
 
+// ---------------------------------------------------------------------------
+// The portfolio publish job: Re-verify candidate, then Publish the set in order, whose lines npm-publication.mjs prints
+// per package (preflight for the whole set, then for each package in order: drift recheck, the npm notices, the read-back).
+
+const portfolioPublishSteps = [
+  { name: 'Re-verify candidate', marker: 'npm-publication.mjs verify-candidate' },
+  { name: 'Publish the set in order', marker: 'npm-publication.mjs publish-set' },
+];
+
+/**
+ * Reads what the publish step printed for each package of `set` (`{ name, version, integrity, shasum }` in publish order):
+ * 'verified' (published and read back), 'read-back-failed' (the publish landed), 'publish-failed' (it did not), or
+ * 'not-attempted' (the set stopped before it). A package that was attempted but never preflighted is a malformed log.
+ */
+function observePublishSet(stepLines, set) {
+  const text = stepLines.map(content);
+  return set.map(({ name, version, integrity, shasum }, index) => {
+    const label = `${name}@${version}`;
+    const position = `(${index + 1} of ${set.length})`;
+    const preflightVersion = text.includes(`${label}: 404 (no collision)`) ? '404 (no collision)' : null;
+    const first = text.some((line) => line.startsWith(`${name} absent (first publish`));
+    const [, latest = '', next = ''] = text.find((line) => line.startsWith(`${name} dist-tags latest=`))?.match(/latest=(\S+) next=(\S+)$/u) ?? [];
+    if (!preflightVersion || (!first && !latest)) fail('R1_EXIT_RUN_INVALID', `the registry preflight printed no version or dist-tag state for ${label}`);
+    const start = text.indexOf(`Publishing ${label} ${position}`);
+    const end = start < 0 ? -1 : text.findIndex((line, at) => at > start && line.startsWith('Publishing '));
+    const segment = start < 0 ? [] : text.slice(start, end < 0 ? text.length : end);
+    const notice = segment.find((line) => line.startsWith('npm notice integrity: '))?.slice('npm notice integrity: '.length);
+    const [head, tail] = notice?.split('[...]') ?? [];
+    const readStart = segment.indexOf(`Read back ${label}`);
+    const readLines = readStart < 0 ? [] : segment.slice(readStart);
+    const landed = segment.includes(`+ ${label}`);
+    const done = segment.includes(`Published ${label} ${position}`);
+    const state = done ? 'verified' : landed ? 'read-back-failed' : start >= 0 ? 'publish-failed' : 'not-attempted';
+    // A package that does not exist yet first-publishes with the temporary token; an existing one only through OIDC.
+    const authentication = segment.find((line) => line.startsWith(`Authentication for ${name}: `))?.slice(`Authentication for ${name}: `.length);
+    const expectedAuthentication = first ? 'temporary npm token (first publish)' : 'trusted publishing (OIDC)';
+    if (start >= 0 && authentication !== expectedAuthentication) {
+      fail('R1_EXIT_RUN_INVALID', `${label} ${first ? 'is a first publish and' : 'exists and'} was published with ${JSON.stringify(authentication ?? null)}, not ${expectedAuthentication}`);
+    }
+    return {
+      name,
+      version,
+      state,
+      ...(start < 0 ? {} : { authentication }),
+      preflight: { version: preflightVersion, kind: first ? 'first' : 'later', ...(first ? {} : { latest, next }) },
+      ...(start < 0 ? {} : {
+        recheck: segment.find((line) => line.startsWith('No drift since the preflight: ')) ?? null,
+        packed: { shasum: segment.find((line) => line.startsWith('npm notice shasum: '))?.slice('npm notice shasum: '.length) ?? null, integrity: notice ?? null },
+        packedMatches: Boolean(head && integrity.startsWith(head) && integrity.endsWith(tail ?? '')) && segment.includes(`npm notice shasum: ${shasum}`),
+        transparencyLog: segment.map((line) => line.match(/transparency log: (\S+)$/u)?.[1]).find(Boolean) ?? null,
+      }),
+      ...(done ? {
+        readBack: {
+          integrity: readLines.find((line) => line.startsWith('dist.integrity: '))?.slice('dist.integrity: '.length) ?? null,
+          provenancePredicateType: readLines.find((line) => line.startsWith('provenance: '))?.slice('provenance: '.length) ?? null,
+          distTags: jsonAfter(readLines, 'dist-tags: ') ?? null,
+        },
+      } : {}),
+    };
+  });
+}
+
+// The publish run of the portfolio workflow, bound to the captured dry run: same commit and candidate set, the authorized
+// React digest, no registry credential in the job, and every published package preflighted and read back as the manifest records.
+function bindPortfolioPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal }) {
+  const execution = assertRun(run, { mode: 'publish', rehearsal, allowFailure: true });
+  if (execution.headRevision !== dryRun.execution.headRevision) {
+    fail('R1_EXIT_HEAD_SHA_MISMATCH', `publish run head ${execution.headRevision} differs from the dry run's ${dryRun.execution.headRevision}`);
+  }
+  const prepare = successfulJob(jobs, 'prepare', run.id);
+  const publishJob = jobs.find((job) => job.name === 'publish');
+  if (!publishJob) fail('R1_EXIT_RUN_INVALID', `run ${run.id} has no publish job`);
+  if (stepOf(publishJob, 'Re-verify candidate')?.conclusion !== 'success') fail('R1_EXIT_RUN_INVALID', `run ${run.id} step "Re-verify candidate" did not succeed`);
+  const lines = publishLog.split('\n');
+  const { packages, published } = dryRun.portfolio;
+  const react = packages.find(({ name }) => name === reactName);
+  if (envValue(lines, 'EXPECTED_SHA512') !== react.integrity) fail('R1_EXIT_DIGEST_MISMATCH', `run ${run.id} tarball-sha512 input differs from the dry-run digest ${react.integrity}`);
+  if (envValue(lines, 'MUXUI_RELEASE_VERSIONS') !== packages.map(({ name, version }) => `${name}=${version}`).join(',')) {
+    fail('R1_EXIT_TUPLE_MISMATCH', `run ${run.id} version inputs differ from the dry run's ${packages.map(({ name, version }) => `${name}=${version}`).join(',')}`);
+  }
+  // The job verified exactly the dry run's published bytes before it published anything.
+  const verified = lines.map((line) => content(line).match(/^Candidate verified: (.+)$/u)?.[1]).find(Boolean);
+  if (verified !== published.map(({ name, version, integrity }) => `${name}@${version} ${integrity}`).join(', ')) {
+    fail('R1_EXIT_DIGEST_MISMATCH', `run ${run.id} verified a candidate other than the dry run's published packages`);
+  }
+  const [start, end] = findStep(lines, 'Publish the set in order', portfolioPublishSteps[1].marker);
+  // The temporary first-publish token is the publish step's alone; NODE_AUTH_TOKEN is never set (no .npmrc, no registry-url).
+  const credentialed = lines.some((line, index) => /\bNODE_AUTH_TOKEN\b/u.test(content(line)) || (/\bNPM_TOKEN\b/u.test(content(line)) && (index < start || index >= end)));
+  if (credentialed) fail('R1_EXIT_RUN_INVALID', `run ${run.id} publish job exposes a registry credential outside the publish step`);
+  const observed = observePublishSet(lines.slice(start, end), published.map((entry) => ({ ...entry, shasum: packages.find(({ name }) => name === entry.name).shasum })));
+  return { execution: { ...execution, prepare, publish: { jobId: publishJob.id, job: publishJob.name, conclusion: publishJob.conclusion, startedAt: publishJob.started_at, completedAt: publishJob.completed_at } }, lines, publishJob, observed, react };
+}
+
+// The React package's part of the observation, in the shape the R1 exit records carry.
+function reactObserved({ observed, react }) {
+  const { preflight, recheck, packed, transparencyLog } = observed.find(({ name }) => name === reactName);
+  return { inputDigest: react.integrity, shasum: react.shasum, preflight: { ...preflight, recheck: recheck ?? null }, packed, transparencyLog: transparencyLog ?? null };
+}
+
+/**
+ * Binds the portfolio publish run to its dry run, as bindPublish does for one package: every published package of the set
+ * preflighted, published from the dry run's bytes, and read back by the workflow, in publish order. With `prior`, binds an
+ * earlier run that stopped first (a refused publish or a failed read-back) and published no @muxui/react; the other packages'
+ * states are recorded as they were.
+ */
+function bindPortfolioPublish({ dryRun, run, jobs, prepareLog, publishLog, approvals = [], approvalMethod, rehearsal = false }, { prior = false } = {}) {
+  const attempt = bindPortfolioPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal });
+  const { observed, lines, publishJob } = attempt;
+  const prepareLines = prepareLog ? prepareLog.split('\n') : [];
+  const promotion = promotesDryRun(prepareLines) ? bindPromotion({ lines: prepareLines, dryRun, runId: run.id }) : undefined;
+  const publishStep = stepOf(publishJob, 'Publish the set in order');
+  const rows = observed.map(({ packedMatches: _matches, ...entry }) => entry);
+  const reactRow = observed.find(({ name }) => name === reactName);
+  if (prior) {
+    if (publishStep?.conclusion !== 'failure' || ['verified', 'read-back-failed'].includes(reactRow.state)) {
+      fail('R1_EXIT_PRIOR_ATTEMPT_INVALID', `run ${run.id} is not a failed publish attempt that published no ${reactName}`);
+    }
+    return {
+      execution: attempt.execution,
+      ...(promotion ? { promotion } : {}),
+      approvals: approvalFacts(approvals, approvalMethod),
+      rawLog: rawLog(publishLog),
+      excerpt: stepExcerpt(lines, portfolioPublishSteps),
+      observed: {
+        ...reactObserved(attempt),
+        published: false,
+        failedStep: { name: publishStep?.name ?? 'Publish the set in order', completedAt: publishStep?.completed_at ?? null, errorCode: lines.map((line) => content(line).match(/^npm error code (\S+)$/u)?.[1]).find(Boolean) ?? null },
+      },
+      portfolio: { manifestDigest: dryRun.portfolio.digest, published: dryRun.portfolio.published, packages: rows },
+    };
+  }
+  const unverified = observed.filter(({ state }) => state !== 'verified').map(({ name, state }) => `${name} ${state}`);
+  if (publishJob.conclusion !== 'success' || publishStep?.conclusion !== 'success' || unverified.length > 0) {
+    fail('R1_EXIT_TUPLE_MISMATCH', `run ${run.id} did not publish and read back every package of the set${unverified.length > 0 ? ` (${unverified.join(', ')})` : ''}`);
+  }
+  const mismatched = observed.filter(({ name, packedMatches, readBack, transparencyLog, recheck }) => {
+    const recorded = dryRun.portfolio.published.find((entry) => entry.name === name);
+    return !packedMatches || readBack.integrity !== recorded.integrity || !provenanceType.test(readBack.provenancePredicateType ?? '') || !recheck || !transparencyLog
+      || readBack.distTags?.next !== recorded.version;
+  }).map(({ name }) => name);
+  if (mismatched.length > 0) fail('R1_EXIT_DIGEST_MISMATCH', `run ${run.id} published ${mismatched.join(', ')} other than the dry-run candidate, or without a drift recheck, provenance, or next`);
+  const executed = executedRevision(prepareLines, attempt.execution.headRevision, `run ${run.id} prepare`);
+  if (!promotion) fail('R1_EXIT_PROMOTION_MISSING', `run ${run.id} prepare log lacks its promotion lines`);
+  return {
+    execution: { ...attempt.execution, executedRevision: executed, executedTree: dryRun.execution.executedTree },
+    environment: environmentFrom(lines),
+    approvals: approvalFacts(approvals, approvalMethod),
+    rawLogs: { prepare: rawLog(prepareLog), publish: rawLog(publishLog) },
+    promotion,
+    excerpts: { prepare: stepExcerpt(prepareLines, promotionSteps), publish: stepExcerpt(lines, portfolioPublishSteps) },
+    observed: {
+      ...reactObserved(attempt),
+      published: `${reactName}@${dryRun.candidate.version}`,
+      publishStepCompletedAt: publishStep.completed_at,
+      // An observation of the workflow, not registry proof (see --registry).
+      workflowReadBack: {
+        status: 'passed',
+        completedAt: publishStep.completed_at,
+        integrity: reactRow.readBack.integrity,
+        provenancePredicateType: reactRow.readBack.provenancePredicateType,
+        distTags: reactRow.readBack.distTags,
+      },
+    },
+    portfolio: { manifestDigest: dryRun.portfolio.digest, published: dryRun.portfolio.published, packages: rows },
+  };
+}
+
 /**
  * Binds an earlier publish attempt of the same candidate that failed in
  * "Publish to next" before anything was published (for example EOTP).
  */
-export function bindPriorPublish({ dryRun, run, jobs, publishLog, prepareLog, approvals = [], approvalMethod, rehearsal = false }) {
+export function bindPriorPublish(input) {
+  if (input.dryRun.portfolio) return bindPortfolioPublish(input, { prior: true });
+  const { dryRun, run, jobs, publishLog, prepareLog, approvals = [], approvalMethod, rehearsal = false } = input;
   const attempt = bindPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal });
   // A prior publish run of the build-once workflow also promoted a dry run's artifact; say which.
   const prepareLines = prepareLog ? prepareLog.split('\n') : [];
@@ -746,7 +1032,7 @@ export function bindRegistry({ dryRun, view, attestations, consumer, publishRunI
   if (consumer.installedVersion !== version || consumer.lockIntegrity !== tarball.integrity) {
     fail('R1_EXIT_CONSUMER_MISMATCH', `the clean consumer installed ${consumer.installedVersion} (${consumer.lockIntegrity}) from next`);
   }
-  const exportsMap = dryRun.manifest.package.exports;
+  const exportsMap = candidateFacts(dryRun).exportsMap;
   const expectedJs = Object.keys(exportsMap).filter((subpath) => !subpath.endsWith('.css')).length;
   if (consumer.smoke.imported.length !== expectedJs || consumer.smoke.resolved.length !== Object.keys(exportsMap).length - expectedJs
     || !consumer.smoke.resolved.includes(`${packageName}/styles.css`) || !consumer.smoke.rendered.includes('Button')) {
@@ -800,10 +1086,56 @@ function record(verification, refs, assertionId, body) {
   });
 }
 
+/**
+ * What the R1 exit records read about the candidate: from the single-package release manifest of an earlier workflow, or,
+ * for a portfolio run, from the facts its dry run bound (the React tarball and the dry run's consumer proofs) and the portfolio
+ * manifest's source, publication, and rollback. `dryRun.manifest` is the retained, sanitized manifest.
+ */
+export function candidateFacts(dryRun) {
+  const { manifest, portfolio } = dryRun;
+  if (!portfolio) {
+    return {
+      exportsMap: manifest.package.exports,
+      dependencies: manifest.package.dependencies,
+      peerDependencies: manifest.package.peerDependencies,
+      files: manifest.files.length,
+      onlineConsumerMatrix: manifest.consumerVerification.onlineMatrix,
+      consumerWarnings: manifest.consumerVerification.warnings,
+      artifact: manifest.artifact,
+      source: { revision: manifest.source.revision, tree: manifest.correlation.source.tree, preparationTool: manifest.source.preparationTool },
+      publication: manifest.publication,
+      preflightChecks: manifest.preflight.checks.map(({ name, command, status }) => ({ name, command, status })),
+      rollback: manifest.rollback,
+    };
+  }
+  const { tarball } = dryRun.candidate;
+  return {
+    exportsMap: portfolio.react.exports,
+    dependencies: portfolio.react.dependencies,
+    peerDependencies: portfolio.react.peerDependencies,
+    files: portfolio.react.files,
+    onlineConsumerMatrix: portfolio.react.onlineConsumerMatrix,
+    consumerWarnings: portfolio.react.consumerWarnings,
+    artifact: { file: tarball.file, bytes: tarball.bytes, sha256: tarball.sha256, shasum: tarball.shasum, integrity: tarball.integrity },
+    source: { revision: manifest.source.revision, tree: manifest.source.tree, preparationTool: manifest.preparation.tool },
+    publication: manifest.publication,
+    preflightChecks: portfolio.preflightChecks,
+    rollback: manifest.rollback,
+  };
+}
+
+// The publish set's part of the records: every package's version, role, and digest, in publish order.
+const portfolioSummary = ({ id, digest, packages }) => ({
+  releaseId: id,
+  manifestDigest: digest,
+  packages: packages.map(({ name, version, role, file, integrity, sha256: packageSha256, shasum, bytes, files }) => ({ name, version, role, file, integrity, sha256: packageSha256, shasum, bytes, files })),
+});
+
 export function buildRoute(verification, refs) {
   const { dryRun, publish, priorPublish, registry: observed } = verification.phases;
   if (!dryRun) fail('R1_EXIT_PHASE_ORDER', 'capture --dry-run-run first');
   const manifest = refs.manifest;
+  const facts = candidateFacts(dryRun);
   const records = {};
   records['E-R1-EXIT-01'] = record(verification, refs, 'E-R1-EXIT-01', {
     evidenceKind: 'retained-npm-publish-dry-run',
@@ -815,14 +1147,16 @@ export function buildRoute(verification, refs) {
     environment: dryRun.environment,
     // Since Decision 0030: the main CI run this dry run reused, or its fallback to the full release:prepare.
     ...(dryRun.preparation ? { preparation: dryRun.preparation, candidateArtifact: dryRun.candidateArtifact } : {}),
+    // Since Decision 0032: the publish set this candidate was prepared with.
+    ...(dryRun.portfolio ? { portfolio: portfolioSummary(dryRun.portfolio) } : {}),
     observed: {
       tarball: dryRun.candidate.tarball,
-      exports: Object.keys(dryRun.manifest.package.exports),
-      dependencies: dryRun.manifest.package.dependencies,
-      peerDependencies: dryRun.manifest.package.peerDependencies,
-      files: dryRun.manifest.files.length,
-      onlineConsumerMatrix: dryRun.manifest.consumerVerification.onlineMatrix,
-      consumerWarnings: dryRun.manifest.consumerVerification.warnings,
+      exports: Object.keys(facts.exportsMap),
+      dependencies: facts.dependencies,
+      peerDependencies: facts.peerDependencies,
+      files: facts.files,
+      onlineConsumerMatrix: facts.onlineConsumerMatrix,
+      consumerWarnings: facts.consumerWarnings,
     },
     artifact: manifest,
     excerpt: refs.dryRunExcerpt,
@@ -840,10 +1174,10 @@ export function buildRoute(verification, refs) {
     prePublication: {
       captureTimestamp: dryRun.captureTimestamp,
       manifest: {
-        artifact: dryRun.manifest.artifact,
-        source: { revision: dryRun.manifest.source.revision, tree: dryRun.manifest.correlation.source.tree, preparationTool: dryRun.manifest.source.preparationTool },
-        publication: dryRun.manifest.publication,
-        preflightChecks: dryRun.manifest.preflight.checks.map(({ name, command, status }) => ({ name, command, status })),
+        artifact: facts.artifact,
+        source: facts.source,
+        publication: facts.publication,
+        preflightChecks: facts.preflightChecks,
       },
       // rc.1 only; under trusted publishing the publish run's own preflight is the pre-publish registry check.
       ...(dryRun.credentials ? { verifyCredentials: { execution: dryRun.credentials.execution, observed: dryRun.credentials.observed, excerpt: refs.credentialsExcerpt } } : {}),
@@ -852,6 +1186,7 @@ export function buildRoute(verification, refs) {
       ? [{
         captureTimestamp: priorPublish.captureTimestamp, execution: priorPublish.execution, environmentApprovals: priorPublish.approvals, observed: priorPublish.observed, excerpt: refs.priorPublishExcerpt,
         ...(priorPublish.promotion ? { promotion: priorPublish.promotion } : {}),
+        ...(priorPublish.portfolio ? { portfolio: priorPublish.portfolio } : {}),
       }]
       : [],
     postPublication: publish
@@ -859,6 +1194,8 @@ export function buildRoute(verification, refs) {
         captureTimestamp: publish.captureTimestamp, execution: publish.execution, environmentApprovals: publish.approvals, observed: publish.observed, excerpts: refs.publishExcerpts,
         // Since Decision 0030: this run promoted the dry run's artifact instead of preparing its own.
         ...(publish.promotion ? { promotion: publish.promotion } : {}),
+        // Since Decision 0032: every package of the set, as the workflow preflighted, published, and read it back.
+        ...(publish.portfolio ? { portfolio: publish.portfolio } : {}),
       }
       : { status: 'pending-post-publication' },
     // The workflow's read-back is an observation; this read-back is the proof.
@@ -917,7 +1254,7 @@ export function buildRoute(verification, refs) {
         latest: latestRecord,
         all: observed.view.distTags,
       },
-      rollback: { ...dryRun.manifest.rollback, status: 'prepared-not-exercised' },
+      rollback: { ...facts.rollback, status: 'prepared-not-exercised' },
       artifact: refs.registry,
     });
   }
@@ -974,6 +1311,18 @@ function buildOnceNote({ phases }) {
   return `\n\n${checks}${promoted} Storybook's own-interface colour proofs are not release proof (Decision 0030).`;
 }
 
+// Since Decision 0032 the candidate is one package of a publish set. The other packages' facts are retained under
+// `portfolio` and make no R1 exit claim.
+function portfolioNote({ phases }) {
+  const { portfolio } = phases.dryRun;
+  if (!portfolio) return '';
+  const others = portfolio.packages.filter(({ name }) => name !== '@muxui/react').map(({ name, version }) => `\`${name}@${version}\``).join(', ');
+  const published = phases.publish?.portfolio
+    ? ` The publish run published the set in order, each package preflighted, rechecked, and read back before the next, and the portfolio manifest ${portfolio.digest} binds all of it.`
+    : '';
+  return `\n\nThis candidate came from the portfolio workflow (Decision 0032): release \`${portfolio.id}\` also prepares ${others}. Their tarball digests and workflow read-backs are retained under \`portfolio\` in \`E-R1-EXIT-01\` and \`E-R1-EXIT-02\`; they are not R1 exit claims.${published}`;
+}
+
 function laterCandidateReadme(verification, version) {
   return `# R1 exit retained publication evidence for ${version}
 
@@ -1009,7 +1358,7 @@ retained; its sha512, sha256, shasum, size, and file count are.
 or promoted (Decision 0023). ${version} makes no assistive-technology claim
 (Decision 0022), and every item Decision 0022 defers to \`S1.0\` stays unmet.
 These records do not claim the R1 exit is complete; merging the final R1-exit
-pull request is Andrew's separate stop.${buildOnceNote(verification)}${verification.rehearsal ? '\n\nThis capture is a rehearsal and is not release evidence.' : ''}
+pull request is Andrew's separate stop.${buildOnceNote(verification)}${portfolioNote(verification)}${verification.rehearsal ? '\n\nThis capture is a rehearsal and is not release evidence.' : ''}
 `;
 }
 
@@ -1035,21 +1384,26 @@ function createGitHub() {
   };
 }
 
-function readCandidate(directory) {
+// One tarball and one release manifest (earlier workflows), or the portfolio's: a tarball per package of the publish set
+// and one portfolio manifest, with the tarballs in the manifest's order (bindDryRun checks each against its record).
+export function readCandidate(directory) {
   const files = existsSync(directory) ? readdirSync(directory) : [];
   const tarballs = files.filter((file) => file.endsWith('.tgz'));
   const manifests = files.filter((file) => file.endsWith('.release-manifest.json'));
-  if (tarballs.length !== 1 || manifests.length !== 1) return null;
-  const path = join(directory, tarballs[0]);
-  return {
-    manifest: { file: manifests[0], bytes: readFileSync(join(directory, manifests[0])) },
-    tarball: {
-      file: tarballs[0],
+  if (manifests.length !== 1 || tarballs.length === 0) return null;
+  const manifest = { file: manifests[0], bytes: readFileSync(join(directory, manifests[0])) };
+  const read = (file) => {
+    const path = join(directory, file);
+    return {
+      file,
       bytes: readFileSync(path),
       entries: execFileSync('tar', ['-tzf', path], { encoding: 'utf8' }).split('\n').filter((entry) => entry && !entry.endsWith('/')),
       packageJson: JSON.parse(execFileSync('tar', ['-xzOf', path, 'package/package.json'], { encoding: 'utf8' })),
-    },
+    };
   };
+  if (tarballs.length === 1 && JSON.parse(manifest.bytes.toString('utf8')).schema !== portfolioSchema) return { manifest, tarball: read(tarballs[0]) };
+  const order = new Map((JSON.parse(manifest.bytes.toString('utf8')).packages ?? []).map(({ file }, index) => [file, index]));
+  return { manifest, packages: tarballs.sort((left, right) => (order.get(left) ?? Infinity) - (order.get(right) ?? Infinity)).map(read) };
 }
 
 function runCommand(label, command, args, options) {
@@ -1218,6 +1572,11 @@ export function dryRunBindingProblems({ dryRun, publish, priorPublish, registry 
   const publishProblem = (phase) => {
     if (phase.execution.headRevision !== headRevision || phase.observed.inputDigest !== tarball.integrity) {
       return `its run is not for commit ${headRevision} and candidate ${tarball.integrity}`;
+    }
+    // A portfolio run publishes the whole set the dry run prepared: the same manifest and the same bytes of every package.
+    if (dryRun.portfolio && (phase.portfolio?.manifestDigest !== dryRun.portfolio.digest
+      || canonicalJson(phase.portfolio?.published) !== canonicalJson(dryRun.portfolio.published))) {
+      return `it did not publish the portfolio set of the captured dry run's manifest ${dryRun.portfolio.digest}`;
     }
     const { promotion } = phase;
     if (!dryRun.preparation) return promotion ? `it promoted dry run ${promotion.dryRunId}, but the captured dry run predates promotion` : null;
@@ -1534,7 +1893,8 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
       const { view, attestations } = await observeView(dryRun, options.registryWait);
       const preflight = verification.phases.publish?.observed.preflight;
       const prior = preflight?.kind === 'later' ? { kind: 'later', latest: preflight.latest, next: preflight.next } : { kind: 'first' };
-      const bound = bindRegistry({ dryRun, view, attestations, consumer: observeConsumer(dryRun.manifest), publishRunId: verification.phases.publish?.execution.runId, prior });
+      const facts = candidateFacts(dryRun);
+      const bound = bindRegistry({ dryRun, view, attestations, consumer: observeConsumer({ package: { exports: facts.exportsMap, dependencies: facts.dependencies } }), publishRunId: verification.phases.publish?.execution.runId, prior });
       retain('registry', `${route}/artifacts/registry-observation.json`, canonicalJson({
         schema: 'muxui-r1-exit-registry-observation-v1',
         registry,

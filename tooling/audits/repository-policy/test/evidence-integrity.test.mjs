@@ -11,6 +11,7 @@ import { canonicalJson } from '../src/canonical-json.mjs';
 import { REVISION_BOUND_INPUTS, hasUnsanitizedEvidenceOutput, readAtRevision, verifyEvidence } from '../src/evidence-verify.mjs';
 import { DEFERRED_R1_EVIDENCE } from '../../../../packages/react/src/r1-deferred-evidence.mjs';
 import { gitIn } from './evidence-growth-repository.mjs';
+import * as portfolioModule from './evidence-portfolio-fixture.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 
@@ -628,8 +629,9 @@ test('R1 exit capture discloses a failed earlier dry-run attempt and masks npm a
 
 test('R1 exit capture rebuilds each committed route byte for byte from its verification.json', async () => {
   const read = (relative) => readFileSync(join(repositoryRoot, relative), 'utf8');
-  // rc.1 (token workflow) and rc.2 (trusted publishing, which rebuilt its candidate in the publish run) keep their binding.
-  for (const route of [r1Exit.route, r1Exit.routeFor('0.1.0-rc.2')]) {
+  // rc.1 (token workflow), rc.2 (trusted publishing, which rebuilt its candidate in the publish run), and rc.3 and rc.4
+  // (build once, single-package manifest) keep their binding; the portfolio adapter does not touch their records.
+  for (const route of [r1Exit.route, ...['0.1.0-rc.2', '0.1.0-rc.3', '0.1.0-rc.4'].map((version) => r1Exit.routeFor(version))]) {
     const { files } = r1Exit.assembleRoute(JSON.parse(read(`${route}/verification.json`)), read);
     assert.deepEqual([...files.keys()].sort(), ['README.md', 'index.json', 'records/E-R1-EXIT-01.json', 'records/E-R1-EXIT-02.json', 'records/E-R1-EXIT-03.json', 'records/E-R1-EXIT-04.json', 'verification.json'].map((file) => `${route}/${file}`));
     for (const [relative, text] of files) assert.equal(text, read(relative), relative);
@@ -3117,3 +3119,273 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     await rm(outputRoot, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// The portfolio workflow (Decision 0032). Kept in a block: its fixture's names (react, schema, ...) are local to it.
+{
+  const { catalog, names, portfolioFixture, react, schema, tooling } = portfolioModule;
+  // The R1 exit capture of a portfolio run (Decision 0032): the E-R1-EXIT records of the @muxui/react candidate, from a
+  // dry run and a publish run of the workflow that carries the whole publish set. The earlier formats keep their tests in
+  // evidence-integrity.test.mjs, which rebuilds every committed route byte for byte.
+  const code = (expected) => (error) => error?.code === expected;
+  const rejectsWith = (expected, change) => assert.throws(change, code(expected), expected);
+  const manifestInput = (fixture, change) => {
+    const manifest = structuredClone(fixture.manifest);
+    change(manifest);
+    return { ...fixture.candidate, manifest: { ...fixture.candidate.manifest, bytes: Buffer.from(JSON.stringify(manifest)) } };
+  };
+
+  test('a portfolio dry run binds @muxui/react as the candidate, with every package of the set beside it', () => {
+    const fixture = portfolioFixture();
+    const bound = r1Exit.bindDryRun(fixture.dryRunInput());
+    assert.equal(bound.candidate.name, react);
+    assert.equal(bound.candidate.version, fixture.reactVersion);
+    assert.equal(bound.candidate.tarball.integrity, fixture.integrityOf(react));
+    assert.equal(bound.execution.executedRevision, fixture.head);
+    assert.deepEqual(bound.portfolio.packages.map(({ name, version, role }) => [name, version, role]), names.map((name) => [name, fixture.versionOf(name), 'published']));
+    assert.deepEqual(bound.portfolio.published.map(({ integrity }) => integrity), names.map((name) => fixture.integrityOf(name)));
+    assert.equal(bound.portfolio.id, fixture.manifest.id);
+    assert.equal(bound.portfolio.digest, fixture.manifest.digest);
+    assert.deepEqual(bound.portfolio.preflightChecks.map(({ name, status }) => [name, status]), names.map((name) => [`npm publish --dry-run ${name}@${fixture.versionOf(name)}`, 'passed']));
+    // The React facts the R1 exit records carry come from the tarball and the dry run's consumer proofs.
+    assert.deepEqual(Object.keys(bound.portfolio.react.exports), ['.', './markdown', './styles.css']);
+    assert.equal(bound.portfolio.react.files, fixture.candidate.packages.at(-1).entries.length);
+    assert.equal(bound.portfolio.react.onlineConsumerMatrix[0].packageManager, 'pnpm');
+    assert.equal(bound.preparation.mode, 'main-ci-reused');
+    assert.deepEqual(bound.candidateArtifact, { id: 9, digest: fixture.artifactDigest, bytes: 4096 });
+    assert.match(bound.excerpt.text, /# step: Find main CI proof[\s\S]*Main CI proof: reusing run 4242 attempt 1/u);
+    assert.match(bound.excerpt.text, /P2\.1 packed and audited/u);
+    assert.match(bound.excerpt.text, new RegExp(`Prepared candidate set ${schema}@0\\.6\\.0-rc\\.1`, 'u'));
+    assert.doesNotMatch(bound.excerpt.text, /unrelated check output/u, 'long-step noise is not retained');
+  });
+
+  test('a portfolio dry run is refused when its manifest, tarballs, log, or mode do not agree', () => {
+    const fixture = portfolioFixture();
+    const rejects = (code, overrides) => rejectsWith(code, () => r1Exit.bindDryRun(fixture.dryRunInput(overrides)));
+    // The manifest: another commit or tree, an edit after preparation, another schema.
+    rejects('R1_EXIT_SOURCE_REVISION_MISMATCH', { artifact: manifestInput(fixture, (manifest) => { manifest.source.revision = 'e'.repeat(40); }) });
+    rejects('R1_EXIT_SOURCE_REVISION_MISMATCH', { sourceTree: 'f'.repeat(40) });
+    rejects('R1_EXIT_TUPLE_MISMATCH', { artifact: manifestInput(fixture, (manifest) => { manifest.id = 'muxui-portfolio:other'; }) });
+    rejects('R1_EXIT_TUPLE_MISMATCH', { artifact: manifestInput(fixture, (manifest) => { manifest.schema = 'muxui-release-manifest-v1'; }) });
+    // The tarballs: one repacked, one missing, two out of order.
+    const packages = fixture.candidate.packages;
+    rejects('R1_EXIT_TUPLE_MISMATCH', { artifact: { ...fixture.candidate, packages: packages.map((entry, index) => (index === 2 ? { ...entry, bytes: Buffer.from('repacked') } : entry)) } });
+    rejects('R1_EXIT_TUPLE_MISMATCH', { artifact: { ...fixture.candidate, packages: packages.slice(0, 3) } });
+    rejects('R1_EXIT_TUPLE_MISMATCH', { artifact: { ...fixture.candidate, packages: [packages[1], packages[0], ...packages.slice(2)] } });
+    // The log: the set the dry run checked, the digest it printed, and a package whose publish was never rehearsed.
+    rejects('R1_EXIT_DIGEST_MISMATCH', { prepareLog: fixture.dryRunLog().replace(fixture.manifest.digest, `sha256:${'9'.repeat(64)}`) });
+    rejects('R1_EXIT_RUN_INVALID', { prepareLog: fixture.dryRunLog({ rehearsed: names.slice(0, 3) }) });
+    // A publish run's prepare job is not a dry run, and a dry run reports how its checks ran.
+    rejects('R1_EXIT_RUN_INVALID', { jobs: [fixture.job(11, 'prepare', [fixture.stepRecord('Prepare release candidate'), fixture.stepRecord('Verify dry run')]), fixture.job(12, 'publish', [], 'skipped')] });
+    rejects('R1_EXIT_RUN_INVALID', { jobs: [fixture.dryRunJobs()[0], fixture.job(12, 'publish', [], 'success')] });
+    rejects('R1_EXIT_PREPARATION_MISMATCH', { mainCi: undefined });
+    rejects('R1_EXIT_ARTIFACT_MISSING', { artifacts: [] });
+    rejects('R1_EXIT_RUN_NOT_MAIN', { run: fixture.run(1, { head_branch: 'feature' }) });
+  });
+
+  async function boundRuns(fixture, { faults, jobsOptions } = {}) {
+    const dryRun = { ...r1Exit.bindDryRun(fixture.dryRunInput()), manifest: fixture.manifest };
+    const input = async (overrides = {}) => ({
+      dryRun, run: fixture.run(2), jobs: fixture.publishRunJobs(), prepareLog: fixture.promotedLog(), publishLog: await fixture.publishLog({ faults, ...jobsOptions }), ...overrides,
+    });
+    return { dryRun, input };
+  }
+
+  test('a portfolio publish run binds every package, in order, to the dry run that prepared it', async () => {
+    const fixture = portfolioFixture();
+    const { dryRun, input } = await boundRuns(fixture);
+    const publish = r1Exit.bindPublish({ ...(await input()), approvals: [{ state: 'approved', user: { login: 'ndrewtran' }, environments: [{ name: 'npm-publish' }], comment: '' }], approvalMethod: 'web UI' });
+    assert.deepEqual(publish.promotion, {
+      source: 'dry-run-artifact', artifact: 'npm-candidate', artifactId: 9, artifactDigest: fixture.artifactDigest, artifactBytes: 4096,
+      dryRunId: 1, dryRunAttempt: 1, version: fixture.reactVersion, integrity: fixture.integrityOf(react),
+    });
+    assert.equal(publish.approvals[0].environments[0], 'npm-publish', 'one approval covers the set');
+    // The React package is what the R1 exit reads; the others are recorded in the order they published.
+    assert.equal(publish.observed.published, `${react}@${fixture.reactVersion}`);
+    assert.deepEqual(publish.observed.preflight, {
+      version: '404 (no collision)', kind: 'later', latest: '0.1.0-rc.1', next: '0.1.0-rc.4', recheck: `No drift since the preflight: ${react} dist-tags latest=0.1.0-rc.1 next=0.1.0-rc.4`,
+    });
+    assert.equal(publish.observed.workflowReadBack.status, 'passed');
+    assert.equal(publish.observed.workflowReadBack.integrity, fixture.integrityOf(react));
+    assert.deepEqual(publish.portfolio.packages.map(({ name, state, preflight }) => [name, state, preflight.kind]), [
+      [schema, 'verified', 'first'], [catalog, 'verified', 'first'], [tooling, 'verified', 'first'], [react, 'verified', 'later'],
+    ]);
+    assert.ok(publish.portfolio.packages.every(({ readBack }) => readBack.provenancePredicateType.startsWith('https://slsa.dev/provenance/')));
+    assert.deepEqual(publish.portfolio.packages.map(({ authentication }) => authentication), [
+      'temporary npm token (first publish)', 'temporary npm token (first publish)', 'temporary npm token (first publish)', 'trusted publishing (OIDC)',
+    ]);
+    assert.equal(publish.portfolio.manifestDigest, dryRun.portfolio.digest);
+    assert.match(publish.excerpts.publish.text, /# step: Publish the set in order[\s\S]*Published @muxui\/react@0\.1\.0-rc\.5 \(4 of 4\)/u);
+    assert.doesNotMatch(publish.excerpts.publish.text, /\u001b\[36;1m/u, 'workflow script lines are not retained');
+    assert.deepEqual(r1Exit.dryRunBindingProblems({ dryRun, publish }), {});
+    // A publish run for another manifest or another package's bytes is not this dry run's.
+    assert.match(r1Exit.dryRunBindingProblems({ dryRun, publish: { ...publish, portfolio: { ...publish.portfolio, manifestDigest: `sha256:${'8'.repeat(64)}` } } }).publish, /did not publish the portfolio set/u);
+    const tampered = structuredClone(publish.portfolio.published);
+    tampered[1].integrity = 'sha512-other';
+    assert.match(r1Exit.dryRunBindingProblems({ dryRun, publish: { ...publish, portfolio: { ...publish.portfolio, published: tampered } } }).publish, /did not publish the portfolio set/u);
+  });
+
+  test('a portfolio publish run is refused when its inputs, bytes, credentials, or promotion do not match the dry run', async () => {
+    const fixture = portfolioFixture();
+    const { input } = await boundRuns(fixture);
+    const rejects = async (expected, overrides) => assert.throws(() => r1Exit.bindPublish(overrides), code(expected), expected);
+    await rejects('R1_EXIT_DIGEST_MISMATCH', await input({ publishLog: await fixture.publishLog({ expected: 'sha512-other' }) }));
+    await rejects('R1_EXIT_TUPLE_MISMATCH', await input({ publishLog: await fixture.publishLog({ versionsEnvironment: fixture.versionsText.replace(fixture.reactVersion, '0.1.0-rc.6') }) }));
+    await rejects('R1_EXIT_RUN_INVALID', await input({ publishLog: await fixture.publishLog({ credential: true }) }));
+    await rejects('R1_EXIT_RUN_INVALID', await input({ publishLog: await fixture.publishLog({ credential: 'NPM_TOKEN' }) }));
+    await rejects('R1_EXIT_HEAD_SHA_MISMATCH', await input({ run: fixture.run(2, { head_sha: 'f'.repeat(40) }) }));
+    await rejects('R1_EXIT_RUN_INVALID', await input({ jobs: [fixture.publishRunJobs()[0]] }));
+    // Promotion: another dry run, other bytes, and a publish run that prepared its own candidate.
+    await rejects('R1_EXIT_PROMOTION_MISMATCH', await input({ prepareLog: fixture.promotedLog({ dryRunId: 2 }) }));
+    await rejects('R1_EXIT_DIGEST_MISMATCH', await input({ prepareLog: fixture.promotedLog({ integrity: 'sha512-other' }) }));
+    await rejects('R1_EXIT_PROMOTION_MISSING', await input({ prepareLog: fixture.dryRunLog() }));
+    // The bytes npm published and the workflow read back must be the dry run's, for every package.
+    const log = await fixture.publishLog();
+    const catalogIntegrity = fixture.integrityOf(catalog);
+    await rejects('R1_EXIT_DIGEST_MISMATCH', await input({ publishLog: log.replace(`dist.integrity: ${catalogIntegrity}`, 'dist.integrity: sha512-other') }));
+    await rejects('R1_EXIT_DIGEST_MISMATCH', await input({ publishLog: log.replace(`npm notice integrity: ${catalogIntegrity.slice(0, 20)}`, 'npm notice integrity: sha512-other') }));
+    await rejects('R1_EXIT_DIGEST_MISMATCH', await input({ publishLog: log.replace(/(@muxui\/tooling@1\.1\.0-rc\.1\n)?\S+ No drift since the preflight: @muxui\/tooling[^\n]*\n/u, '') }));
+    await rejects('R1_EXIT_RUN_INVALID', await input({ publishLog: log.replace(`${schema}@0.6.0-rc.1: 404 (no collision)`, '') }));
+    // A new package first-publishes with the temporary token and an existing one only through OIDC; any other pairing is refused.
+    await rejects('R1_EXIT_RUN_INVALID', await input({ publishLog: log.replace(`Authentication for ${react}: trusted publishing (OIDC)`, `Authentication for ${react}: temporary npm token (first publish)`) }));
+    await rejects('R1_EXIT_RUN_INVALID', await input({ publishLog: log.replace(`Authentication for ${catalog}: temporary npm token (first publish)`, `Authentication for ${catalog}: trusted publishing (OIDC)`) }));
+    await rejects('R1_EXIT_DIGEST_MISMATCH', await input({ publishLog: log.replace(/^.*Candidate verified: .*$/mu, `${log.match(/^(\S+) Candidate verified/mu)[1]} Candidate verified: ${schema}@0.6.0-rc.1 sha512-other`) }));
+  });
+
+  test('a partial publication is captured as a prior attempt, not as the candidate publish', async () => {
+    const fixture = portfolioFixture();
+    const failed = async (faults) => {
+      const { input } = await boundRuns(fixture);
+      return input({ run: fixture.run(3, { conclusion: 'failure' }), jobs: fixture.publishRunJobs({ publishOutcome: 'failure', base: 30 }), publishLog: await fixture.publishLog({ faults }) });
+    };
+    // A publish refused at tooling: schema and catalog published, tooling failed, React never reached.
+    const refused = await failed({ refuse: [tooling] });
+    assert.throws(() => r1Exit.bindPublish(refused), code('R1_EXIT_TUPLE_MISMATCH'), 'a stopped run is not the publish of the set');
+    const prior = r1Exit.bindPriorPublish(refused);
+    assert.equal(prior.observed.published, false);
+    assert.deepEqual(prior.portfolio.packages.map(({ name, state }) => [name, state]), [[schema, 'verified'], [catalog, 'verified'], [tooling, 'publish-failed'], [react, 'not-attempted']]);
+    assert.equal(prior.portfolio.manifestDigest, fixture.manifest.digest);
+    assert.match(prior.excerpt.text, /Recovery plan \(a plan only; nothing was deprecated, unpublished, or re-tagged\)/u);
+    assert.deepEqual(r1Exit.dryRunBindingProblems({ dryRun: r1Exit.bindDryRun(fixture.dryRunInput()), priorPublish: prior }), {});
+
+    // A read-back that failed on other bytes is recorded as such for the package, and still publishes no React.
+    const corrupted = r1Exit.bindPriorPublish(await failed({ corrupt: [catalog] }));
+    assert.deepEqual(corrupted.portfolio.packages.map(({ state }) => state), ['verified', 'read-back-failed', 'not-attempted', 'not-attempted']);
+    assert.match(corrupted.excerpt.text, /catalog@2\.1\.0-rc\.1: bad-bytes; published bad bytes; deprecate 2\.1\.0-rc\.1/u);
+
+    // A run that published React, or that succeeded, is not a prior attempt that published no React.
+    const { input } = await boundRuns(fixture);
+    const succeeded = await input();
+    assert.throws(() => r1Exit.bindPriorPublish(succeeded), code('R1_EXIT_PRIOR_ATTEMPT_INVALID'));
+  });
+
+  // A hosted run set for the portfolio workflow: dry run 1 (job 11), publish run 2 (jobs 21 and 22), a failed publish run 3 (jobs 31 and 32), main CI 4242.
+  async function portfolioCapture(fixture) {
+    const publishLogs = new Map([[22, await fixture.publishLog()], [32, await fixture.publishLog({ faults: { refuse: [tooling] } })]]);
+    const github = {
+      run: (id) => (id === 4242 ? fixture.mainCiRun() : fixture.run(id, id === 3 ? { conclusion: 'failure' } : {})),
+      jobs: (id) => ({ 1: fixture.dryRunJobs(), 2: fixture.publishRunJobs(), 3: fixture.publishRunJobs({ publishOutcome: 'failure', base: 30 }) })[id],
+      attempt: () => fixture.mainCiRun(),
+      attemptJobs: () => [fixture.checkJob()],
+      artifacts: (id) => fixture.candidateArtifacts({ workflow_run: { id, head_sha: fixture.head } }),
+      log: (jobId) => (publishLogs.get(jobId) ?? ([21, 31].includes(jobId) ? fixture.promotedLog() : fixture.dryRunLog())),
+      tree: () => fixture.tree,
+      approvals: () => [],
+      download: (_runId, directory) => {
+        fixture.download(directory);
+        return true;
+      },
+    };
+    return { github, capture: (out, ...phases) => r1Exit.main(['--rehearsal', `--out=${out}`, `--version=${fixture.reactVersion}`, '--capture-timestamp=2026-11-02T10:00:00Z', ...phases], github) };
+  }
+
+  test('portfolio capture writes the R1 exit evidence of the React candidate and rebuilds it byte for byte', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'muxui-portfolio-capture-'));
+    try {
+      const fixture = portfolioFixture();
+      const { github, capture } = await portfolioCapture(fixture);
+      const out = join(root, 'out');
+      const result = await capture(out, '--dry-run-run=1', '--publish-run=2');
+      assert.deepEqual(result.records, ['E-R1-EXIT-01', 'E-R1-EXIT-02']);
+      const record = async (id) => JSON.parse(await readFile(join(out, `records/${id}.json`), 'utf8'));
+      const first = await record('E-R1-EXIT-01');
+      assert.equal(first.candidate.version, fixture.reactVersion);
+      assert.deepEqual(first.portfolio.packages.map(({ name }) => name), names);
+      assert.equal(first.portfolio.manifestDigest, fixture.manifest.digest);
+      assert.deepEqual(first.observed.exports, ['.', './markdown', './styles.css']);
+      const second = await record('E-R1-EXIT-02');
+      assert.equal(second.outcome, 'partial', 'the registry read-back is the proof, and it is a later phase');
+      assert.equal(second.postPublication.portfolio.packages.length, 4);
+      assert.deepEqual(second.prePublication.manifest.preflightChecks.map(({ status }) => status), ['passed', 'passed', 'passed', 'passed']);
+      const readme = await readFile(join(out, 'README.md'), 'utf8');
+      assert.match(readme, /# R1 exit retained publication evidence for 0\.1\.0-rc\.5/u);
+      assert.match(readme, /came from the portfolio workflow \(Decision 0032\)[^\n]*@muxui\/schema@0\.6\.0-rc\.1/u);
+      assert.match(readme, /The publish run published the set in order/u);
+      // The retained manifest is the portfolio manifest, sanitized.
+      const retained = JSON.parse(await readFile(join(out, 'artifacts/release-manifest.json'), 'utf8'));
+      assert.equal(retained.schema, 'muxui-portfolio-release-v1');
+      assert.equal(retained.publication.authorization, '<public-id>');
+
+      // Every file rebuilds from verification.json, as the committed routes do.
+      const route = r1Exit.routeFor(fixture.reactVersion);
+      const read = (relative) => readFileSync(join(out, relative.slice(route.length + 1)), 'utf8');
+      const rebuilt = r1Exit.assembleRoute(JSON.parse(read(`${route}/verification.json`)), read);
+      // Records for phases not captured yet are staged for removal (null), not written.
+      const written = [...rebuilt.files].filter(([, text]) => text !== null);
+      assert.deepEqual(written.map(([relative]) => relative).sort(), ['README.md', 'index.json', 'records/E-R1-EXIT-01.json', 'records/E-R1-EXIT-02.json', 'verification.json'].map((file) => `${route}/${file}`));
+      for (const [relative, text] of written) assert.equal(text, read(relative), relative);
+      assert.deepEqual((await readdir(join(out, 'validation'))).sort(), ['dry-run-prepare-11.txt', 'publish-22.txt', 'publish-prepare-21.txt']);
+
+      // A prior attempt of the same dry run (a publish refused at tooling) is disclosed beside it, without becoming the publish.
+      await capture(out, '--prior-publish-run=3');
+      const prior = (await record('E-R1-EXIT-02')).priorPublishAttempts[0];
+      assert.deepEqual(prior.portfolio.packages.map(({ state }) => state), ['verified', 'verified', 'publish-failed', 'not-attempted']);
+      // The capture is for the version it was started with.
+      await assert.rejects(r1Exit.main(['--rehearsal', `--out=${join(root, 'again')}`, '--version=0.1.0-rc.6', '--capture-timestamp=2026-11-02T10:00:00Z', '--dry-run-run=1'], github), code('R1_EXIT_VERSION_MISMATCH'));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test('the registry read-back and the four R1 exit records follow from a portfolio candidate', async () => {
+    const fixture = portfolioFixture();
+    const { dryRun, input } = await boundRuns(fixture);
+    const publish = r1Exit.bindPublish(await input());
+    const version = fixture.reactVersion;
+    const integrity = fixture.integrityOf(react);
+    const prior = { kind: 'later', latest: '0.1.0-rc.1', next: '0.1.0-rc.4' };
+    const view = {
+      integrity, shasum: dryRun.candidate.tarball.shasum, attestations: { url: 'https://registry.example/attestations', provenance: { predicateType: 'https://slsa.dev/provenance/v1' } },
+      distTags: { latest: '0.1.0-rc.1', next: version }, versions: ['0.1.0-rc.1', '0.1.0-rc.2', '0.1.0-rc.3', '0.1.0-rc.4', version],
+      time: { created: '2026-10-04T13:05:33.464Z', [version]: '2026-11-02T13:05:33.917Z' },
+    };
+    const attestations = { attestations: [{
+      predicateType: 'https://slsa.dev/provenance/v1',
+      bundle: { dsseEnvelope: { payload: Buffer.from(JSON.stringify({
+        subject: [{ name: `pkg:npm/%40muxui/react@${version}`, digest: { sha512: Buffer.from(integrity.slice(7), 'base64').toString('hex') } }],
+        predicate: {
+          buildDefinition: { externalParameters: { workflow: { ref: 'refs/heads/main', repository: 'https://github.com/ndrewtran/muxui', path: '.github/workflows/npm-publish.yml' } }, resolvedDependencies: [{ digest: { gitCommit: fixture.head } }] },
+          runDetails: { builder: { id: 'https://github.com/actions/runner/github-hosted' }, metadata: { invocationId: 'https://github.com/ndrewtran/muxui/actions/runs/2/attempts/1' } },
+        },
+      })).toString('base64') } },
+    }] };
+    const consumer = { installedVersion: version, lockIntegrity: integrity, smoke: { imported: [react, `${react}/markdown`], resolved: [`${react}/styles.css`], rendered: ['Button'] } };
+    const registry = r1Exit.bindRegistry({ dryRun, view, attestations, consumer, publishRunId: 2, prior });
+    assert.deepEqual(registry.prior, prior);
+    assert.throws(() => r1Exit.bindRegistry({ dryRun, view: { ...view, integrity: 'sha512-other' }, attestations, consumer, publishRunId: 2, prior }), code('R1_EXIT_DIGEST_MISMATCH'));
+
+    const ref = { path: 'tests/evidence/r1-exit-0.1.0-rc.5/x', sha256: `sha256:${'0'.repeat(64)}` };
+    const phase = (value) => ({ ...value, captureTimestamp: 't', proofTool: {} });
+    const records = Object.fromEntries(Object.entries(r1Exit.buildRoute({
+      phases: { dryRun: phase(dryRun), publish: phase(publish), registry: phase(registry) }, sourceRevision: fixture.head, sourceTree: fixture.tree, proofTool: {},
+    }, { validation: ref, manifest: ref, registry: ref })).map(([id, text]) => [id, JSON.parse(text)]));
+    assert.deepEqual(Object.keys(records), ['E-R1-EXIT-01', 'E-R1-EXIT-02', 'E-R1-EXIT-03', 'E-R1-EXIT-04']);
+    assert.equal(records['E-R1-EXIT-02'].outcome, 'pass');
+    assert.equal(records['E-R1-EXIT-02'].postPublication.portfolio.packages.length, 4);
+    // latest is not moved by this publish; rollback comes from the portfolio manifest, prepared and not exercised.
+    assert.equal(records['E-R1-EXIT-04'].distTags.latest.observed, '0.1.0-rc.1');
+    assert.equal(records['E-R1-EXIT-04'].rollback.status, 'prepared-not-exercised');
+    assert.deepEqual(records['E-R1-EXIT-04'].rollback.publishOrder, names);
+    assert.deepEqual(r1Exit.candidateFacts(dryRun).source, { revision: fixture.head, tree: fixture.tree, preparationTool: fixture.manifest.preparation.tool });
+  });
+}
