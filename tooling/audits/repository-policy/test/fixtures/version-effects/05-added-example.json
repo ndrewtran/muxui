@@ -1,0 +1,37 @@
+{
+  "row": "Add an optional example",
+  "patch": [
+    {
+      "op": "add",
+      "path": "/records/-",
+      "value": {
+        "family": "example",
+        "source": "export const Icon = () => <Button icon=\"plus\">Add</Button>;\n",
+        "record": {
+          "schemaVersion": "1.0.0",
+          "id": "muxui:example:button-icon-react",
+          "kind": "example",
+          "name": "Icon React Button",
+          "summary": "A React Button with an icon.",
+          "lifecycle": "experimental",
+          "binding": {
+            "ref": "muxui:component:button#web.react",
+            "guidanceImpact": "normative",
+            "purposes": ["generation"],
+            "preference": 1
+          },
+          "complexity": "minimal",
+          "prerequisites": [],
+          "source": "catalog/components/button/examples/react/icon.tsx"
+        }
+      }
+    }
+  ],
+  "expect": {
+    "catalog": "minor",
+    "renderers": {
+      "@muxui/react": "patch"
+    },
+    "publish": ["@muxui/catalog", "@muxui/react"]
+  }
+}

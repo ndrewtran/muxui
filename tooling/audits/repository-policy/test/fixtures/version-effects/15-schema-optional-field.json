@@ -1,0 +1,20 @@
+{
+  "row": "Schema: add an optional stable field",
+  "patch": [
+    {
+      "op": "add",
+      "path": "/schemas/component.schema.json/properties/keywords",
+      "value": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  ],
+  "expect": {
+    "catalog": "minor",
+    "schema": "minor",
+    "publish": ["@muxui/schema", "@muxui/catalog"]
+  }
+}

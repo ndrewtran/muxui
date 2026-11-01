@@ -1,0 +1,72 @@
+{
+  "row": "Add an optional component or binding",
+  "patch": [
+    {
+      "op": "add",
+      "path": "/records/-",
+      "value": {
+        "family": "component",
+        "record": {
+          "schemaVersion": "1.0.0",
+          "id": "muxui:component:badge",
+          "kind": "component",
+          "name": "Badge",
+          "summary": "Labels a status.",
+          "lifecycle": "experimental",
+          "intent": {
+            "useWhen": ["Labelling a status"],
+            "avoidWhen": ["Triggering an action"]
+          },
+          "anatomy": ["root"],
+          "states": ["idle"],
+          "accessibility": {
+            "nameRequired": false,
+            "obligations": ["Expose the label as text"]
+          },
+          "bindings": {
+            "web.html": {
+              "schemaVersion": "2.0.0",
+              "strategy": "unsupported",
+              "reason": "Only the React binding exists yet."
+            },
+            "web.react": {
+              "schemaVersion": "2.0.0",
+              "lifecycle": "experimental",
+              "strategy": "direct",
+              "api": {
+                "props": ["tone"],
+                "events": [],
+                "parts": ["root"],
+                "defaults": {}
+              },
+              "behavior": ["Renders its label"],
+              "accessibility": ["Expose the label as text"],
+              "tokenRecipe": {
+                "source": "muxui:token:default-theme",
+                "requirements": [
+                  {
+                    "token": "semantic.action.background",
+                    "requirement": "required"
+                  }
+                ]
+              },
+              "runtimeProfiles": {}
+            },
+            "native.react-native": {
+              "schemaVersion": "2.0.0",
+              "strategy": "unsupported",
+              "reason": "Only the React binding exists yet."
+            }
+          }
+        }
+      }
+    }
+  ],
+  "expect": {
+    "catalog": "minor",
+    "renderers": {
+      "@muxui/react": "minor"
+    },
+    "publish": ["@muxui/catalog", "@muxui/react"]
+  }
+}

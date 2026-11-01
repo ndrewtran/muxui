@@ -33,6 +33,7 @@ import {
 } from './release-proof.mjs';
 import { canonicalJson } from './canonical-json.mjs';
 import { deterministicArchive, readArchive } from './release-archive.mjs';
+import { assertVersionEffects, findCandidateSetProblems } from './release-effects.mjs';
 import { RETAINED_EVIDENCE_MILESTONES, buildPortfolioManifest, committedFileReader, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
 import {
   CANDIDATE_PUBLISH_CONFIG,
@@ -418,6 +419,21 @@ const releaseId = releaseIdFor({
   revision: sourceRevision,
   published: publishSet.packages.map(({ name }) => ({ name, version: versions.get(name) })),
 });
+// E-P2.1-04: with a prior release, the proposed versions must carry the effect of what changed since it. The workflow gives
+// that release's portfolio manifest; without one this is the first portfolio release (Decision 0032 item 9).
+const priorReleaseManifest = process.env.MUXUI_PRIOR_RELEASE_MANIFEST;
+const versionEffects = priorReleaseManifest
+  ? assertVersionEffects({
+    priorManifest: JSON.parse(readFileSync(resolve(priorReleaseManifest), 'utf8')),
+    revision: sourceRevision,
+    cwd: repositoryRoot,
+    versions,
+    packageNames: publishSet.packages.map(({ name }) => name),
+  })
+  : { status: 'first-portfolio-release' };
+console.log(versionEffects.status === 'checked'
+  ? `P2.1 version effects match the change since ${versionEffects.priorRelease}; publishing ${versionEffects.publish.join(', ') || 'nothing'}`
+  : 'P2.1 first portfolio release: no prior release to compare versions with');
 
 // The catalog's generated files embed its package version (`catalogVersion`, ids, digest, release record), so the
 // candidate takes them from a compile for the rc, written outside the checkout.
@@ -1082,6 +1098,17 @@ try {
   });
   if (setInstall.status !== 0) fail('P2_1_SET_CONSUMER_INSTALL_FAILED', childOutput(setInstall));
   for (const [name, { candidateRoot }] of tuple) assertInstalledCandidate(setConsumer, name, candidateRoot);
+  // E-P2.1-04: tooling's catalog dependency resolves to the candidate catalog and not a registry copy, the new packages are
+  // prereleases, and the catalog's package version is its catalogVersion.
+  const installedManifest = (name) => JSON.parse(readFileSync(join(setConsumer, 'node_modules', name, 'package.json'), 'utf8'));
+  assertInstalledCandidate(realpathSync(join(setConsumer, 'node_modules/@muxui/tooling')), '@muxui/catalog', tuple.get('@muxui/catalog').candidateRoot);
+  const candidateSetProblems = findCandidateSetProblems({
+    versions,
+    installed: new Map(publishSet.packages.map(({ name }) => [name, installedManifest(name).version])),
+    toolingCatalogRange: installedManifest('@muxui/tooling').dependencies['@muxui/catalog'],
+    catalogVersion: JSON.parse(readFileSync(join(setConsumer, 'node_modules/@muxui/catalog/generated/catalog-package.json'), 'utf8')).catalogVersion,
+  });
+  if (candidateSetProblems.length > 0) fail('P2_1_CANDIDATE_SET_INVALID', candidateSetProblems.join('; '));
   copyConsumerTool(setConsumer, 'set-entries.mjs');
   const setEntries = runChild('publish-set entry imports', process.execPath, ['set-entries.mjs', JSON.stringify(publishSet.packages.map(({ name }) => name))], { cwd: setConsumer });
   if (setEntries.status !== 0) fail('P2_1_SET_CONSUMER_IMPORT_FAILED', childOutput(setEntries));
@@ -1135,6 +1162,7 @@ try {
       verification: {
         reactOnlineMatrix: matrixResults,
         publishSetConsumer: { packageManager: 'pnpm', entriesImported: Object.keys(exportNames).length, entriesResolved: resolvedEntries.length },
+        versionEffects,
         warnings: { duplicateDependencyVersions: duplicateVersionWarnings },
       },
     },

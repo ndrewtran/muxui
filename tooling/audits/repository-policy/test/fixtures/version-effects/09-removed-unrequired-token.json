@@ -1,0 +1,22 @@
+{
+  "row": "Change a public token name incompatibly, where no component binding requires it",
+  "patch": [
+    {
+      "op": "remove",
+      "path": "/records/muxui:token:default-theme/record/tokens/semantic.action.foreground"
+    },
+    {
+      "op": "replace",
+      "path": "/records/muxui:token:default-theme/record/tokenContractVersion",
+      "value": "2.0.0"
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "tokenContract": "major",
+    "renderers": {
+      "@muxui/react": "patch"
+    },
+    "publish": ["@muxui/catalog", "@muxui/react"]
+  }
+}

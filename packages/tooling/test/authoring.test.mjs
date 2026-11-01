@@ -305,6 +305,49 @@ test('E-G0.5-02: semantic golden corpus reports owning fields and exact revision
   }
 });
 
+test('Architecture "Add a supported runtime profile": enabling a binding or a runtime profile is minor, other strategy moves stay major', async () => {
+  const { component, revisionContext } = await setup();
+  const react = component.record.bindings['web.react'];
+  const api = { props: [], events: [], parts: component.record.anatomy, defaults: {} };
+  const withBinding = (id, binding) => ({ ...component.record, bindings: { ...component.record.bindings, [id]: binding } });
+  const diff = (before, after) => semanticDiff({ before, after, revisionContext });
+  // Button leaves web.html unsupported: supporting it adds fields and drops `reason`, and all of it is additive.
+  const enabled = diff(component.record, withBinding('web.html', { ...react, api }));
+  assert.equal(enabled.effect, 'compatible');
+  assert.equal(enabled.versionEffect, 'minor');
+  assert.ok(enabled.changes.some(({ path, operation }) => path === '$/bindings/web.html/reason' && operation === 'remove'));
+  assert.ok(enabled.changes.every(({ effect }) => effect === 'compatible'));
+  // The reverse withdraws support, and a move between supported strategies changes behavior: both stay major.
+  assert.equal(diff(withBinding('web.html', { ...react, api }), component.record).versionEffect, 'major');
+  assert.equal(diff(component.record, withBinding('web.react', { ...react, strategy: 'adapted' })).versionEffect, 'major');
+  assert.equal(diff(withBinding('web.html', { ...react, api }), withBinding('web.html', { ...react, api, strategy: 'adapted' })).versionEffect, 'major');
+  // A supported native binding lists a disposition for every profile; supporting one that was unsupported is additive.
+  const profile = (validationProfile, disposition) => ({ strategy: 'adapted', lifecycle: 'experimental', validationProfile, ...disposition });
+  const native = (web) => withBinding('native.react-native', {
+    ...react,
+    strategy: 'adapted',
+    api,
+    runtimeProfiles: {
+      ios: profile('native.ios'),
+      android: profile('native.android'),
+      'native.react-native-web': web,
+    },
+  });
+  const before = native({ strategy: 'unsupported', reason: 'No responsible implementation yet.' });
+  const profileEnabled = diff(before, native(profile('native.react-native-web')));
+  assert.deepEqual(profileEnabled.changes.map(({ path, effect }) => [path, effect]), [
+    ['$/bindings/native.react-native/runtimeProfiles/native.react-native-web/lifecycle', 'compatible'],
+    ['$/bindings/native.react-native/runtimeProfiles/native.react-native-web/reason', 'compatible'],
+    ['$/bindings/native.react-native/runtimeProfiles/native.react-native-web/strategy', 'compatible'],
+    ['$/bindings/native.react-native/runtimeProfiles/native.react-native-web/validationProfile', 'compatible'],
+  ]);
+  assert.equal(profileEnabled.versionEffect, 'minor');
+  assert.equal(diff(native(profile('native.react-native-web')), before).versionEffect, 'major');
+  const moved = native(profile('native.react-native-web'));
+  moved.bindings['native.react-native'].runtimeProfiles.ios.strategy = 'direct';
+  assert.equal(diff(native(profile('native.react-native-web')), moved).versionEffect, 'major');
+});
+
 test('E-G0.5-02: sequence diffs preserve one add or remove at every array position', async () => {
   const { component, revisionContext } = await setup();
   for (let index = 0; index <= component.record.states.length; index += 1) {

@@ -1,0 +1,14 @@
+{
+  "row": "Remove an inline query-response field",
+  "patch": [
+    {
+      "op": "remove",
+      "path": "/schemas/query-envelope.schema.json/properties/legacyNote"
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "queryApi": "major",
+    "publish": ["@muxui/schema", "@muxui/catalog", "@muxui/tooling"]
+  }
+}

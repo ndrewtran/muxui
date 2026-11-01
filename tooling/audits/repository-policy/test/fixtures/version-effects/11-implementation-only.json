@@ -1,0 +1,16 @@
+{
+  "row": "Implementation fix with no public contract change",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/implementation/@muxui~1react",
+      "value": "sha256:r2"
+    }
+  ],
+  "expect": {
+    "renderers": {
+      "@muxui/react": "patch"
+    },
+    "publish": ["@muxui/react"]
+  }
+}

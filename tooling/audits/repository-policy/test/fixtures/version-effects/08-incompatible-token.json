@@ -1,0 +1,23 @@
+{
+  "row": "Change a public token name, type, layer, or semantic meaning incompatibly",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/records/muxui:token:default-theme/record/tokens/semantic.action.background/overridePolicy",
+      "value": "fixed"
+    },
+    {
+      "op": "replace",
+      "path": "/records/muxui:token:default-theme/record/tokenContractVersion",
+      "value": "2.0.0"
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "tokenContract": "major",
+    "renderers": {
+      "@muxui/react": "major"
+    },
+    "publish": ["@muxui/catalog", "@muxui/react"]
+  }
+}

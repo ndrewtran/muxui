@@ -905,6 +905,23 @@ function derivedEffect(change, effect, mergedBefore, mergedAfter) {
   return effect;
 }
 
+/**
+ * Enabling is additive (Architecture "Add a supported runtime profile"): a binding or a runtime profile whose strategy moves
+ * from `unsupported` to a supported one is compatible in every field it adds, drops, or replaces on the way (its
+ * `strategy`, `reason`, `lifecycle`, and so on). A move between supported strategies, or to `unsupported`, keeps the
+ * incompatible effect the field table gives it.
+ */
+function enablementEffect(change, effect, mergedBefore, mergedAfter) {
+  if (effect !== 'incompatible') return effect;
+  const [root, bindingId, section, profileId] = pointerSegments(change.path);
+  if (root !== 'bindings' || bindingId === undefined) return effect;
+  const enabling = (before, after) => before?.strategy === 'unsupported' && after?.strategy !== undefined && after.strategy !== 'unsupported';
+  const [before, after] = [mergedBefore, mergedAfter].map((record) => record.bindings?.[bindingId]);
+  if (enabling(before, after)) return 'compatible';
+  if (section === 'runtimeProfiles' && profileId !== undefined && enabling(before?.runtimeProfiles?.[profileId], after?.runtimeProfiles?.[profileId])) return 'compatible';
+  return effect;
+}
+
 function exampleSourceBytes(context, record) {
   const bytes = context.exampleSources?.[record.id];
   if (typeof bytes !== 'string') {
@@ -928,7 +945,8 @@ function exampleSourceBytes(context, record) {
  * a derived prop change is classified like an authored one; a binding derived
  * on both sides reports only the binding-spec axis for its api changes. A
  * derived block's required additions and description edits classify as
- * `derivedEffect` says.
+ * `derivedEffect` says, and enabling an unsupported binding or runtime profile as
+ * `enablementEffect` says.
  */
 export function semanticDiff({
   family = 'component',
@@ -950,7 +968,7 @@ export function semanticDiff({
     return {
       ...change,
       effect: family === 'component'
-        ? derivedEffect(change, field.effects[change.operation], mergedBefore, mergedAfter)
+        ? enablementEffect(change, derivedEffect(change, field.effects[change.operation], mergedBefore, mergedAfter), mergedBefore, mergedAfter)
         : field.effects[change.operation],
       revisionAxes: derived ? field.revisionAxes.filter((axis) => axis === 'binding-spec') : field.revisionAxes,
       owner: {
