@@ -1097,9 +1097,17 @@ consists of:
 
 - **Cascade layers.** `muxui.tokens`, `muxui.components`, and
   `muxui.utilities`, declared in that order. All Mux UI CSS sits in a layer, so
-  an unlayered consumer rule wins without specificity tricks.
-- **Classes.** A root class `.muxui-<slug>` per component and a part class for
-  each named part of its anatomy, in one naming scheme.
+  an unlayered consumer rule beats an ordinary Mux UI declaration without
+  specificity tricks. A property Mux UI declares `!important`, mostly for forced
+  colors and reduced motion, reverses the order for that property, and an
+  unlayered consumer rule does not override it.
+- **Classes.** A root class `.muxui-<slug>` per component and a part class
+  `.muxui-<slug>__<part>` for the named parts of its anatomy that have a
+  documented hook, in one naming scheme. Every anatomy entry is recorded with its
+  hook or with the reason it has none: no element, or an internal class several
+  families share. Four shared field classes (`muxui-field-label`, `-input`,
+  `-description`, and `-error`) are also documented hooks, only under a scope such
+  as the family root.
 - **State attributes.** A closed, documented set rooted in `data-muxui-`, set by
   a thin Mux UI adapter over the substrate's render props. Stylesheets,
   examples, and consumers use these and no substrate attribute, so replacing
@@ -1107,9 +1115,10 @@ consists of:
 - **Custom properties.** The tokens whose override policy is `instance`. A token
   keeps that policy only while the component's CSS reads the property and a test
   shows that setting it on a rendered instance changes the computed style.
-- **Style entry points.** At least a core entry, a supplemental entry, and an
-  editor entry, so an ordinary consumer does not load the editor and Markdown
-  styles. Theme stylesheets are separate.
+- **Style entry points.** One component stylesheet, `styles.css`, which holds
+  every family, including the editor and Markdown styles, and the optional
+  `themes.css`. Within a major, `styles.css` stays complete, so any finer entry
+  is added later only additively.
 
 For supported published contracts, the compatibility promise is deliberately
 narrow and machine-enumerated:
@@ -1126,19 +1135,21 @@ component tokens and never raw palette values. A test in `@muxui/react` renders
 the exported components and checks the published surface. Every declared public
 class and state attribute is emitted in its applicable fixtures and has CSS
 coverage, every public custom property is read and changes computed style in a
-browser, the layers and style entries exist, and canonical examples rely on no
-internal hook. Internal classes and substrate attributes may be emitted; they
-are not part of the contract. The catalog and that test expose only registered
-hooks and flag examples that rely on internal selectors. During the
+browser, the layers exist, `styles.css` and `themes.css` are the only style
+entries, and canonical examples rely on no internal hook. Internal classes and
+substrate attributes may be emitted; they are not part of the contract. The
+catalog and that test expose only registered hooks and flag examples that rely
+on internal selectors. During the
 current pre-release state a superseded hook is removed outright, with no alias
 (Decision 0016); a supported published contract keeps a deprecated hook as an
 alias for its declared notice window.
 
-The contract is adopted in three ordinary stages: cascade layers, with the
-`instance` hooks made real or dropped; one class scheme and the Mux-owned state
-attributes; then the split style entries. A listed hook is public from the stage
-that delivers it. Until then the stylesheet's selectors are internal and carry
-no promise.
+The contract was adopted in two ordinary stages: cascade layers, with the
+`instance` hooks made real or dropped; then one class scheme and the Mux-owned
+state attributes. A third stage, a split of the style entries, was retired on 1
+November 2026 in favor of the one `styles.css` (Decision 0031). A listed hook is
+public from the stage that delivered it, and every selector not listed is
+internal and carries no promise.
 
 #### React styling and parity boundary
 
@@ -1191,16 +1202,16 @@ list (Decision 0031).
 ### Deferred renderer tracks
 
 Framework-free web, React Native, and the code they might share are deferred
-(Decision 0031). Their existing private scaffolds stay in the workspace, claiming
-nothing, until the parking pull request removes them. After removal, `@muxui/web`
-is restored only by an accepted W1.0 activation and `@muxui/react-native` only
-by an accepted N1.0 activation, and `@muxui/foundation` only by an activation
-that names the shared code and its two real consumers. The schema keeps the
-platform vocabulary (`web.html`, `web.react`, `native.react-native`, and the
-runtime profiles `ios`, `android`, and `native.react-native-web`), and a binding
-with no responsible implementation is `strategy: "unsupported"` with a reason,
-which the parking pull request applies to the existing ones, so the catalog stays
-honest without a scaffold. What follows is the
+(Decision 0031). Their private scaffolds have been removed from the workspace.
+`@muxui/web` is restored only by an accepted W1.0 activation and
+`@muxui/react-native` only by an accepted N1.0 activation, and
+`@muxui/foundation` only by an activation that names the shared code and its two
+real consumers. The schema keeps the platform vocabulary (`web.html`,
+`web.react`, `native.react-native`, and the runtime profiles `ios`, `android`,
+and `native.react-native-web`), and a binding with no responsible implementation
+is `strategy: "unsupported"` with a reason, which the catalog's `web.html` and
+`native.react-native` bindings carry, so the catalog stays honest without a
+scaffold. What follows is the
 intended design, not a commitment or a claim. The activating decision may change
 it, and states whether its binding's API is derived from renderer source, as for
 `web.react`, or authored in its binding spec, so no fact has two owners.
@@ -1337,8 +1348,8 @@ undeclared file dependency, or `@muxui/web` import.
 | `@muxui/tooling` | Self-describing CLI, MCP adapters, local validation, maintainer scaffolds, semantic diffs, and (when separately admitted) safe project operations. | A second artifact index, product decisions, or renderer implementation. |
 
 At the React package-only boundary, schema, tokens, catalog, and tooling remain
-private authoring/build/proof authorities, and the parked renderer scaffolds
-stay outside the public graph and, once removed, return only through activation
+private authoring/build/proof authorities, and the parked renderer packages
+stay outside the public graph and return only through activation
 ("Deferred renderer tracks"). Productization later
 publishes the compatible catalog/tooling portfolio and CLI-as-documentation.
 Their versions may move independently from renderer packages, but every
