@@ -85,8 +85,19 @@ test('E-P2.1-05 negotiation picks the highest shared query API version by SemVer
       assert.equal(negotiateQueryApiVersion(pair, pair), version, pair.join(' vs '));
     }
   });
-  assert.ok(['2.1.0', '2.2.0-rc.1', '0.1.0'].every(isQueryApiVersion));
-  assert.ok(['not-a-version', '2.1', '02.1.0', '2.1.0+build', 'v2.1.0', '', 2.1, null].every((value) => !isQueryApiVersion(value)));
+  // Build metadata is valid and never part of precedence, so `alpha+build.1` is `alpha`, which sorts below `alpha.1`.
+  for (const pair of [['2.1.0-alpha+build.1', '2.1.0-alpha.1'], ['2.1.0-alpha.1', '2.1.0-alpha+build.1']]) {
+    assert.equal(negotiateQueryApiVersion(pair, pair), '2.1.0-alpha.1', pair.join(' vs '));
+  }
+  // Numeric identifiers compare exactly, beyond the 53 bits a Number holds, in the core and in a prerelease.
+  for (const [low, high] of [
+    ['2.1.0-rc.9007199254740992', '2.1.0-rc.9007199254740993'],
+    ['2.1.9007199254740992', '2.1.9007199254740993'],
+  ]) {
+    for (const pair of [[low, high], [high, low]]) assert.equal(negotiateQueryApiVersion(pair, pair), high, pair.join(' vs '));
+  }
+  assert.ok(['2.1.0', '2.2.0-rc.1', '0.1.0', '3.0.0+build.1', '2.1.0-alpha+build.1'].every(isQueryApiVersion));
+  assert.ok(['not-a-version', '2.1', '02.1.0', '2.1.0+', 'v2.1.0', '', 2.1, null].every((value) => !isQueryApiVersion(value)));
 });
 
 test('E-P2.1-05 the current contract is read', async () => {
@@ -118,6 +129,7 @@ test('E-P2.1-05 supported older and newer tuples are read', async () => {
       release: { queryApiVersion: '2.2.0' },
     }],
     ['a valid but unknown prerelease in the list', { catalog: { supportedQueryApiVersions: ['2.1.0', '2.2.0-rc.1'] } }],
+    ['an unknown version with build metadata', { catalog: { supportedQueryApiVersions: ['2.1.0', '3.0.0+build.1'] } }],
     ['the current schema', { release: { schemaVersion: SCHEMA_VERSION } }],
     ['a later patch of the current schema', { release: { schemaVersion: laterPatch } }],
   ];
@@ -284,7 +296,7 @@ test('E-P2.1-05 an installed prerelease catalog from a newer query line is read 
   await withCatalogProject({
     version: '2.2.0-rc.1',
     apiVersion: '2.2.0',
-    supported: ['1.2.0', '2.1.0', '2.2.0'],
+    supported: ['1.2.0', '2.1.0', '2.2.0', '3.0.0+build.1'],
     schemaVersion: SCHEMA_VERSION,
   }, async (project) => {
     const { exitCode, stdout } = runCli(['manifest', '--project', project.path, '--detail', 'brief', '--json']);
@@ -335,6 +347,26 @@ test('E-P2.1-05 an installed catalog on a newer schema minor is incompatible, no
   }, (project) => {
     assertIncompatible(resolvePnpmProjectCatalog({ project: project.path }), 'schema', 'adapter');
     const { exitCode, stdout } = runCli(['manifest', '--project', project.path, '--json']);
+    assert.equal(exitCode, 16);
+    assert.equal(JSON.parse(stdout).error.code, 'MUXUI_CATALOG_INCOMPATIBLE');
+  });
+});
+
+test('E-P2.1-05 an installed catalog on an unreadable schema is never inspected for records', async () => {
+  await withCatalogProject({
+    version: '2.1.0-rc.2',
+    apiVersion: API_VERSION,
+    supported: [API_VERSION],
+    schemaVersion: `${schemaMajor + 1}.0.0`,
+    // A later major reshapes the bundle: there is no `artifacts` list to read bindings from.
+    shape: (bundle) => { bundle.records = bundle.artifacts; delete bundle.artifacts; },
+  }, (project) => {
+    assertIncompatible(
+      resolvePnpmProjectCatalog({ project: project.path, artifact: 'muxui:component:button', platform: 'web.react' }),
+      'schema',
+      'adapter',
+    );
+    const { exitCode, stdout } = runCli(['get', 'muxui:component:button', '--project', project.path, '--platform', 'web.react', '--json']);
     assert.equal(exitCode, 16);
     assert.equal(JSON.parse(stdout).error.code, 'MUXUI_CATALOG_INCOMPATIBLE');
   });

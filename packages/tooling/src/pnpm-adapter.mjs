@@ -158,6 +158,7 @@ function loadCatalogCandidate(packageRoot) {
   let identity;
   let bundle;
   let identityValid = false;
+  let schemaReadable = false;
   let releaseManifest = null;
   try {
     packageManifest = readJson(join(packageRoot, 'package.json'));
@@ -246,8 +247,9 @@ function loadCatalogCandidate(packageRoot) {
         !== canonicalJson(bundle.supportedQueryApiVersions ?? [])
     ) failures.push('query-api-mismatch');
     // A bundle outside the readable schema range is the resolver's `schema` incompatibility. Its records may use a grammar
-    // the current schemas reject, so they are validated only for a schema this build reads.
-    if (satisfies(String(bundle.schemaVersion), SCHEMA_READ_RANGE)) {
+    // this build does not know, so they are neither validated nor inspected unless the schema is one this build reads.
+    schemaReadable = satisfies(String(bundle.schemaVersion), SCHEMA_READ_RANGE);
+    if (schemaReadable) {
       try {
         createCatalogApi(bundle);
       } catch {
@@ -303,6 +305,7 @@ function loadCatalogCandidate(packageRoot) {
     identity: identityValid ? identity : null,
     releaseManifest,
     bundle,
+    schemaReadable,
     packageRoot,
     failures: [...new Set(failures)],
   };
@@ -493,7 +496,7 @@ export function resolvePnpmProjectCatalog({
     : { identity: null, bundle: null, failures: ['catalog-package-metadata-missing'] };
   const identity = candidate.identity;
   const release = candidate.releaseManifest;
-  const bindingRequests = candidate.bundle && candidate.failures.length === 0
+  const bindingRequests = candidate.bundle && candidate.schemaReadable && candidate.failures.length === 0
     ? requestedBindings(candidate.bundle, { artifact, bindings, platform })
     : bindings;
   const catalogId = release?.catalog?.id ?? 'unresolved-catalog';

@@ -32,21 +32,25 @@ export const QUERY_SCHEMA_VERSION = '2.1.0';
 /** The query API versions this build reads. */
 export const QUERY_API_VERSIONS = Object.freeze([API_VERSION]);
 
-const QUERY_API_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?$/u;
+const QUERY_API_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 
-/** Whether `value` is a SemVer `X.Y.Z[-prerelease]` string, the syntax of every query API version. */
+/** Whether `value` is a SemVer `X.Y.Z[-prerelease][+build]` string, the syntax of every query API version. */
 export function isQueryApiVersion(value) {
   return typeof value === 'string' && QUERY_API_VERSION_PATTERN.test(value);
 }
 
-/** SemVer precedence of two valid versions: numeric core, then a prerelease sorts below its release, then identifiers. */
+/** Numeric identifiers have no leading zeros, so a longer one is larger, and equal lengths compare as text: exact at any size. */
+const compareNumeric = (left, right) => left.length - right.length || (left < right ? -1 : left > right ? 1 : 0);
+
+/** SemVer precedence of two valid versions: numeric core, then a prerelease sorts below its release, then identifiers. Build metadata is ignored. */
 function compareQueryApiVersions(left, right) {
-  const [leftCore, leftPre] = left.split(/-(.*)/su);
-  const [rightCore, rightPre] = right.split(/-(.*)/su);
-  const core = leftCore.split('.').map(Number);
-  const other = rightCore.split('.').map(Number);
+  const [leftCore, leftPre] = left.split('+')[0].split(/-(.*)/su);
+  const [rightCore, rightPre] = right.split('+')[0].split(/-(.*)/su);
+  const core = leftCore.split('.');
+  const other = rightCore.split('.');
   for (let index = 0; index < 3; index += 1) {
-    if (core[index] !== other[index]) return core[index] < other[index] ? -1 : 1;
+    const order = compareNumeric(core[index], other[index]);
+    if (order !== 0) return Math.sign(order);
   }
   if (leftPre === undefined || rightPre === undefined) {
     return (leftPre === undefined) - (rightPre === undefined);
@@ -57,7 +61,7 @@ function compareQueryApiVersions(left, right) {
     const [a, b] = [leftIds[index], rightIds[index]];
     if (a === b) continue;
     const [aNumeric, bNumeric] = [/^\d+$/u.test(a), /^\d+$/u.test(b)];
-    if (aNumeric && bNumeric) return Number(a) < Number(b) ? -1 : 1;
+    if (aNumeric && bNumeric) return Math.sign(compareNumeric(a, b));
     if (aNumeric !== bNumeric) return aNumeric ? -1 : 1;
     return a < b ? -1 : 1;
   }

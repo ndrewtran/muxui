@@ -16,6 +16,8 @@ after(async () => {
 });
 
 const BUTTON = 'muxui:component:button';
+// A regression ceiling for `get` with `--platform web.react --detail full` (2797 tokens today), not the registry budget (2048).
+const WEB_REACT_GET_FULL_REGRESSION_CEILING = 3072;
 const GOLDENS = fileURLToPath(new URL('goldens/packed/', import.meta.url));
 const MODES = { human: [], json: ['--json'], dense: ['--dense'] };
 
@@ -205,10 +207,12 @@ test('E-P2.1-02 dense output stays inside every locked token budget', async () =
   const fixtures = { manifest: [], list: ['--limit', '1'], search: ['button', '--limit', '1'], get: [BUTTON] };
   const cases = ['brief', 'compact', 'full'].flatMap((detail) => Object.entries(fixtures)
     .map(([command, args]) => ({ command, detail, args: [command, ...args, '--detail', detail, '--dense'] })));
-  // `get --platform web.react` also fits brief and compact. Its full detail exceeds the 2048 budget, so it is not enforced.
-  cases.push(...['brief', 'compact'].map((detail) => ({
+  // `get --platform web.react` fits the registry budget at brief and compact. Its full detail exceeds the 2048 budget, so
+  // it is held to a regression ceiling instead.
+  cases.push(...['brief', 'compact', 'full'].map((detail) => ({
     command: 'get',
     detail,
+    ceiling: detail === 'full' ? WEB_REACT_GET_FULL_REGRESSION_CEILING : undefined,
     args: ['get', BUTTON, '--platform', 'web.react', '--detail', detail, '--dense'],
   })));
   const outputs = await Promise.all(cases.map(({ args }) => tuple.muxui(args)));
@@ -221,8 +225,8 @@ test('E-P2.1-02 dense output stays inside every locked token budget', async () =
     manifest: {}, list: { limit: 1 }, search: { query: 'button', limit: 1 }, get: { 'id-or-alias': BUTTON },
   });
   tokens.forEach(({ used, budget }, index) => {
-    const { command, detail } = cases[index];
-    assert.ok(used > 0 && used <= budget, `${command}.${detail} used ${used} of ${budget} tokens`);
+    const { command, detail, ceiling = budget } = cases[index];
+    assert.ok(used > 0 && used <= ceiling, `${command}.${detail} used ${used} of ${ceiling} tokens`);
   });
 });
 
