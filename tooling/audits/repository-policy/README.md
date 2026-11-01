@@ -37,7 +37,9 @@ compile into the catalog that the tooling queries and dense goldens render. Scal
 run the theme-authoring checks, and Scale source also runs the documentation
 owner that embeds it. Either route runs the Scale docs browser test, which
 builds the docs site first. Repository-policy, workflow, policy-run fixture, and
-retained evidence changes run the policy checks. Mixed changes combine and
+retained evidence changes run the policy checks. The declared publish set,
+`publish-set.json` (`pullRequestImpact.publishSetInputs`), also runs the `@muxui/tooling`
+check, whose packed-entry test takes its allowed edges from it. Mixed changes combine and
 deduplicate those scopes.
 
 React browser tests run in per-engine groups, in pull requests and in the full
@@ -172,19 +174,56 @@ scheduled runs, `pnpm check`, `pnpm check:all`, and `pnpm release:prepare`
 always run both scripts: the workspace runner adds `check:evidence` beside any
 run that includes this package.
 
-## Release lineage
+## Release preparation and lineage
+
+A release is the declared publish set, `publish-set.json` (Decision 0032):
+`@muxui/schema`, `@muxui/catalog`, `@muxui/tooling`, and `@muxui/react`, in publish
+order, each with its directory and the Mux UI packages it may depend on at runtime.
+Release preparation (`src/release-prepare.mjs`), the packed-entry tests of
+`@muxui/tooling`, and the publish workflow all read it. Every other workspace
+package stays private, and the source manifests of the set stay private too: packing
+sets `private: false` on the candidate copy only.
+
+`MUXUI_RELEASE_VERSIONS=<name>=<version>,...` gives every member one version, an
+rc of its source version (`<source version>-rc.N`; `@muxui/react` is `0.1.0-rc.N`).
+The workflow builds it from its version inputs. Without it, a local preparation
+takes `-rc.1` for each member. Each tarball is repacked deterministically with the
+rc version, `private: false`, no scripts or development dependencies, the release
+commit as `gitHead`, and sibling edges as `^<rc>` ranges. The catalog's generated
+files are compiled for its rc outside the checkout, and tooling's catalog range is
+refused unless the catalog major is the query API major. Preparation audits every
+tarball against its declared entries, files, and dependencies (`E-P2.1-01`), checks
+that each React descriptor binding is exported by its installed module and stamps
+the descriptor with the release id and commit (`E-P2.1-02`), installs all four
+tarballs into one isolated pnpm consumer, keeps the React pnpm, npm, and yarn matrix,
+and rehearses `npm publish --dry-run` for each tarball in order.
+
+One portfolio release manifest (`muxui-portfolio-release-v1`, `src/release-manifest.mjs`)
+correlates the tuple: source commit and tree, each package with its role
+(`published` or `reused`), integrity, and provenance, the catalog, contract
+versions, descriptor and compatibility profile digests, evidence and exception
+digests, and the rollback plan. Its digest excludes how the checks ran, so the same
+commit and versions give the same digest. `verifyPortfolioRelease` holds the manifest to
+the tarball bytes and rejects repacked bytes under a version, a package missing from
+the tuple, a published package built from another commit, and a reused package whose
+recorded digest or compatibility no longer holds. This release publishes all four
+packages; reuse is modeled and tested only.
 
 `.github/workflows/npm-publish.yml` builds a candidate once (Decision 0030).
-`src/release-lineage.mjs` is the part of that workflow that reads GitHub runs.
-A dry run asks `main-ci` for the push run of `ci.yml` on `main` at its exact
-commit. It reuses that run only when the run succeeded and every group of the
-full plan, recomputed from the commit, has a successful job; otherwise it runs
-the full `pnpm release:prepare`. A publish run does not rebuild: `dry-run`
-verifies the dry run named by `dry-run-id`, read as one attempt; `fetch-candidate`
-downloads that artifact's ZIP by the verified id, checks it against the API
-digest, accepts only the two expected file names, and extracts them itself into a
-fresh directory outside the checkout; and `candidate` verifies the version,
-sha512, and manifest before the approval gate. The tests are
+`src/release-lineage.mjs` is the part of that workflow that reads GitHub runs and
+checks the candidate set. A dry run asks `main-ci` for the push run of `ci.yml` on
+`main` at its exact commit. It reuses that run only when the run succeeded and every
+group of the full plan, recomputed from the commit, has a successful job; otherwise
+it runs the full `pnpm release:prepare`. It then verifies its own candidate with
+`prepared` and uploads the four tarballs and the manifest. Publish mode refuses a
+package set before it reads anything, because the publish job still publishes one
+tarball; the ordered publish job is a later change. The promotion steps are written
+for the set: `dry-run` verifies the dry run named by `dry-run-id`, read as one
+attempt; `fetch-candidate` downloads that artifact's ZIP by the verified id, checks
+it against the API digest, accepts only the expected file names, and extracts them
+itself into a fresh directory outside the checkout; and `candidate` verifies the
+versions, the `@muxui/react` sha512, and the manifest against the commit. The tests are
+`test/release-set.test.mjs`, `test/release-manifest.test.mjs`, and
 `test/release-lineage.test.mjs`.
 
 Evidence capture and disclosure remain owned by the architecture, Product Scope,

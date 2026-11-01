@@ -222,6 +222,9 @@
       "packages/tooling/command-registry.json",
       "strategy/platform-safety-contract.json"
     ],
+    "publishSetInputs": [
+      "tooling/audits/repository-policy/publish-set.json"
+    ],
     "packedReactResolverInputs": [
       "packages/react/src/generate.mjs",
       "packages/react/src/renderer-descriptor.mjs"

@@ -659,7 +659,10 @@ const releaseRecord = {
   packageExports: manifest.exports,
   packageFiles: manifest.files,
   publicationPreparation: {
-    schema: 'muxui-r1-exit-publication-preparation-v1',
+    // Release preparation packs the whole publish set and records it in one portfolio manifest (Decision 0032);
+    // this package is one member of its tuple, published last.
+    schema: 'muxui-portfolio-release-v1',
+    publishSet: 'tooling/audits/repository-policy/publish-set.json',
     candidateVersion,
     registry: 'https://registry.npmjs.org',
     distTag: 'next',
@@ -689,7 +692,7 @@ const releaseRecord = {
       'E-R1-EXIT-03': 'pending-post-publication',
       'E-R1-EXIT-04': 'pending-post-publication',
     },
-    rollback: `prepared, not exercised: deprecate a bad ${candidateVersion} with a message and publish a fixed ${fixForwardVersion} as a new exact candidate, each through separate authorization; with explicit authorization at the time, re-point latest from the deprecated rc to the fixed rc, without stable promotion; unpublish only for a security or legal problem, with explicit authorization, inside npm's 72-hour no-dependents window; retain the immutable ${candidateVersion} version and its manifest`,
+    rollback: `prepared, not exercised: deprecate a bad ${candidateVersion} with a message and publish a fixed ${fixForwardVersion} as a new exact candidate, each through separate authorization; with explicit authorization at the time, re-point latest from the deprecated rc to the fixed rc, without stable promotion; unpublish only for a security or legal problem, with explicit authorization, inside npm's 72-hour no-dependents window; retain the immutable ${candidateVersion} version and its release manifest; the manifest's rollback plan covers the other packages of the set`,
   },
 };
 const snapshotByFamily = new Map(familySnapshot.families.map((family) => [family.family, family]));

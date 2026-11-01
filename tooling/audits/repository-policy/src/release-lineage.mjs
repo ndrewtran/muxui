@@ -6,6 +6,7 @@
 //   node release-lineage.mjs dry-run          publish: verify the dry run whose candidate is promoted
 //   node release-lineage.mjs fetch-candidate  publish: download the verified artifact by id, inspect it, and extract it
 //   node release-lineage.mjs candidate        publish: verify the extracted candidate's bytes and manifest
+//   node release-lineage.mjs prepared         dry run: verify the prepared candidate set the same way
 //
 // Each judgement reads one attempt of a run (`attempts/<n>`), and the attempt and
 // artifact id the dry-run step verified are bound into the fetch step.
@@ -20,13 +21,14 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { crc32, inflateRawSync } from 'node:zlib';
-import { parseCandidateVersion } from './npm-publication.mjs';
+import { verifyPortfolioRelease } from './release-manifest.mjs';
+import { candidateFileNames, parseReleaseVersions, readPublishSet, readSourceVersions } from './release-set.mjs';
 
 export const CI_WORKFLOW = '.github/workflows/ci.yml';
 export const PUBLISH_WORKFLOW = '.github/workflows/npm-publish.yml';
 export const CANDIDATE_ARTIFACT = 'npm-candidate';
-const manifestSchema = 'muxui-r1-exit-publication-preparation-v1';
 const ciImpact = resolve(import.meta.dirname, 'ci-impact.mjs');
+const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 // The candidate is a tarball and a manifest of a few megabytes.
 const maxArchiveBytes = 256 * 1024 * 1024;
 
@@ -285,10 +287,13 @@ export async function downloadArtifactZip({ repository, artifactId, token, apiUr
  * attempt, artifact id, digest, size) and extracts it into a fresh directory outside the
  * checkout. The dry run is verified again first, so a rerun, a replaced artifact, or a
  * second artifact fails. The archive's size and sha256 are checked against the API digest
- * before it is parsed, and this code, not a general extractor, writes only the two expected names.
+ * before it is parsed, and this code, not a general extractor, writes only the expected
+ * `fileNames` (the candidate set's tarballs and manifest, see `candidateFileNames`).
  */
-export async function fetchCandidate({ repository, sha, dryRunId, currentRunId, expected, version, directory, workspace, github, download }) {
-  parseCandidateVersion(version);
+export async function fetchCandidate({ repository, sha, dryRunId, currentRunId, expected, fileNames, directory, workspace, github, download }) {
+  if (!Array.isArray(fileNames) || fileNames.length === 0 || fileNames.some((name) => !/^[a-z0-9][a-z0-9.-]*$/u.test(name))) {
+    stop('Candidate files invalid', `${JSON.stringify(fileNames)} are not plain candidate file names.`);
+  }
   const verified = await verifyDryRun({ repository, sha, dryRunId, currentRunId, github });
   const { artifact } = verified;
   const changed = [
@@ -311,45 +316,39 @@ export async function fetchCandidate({ repository, sha, dryRunId, currentRunId, 
   if (zip.length !== artifact.size_in_bytes || digest !== artifact.digest) {
     stop('Candidate archive mismatch', `The downloaded archive is ${zip.length} bytes with ${digest}; artifact ${artifact.id} is ${artifact.size_in_bytes} bytes with ${artifact.digest}.`);
   }
-  const files = readCandidateZip(zip, [`muxui-react-${version}.tgz`, `muxui-react-${version}.release-manifest.json`]);
+  const files = readCandidateZip(zip, fileNames);
   mkdirSync(target);
   for (const { name, data } of files) writeFileSync(join(target, name), data, { flag: 'wx', mode: 0o644 });
   return { artifact, attempt: verified.attempt, run: verified.run, bytes: zip.length, digest };
 }
 
-function tarballVersion(tarball) {
-  return JSON.parse(execFileSync('tar', ['-xzOf', tarball, 'package/package.json'], { encoding: 'utf8' })).version;
-}
-
 /**
- * Verifies the extracted artifact's bytes: exactly
- * one tarball and one release manifest; the tarball's version and sha512 are the inputs;
- * the manifest names the same version and digest, this commit as its source revision,
- * and this commit's tree. Returns the paths and facts the workflow reports.
+ * Verifies the extracted candidate set's bytes: exactly the tarballs and the portfolio manifest that `versions`
+ * name, and the manifest holds to them (`verifyPortfolioRelease`): every package's recorded integrity and tuple
+ * position, every published package built from this commit (`sha`), the commit's tree, and the compatibility of the
+ * tuple. The versions are the inputs. `expectedSha512` is the React tarball's integrity: required when
+ * `requireDigest`, as promotion does, and checked whenever given. Returns what the workflow reports.
  */
-export function verifyCandidate({ directory, version, expectedSha512, sha, tree, readVersion = tarballVersion }) {
-  if (!expectedSha512) stop('Digest required', 'mode=publish needs the tarball-sha512 input.');
+export function verifyCandidate({ directory, publishSet, versions, expectedSha512, requireDigest = true, sha, tree }) {
+  if (requireDigest && !expectedSha512) stop('Digest required', 'mode=publish needs the tarball-sha512 input.');
+  const expectedNames = candidateFileNames(publishSet, versions);
   const files = readdirSync(directory).sort();
-  const tarballs = files.filter((name) => name.endsWith('.tgz'));
-  const manifests = files.filter((name) => name.endsWith('.release-manifest.json'));
-  if (files.length !== 2 || tarballs.length !== 1 || manifests.length !== 1) {
-    stop('Candidate ambiguous', `Expected exactly one tarball and one release manifest in the artifact; found ${JSON.stringify(files)}.`);
+  if (files.length !== expectedNames.length || files.join() !== [...expectedNames].sort().join()) {
+    stop('Candidate ambiguous', `Expected exactly the tarball of each package and one release manifest, ${JSON.stringify(expectedNames)}; found ${JSON.stringify(files)}.`);
   }
-  const tarball = join(directory, tarballs[0]);
-  const integrity = `sha512-${createHash('sha512').update(readFileSync(tarball)).digest('base64')}`;
-  if (integrity !== expectedSha512) stop('Integrity mismatch', `Promoted tarball is ${integrity}; the tarball-sha512 input is ${expectedSha512}.`);
-  const manifest = JSON.parse(readFileSync(join(directory, manifests[0]), 'utf8'));
-  const packed = readVersion(tarball);
-  const mismatches = [
-    [manifest.schema === manifestSchema, `the manifest schema is ${manifest.schema}`],
-    [packed === version, `the tarball is ${packed}, not the version input ${version}`],
-    [manifest.package?.version === version, `the manifest is for ${manifest.package?.version}, not ${version}`],
-    [manifest.artifact?.integrity === integrity, `the manifest digest is ${manifest.artifact?.integrity}, not ${integrity}`],
-    [manifest.source?.revision === sha, `the manifest source revision is ${manifest.source?.revision}, not ${sha}`],
-    [manifest.correlation?.source?.tree === tree, `the manifest source tree is ${manifest.correlation?.source?.tree}, not ${tree}`],
-  ].filter(([ok]) => !ok).map(([, text]) => text);
-  if (mismatches.length > 0) stop('Candidate mismatch', `${mismatches.join('; ')}.`);
-  return { version, integrity, preparation: manifest.preparation ?? null };
+  const manifestName = expectedNames.at(-1);
+  const artifacts = new Map(publishSet.packages.map(({ name }, index) => [name, readFileSync(join(directory, expectedNames[index]))]));
+  const manifest = JSON.parse(readFileSync(join(directory, manifestName), 'utf8'));
+  try {
+    verifyPortfolioRelease({ manifest, artifacts, publishSet, expected: { revision: sha, tree } });
+  } catch (error) {
+    stop('Candidate mismatch', `${error.message}.`);
+  }
+  const mismatched = manifest.packages.filter(({ name, version }) => version !== versions.get(name)).map(({ name, version }) => `${name} is ${version}, not the version input ${versions.get(name)}`);
+  if (mismatched.length > 0) stop('Candidate mismatch', `${mismatched.join('; ')}.`);
+  const integrity = manifest.packages.find(({ name }) => name === '@muxui/react').integrity;
+  if (expectedSha512 && integrity !== expectedSha512) stop('Integrity mismatch', `Promoted tarball is ${integrity}; the tarball-sha512 input is ${expectedSha512}.`);
+  return { versions, integrity, digest: manifest.digest, preparation: manifest.preparation ?? null };
 }
 
 const describePreparation = (preparation) => {
@@ -365,6 +364,19 @@ function writeOutputs(environment, values) {
 function writeSummary(environment, markdown) {
   if (environment.GITHUB_STEP_SUMMARY) appendFileSync(environment.GITHUB_STEP_SUMMARY, `${markdown}\n`);
 }
+
+// The publish set and the versions of this release (`MUXUI_RELEASE_VERSIONS`, as release preparation reads them).
+function releaseTuple(environment) {
+  if (!environment.MUXUI_RELEASE_VERSIONS) stop('Environment missing', 'MUXUI_RELEASE_VERSIONS is not set.');
+  const publishSet = readPublishSet(repositoryRoot);
+  try {
+    return { publishSet, versions: parseReleaseVersions(environment.MUXUI_RELEASE_VERSIONS, publishSet, readSourceVersions(publishSet, repositoryRoot)) };
+  } catch (error) {
+    return stop('Release versions invalid', error.message);
+  }
+}
+
+const readTree = (revision) => execFileSync('git', ['rev-parse', `${revision}^{tree}`], { encoding: 'utf8' }).trim();
 
 function requireEnvironment(environment, names) {
   for (const name of names) if (!environment[name]) stop('Environment missing', `${name} is not set.`);
@@ -417,15 +429,16 @@ export async function main(command, environment = process.env, io = {}) {
       return;
     }
     case 'fetch-candidate': {
-      requireEnvironment(environment, ['GITHUB_REPOSITORY', 'GITHUB_SHA', 'CANDIDATE_DIR', 'VERSION', 'DRY_RUN_ID', 'DRY_RUN_ATTEMPT', 'ARTIFACT_ID', 'ARTIFACT_DIGEST', 'ARTIFACT_SIZE']);
+      requireEnvironment(environment, ['GITHUB_REPOSITORY', 'GITHUB_SHA', 'CANDIDATE_DIR', 'DRY_RUN_ID', 'DRY_RUN_ATTEMPT', 'ARTIFACT_ID', 'ARTIFACT_DIGEST', 'ARTIFACT_SIZE']);
       const { GITHUB_REPOSITORY: repository } = environment;
+      const { publishSet, versions } = releaseTuple(environment);
       const fetched = await fetchCandidate({
         repository,
         sha: environment.GITHUB_SHA,
         dryRunId: environment.DRY_RUN_ID,
         currentRunId: environment.GITHUB_RUN_ID,
         expected: { attempt: environment.DRY_RUN_ATTEMPT, artifactId: environment.ARTIFACT_ID, digest: environment.ARTIFACT_DIGEST, size: environment.ARTIFACT_SIZE },
-        version: environment.VERSION,
+        fileNames: candidateFileNames(publishSet, versions),
         directory: environment.CANDIDATE_DIR,
         workspace: environment.GITHUB_WORKSPACE,
         github,
@@ -435,27 +448,39 @@ export async function main(command, environment = process.env, io = {}) {
       return;
     }
     case 'candidate': {
-      requireEnvironment(environment, ['GITHUB_REPOSITORY', 'GITHUB_SHA', 'CANDIDATE_DIR', 'VERSION', 'DRY_RUN_ID', 'DRY_RUN_ATTEMPT']);
+      requireEnvironment(environment, ['GITHUB_REPOSITORY', 'GITHUB_SHA', 'CANDIDATE_DIR', 'DRY_RUN_ID', 'DRY_RUN_ATTEMPT']);
       const { GITHUB_SHA: sha, DRY_RUN_ATTEMPT: attempt } = environment;
       if (!/^[1-9]\d*$/u.test(attempt)) stop('Environment invalid', `DRY_RUN_ATTEMPT is ${attempt}.`);
-      const tree = (io.readTree ?? ((revision) => execFileSync('git', ['rev-parse', `${revision}^{tree}`], { encoding: 'utf8' }).trim()))(sha);
+      const { publishSet, versions } = releaseTuple(environment);
       const candidate = verifyCandidate({
-        directory: environment.CANDIDATE_DIR, version: environment.VERSION, expectedSha512: environment.EXPECTED_SHA512, sha, tree,
+        directory: environment.CANDIDATE_DIR, publishSet, versions, expectedSha512: environment.EXPECTED_SHA512, sha, tree: (io.readTree ?? readTree)(sha),
       });
-      log(`Promoted candidate ${candidate.version} ${candidate.integrity} from dry run ${environment.DRY_RUN_ID} attempt ${attempt}`);
+      log(`Promoted candidate ${candidate.versions.get('@muxui/react')} ${candidate.integrity} from dry run ${environment.DRY_RUN_ID} attempt ${attempt}`);
       log(`Dry run preparation: ${describePreparation(candidate.preparation)}`);
       writeSummary(environment, [
         '### Promoted candidate',
         '',
-        `- version: \`${candidate.version}\``,
-        `- tarball-sha512: \`${candidate.integrity}\``,
+        ...[...candidate.versions].map(([name, version]) => `- ${name}: \`${version}\``),
+        `- release manifest digest: \`${candidate.digest}\``,
+        `- @muxui/react tarball-sha512: \`${candidate.integrity}\``,
         `- built by dry run ${environment.DRY_RUN_ID} attempt ${attempt} at \`${sha}\`; this run did not rebuild it`,
         `- dry run preparation: ${describePreparation(candidate.preparation)}`,
       ].join('\n'));
       return;
     }
+    case 'prepared': {
+      // The dry run's own candidate, read the way a promotion reads it: same bytes, same manifest, this commit.
+      requireEnvironment(environment, ['GITHUB_REPOSITORY', 'GITHUB_SHA', 'CANDIDATE_DIR']);
+      const { publishSet, versions } = releaseTuple(environment);
+      const candidate = verifyCandidate({
+        directory: environment.CANDIDATE_DIR, publishSet, versions, expectedSha512: environment.EXPECTED_SHA512, requireDigest: false,
+        sha: environment.GITHUB_SHA, tree: (io.readTree ?? readTree)(environment.GITHUB_SHA),
+      });
+      log(`Prepared candidate set ${[...candidate.versions].map(([name, version]) => `${name}@${version}`).join(', ')}; release manifest ${candidate.digest}; @muxui/react ${candidate.integrity}`);
+      return;
+    }
     default:
-      stop('Unknown command', `Expected main-ci, dry-run, fetch-candidate, or candidate; got ${JSON.stringify(command)}.`);
+      stop('Unknown command', `Expected main-ci, dry-run, fetch-candidate, candidate, or prepared; got ${JSON.stringify(command)}.`);
   }
 }
 

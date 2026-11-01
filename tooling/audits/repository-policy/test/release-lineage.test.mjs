@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
@@ -17,6 +16,9 @@ import {
   verifyCandidate,
   verifyDryRun,
 } from '../src/release-lineage.mjs';
+import { buildPortfolioManifest } from '../src/release-manifest.mjs';
+import { PORTFOLIO_MANIFEST_FILE, candidateFileNames, parseReleaseVersions, readSourceVersions, tarballFileName } from '../src/release-set.mjs';
+import { archiveOf, artifactsOf, evidence, otherCommit, publishSet, tupleFixture } from './release-tuple-fixture.mjs';
 
 // Decision 0030: the dry run reuses main's green full CI run for the exact commit, and a
 // publish run promotes the dry run's candidate. These cases fail closed or fall back.
@@ -243,10 +245,12 @@ function zipOf(entries, { comment = Buffer.alloc(0), trailing = Buffer.alloc(0) 
   return Buffer.concat([...parts, centralDirectory, trailing, end, comment]);
 }
 
-const version = '0.1.0-rc.3';
-const tarballName = `muxui-react-${version}.tgz`;
-const manifestName = `muxui-react-${version}.release-manifest.json`;
+// Two plain file names stand in for the candidate's files in the archive tests.
+const tarballName = 'muxui-react-0.1.0-rc.5.tgz';
+const manifestName = PORTFOLIO_MANIFEST_FILE;
 const names = [tarballName, manifestName];
+const versionsText = '@muxui/schema=0.6.0-rc.1,@muxui/catalog=2.1.0-rc.1,@muxui/tooling=1.1.0-rc.1,@muxui/react=0.1.0-rc.5';
+const versions = parseReleaseVersions(versionsText, publishSet, readSourceVersions(publishSet));
 const good = [{ name: tarballName, data: 'tarball bytes' }, { name: manifestName, data: '{"manifest":true}', method: 8 }];
 const traversal = 'x/../../../../work/muxui/muxui/tooling/audits/repository-policy/src/release-lineage.mjs';
 
@@ -294,7 +298,7 @@ function fetching({ archive = zipOf(good), artifact = {}, latest, expected = {},
   const { github } = dryRunGithub({ latest, artifacts: [record] });
   const downloads = [];
   const run = () => fetchCandidate({
-    repository, sha, dryRunId: '555', currentRunId: '777', version, directory: target, workspace, github,
+    repository, sha, dryRunId: '555', currentRunId: '777', fileNames: names, directory: target, workspace, github,
     expected: { attempt: '1', artifactId: '9', digest: archiveDigest(archive), size: String(archive.length), ...expected },
     download: async (id) => {
       downloads.push(id);
@@ -357,12 +361,12 @@ test('a hostile, replaced, or mismatched archive writes nothing', async () => {
     [`${base}/runs/555`]: dryRun(),
   });
   await assert.rejects(fetchCandidate({
-    repository, sha, dryRunId: '555', currentRunId: '777', version, directory: join(tmpdir(), 'never-created'), github: second.github,
+    repository, sha, dryRunId: '555', currentRunId: '777', fileNames: names, directory: join(tmpdir(), 'never-created'), github: second.github,
     expected: { attempt: '1', artifactId: '9', digest: candidateArtifact().digest, size: '4096' }, download: async () => assert.fail('no download'),
   }), /has 2 npm-candidate artifacts/u);
 });
 
-test('the candidate directory must be fresh and outside the checkout, and the version a release candidate', async () => {
+test('the candidate directory must be fresh and outside the checkout, and the files plain candidate names', async () => {
   const workspace = mkdtempSync(join(tmpdir(), 'muxui-release-workspace-'));
   const occupied = mkdtempSync(join(tmpdir(), 'muxui-release-occupied-'));
   try {
@@ -381,11 +385,11 @@ test('the candidate directory must be fresh and outside the checkout, and the ve
     await withFetching({ workspace }, async ({ run }) => {
       await run();
     });
-    // The version names the two files, so it must be an admitted candidate version.
-    const never = () => assert.fail('no read before the version is judged');
+    // The names are written to disk, so a name that is not a plain file name is judged before any read.
+    const never = () => assert.fail('no read before the names are judged');
     await assert.rejects(fetchCandidate({
-      repository, sha, dryRunId: '555', currentRunId: '777', version: '../0.1.0', directory: join(workspace, 'x'), expected: {}, github: never, download: never,
-    }), /not an admitted candidate version/u);
+      repository, sha, dryRunId: '555', currentRunId: '777', fileNames: ['../muxui-react-0.1.0-rc.5.tgz'], directory: join(workspace, 'x'), expected: {}, github: never, download: never,
+    }), /not plain candidate file names/u);
   } finally {
     rmSync(workspace, { recursive: true, force: true });
     rmSync(occupied, { recursive: true, force: true });
@@ -417,30 +421,23 @@ test('the artifact ZIP request sends the token to GitHub and not to the redirect
   }
 });
 
-// The downloaded candidate: one tarball and one manifest, verified byte for byte.
+// The downloaded candidate: the tarball of each package and one manifest, verified byte for byte.
 const preparation = { mode: 'main-ci-reused', mainCi: { runId: 101, runAttempt: 1 } };
 
-function candidate({ manifest = {}, packed = version, extraFile } = {}) {
+// `fixture` changes the tuple's tarballs, `manifest` edits the written manifest, and `fileVersions` names a tarball by another version.
+function candidate({ fixture = {}, manifest = {}, fileVersions = {}, extraFile, omit } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'muxui-release-lineage-'));
-  const source = join(root, 'source/package');
-  mkdirSync(source, { recursive: true });
-  writeFileSync(join(source, 'package.json'), JSON.stringify({ name: '@muxui/react', version: packed }));
   const directory = join(root, 'candidate');
   mkdirSync(directory);
-  const tarball = join(directory, `muxui-react-${version}.tgz`);
-  execFileSync('tar', ['-czf', tarball, '-C', join(root, 'source'), 'package']);
-  const integrity = `sha512-${createHash('sha512').update(readFileSync(tarball)).digest('base64')}`;
-  writeFileSync(join(directory, `muxui-react-${version}.release-manifest.json`), JSON.stringify({
-    schema: 'muxui-r1-exit-publication-preparation-v1',
-    package: { version },
-    artifact: { integrity },
-    source: { revision: sha },
-    correlation: { source: { tree } },
-    preparation,
-    ...manifest,
-  }));
+  const tuple = tupleFixture(fixture);
+  const artifacts = artifactsOf(tuple);
+  const built = buildPortfolioManifest({ publishSet, artifacts, source: { revision: sha, tree }, evidence, react: {}, preparation });
+  for (const [name, bytes] of artifacts) {
+    if (name !== omit) writeFileSync(join(directory, tarballFileName(name, fileVersions[name] ?? tuple.versions[name])), bytes);
+  }
+  writeFileSync(join(directory, PORTFOLIO_MANIFEST_FILE), JSON.stringify({ ...built, ...manifest }));
   if (extraFile) writeFileSync(join(directory, extraFile), 'x');
-  return { root, directory, integrity, tarball };
+  return { root, directory, built, artifacts, integrity: built.packages.find(({ name }) => name === '@muxui/react').integrity };
 }
 
 async function withCandidate(options, callback) {
@@ -452,30 +449,46 @@ async function withCandidate(options, callback) {
   }
 }
 
-test('a promoted candidate must match the authorized digest, the version, and the commit', async () => {
-  await withCandidate({}, ({ directory, integrity }) => {
-    const verified = (overrides = {}) => verifyCandidate({ directory, version, expectedSha512: integrity, sha, tree, ...overrides });
-    assert.deepEqual(verified(), { version, integrity, preparation });
+test('a promoted candidate set must match the authorized digest, the versions, the commit, and its own manifest', async () => {
+  await withCandidate({}, ({ directory, integrity, built, artifacts }) => {
+    const verified = (overrides = {}) => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, ...overrides });
+    assert.deepEqual(verified(), { versions, integrity, digest: built.digest, preparation });
     assert.throws(() => verified({ expectedSha512: '' }), /needs the tarball-sha512 input/u);
+    assert.equal(verified({ expectedSha512: '', requireDigest: false }).integrity, integrity);
     assert.throws(() => verified({ expectedSha512: 'sha512-other' }), /Promoted tarball is sha512-.*; the tarball-sha512 input is sha512-other/u);
-    assert.throws(() => verified({ version: '0.1.0-rc.4' }), /the tarball is 0\.1\.0-rc\.3, not the version input 0\.1\.0-rc\.4; the manifest is for 0\.1\.0-rc\.3/u);
-    assert.throws(() => verified({ sha: 'c'.repeat(40) }), /manifest source revision is a+, not c+/u);
-    assert.throws(() => verified({ tree: 'd'.repeat(40) }), /manifest source tree is b+, not d+/u);
+    // The versions name the files, so another version asks for files the artifact does not hold.
+    assert.throws(() => verified({ versions: new Map([...versions, ['@muxui/react', '0.1.0-rc.6']]) }), /Expected exactly the tarball of each package and one release manifest/u);
+    assert.throws(() => verified({ sha: 'c'.repeat(40) }), /P2_1_MANIFEST_SOURCE_MISMATCH: the manifest source revision is a+, not c+/u);
+    assert.throws(() => verified({ tree: 'd'.repeat(40) }), /the manifest source tree is b+, not d+/u);
+    // One tarball repacked under its recorded version.
+    const other = tupleFixture();
+    other.files['@muxui/tooling']['src/extra.mjs'] = 'export {};\n';
+    writeFileSync(join(directory, tarballFileName('@muxui/tooling', '1.1.0-rc.1')), archiveOf(other.files['@muxui/tooling']));
+    assert.throws(() => verified(), /P2_1_MANIFEST_PACKAGE_REPACKED: @muxui\/tooling@1\.1\.0-rc\.1/u);
+    writeFileSync(join(directory, tarballFileName('@muxui/tooling', '1.1.0-rc.1')), artifacts.get('@muxui/tooling'));
+    assert.equal(verified().digest, built.digest);
   });
-  await withCandidate({ manifest: { artifact: { integrity: 'sha512-stale' } } }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, version, expectedSha512: integrity, sha, tree }), /manifest digest is sha512-stale/u);
+  // A published package built from another commit.
+  await withCandidate({ fixture: { commits: { '@muxui/catalog': otherCommit } } }, ({ directory, integrity }) => {
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree }), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/catalog is built from b+, not its recorded a+/u);
   });
-  await withCandidate({ manifest: { source: { revision: 'c'.repeat(40) } } }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, version, expectedSha512: integrity, sha, tree }), /manifest source revision is c+, not a+/u);
+  // A manifest edited after preparation no longer matches its digest.
+  await withCandidate({ manifest: { source: { revision: sha, tree: 'd'.repeat(40) } } }, ({ directory, integrity }) => {
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree }), /P2_1_MANIFEST_DIGEST_MISMATCH/u);
   });
   await withCandidate({ manifest: { schema: 'other' } }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, version, expectedSha512: integrity, sha, tree }), /manifest schema is other/u);
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree }), /the manifest schema is other/u);
   });
-  await withCandidate({ packed: '0.1.0-rc.4' }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, version, expectedSha512: integrity, sha, tree }), /the tarball is 0\.1\.0-rc\.4, not the version input/u);
+  // A tarball named for one version that holds another.
+  await withCandidate({ fixture: { versions: { '@muxui/react': '0.1.0-rc.6' } }, fileVersions: { '@muxui/react': '0.1.0-rc.5' } }, ({ directory, integrity }) => {
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree }), /@muxui\/react is 0\.1\.0-rc\.6, not the version input 0\.1\.0-rc\.5/u);
   });
+  // Files beyond, or short of, the set.
   await withCandidate({ extraFile: 'notes.txt' }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, version, expectedSha512: integrity, sha, tree }), /exactly one tarball and one release manifest/u);
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree }), /Expected exactly the tarball of each package and one release manifest/u);
+  });
+  await withCandidate({ omit: '@muxui/schema' }, ({ directory, integrity }) => {
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree }), /Expected exactly the tarball of each package/u);
   });
 });
 
@@ -521,32 +534,41 @@ test('the lineage CLI reports in the lines the R1 exit capture reads, and writes
     await assert.rejects(main('dry-run', { ...environment, DRY_RUN_ID: '' }, io(dry.github)), /needs the dry-run-id input/u);
 
     // The fetch step reports the artifact it extracted; it fails when the binding does not hold.
-    const archive = zipOf(good);
+    const cliNames = candidateFileNames(publishSet, versions);
+    const archive = zipOf(cliNames.map((name) => ({ name, data: `${name} bytes` })));
     const fetchEnvironment = (directory, overrides = {}) => ({
-      ...environment, DRY_RUN_ID: '555', GITHUB_RUN_ID: '777', DRY_RUN_ATTEMPT: '1', VERSION: version, ARTIFACT_ID: '9', ARTIFACT_DIGEST: archiveDigest(archive),
+      ...environment, DRY_RUN_ID: '555', GITHUB_RUN_ID: '777', DRY_RUN_ATTEMPT: '1', MUXUI_RELEASE_VERSIONS: versionsText, ARTIFACT_ID: '9', ARTIFACT_DIGEST: archiveDigest(archive),
       ARTIFACT_SIZE: String(archive.length), CANDIDATE_DIR: directory, GITHUB_WORKSPACE: join(root, 'workspace'), ...overrides,
     });
     const fetchGithub = dryRunGithub({ artifacts: [candidateArtifact({ digest: archiveDigest(archive), size_in_bytes: archive.length })] });
     await main('fetch-candidate', fetchEnvironment(join(root, 'promoted')), io(fetchGithub.github, { download: async () => archive }));
     assert.deepEqual(take(), [`Fetched npm-candidate artifact 9 (${archive.length} bytes, ${archiveDigest(archive)}) from dry run 555 attempt 1`]);
-    assert.equal(readFileSync(join(root, 'promoted', tarballName), 'utf8'), 'tarball bytes');
+    assert.deepEqual(readdirSync(join(root, 'promoted')).sort(), [...cliNames].sort());
+    assert.equal(readFileSync(join(root, 'promoted', cliNames[3]), 'utf8'), `${cliNames[3]} bytes`);
+    await assert.rejects(main('fetch-candidate', fetchEnvironment(join(root, 'again'), { MUXUI_RELEASE_VERSIONS: '' }), io(fetchGithub.github)), /MUXUI_RELEASE_VERSIONS is not set/u);
+    await assert.rejects(main('fetch-candidate', fetchEnvironment(join(root, 'again'), { MUXUI_RELEASE_VERSIONS: versionsText.replace('0.6.0-rc.1', '0.6.0') }), io(fetchGithub.github)), /Release versions invalid|"0\.6\.0" is not an rc version/u);
     await assert.rejects(main('fetch-candidate', fetchEnvironment(join(root, 'again'), { DRY_RUN_ATTEMPT: '2' }), io(fetchGithub.github, { download: async () => archive })), /the dry run is at attempt 1, not the verified 2/u);
     await assert.rejects(main('fetch-candidate', fetchEnvironment(join(root, 'again'), { ARTIFACT_ID: '' }), io(fetchGithub.github)), /ARTIFACT_ID is not set/u);
 
     await withCandidate({}, async ({ directory, integrity }) => {
-      const promoted = { ...environment, DRY_RUN_ID: '555', DRY_RUN_ATTEMPT: '2', CANDIDATE_DIR: directory, VERSION: version, EXPECTED_SHA512: integrity };
+      const promoted = { ...environment, DRY_RUN_ID: '555', DRY_RUN_ATTEMPT: '2', CANDIDATE_DIR: directory, MUXUI_RELEASE_VERSIONS: versionsText, EXPECTED_SHA512: integrity };
       await main('candidate', promoted, io(null, { readTree: () => tree }));
       assert.deepEqual(take(), [
-        `Promoted candidate ${version} ${integrity} from dry run 555 attempt 2`,
+        `Promoted candidate 0.1.0-rc.5 ${integrity} from dry run 555 attempt 2`,
         'Dry run preparation: reused main CI run 101 attempt 1',
       ]);
-      assert.match(read('summary'), /### Promoted candidate\n\n- version: `0\.1\.0-rc\.3`/u);
+      assert.match(read('summary'), /### Promoted candidate\n\n- @muxui\/schema: `0\.6\.0-rc\.1`\n- @muxui\/catalog: `2\.1\.0-rc\.1`/u);
+      // The dry run reads its own candidate the same way, without the authorized digest.
+      await main('prepared', { ...promoted, EXPECTED_SHA512: '' }, io(null, { readTree: () => tree }));
+      assert.match(take().at(-1), /^Prepared candidate set @muxui\/schema@0\.6\.0-rc\.1, @muxui\/catalog@2\.1\.0-rc\.1, @muxui\/tooling@1\.1\.0-rc\.1, @muxui\/react@0\.1\.0-rc\.5; release manifest sha256:[0-9a-f]{64}; @muxui\/react sha512-/u);
+      await assert.rejects(main('prepared', { ...promoted, GITHUB_SHA: 'c'.repeat(40) }, io(null, { readTree: () => tree })), /the manifest source revision is a+, not c+/u);
       await assert.rejects(main('candidate', { ...promoted, EXPECTED_SHA512: 'sha512-other' }, io(null, { readTree: () => tree })), /Promoted tarball is/u);
+      assert.deepEqual(take(), []);
       // The attempt the dry-run step verified must reach the promotion line.
       await assert.rejects(main('candidate', { ...promoted, DRY_RUN_ATTEMPT: '' }, io(null, { readTree: () => tree })), /DRY_RUN_ATTEMPT is not set/u);
       await assert.rejects(main('candidate', { ...promoted, DRY_RUN_ATTEMPT: 'unknown' }, io(null, { readTree: () => tree })), /DRY_RUN_ATTEMPT is unknown/u);
     });
-    await assert.rejects(main('unknown', environment, io(null)), /Expected main-ci, dry-run, fetch-candidate, or candidate/u);
+    await assert.rejects(main('unknown', environment, io(null)), /Expected main-ci, dry-run, fetch-candidate, candidate, or prepared/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -559,6 +581,18 @@ test('npm-publish.yml promotes in publish mode, prepares only in dry-run mode, a
   const prepare = job('prepare');
   const publish = job('publish');
   const step = (title) => prepare.split(/^      - /mu).find((entry) => entry.startsWith(`name: ${title}\n`));
+  // The set's versions reach every step through one job variable, from one input per member.
+  for (const [name, input] of [['schema', 'schema-version'], ['catalog', 'catalog-version'], ['tooling', 'tooling-version'], ['react', 'version']]) {
+    assert.match(prepare, new RegExp(`@muxui/${name}=\\$\\{\\{ inputs\\.${input} \\}\\}`, 'u'), name);
+  }
+  assert.match(step('Validate release versions'), /release-set\.mjs validate-versions/u);
+  assert.match(step('Check candidate against inputs'), /release-lineage\.mjs prepared/u);
+  // Publishing a package set is refused before anything is read, fetched, or approved, until the ordered publish job lands.
+  const refusal = step('Refuse publishing a package set');
+  assert.match(refusal, /if: inputs\.mode == 'publish'/u);
+  assert.match(refusal, /exit 1/u);
+  const stepNames = [...prepare.matchAll(/^      - (?:name|uses): (.+)$/gmu)].map(([, title]) => title);
+  assert.deepEqual(stepNames.slice(0, 2), ['Require main for publish mode', 'Refuse publishing a package set']);
   assert.match(step('Find main CI proof'), /if: inputs\.mode == 'dry-run'/u);
   assert.match(step('Prepare release candidate'), /if: inputs\.mode == 'dry-run'/u);
   for (const title of ['Verify dry run', 'Fetch dry-run candidate', 'Verify promoted candidate']) {

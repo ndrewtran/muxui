@@ -1,0 +1,211 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import test from 'node:test';
+import { API_VERSION } from '@muxui/schema';
+import { canonicalJson } from '../src/canonical-json.mjs';
+import {
+  CANDIDATE_PUBLISH_CONFIG,
+  assertCatalogRangeBound,
+  descriptorExports,
+  findDescriptorExportProblems,
+  findPackedPackageProblems,
+  rewritePackedManifest,
+  siblingRange,
+  stampDescriptorProvenance,
+} from '../src/release-package.mjs';
+import {
+  candidateFileNames,
+  candidateVersionProblem,
+  nextCandidateVersion,
+  parseReleaseVersions,
+  readPublishSet,
+  readSourceVersions,
+  tarballFileName,
+  validatePublishSet,
+} from '../src/release-set.mjs';
+import { caretAllows } from '../src/release-manifest.mjs';
+
+const repositoryRoot = resolve(import.meta.dirname, '../../../..');
+const publishSet = readPublishSet(repositoryRoot);
+const sourceVersions = readSourceVersions(publishSet, repositoryRoot);
+const sourceManifest = (entry) => JSON.parse(readFileSync(resolve(repositoryRoot, entry.path, 'package.json'), 'utf8'));
+const entryOf = (name) => publishSet.packages.find((entry) => entry.name === name);
+const revision = 'a'.repeat(40);
+const firstRelease = 'MUXUI_RELEASE_VERSIONS=@muxui/schema=0.6.0-rc.1,@muxui/catalog=2.1.0-rc.1,@muxui/tooling=1.1.0-rc.1,@muxui/react=0.1.0-rc.5'.split('=').slice(1).join('=');
+
+test('the publish set is Decision 0032: schema, catalog, tooling, React, in that order, along the declared edges', () => {
+  assert.deepEqual(publishSet.packages.map(({ name }) => name), ['@muxui/schema', '@muxui/catalog', '@muxui/tooling', '@muxui/react']);
+  assert.deepEqual(Object.fromEntries(publishSet.packages.map(({ name, runtimeEdges }) => [name, runtimeEdges])), {
+    '@muxui/schema': [],
+    '@muxui/catalog': ['@muxui/schema'],
+    '@muxui/tooling': ['@muxui/catalog', '@muxui/schema'],
+    '@muxui/react': [],
+  });
+  for (const entry of publishSet.packages) {
+    const source = sourceManifest(entry);
+    assert.equal(source.name, entry.name);
+    assert.equal(source.private, true, `${entry.name} stays private at source until its publish is authorized`);
+    // The declared edges are the source's Mux UI runtime dependencies, so a new dependency must update the set.
+    assert.deepEqual(Object.keys(source.dependencies ?? {}).filter((name) => name.startsWith('@muxui/')).sort(), [...entry.runtimeEdges].sort(), entry.name);
+  }
+});
+
+test('a publish set must name unique packages at packages/<slug>, with edges only to packages that publish first', () => {
+  const bad = (change) => assert.throws(() => validatePublishSet(change(structuredClone(publishSet))), /P2_1_PUBLISH_SET_INVALID/u);
+  bad((value) => ({ ...value, schema: 'other' }));
+  bad((value) => ({ ...value, packages: [] }));
+  bad((value) => { value.packages[1].name = '@muxui/schema'; return value; });
+  bad((value) => { value.packages[0].path = 'packages/catalog'; return value; });
+  bad((value) => { value.packages[0].runtimeEdges = ['@muxui/catalog']; return value; });
+  bad((value) => { value.packages[0].name = 'schema'; return value; });
+});
+
+test('a release gives every member of the set an rc of its source version, or defaults each to rc.1 locally', () => {
+  const versions = parseReleaseVersions(firstRelease, publishSet, sourceVersions);
+  assert.deepEqual([...versions], [['@muxui/schema', '0.6.0-rc.1'], ['@muxui/catalog', '2.1.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.1'], ['@muxui/react', '0.1.0-rc.5']]);
+  assert.deepEqual([...parseReleaseVersions(undefined, publishSet, sourceVersions).values()], ['0.6.0-rc.1', '2.1.0-rc.1', '1.1.0-rc.1', '0.1.0-rc.1']);
+  const rejects = (text, pattern) => assert.throws(() => parseReleaseVersions(text, publishSet, sourceVersions), pattern);
+  rejects(firstRelease.replace(',@muxui/react=0.1.0-rc.5', ''), /@muxui\/react needs a version/u);
+  rejects(`${firstRelease},@muxui/tokens=2.0.0-rc.1`, /@muxui\/tokens is not in the publish set/u);
+  rejects(`${firstRelease},@muxui/schema=0.6.0-rc.2`, /@muxui\/schema is listed twice/u);
+  rejects(firstRelease.replace('0.6.0-rc.1', '0.6.0'), /@muxui\/schema: "0\.6\.0" is not an rc version/u);
+  rejects(firstRelease.replace('0.6.0-rc.1', '0.7.0-rc.1'), /not a prerelease of the source version 0\.6\.0/u);
+  rejects(firstRelease.replace('2.1.0-rc.1', '2.1.0-rc.0'), /@muxui\/catalog: "2\.1\.0-rc\.0" is not an rc version/u);
+  rejects(firstRelease.replace('0.1.0-rc.5', '0.2.0-rc.1'), /@muxui\/react: 0\.2\.0-rc\.1 is not a prerelease of the source version 0\.1\.0-alpha\.0/u);
+  rejects('@muxui/schema', /is not name=version/u);
+  assert.equal(candidateVersionProblem('2.1.0-rc.12', '2.1.0'), null);
+  assert.equal(nextCandidateVersion('2.1.0-rc.12'), '2.1.0-rc.13');
+});
+
+test('a candidate holds one tarball per package in publish order and the portfolio manifest', () => {
+  const versions = parseReleaseVersions(firstRelease, publishSet, sourceVersions);
+  assert.deepEqual(candidateFileNames(publishSet, versions), [
+    'muxui-schema-0.6.0-rc.1.tgz',
+    'muxui-catalog-2.1.0-rc.1.tgz',
+    'muxui-tooling-1.1.0-rc.1.tgz',
+    'muxui-react-0.1.0-rc.5.tgz',
+    'muxui-portfolio.release-manifest.json',
+  ]);
+  assert.equal(tarballFileName('@muxui/react', '0.1.0-rc.5'), 'muxui-react-0.1.0-rc.5.tgz');
+});
+
+test('tooling\'s catalog range is bound to the query API major, and the candidate set satisfies its own ranges', () => {
+  assertCatalogRangeBound({ catalogVersion: '2.1.0-rc.1', queryApiVersion: API_VERSION });
+  assert.throws(() => assertCatalogRangeBound({ catalogVersion: '3.0.0-rc.1', queryApiVersion: API_VERSION }), /P2_1_CATALOG_RANGE_UNBOUND: catalog 3\.0\.0-rc\.1 is not a release of the query API major 2/u);
+  const versions = parseReleaseVersions(firstRelease, publishSet, sourceVersions);
+  assert.equal(siblingRange(versions.get('@muxui/catalog')), '^2.1.0-rc.1');
+  // `^2.1.0-rc.1` admits later builds of the line and not the prerelease line of the next minor.
+  assert.equal(caretAllows('^2.1.0-rc.1', '2.1.0-rc.2'), true);
+  assert.equal(caretAllows('^2.1.0-rc.1', '2.2.0-rc.1'), false);
+});
+
+// The tarball `pnpm pack` writes for a source manifest: publishConfig.exports applied, workspace specifiers exact.
+function packedFrom(entry, versions) {
+  const source = sourceManifest(entry);
+  const exact = (dependencies) => Object.fromEntries(Object.entries(dependencies ?? {}).map(([name, range]) => [
+    name,
+    range.startsWith('workspace:') ? sourceVersions.get(name) ?? '2.0.0' : range,
+  ]));
+  const { publishConfig: _publishConfig, ...rest } = source;
+  const packed = structuredClone({ ...rest, exports: source.publishConfig?.exports ?? source.exports });
+  if (source.dependencies) packed.dependencies = exact(source.dependencies);
+  if (source.devDependencies) packed.devDependencies = exact(source.devDependencies);
+  return { source, packed: rewritePackedManifest({ packed, entry, versions, sourceRevision: revision }) };
+}
+
+const targetsOf = (value) => (typeof value === 'string' ? [value] : Object.values(value ?? {}).flatMap(targetsOf));
+
+// The archive paths a tarball of the manifest holds: its metadata, the public entry targets, and its `files` directories.
+function entriesFor(source, packed) {
+  const targets = [...targetsOf(packed.exports), ...targetsOf(packed.bin)].filter((target) => !target.includes('*')).map((target) => `package/${target.slice(2)}`);
+  const directories = source.files.filter((file) => !file.includes('.')).map((directory) => `package/${directory}/entry.mjs`);
+  return [...new Set(['package/package.json', 'package/README.md', 'package/LICENSE', ...targets, ...directories])];
+}
+
+function audit(name, change = () => {}) {
+  const entry = entryOf(name);
+  const versions = parseReleaseVersions(firstRelease, publishSet, sourceVersions);
+  const { source, packed } = packedFrom(entry, versions);
+  const entries = entriesFor(source, packed);
+  change(packed, entries);
+  return [...new Set(findPackedPackageProblems({ entry, source, packed, entries, versions, sourceRevision: revision }).map(({ code }) => code))];
+}
+
+test('E-P2.1-01 every candidate manifest passes the pack audit: public entries, allowed edges, rc ranges, no scripts', () => {
+  for (const { name } of publishSet.packages) assert.deepEqual(audit(name), [], name);
+  const { packed } = packedFrom(entryOf('@muxui/tooling'), parseReleaseVersions(firstRelease, publishSet, sourceVersions));
+  assert.deepEqual(packed.dependencies['@muxui/catalog'], '^2.1.0-rc.1');
+  assert.deepEqual(packed.dependencies['@muxui/schema'], '^0.6.0-rc.1');
+  assert.equal(packed.version, '1.1.0-rc.1');
+  assert.equal(packed.private, false);
+  assert.equal(packed.gitHead, revision);
+  assert.deepEqual(packed.publishConfig, CANDIDATE_PUBLISH_CONFIG);
+  for (const field of ['scripts', 'devDependencies']) assert.equal(Object.hasOwn(packed, field), false, field);
+});
+
+test('E-P2.1-01 negative: a leaked compiler or authoring entry fails', () => {
+  assert.deepEqual(audit('@muxui/catalog', (packed, entries) => {
+    packed.exports['./compiler'] = './src/compiler.mjs';
+    entries.push('package/src/compiler.mjs');
+  }), ['P2_1_PACK_ENTRY_LEAKED', 'P2_1_PACK_FILE_UNDECLARED']);
+  // The entry file alone, without its export, is a leak too.
+  assert.deepEqual(audit('@muxui/catalog', (_packed, entries) => entries.push('package/src/compiler.mjs')), ['P2_1_PACK_ENTRY_LEAKED', 'P2_1_PACK_FILE_UNDECLARED']);
+  assert.deepEqual(audit('@muxui/tooling', (packed, entries) => {
+    packed.exports['./authoring'] = './src/authoring.mjs';
+    entries.push('package/src/authoring.mjs');
+  }), ['P2_1_PACK_ENTRY_LEAKED', 'P2_1_PACK_FILE_UNDECLARED']);
+  assert.deepEqual(audit('@muxui/schema', (packed) => { packed.exports['./extra'] = './src/index.mjs'; }), ['P2_1_PACK_EXPORTS_DRIFT']);
+  assert.deepEqual(audit('@muxui/catalog', (_packed, entries) => entries.splice(entries.indexOf('package/generated/entry.mjs'), 1, 'package/test/entry.mjs')), ['P2_1_PACK_FILE_UNDECLARED']);
+  assert.deepEqual(audit('@muxui/schema', (_packed, entries) => entries.splice(entries.indexOf('package/src/index.mjs'), 1)), ['P2_1_PACK_ENTRY_MISSING']);
+});
+
+test('E-P2.1-01 negative: a workspace specifier, an unlisted dependency, and a tokens dependency each fail', () => {
+  assert.ok(audit('@muxui/catalog', (packed) => { packed.dependencies['@muxui/schema'] = 'workspace:*'; }).includes('P2_1_PACK_WORKSPACE_SPECIFIER'));
+  assert.ok(audit('@muxui/catalog', (packed) => { packed.dependencies['@muxui/schema'] = '0.6.0'; }).includes('P2_1_PACK_EDGE_RANGE'));
+  assert.deepEqual(audit('@muxui/tooling', (packed) => { packed.dependencies['left-pad'] = '1.3.0'; }), ['P2_1_PACK_UNLISTED_DEPENDENCY']);
+  assert.deepEqual(audit('@muxui/tooling', (packed) => { packed.dependencies['@muxui/foundation'] = '1.0.0'; }), ['P2_1_PACK_UNLISTED_DEPENDENCY']);
+  // The schema and React depend on no Mux UI package, and an edge outside the declared ones fails for the rest.
+  assert.deepEqual(audit('@muxui/schema', (packed) => { packed.dependencies = { '@muxui/catalog': '^2.1.0-rc.1' }; }), ['P2_1_PACK_UNLISTED_DEPENDENCY']);
+  assert.deepEqual(audit('@muxui/catalog', (packed) => { packed.dependencies['@muxui/tooling'] = '^1.1.0-rc.1'; }), ['P2_1_PACK_UNLISTED_DEPENDENCY']);
+  for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+    assert.ok(audit('@muxui/catalog', (packed) => { packed[field] = { ...packed[field], '@muxui/tokens': '2.0.0' }; }).includes('P2_1_PACK_TOKENS_DEPENDENCY'), field);
+  }
+  // A retained development dependency or lifecycle script is not part of a published package either.
+  assert.deepEqual(audit('@muxui/catalog', (packed) => { packed.devDependencies = { '@muxui/tokens': '2.0.0' }; }), ['P2_1_PACK_MANIFEST_DRIFT']);
+  assert.deepEqual(audit('@muxui/react', (packed) => { packed.scripts = { postinstall: 'node x.mjs' }; }), ['P2_1_PACK_MANIFEST_DRIFT']);
+  assert.deepEqual(audit('@muxui/schema', (packed) => { packed.gitHead = 'b'.repeat(40); }), ['P2_1_PACK_MANIFEST_DRIFT']);
+});
+
+const sampleDescriptor = {
+  id: 'renderer:@muxui/react',
+  bindings: {
+    'muxui:component:button#web.react': { export: '@muxui/react#Button' },
+    'muxui:component:markdown#web.react': { export: '@muxui/react/markdown#Markdown' },
+  },
+};
+
+test('E-P2.1-02 the pack-time descriptor audit finds every binding\'s member in its module, and only there', () => {
+  const exportNames = new Map([['@muxui/react', ['Button', 'Card']], ['@muxui/react/markdown', ['Markdown']]]);
+  assert.deepEqual(findDescriptorExportProblems(sampleDescriptor, exportNames), []);
+  // The right member under the wrong subpath is not an export of that module.
+  const crossed = structuredClone(sampleDescriptor);
+  crossed.bindings['muxui:component:button#web.react'].export = '@muxui/react/markdown#Button';
+  assert.deepEqual(findDescriptorExportProblems(crossed, exportNames), ['muxui:component:button#web.react: @muxui/react/markdown does not export Button']);
+  const absent = structuredClone(sampleDescriptor);
+  absent.bindings['muxui:component:button#web.react'].export = '@muxui/react/button#Button';
+  assert.deepEqual(findDescriptorExportProblems(absent, exportNames), ['muxui:component:button#web.react: @muxui/react/button is not an importable module of the package']);
+  assert.deepEqual(descriptorExports(sampleDescriptor).map(({ specifier, member }) => `${specifier}#${member}`), ['@muxui/react#Button', '@muxui/react/markdown#Markdown']);
+});
+
+test('pack-time provenance is stamped into the generator\'s canonical descriptor and nowhere else', () => {
+  const source = readFileSync(resolve(repositoryRoot, 'packages/react/generated/renderer-descriptor.json'), 'utf8');
+  const provenance = { releaseId: 'muxui-portfolio:abc', sourceCommit: revision };
+  const stamped = stampDescriptorProvenance(source, provenance);
+  const descriptor = JSON.parse(stamped);
+  assert.deepEqual(descriptor.provenance, provenance);
+  assert.equal(stamped, `${canonicalJson(descriptor)}\n`);
+  assert.deepEqual({ ...descriptor, provenance: undefined }, { ...JSON.parse(source), provenance: undefined });
+  assert.throws(() => stampDescriptorProvenance(stamped, provenance), /P2_1_DESCRIPTOR_STAMP_INVALID/u);
+  assert.throws(() => stampDescriptorProvenance(JSON.stringify(JSON.parse(source), null, 2), provenance), /P2_1_DESCRIPTOR_STAMP_INVALID/u);
+});

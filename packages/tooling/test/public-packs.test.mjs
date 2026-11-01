@@ -7,17 +7,20 @@ import test, { after } from 'node:test';
 
 // Decision 0032 item 5: the entries each packed manifest exposes, and the files its tarball holds beyond them.
 const packagesRoot = resolve(import.meta.dirname, '../..');
+// Item 3: the Mux UI packages each may depend on come from the declared publish set that release preparation reads.
+const publishSet = JSON.parse(await readFile(resolve(packagesRoot, '../tooling/audits/repository-policy/publish-set.json'), 'utf8'));
+const edgesOf = (name) => publishSet.packages.find((entry) => entry.name === name).runtimeEdges;
 const specs = {
   schema: {
     name: '@muxui/schema',
     entries: ['.', './schemas/*', './types'],
-    dependencies: [],
+    dependencies: edgesOf('@muxui/schema'),
     excluded: ['src/generate.mjs'],
   },
   catalog: {
     name: '@muxui/catalog',
     entries: ['.', './search', './bundle', './catalog.json', './catalog-package.json', './token-section-page-budget-profile.json'],
-    dependencies: ['@muxui/schema'],
+    dependencies: edgesOf('@muxui/catalog'),
     workspaceOnly: ['./compiler', './pattern-imports', './pattern-content'],
     // The tooling pnpm adapter reads these beside the bundle by path; nothing imports them.
     sidecars: ['generated/catalog.json.provenance', 'generated/catalog-package.json.provenance'],
@@ -30,7 +33,7 @@ const specs = {
     name: '@muxui/tooling',
     entries: ['.', './resolver', './registry', './types'],
     bin: { muxui: './bin/muxui.mjs' },
-    dependencies: ['@muxui/catalog', '@muxui/schema', 'semver'],
+    dependencies: [...edgesOf('@muxui/tooling'), 'semver'].sort(),
     workspaceOnly: ['./authoring'],
     excluded: ['src/registry.mjs', 'src/generate.mjs', 'src/authoring.mjs', 'command-registry.json'],
   },
@@ -136,7 +139,7 @@ function dependencyProblems(manifest, allowedEdges) {
 }
 
 test('P2.1 the packed dependency rule refuses Mux UI edges outside Decision 0032 in every installable field', () => {
-  const allowed = ['@muxui/schema'];
+  const allowed = edgesOf('@muxui/catalog');
   for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
     assert.deepEqual(dependencyProblems({ [field]: { '@muxui/tokens': '0.6.0' } }, allowed), [`${field} @muxui/tokens is not an allowed Mux UI edge`]);
     assert.deepEqual(dependencyProblems({ [field]: { '@muxui/scale': '1.0.0' } }, allowed), [`${field} @muxui/scale is not an allowed Mux UI edge`]);

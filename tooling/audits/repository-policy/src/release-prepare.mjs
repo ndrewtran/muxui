@@ -1,10 +1,10 @@
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { dirname, join, posix, resolve } from 'node:path';
+import { basename, join, posix, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
-import { gzipSync } from 'node:zlib';
+import { API_VERSION } from '@muxui/schema';
 import {
   assertBundleRetention,
   assertExactArchiveEntries,
@@ -34,6 +34,18 @@ import {
   replaceVersions,
   summarizeBundleModules,
 } from './release-proof.mjs';
+import { canonicalJson } from './canonical-json.mjs';
+import { deterministicArchive, readArchive } from './release-archive.mjs';
+import { buildPortfolioManifest, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
+import {
+  CANDIDATE_PUBLISH_CONFIG,
+  assertCatalogRangeBound,
+  assertPackedPackage,
+  findDescriptorExportProblems,
+  rewritePackedManifest,
+  stampDescriptorProvenance,
+} from './release-package.mjs';
+import { PORTFOLIO_MANIFEST_FILE, PUBLISH_SET_FILE, parseReleaseVersions, readPublishSet, readSourceVersions, tarballFileName } from './release-set.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
 import { assertPatternVariantMarkup } from './pattern-variant-markup.mjs';
 import { patternVariantExamples } from './pattern-variants.mjs';
@@ -44,16 +56,20 @@ import { readSupplementalMapping } from '../../../../packages/react/src/suppleme
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const packages = await discoverWorkspacePackages(repositoryRoot);
 const reactVersionPattern = /^0\.1\.0-alpha\.(?:0|[1-9]\d*)$/u;
-// The candidate version is an input (the npm-publish workflow's version), so a
-// later rc (Decision 0023 amendment 01) is prepared without changing the source tree.
-const candidateVersion = process.env.MUXUI_RELEASE_CANDIDATE_VERSION || '0.1.0-rc.1';
+// Release preparation packs the declared publish set (Decision 0032): one rc version for each member, given as
+// `MUXUI_RELEASE_VERSIONS=<name>=<version>,...` (the npm-publish workflow's version inputs). Without it each member
+// takes the first rc of its source version, so a local `pnpm release:prepare` runs as it always has.
+const publishSet = readPublishSet(repositoryRoot);
+const versions = parseReleaseVersions(process.env.MUXUI_RELEASE_VERSIONS, publishSet, readSourceVersions(publishSet, repositoryRoot));
+const candidateVersion = versions.get('@muxui/react');
 try {
   parseCandidateVersion(candidateVersion);
 } catch (error) {
   throw new Error(`R1_EXIT_CANDIDATE_VERSION_INVALID: ${error.message}`);
 }
-const candidateArchiveName = `muxui-react-${candidateVersion}.tgz`;
-const candidateManifestName = `muxui-react-${candidateVersion}.release-manifest.json`;
+// Decision 0032 item 8: tooling's catalog range is bound to the query API major tooling reads.
+assertCatalogRangeBound({ catalogVersion: versions.get('@muxui/catalog'), queryApiVersion: API_VERSION });
+const candidateArchiveName = tarballFileName('@muxui/react', candidateVersion);
 // Rollback fixes forward with the next rc, so later candidates name the right successor.
 const fixForwardCandidate = fixForwardVersion(candidateVersion);
 const preparationToolPath = 'tooling/audits/repository-policy/src/release-prepare.mjs';
@@ -72,11 +88,7 @@ const expectedPeerDependencies = {
 };
 // Only stylesheets have import-time effects, so bundlers may drop unused JS modules.
 const expectedSideEffects = ['*.css'];
-const expectedCandidatePublishConfig = {
-  access: 'public',
-  tag: 'next',
-  registry: 'https://registry.npmjs.org',
-};
+const expectedCandidatePublishConfig = CANDIDATE_PUBLISH_CONFIG;
 // Decision 0022: R1.1-R1.5 logged evidence must be retained before the R1 exit.
 const retainedEvidenceMilestones = Object.freeze(['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']);
 const fixedPackageEntries = Object.freeze([
@@ -282,56 +294,6 @@ function rewriteProvenance(source, target, rewrites) {
   return `${lines.slice(0, 2).join('\n')}\n${rewrittenBody}`;
 }
 
-function writeString(buffer, value, offset, length) {
-  buffer.write(String(value).slice(0, length), offset, length, 'utf8');
-}
-
-function octal(value, length) {
-  const digits = Math.max(0, length - 1);
-  return `${Number(value).toString(8).padStart(digits, '0')}\0`;
-}
-
-function tarHeader(path, size) {
-  const header = Buffer.alloc(512);
-  writeString(header, path, 0, 100);
-  writeString(header, octal(0o644, 8), 100, 8);
-  writeString(header, octal(0, 8), 108, 8);
-  writeString(header, octal(0, 8), 116, 8);
-  writeString(header, octal(size, 12), 124, 12);
-  writeString(header, octal(0, 12), 136, 12);
-  header.fill(0x20, 148, 156);
-  writeString(header, '0', 156, 1);
-  writeString(header, 'ustar\0', 257, 6);
-  writeString(header, '00', 263, 2);
-  const checksum = [...header].reduce((sum, byte) => sum + byte, 0);
-  writeString(header, `${checksum.toString(8).padStart(6, '0')}\0 `, 148, 8);
-  return header;
-}
-
-function packageFiles(packageRoot, prefix = 'package') {
-  return readdirSync(packageRoot, { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name))
-    .flatMap((entry) => {
-      const absolute = join(packageRoot, entry.name);
-      const archivePath = `${prefix}/${entry.name}`;
-      if (entry.isDirectory()) return packageFiles(absolute, archivePath);
-      if (!entry.isFile()) fail('R1_EXIT_PACK_CONTENT_INVALID', archivePath);
-      return [{ absolute, archivePath }];
-    });
-}
-
-function deterministicArchive(packageRoot) {
-  const chunks = [];
-  for (const { absolute, archivePath } of packageFiles(packageRoot)) {
-    const bytes = readFileSync(absolute);
-    chunks.push(tarHeader(archivePath, bytes.length), bytes);
-    const remainder = bytes.length % 512;
-    if (remainder !== 0) chunks.push(Buffer.alloc(512 - remainder));
-  }
-  chunks.push(Buffer.alloc(1024));
-  return gzipSync(Buffer.concat(chunks), { level: 9, mtime: 0 });
-}
-
 function trackedPackageEntries(sourceRevision, sourcePath) {
   const result = spawnSync('git', ['ls-tree', '-r', '--name-only', sourceRevision, '--', sourcePath], {
     cwd: repositoryRoot,
@@ -398,11 +360,26 @@ const currentPublicExports = Object.keys(sourcePublicModule).sort();
 const reactCandidate = packages.filter(({ name, manifest }) => (
   name === '@muxui/react' && reactVersionPattern.test(manifest.version)
 ));
-const publishable = packages.filter(({ manifest }) => manifest.private !== true);
+// Only members of the publish set may be packed for publication; every other workspace package stays private.
+const publishSetNames = new Set(publishSet.packages.map(({ name }) => name));
+const publishable = packages.filter(({ name, manifest }) => manifest.private !== true && !publishSetNames.has(name));
 
 if (publishable.length !== 0) {
   console.error(
     `FOUNDATION_RELEASE_FORBIDDEN: packages cannot become publishable before an exact external publish authorization: ${publishable.map(({ name }) => name).join(', ')}`,
+  );
+  process.exit(1);
+}
+
+// A member's source manifest stays private: packing sets `private: false` on the candidate copy only.
+const sourcePackages = publishSet.packages.map((entry) => ({
+  entry,
+  workspace: packages.find(({ name, path }) => name === entry.name && path === entry.path),
+}));
+const publicSources = sourcePackages.filter(({ workspace }) => workspace?.manifest.private !== true);
+if (publicSources.length !== 0) {
+  console.error(
+    `FOUNDATION_RELEASE_FORBIDDEN: publish-set sources must stay private until an exact external publish authorization: ${publicSources.map(({ entry }) => entry.name).join(', ')}`,
   );
   process.exit(1);
 }
@@ -413,6 +390,7 @@ if (reactCandidate.length !== 1) {
 }
 
 const reactPackage = reactCandidate[0];
+const reactEntry = publishSet.packages.find(({ name }) => name === '@muxui/react');
 const reactPackageRoot = resolve(repositoryRoot, 'packages/react');
 const manifest = reactPackage.manifest;
 const expectedRuntimeDependencies = { ...manifest.dependencies };
@@ -437,9 +415,73 @@ const sourceRevision = sourceIdentity.revision;
 const trackedAssetEntries = trackedPackageEntries(sourceRevision, 'packages/react/assets');
 const trackedLicenseEntries = trackedPackageEntries(sourceRevision, 'packages/react/licenses');
 const requiredAssetAndLicenseEntries = [...trackedAssetEntries, ...trackedLicenseEntries];
+const sourceTreeResult = spawnSync('git', ['rev-parse', `${sourceRevision}^{tree}`], { cwd: repositoryRoot, encoding: 'utf8' });
+if (sourceTreeResult.status !== 0) fail('R1_EXIT_SOURCE_IDENTITY_UNAVAILABLE', sourceTreeResult.stderr);
+const sourceTree = sourceTreeResult.stdout.trim();
+// One commit and these exact versions name the release; the React descriptor records it at pack time.
+const releaseId = releaseIdFor({
+  revision: sourceRevision,
+  published: publishSet.packages.map(({ name }) => ({ name, version: versions.get(name) })),
+});
+
+// The catalog's generated files embed its package version (`catalogVersion`, ids, digest, release record), so the
+// candidate takes them from a compile for the rc, written outside the checkout.
+function compileCatalogCandidate(candidatePackage, version, workDirectory) {
+  const output = join(workDirectory, 'catalog-generated');
+  const compiled = spawnSync(process.execPath, ['packages/catalog/src/generate.mjs', '--package-version', version, '--output-directory', output], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+  });
+  if (compiled.status !== 0) fail('P2_1_CATALOG_COMPILE_FAILED', childOutput(compiled));
+  const compiledNames = readdirSync(join(output, 'generated')).sort();
+  const packedNames = readdirSync(join(candidatePackage, 'generated')).sort();
+  if (stableJson(compiledNames) !== stableJson(packedNames)) {
+    fail('P2_1_CATALOG_COMPILE_FAILED', `compiled ${compiledNames.join(', ')} but the package packs ${packedNames.join(', ')}`);
+  }
+  for (const name of compiledNames) copyFileSync(join(output, 'generated', name), join(candidatePackage, 'generated', name));
+}
+
+// Packs a publish-set member other than React from its source tree and rewrites the tarball into its candidate
+// (the rc manifest and, for the catalog, the files compiled for the rc), then audits it (E-P2.1-01).
+function packSupportPackage(entry, destination) {
+  const { workspace } = sourcePackages.find((candidate) => candidate.entry === entry);
+  const source = workspace.manifest;
+  const workDirectory = join(destination, `pack-${basename(entry.path)}`);
+  mkdirSync(workDirectory);
+  // Generation precedes preparation, so packing runs no lifecycle scripts.
+  const packed = spawnSync('pnpm', ['--config.ignore-scripts=true', '--config.engine-strict=false', 'pack', '--pack-destination', workDirectory], {
+    cwd: resolve(repositoryRoot, entry.path),
+    encoding: 'utf8',
+    stdio: 'pipe',
+  });
+  if (packed.status !== 0) fail('P2_1_PACK_FAILED', `${entry.name}: ${tail(packed.stderr)}`);
+  const extractedRoot = join(workDirectory, 'extracted');
+  mkdirSync(extractedRoot);
+  const unpacked = spawnSync('tar', ['-xzf', join(workDirectory, tarballFileName(entry.name, source.version)), '-C', extractedRoot], { encoding: 'utf8' });
+  if (unpacked.status !== 0) fail('P2_1_PACK_ARCHIVE_MISSING', `${entry.name}: ${unpacked.stderr}`);
+  const candidatePackage = join(extractedRoot, 'package');
+  const manifestPath = join(candidatePackage, 'package.json');
+  writeFileSync(manifestPath, `${JSON.stringify(sortedJsonValue(rewritePackedManifest({
+    packed: JSON.parse(readFileSync(manifestPath, 'utf8')),
+    entry,
+    versions,
+    sourceRevision,
+  })), null, 2)}\n`);
+  if (entry.name === '@muxui/catalog') compileCatalogCandidate(candidatePackage, versions.get(entry.name), workDirectory);
+  const archiveBytes = deterministicArchive(candidatePackage);
+  const archive = join(destination, tarballFileName(entry.name, versions.get(entry.name)));
+  writeFileSync(archive, archiveBytes);
+  const entries = [...readArchive(archiveBytes).keys()].sort();
+  assertPackedPackage({ entry, source, packed: JSON.parse(readFileSync(manifestPath, 'utf8')), entries, versions, sourceRevision });
+  return { entry, archive, archiveBytes, candidateRoot: candidatePackage };
+}
 
 const temp = mkdtempSync(join(tmpdir(), 'muxui-r1-5-release-'));
 try {
+  const supportPackages = publishSet.packages.filter(({ name }) => name !== '@muxui/react').map((entry) => packSupportPackage(entry, temp));
+  assertSourceIdentity(sourceRevision, 'after packing schema, catalog, and tooling');
+  console.log(`P2.1 packed and audited ${supportPackages.map(({ entry }) => `${entry.name}@${versions.get(entry.name)}`).join(', ')}`);
+
   const packed = spawnSync('pnpm', ['pack', '--pack-destination', temp], {
     cwd: reactPackageRoot,
     encoding: 'utf8',
@@ -476,13 +518,12 @@ try {
   const extracted = spawnSync('tar', ['-xzf', sourceArchive, '-C', candidateRoot], { encoding: 'utf8' });
   if (extracted.status !== 0) fail('R1.5_PACK_ARCHIVE_MISSING', extracted.stderr);
   const candidatePackage = join(candidateRoot, 'package');
-  const candidateManifest = JSON.parse(readFileSync(join(candidatePackage, 'package.json'), 'utf8'));
-  candidateManifest.version = candidateVersion;
-  candidateManifest.private = false;
-  candidateManifest.scripts = { ...candidateManifest.scripts };
-  delete candidateManifest.scripts.prepack;
-  delete candidateManifest.scripts.prepublishOnly;
-  candidateManifest.publishConfig = expectedCandidatePublishConfig;
+  const candidateManifest = rewritePackedManifest({
+    packed: JSON.parse(readFileSync(join(candidatePackage, 'package.json'), 'utf8')),
+    entry: reactEntry,
+    versions,
+    sourceRevision,
+  });
   writeFileSync(join(candidatePackage, 'package.json'), `${JSON.stringify(sortedJsonValue(candidateManifest), null, 2)}\n`);
   // The source alpha becomes the candidate; the generator's declared candidate
   // and fix-forward become the input candidate and its fix-forward.
@@ -519,6 +560,9 @@ try {
         },
         families: value.families.map((family) => ({ ...family, packed: { ...family.packed, private: false } })),
       }));
+    } else if (relative === 'generated/renderer-descriptor.json') {
+      // The renderer descriptor records the release and commit it was packed for (read, never compared, by the resolver).
+      rewritten = stampDescriptorProvenance(rewritten, { releaseId, sourceCommit: sourceRevision });
     } else if (relative === 'generated/compatibility.mjs') {
       rewritten = rewriteGeneratedBody(rewritten, (body) => {
         const publication = `"publication":{"candidateVersion":"${candidateVersion}","private":true,"requires":["explicit external publish authorization"],"status":"disabled"}`;
@@ -563,8 +607,7 @@ try {
     || stableJson(packedManifest.files) !== stableJson(manifest.files)
     || stableJson(manifest.sideEffects) !== stableJson(expectedSideEffects)
     || stableJson(packedManifest.sideEffects) !== stableJson(expectedSideEffects)
-    || packedManifest.scripts?.prepack !== undefined
-    || packedManifest.scripts?.prepublishOnly !== undefined
+    || packedManifest.scripts !== undefined
     || stableJson(packedManifest.publishConfig) !== stableJson(expectedCandidatePublishConfig)) {
     fail('R1_EXIT_PACK_MANIFEST_INVALID', 'name, version, privacy, runtime graph, peers, exports, files, side effects, lifecycle, or publish config drifted');
   }
@@ -572,6 +615,7 @@ try {
   for (const forbidden of ['workspace:', '@muxui/web']) {
     if (packedManifestText.includes(forbidden)) fail('R1.5_PACK_MANIFEST_INVALID', `forbidden package reference: ${forbidden}`);
   }
+  assertPackedPackage({ entry: reactEntry, source: manifest, packed: packedManifest, entries, versions, sourceRevision });
 
   const publicEntry = readArchiveFile(archive, 'package/generated/index.mjs');
   const publicTypes = readArchiveFile(archive, 'package/generated/index.d.ts');
@@ -639,7 +683,8 @@ try {
     ['peers', stableJson(release.peerDependencies) === stableJson(expectedPeerDependencies)],
     ['exports', stableJson(release.packageExports) === stableJson(manifest.exports)],
     ['files', stableJson(release.packageFiles) === stableJson(manifest.files)],
-    ['schema', release.publicationPreparation?.schema === 'muxui-r1-exit-publication-preparation-v1'],
+    ['schema', release.publicationPreparation?.schema === 'muxui-portfolio-release-v1'],
+    ['publishSet', release.publicationPreparation?.publishSet === PUBLISH_SET_FILE],
     ['candidateVersion', release.publicationPreparation?.candidateVersion === candidateVersion],
     ['registry', release.publicationPreparation?.registry === 'https://registry.npmjs.org'],
     ['distTag', release.publicationPreparation?.distTag === 'next'],
@@ -1016,19 +1061,67 @@ try {
     console.log(`R1 exit consumer matrix ${name} ${version}: online install, ${smokeResult.imported.length} subpaths imported, ${smokeResult.resolved.length} stylesheets resolved, SSR ${smokeResult.rendered.join(' and ')}, one @tiptap/core ${tiptapCore} across ${closure.size} runtime packages`);
   }
 
-  const publishDryRun = spawnSync('npm', ['publish', archive, '--dry-run', '--registry=https://registry.npmjs.org'], {
-    cwd: repositoryRoot,
-    encoding: 'utf8',
-    stdio: 'pipe',
-    env: { ...process.env, npm_config_engine_strict: 'false' },
+  // The whole tuple, in publish order, as it will be written.
+  const tuple = new Map(publishSet.packages.map(({ name }) => {
+    const support = supportPackages.find(({ entry }) => entry.name === name);
+    return [name, support ?? { archive, archiveBytes, candidateRoot: join(`${archive}-contents`, 'package') }];
+  }));
+
+  // Isolated consumer of the whole set: every tarball installs together, every public entry imports, and the
+  // renderer descriptor names only members its package really exports (E-P2.1-01 and -02). The set is not on the
+  // registry, so the tarballs also stand in for the ranges its members declare on each other.
+  const setSpecifiers = Object.fromEntries(publishSet.packages.map(({ name }) => [name, `file:./${tarballFileName(name, versions.get(name))}`]));
+  const setConsumer = join(temp, 'consumer-set');
+  mkdirSync(setConsumer);
+  for (const [name, { archiveBytes: bytes }] of tuple) writeFileSync(join(setConsumer, tarballFileName(name, versions.get(name))), bytes);
+  writeFileSync(join(setConsumer, 'package.json'), `${JSON.stringify({
+    name: 'muxui-p2-1-set-consumer', private: true, type: 'module',
+    dependencies: { ...setSpecifiers, react: '19.2.8', 'react-dom': '19.2.8' },
+    pnpm: { overrides: setSpecifiers },
+  }, null, 2)}\n`);
+  const [setPnpm, ...setPnpmArguments] = pinnedPnpmCommand();
+  const setInstall = runChild('publish-set consumer install', setPnpm, [...setPnpmArguments, 'install', '--ignore-scripts', '--no-frozen-lockfile', '--registry=https://registry.npmjs.org/'], {
+    cwd: setConsumer,
+    env: environment,
+    timeout: 600_000,
   });
-  if (publishDryRun.status !== 0) {
-    fail('R1_EXIT_PACK_PUBLISH_DRY_RUN_FAILED', publishDryRun.stderr || publishDryRun.stdout);
+  if (setInstall.status !== 0) fail('P2_1_SET_CONSUMER_INSTALL_FAILED', childOutput(setInstall));
+  for (const [name, { candidateRoot }] of tuple) assertInstalledCandidate(setConsumer, name, candidateRoot);
+  copyConsumerTool(setConsumer, 'set-entries.mjs');
+  const setEntries = runChild('publish-set entry imports', process.execPath, ['set-entries.mjs', JSON.stringify(publishSet.packages.map(({ name }) => name))], { cwd: setConsumer });
+  if (setEntries.status !== 0) fail('P2_1_SET_CONSUMER_IMPORT_FAILED', childOutput(setEntries));
+  const { exportNames, resolved: resolvedEntries } = JSON.parse(setEntries.stdout.trim().split('\n').at(-1));
+
+  const installedReact = join(setConsumer, 'node_modules/@muxui/react');
+  const installedDescriptor = JSON.parse(readFileSync(join(installedReact, packedManifest.muxUi.rendererDescriptor), 'utf8'));
+  const moduleExports = new Map(Object.entries(exportNames));
+  const descriptorProblems = findDescriptorExportProblems(installedDescriptor, moduleExports);
+  if (descriptorProblems.length !== 0) fail('P2_1_DESCRIPTOR_EXPORT_MISSING', descriptorProblems.join('; '));
+  if (installedDescriptor.provenance?.releaseId !== releaseId || installedDescriptor.provenance?.sourceCommit !== sourceRevision) {
+    fail('P2_1_DESCRIPTOR_PROVENANCE_INVALID', 'the packed descriptor does not record this release and commit');
   }
-  if (!publishDryRun.stdout.includes(`+ @muxui/react@${candidateVersion}`)) {
-    fail('R1_EXIT_PACK_PUBLISH_DRY_RUN_FAILED', 'npm did not report the exact candidate package tuple');
+  // The audit must stay able to fail: the right member under another subpath is not an export.
+  const crossed = structuredClone(installedDescriptor);
+  crossed.bindings['muxui:component:button#web.react'].export = '@muxui/react/markdown#Button';
+  if (findDescriptorExportProblems(crossed, moduleExports).length !== 1) fail('P2_1_DESCRIPTOR_AUDIT_INERT', '@muxui/react/markdown#Button was accepted');
+  console.log(`P2.1 set consumer: ${tuple.size} tarballs installed together, ${Object.keys(exportNames).length} entries imported and ${resolvedEntries.length} resolved, ${Object.keys(installedDescriptor.bindings).length} descriptor bindings export their members`);
+
+  // Rehearse the publish of every tarball in order; npm reports the exact tuple without lifecycle hooks or a registry write.
+  for (const [name, { archive: file }] of tuple) {
+    const publishDryRun = spawnSync('npm', ['publish', file, '--dry-run', '--registry=https://registry.npmjs.org'], {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      stdio: 'pipe',
+      env: { ...process.env, npm_config_engine_strict: 'false' },
+    });
+    if (publishDryRun.status !== 0) {
+      fail('R1_EXIT_PACK_PUBLISH_DRY_RUN_FAILED', `${name}: ${publishDryRun.stderr || publishDryRun.stdout}`);
+    }
+    if (!publishDryRun.stdout.includes(`+ ${name}@${versions.get(name)}`)) {
+      fail('R1_EXIT_PACK_PUBLISH_DRY_RUN_FAILED', `npm did not report ${name}@${versions.get(name)}`);
+    }
   }
-  console.log('R1 exit npm publish dry-run passed without lifecycle hooks or registry mutation');
+  console.log(`R1 exit npm publish dry-run passed for ${[...tuple.keys()].join(', ')} without lifecycle hooks or registry mutation`);
 
   const readRepositoryFile = (path) => readFileSync(resolve(repositoryRoot, path));
   const lockfileBytes = readRepositoryFile('pnpm-lock.yaml');
@@ -1039,16 +1132,17 @@ try {
     bytes: readArchiveBytes(archive, entry),
   }));
   const retainedEvidence = readRetainedEvidence(repositoryRoot, retainedEvidenceMilestones);
-  const sourceTree = spawnSync('git', ['rev-parse', `${sourceRevision}^{tree}`], { cwd: repositoryRoot, encoding: 'utf8' });
-  if (sourceTree.status !== 0) fail('R1_EXIT_SOURCE_IDENTITY_UNAVAILABLE', sourceTree.stderr);
-  const correlation = buildReleaseCorrelation({
-    source: { revision: sourceRevision, tree: sourceTree.stdout.trim() },
+  // The catalog is the rc the candidate packs, not the source version the checkout's generated files carry.
+  const catalogFiles = readArchive(tuple.get('@muxui/catalog').archiveBytes);
+  const { evidence, ...reactCorrelation } = buildReleaseCorrelation({
+    source: { revision: sourceRevision, tree: sourceTree },
     lockfile: { path: 'pnpm-lock.yaml', bytes: lockfileBytes },
     generated: packedGenerated,
-    catalogPackage: JSON.parse(readRepositoryFile('packages/catalog/generated/catalog-package.json')),
-    catalogBundle: JSON.parse(readRepositoryFile('packages/catalog/generated/catalog.json')),
+    catalogPackage: JSON.parse(catalogFiles.get('package/generated/catalog-package.json')),
+    catalogBundle: JSON.parse(catalogFiles.get('package/generated/catalog.json')),
     bindings: release.componentExports.map(({ binding }) => binding),
-    workspacePackages: packages.map(({ name, manifest: packageManifest }) => ({ name, version: packageManifest.version, private: packageManifest.private })),
+    // Everything outside the publish set stays private and unpublished.
+    workspacePackages: packages.filter(({ name }) => !publishSetNames.has(name)).map(({ name, manifest: packageManifest }) => ({ name, version: packageManifest.version, private: packageManifest.private })),
     retainedEvidence,
     reviewEvidence: readRetainedReviewEvidence(repositoryRoot),
     activeExceptions: release.exceptions,
@@ -1061,145 +1155,39 @@ try {
   });
   // The lockfile, token source, and evidence indexes were read from the worktree; bind them to the commit.
   assertSourceIdentity(sourceRevision, 'after release correlation');
-  console.log(`R1 exit correlation: ${correlation.bindings.length} binding-spec revisions, ${correlation.generatedOutputs.entries.length} generated outputs, ${correlation.evidence.capturedCiEvidence.length} captured CI evidence indexes, ${correlation.evidence.retainedReviewEvidence.length} retained review evidence index, visual contract ${correlation.visualContract.digest}`);
+  console.log(`R1 exit correlation: ${reactCorrelation.bindings.length} binding-spec revisions, ${reactCorrelation.generatedOutputs.entries.length} generated outputs, ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index, visual contract ${reactCorrelation.visualContract.digest}`);
 
-  const releaseManifest = {
-    schema: 'muxui-r1-exit-publication-preparation-v1',
-    package: {
-      name: packedManifest.name,
-      version: packedManifest.version,
-      private: packedManifest.private,
-      dependencies: packedManifest.dependencies,
-      peerDependencies: packedManifest.peerDependencies,
-      exports: packedManifest.exports,
-      files: packedManifest.files,
-      publishConfig: packedManifest.publishConfig,
-      componentExports: currentComponentExports,
-      supportingExports: documentedSupportingExports,
-      publicExports: currentPublicExports,
-    },
-    source: {
-      path: 'packages/react',
-      revision: sourceRevision,
-      version: manifest.version,
-      private: manifest.private,
-      generatedFrom: ['packages/react/src/generate.mjs', 'catalog/react-r1-5/closure.json'],
-      preparationTool: {
-        path: preparationToolPath,
-        sha256: `sha256:${sha256(readFileSync(resolve(repositoryRoot, preparationToolPath)))}`,
-      },
-      provenance: {
-        intent: 'source, generated projections, and provenance sidecars are correlated; registry provenance is not claimed by local preparation',
-        generatedEntries: expectedGeneratedEntries,
+  const releaseManifest = buildPortfolioManifest({
+    publishSet,
+    artifacts: new Map([...tuple].map(([name, { archiveBytes: bytes }]) => [name, bytes])),
+    source: { revision: sourceRevision, tree: sourceTree },
+    evidence,
+    react: { correlation: reactCorrelation },
+    // Which checks stand behind this candidate, and what the consumer proofs saw (Decision 0030). Not part of the digest.
+    preparation: {
+      ...derivePreparation(process.env, sourceRevision),
+      tool: { path: preparationToolPath, sha256: `sha256:${sha256(readFileSync(resolve(repositoryRoot, preparationToolPath)))}` },
+      verification: {
+        reactOnlineMatrix: matrixResults,
+        publishSetConsumer: { packageManager: 'pnpm', entriesImported: Object.keys(exportNames).length, entriesResolved: resolvedEntries.length },
+        warnings: { duplicateDependencyVersions: duplicateVersionWarnings },
       },
     },
-    // Which checks stand behind this candidate: this process's full graph, or a green main CI run (Decision 0030).
-    preparation: derivePreparation(process.env, sourceRevision),
-    artifact: {
-      file: candidateArchiveName,
-      bytes: archiveBytes.length,
-      sha256: `sha256:${sha256(archiveBytes)}`,
-      shasum: sha1(archiveBytes),
-      integrity: integrity(archiveBytes),
-      compression: 'gzip',
-    },
-    files: expectedPackageEntries,
-    correlation,
-    consumerVerification: {
-      onlineMatrix: matrixResults,
-      warnings: {
-        duplicateDependencyVersions: duplicateVersionWarnings,
-      },
-    },
-    guidance: {
-      descriptor: { path: 'generated/descriptor.json', version: descriptor.version, exports: descriptor.exports.length },
-      release: { path: 'generated/release.json', version: release.version, exports: release.componentExports.length },
-      compatibility: { path: 'generated/compatibility.mjs', version: candidateVersion },
-      readme: { path: 'README.md', candidateVersion, distTag: 'next' },
-      correlation: 'all generated/package guidance resolves to the exact candidate package tuple',
-    },
-    publication: {
-      status: 'prepared',
-      registry: 'https://registry.npmjs.org',
-      distTag: 'next',
-      authorization: 'required-external-human-authorization',
-      command: 'npm publish <candidate-tarball> --tag next --access public --provenance --registry=https://registry.npmjs.org',
-      provenance: 'required-at-publication',
-      mutationPerformed: false,
-    },
-    preflight: {
-      status: 'required-before-publication',
-      registry: 'https://registry.npmjs.org',
-      checks: [
-        {
-          name: 'namespace ownership',
-          command: 'npm trusted publishing: OIDC from .github/workflows/npm-publish.yml in the npm-publish environment',
-          status: 'pending',
-          policy: 'only the trusted publisher configured for @muxui/react can publish; there is no long-lived token, and a mismatched workflow, environment, or repository fails authentication before any write',
-        },
-        {
-          name: 'version collision',
-          command: `GET https://registry.npmjs.org/@muxui/react/${candidateVersion}`,
-          status: 'pending',
-          policy: 'an existing version is a hard stop; never overwrite or republish it',
-        },
-        {
-          name: 'next dist-tag collision',
-          command: 'GET https://registry.npmjs.org/@muxui/react (dist-tags)',
-          status: 'pending',
-          policy: `a first publish expects the package to be absent and must be ${sourceCandidateVersion}; otherwise the dist-tags must be exactly latest and next, next must be a published rc.N and this candidate the next number, rc.N+1, and latest is recorded unchanged; any other dist-tag state is a hard stop for review`,
-          laterPublish: 'record the prior next and latest pointers; after publication next must be the candidate and latest unchanged',
-        },
-        {
-          name: 'publish authorization drift',
-          command: 'GET https://registry.npmjs.org/@muxui/react (dist-tags), immediately before npm publish',
-          status: 'pending',
-          policy: 'npm-publish environment approval gates the publish job; recheck the recorded registry state immediately before npm publish and stop on drift',
-        },
-      ],
-      mutationPerformed: false,
-    },
-    evidence: {
-      'E-R1-EXIT-01': {
-        status: 'candidate-prepared',
-        assertion: 'exact tarball, dependency/export/file tuple, generated guidance, offline install/import, and SSR pass',
-      },
-      'E-R1-EXIT-02': {
-        status: 'partial-prepublication',
-        assertion: 'sha256, npm shasum, integrity, source revision, and preparation-tool identity are recorded; registry provenance remains pending',
-      },
-      'E-R1-EXIT-03': {
-        status: 'pending-post-publication',
-        assertion: 'requires a separately authorized npm publication and clean published-package consumer verification',
-      },
-      'E-R1-EXIT-04': {
-        status: 'pending-post-publication',
-        assertion: 'next dist-tag observation; rollback prepared, not exercised: verifies next, confirms latest is not claimed, and confirms the fix-forward path is ready',
-      },
-    },
-    rollback: {
-      status: 'prepared-not-exercised',
-      trigger: ['published consumer verification failure', 'integrity/provenance mismatch'],
-      steps: [
-        `stop further publication and preserve the immutable ${candidateVersion} version and manifest`,
-        `with Andrew's separate explicit authorization, run npm deprecate on @muxui/react@${candidateVersion} with a message naming the failure and its fixed successor`,
-        `fix forward by publishing a corrected ${fixForwardCandidate} to next through a separately authorized publication`,
-        `optional, only after ${fixForwardCandidate} is verified and with Andrew's separate explicit authorization at the time: re-point latest from the deprecated ${candidateVersion} to ${fixForwardCandidate}`,
-        'retain the candidate artifact and failed verification for audit; latest is otherwise not claimed or promoted (the registry sets latest on first publish) and stable is not promoted',
-      ],
-      forbidden: [
-        'overwrite or republish the immutable package version',
-        'unpublish, except for a security or legal problem inside the npm 72-hour no-dependents window with explicit human authorization',
-        `claim or promote latest, other than the separately authorized fix-forward re-point from ${candidateVersion} to ${fixForwardCandidate}; the registry sets latest on first publish`,
-        'promote stable support',
-      ],
-    },
-  };
+  });
   const outputDirectory = mkdtempSync(join(tmpdir(), 'muxui-r1-exit-output-'));
-  writeFileSync(join(outputDirectory, candidateArchiveName), archiveBytes);
-  writeFileSync(join(outputDirectory, candidateManifestName), `${JSON.stringify(releaseManifest)}\n`);
-  if (statSync(join(outputDirectory, candidateArchiveName)).size !== archiveBytes.length) {
-    fail('R1_EXIT_ARTIFACT_WRITE_FAILED', 'candidate tarball size changed after persistence');
+  for (const [name, { archiveBytes: bytes }] of tuple) writeFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))), bytes);
+  writeFileSync(join(outputDirectory, PORTFOLIO_MANIFEST_FILE), `${canonicalJson(releaseManifest)}\n`);
+  // What was written, read back, must verify as the release this commit prepares.
+  verifyPortfolioRelease({
+    manifest: JSON.parse(readFileSync(join(outputDirectory, PORTFOLIO_MANIFEST_FILE), 'utf8')),
+    artifacts: new Map(publishSet.packages.map(({ name }) => [name, readFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))))])),
+    publishSet,
+    expected: { revision: sourceRevision, tree: sourceTree },
+  });
+  for (const [name, { archiveBytes: bytes }] of tuple) {
+    if (statSync(join(outputDirectory, tarballFileName(name, versions.get(name)))).size !== bytes.length) {
+      fail('R1_EXIT_ARTIFACT_WRITE_FAILED', `${name} tarball size changed after persistence`);
+    }
   }
   console.log(`R1 exit artifacts written to ${outputDirectory}`);
   console.log(JSON.stringify(releaseManifest));
@@ -1207,4 +1195,4 @@ try {
   rmSync(temp, { recursive: true, force: true });
 }
 
-console.log(`R1 exit release preparation passed for ${candidateVersion}; source @muxui/react remains private and unpublished.`);
+console.log(`R1 exit release preparation passed for ${publishSet.packages.map(({ name }) => `${name}@${versions.get(name)}`).join(', ')}; the sources remain private and unpublished.`);

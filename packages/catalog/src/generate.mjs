@@ -15,6 +15,14 @@ const repositoryPolicy = parseJsonStrict(await readFile(
   'utf8',
 ));
 const checking = process.argv.includes('--check');
+// Release preparation compiles the rc it packs without touching the source tree:
+// `--package-version <rc> --output-directory <dir>` writes the package's generated files for that version into `<dir>/generated`.
+const option = (flag) => (process.argv.includes(flag) ? process.argv[process.argv.indexOf(flag) + 1] : undefined);
+const packageVersion = option('--package-version') ?? packageManifest.version;
+const outputDirectory = option('--output-directory');
+if (outputDirectory === undefined ? packageVersion !== packageManifest.version : checking) {
+  throw new Error('CATALOG_PACKAGE_VERSION_OVERRIDE_INVALID: --package-version needs --output-directory, and neither combines with --check');
+}
 // The manifest lists exactly the canonical records on disk; only its settings
 // are authored. The compiler takes the synchronized manifest directly, so it
 // never depends on the file having been written first.
@@ -26,10 +34,10 @@ const manifestOutput = {
   label: source,
   from: 'catalog/',
 };
-const { bundle, bytes } = await compileCatalog({ repositoryRoot, sourceManifest: syncedManifest });
+const { bundle, bytes } = await compileCatalog({ repositoryRoot, sourceManifest: syncedManifest, catalogVersion: packageVersion });
 const tokenArtifact = bundle.artifacts.find(({ kind }) => kind === 'token');
 if (!tokenArtifact) throw new Error('CATALOG_TOKEN_CONTRACT_MISSING: expected one canonical token source');
-if (packageManifest.version !== bundle.catalogVersion) {
+if (packageVersion !== bundle.catalogVersion) {
   throw new Error(
     'CATALOG_PACKAGE_VERSION_DRIFT: package version must equal compiled catalogVersion',
   );
@@ -45,7 +53,7 @@ const expected = [
   body,
 ].join('\n');
 
-const catalogPackageId = `${packageManifest.name}@${packageManifest.version}:${bundle.catalogDigest}`;
+const catalogPackageId = `${packageManifest.name}@${packageVersion}:${bundle.catalogDigest}`;
 const bindingDescriptors = bundle.artifacts
   .filter(({ kind }) => kind === 'component')
   .flatMap((artifact) => Object.entries(artifact.tokenRequirementSets).map(([key, requirementSet]) => {
@@ -131,15 +139,15 @@ const releaseBindings = bundle.artifacts
     }))
   .sort((left, right) => (left.binding < right.binding ? -1 : left.binding > right.binding ? 1 : 0));
 const releaseManifest = {
-  id: `muxui-release:${packageManifest.version}:${bundle.sourceRevision}`,
-  releaseVersion: packageManifest.version,
+  id: `muxui-release:${packageVersion}:${bundle.sourceRevision}`,
+  releaseVersion: packageVersion,
   schemaVersion: bundle.schemaVersion,
   queryApiVersion: bundle.apiVersion,
   tokenContractVersion: tokenArtifact.record.tokenContractVersion,
   sourceRevision: bundle.sourceRevision,
   catalog: {
     id: catalogPackageId,
-    version: packageManifest.version,
+    version: packageVersion,
     digest: bundle.catalogDigest,
   },
   bindings: releaseBindings,
@@ -147,7 +155,7 @@ const releaseManifest = {
 const packageData = {
   schema: 'muxui-catalog-package-v2',
   name: packageManifest.name,
-  version: packageManifest.version,
+  version: packageVersion,
   catalogVersion: bundle.catalogVersion,
   catalogDigest: bundle.catalogDigest,
   queryApiVersion: bundle.apiVersion,
@@ -167,6 +175,8 @@ const packageData = {
   releaseManifest,
   bundle: './catalog.json',
 };
+// A version override writes beside, never into, the checkout.
+const outputRoot = outputDirectory === undefined ? packageRoot : resolve(outputDirectory);
 function strictJsonOutputs(path, sourcePath, value) {
   const expectedBytes = `${typeof value === 'string' ? value : canonicalJson(value)}\n`;
   const label = `packages/catalog/generated/${path}`;
@@ -177,21 +187,21 @@ function strictJsonOutputs(path, sourcePath, value) {
   })}\n`;
   return [
     {
-      path: resolve(packageRoot, `generated/${path}`),
+      path: resolve(outputRoot, `generated/${path}`),
       expected: expectedBytes,
       label,
     },
     {
-      path: resolve(packageRoot, `generated/${path}.provenance`),
+      path: resolve(outputRoot, `generated/${path}.provenance`),
       expected: generatedText({ source: sourcePath, body: provenanceBody, policy: repositoryPolicy }),
       label: provenanceLabel,
     },
   ];
 }
 const outputs = [
-  manifestOutput,
+  ...(outputDirectory === undefined ? [manifestOutput] : []),
   {
-    path: resolve(packageRoot, 'generated/catalog.mjs'),
+    path: resolve(outputRoot, 'generated/catalog.mjs'),
     expected,
     label: 'packages/catalog/generated/catalog.mjs',
   },

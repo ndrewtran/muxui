@@ -156,8 +156,13 @@ function validateNormalizedInput(input) {
   for (const descriptor of input.rendererDescriptors) {
     assertClosed(descriptor, [
       'id', 'descriptorVersion', 'package', 'version', 'bindingSchemaRange',
-      'tokenContractRange', 'bindings',
+      'tokenContractRange', 'bindings', 'provenance',
     ], `descriptor ${descriptor.id ?? '<unknown>'}`);
+    // Pack-time provenance (the release and commit a package was packed for) is read and never compared,
+    // so a catalog-only release leaves an unchanged renderer valid.
+    if (descriptor.provenance !== undefined) {
+      assertClosed(descriptor.provenance, ['releaseId', 'sourceCommit'], `${descriptor.id}.provenance`);
+    }
     if (
       descriptor.bindings === null
       || typeof descriptor.bindings !== 'object'

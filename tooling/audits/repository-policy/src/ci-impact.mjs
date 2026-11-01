@@ -1245,6 +1245,11 @@ export async function buildPullRequestImpact({
       plan.packageChecks.add('@muxui/tooling');
       plan.reasons.push(`${path} shapes the packed React descriptor and exports; run the tooling check that resolves the packed package`);
     }
+    // The packed-entry tests of @muxui/tooling take each package's allowed Mux UI edges from the declared publish set.
+    if (matches(path, config.publishSetInputs)) {
+      plan.packageChecks.add('@muxui/tooling');
+      plan.reasons.push(`${path} declares the publish set and its runtime edges; run the tooling check that packs the public entries`);
+    }
     if (config.fullInputPaths.includes(path)) {
       plan.fullReasons.push(`${path} is a workspace-wide execution input`);
       continue;

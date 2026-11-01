@@ -4403,6 +4403,18 @@ test('a catalog compile input plans the React package check and generation ident
   assert.ok(compiler.packageChecks.includes('@muxui/tooling'));
 });
 
+test('the declared publish set plans the tooling check that packs the public entries beside the policy checks', async () => {
+  const path = 'tooling/audits/repository-policy/publish-set.json';
+  assert.deepEqual(config.publishSetInputs, [path]);
+  const result = await plan([path], { packages: workspacePackages });
+  assert.equal(result.policy, true);
+  assert.ok(result.packageChecks.includes('@muxui/tooling'));
+  assert.ok(result.reasons.some((reason) => reason.startsWith(`${path} declares the publish set`)));
+  // The sibling release modules stay policy-only: they do not feed the tooling pack test.
+  const sibling = await plan(['tooling/audits/repository-policy/src/release-set.mjs'], { packages: workspacePackages });
+  assert.equal(sibling.packageChecks.includes('@muxui/tooling'), false);
+});
+
 test('what shapes the packed React descriptor and exports plans the tooling check that resolves the packed package', async () => {
   const generator = 'packages/react/src/generate.mjs';
   const descriptorBuilder = 'packages/react/src/renderer-descriptor.mjs';
