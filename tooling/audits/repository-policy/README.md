@@ -85,6 +85,15 @@ changes route through verified workspace importers; changes whose consumers
 cannot be resolved fail with an actionable ownership error. Manual and
 scheduled CI keep the explicit full graph and broad browser checks.
 
+In a pull request run the plan job uploads the metadata it prepared
+(`generatedMetadataDirectories`) as a one-day artifact, and each group that runs
+restores it and sets `MUXUI_CI_METADATA_READY=1` only when the restore
+succeeded. The group then skips the generation of `@muxui/react-storybook` and
+its dependencies, as if it had run it, only when the React contract and the
+Storybook manifest are both there. A restore missing either is discarded whole
+and the group generates the metadata itself, as it does when the artifact is
+missing. Main, scheduled, and manual runs do not use the artifact.
+
 Local `pnpm check --files <paths>` and the default changed-owner `pnpm check`
 run the Storybook lane CI would plan for the same paths: the story-index
 generation check, any focused Storybook unit tests, and the scoped page audits,

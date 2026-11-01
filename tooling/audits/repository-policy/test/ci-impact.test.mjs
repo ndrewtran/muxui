@@ -19,6 +19,7 @@ import {
   executionGroups,
   executionMode,
   fullWorkspacePlan,
+  generatedMetadataDirectories,
   groupBrowserEngines,
   groupMatrix,
   groupPackageDirectories,
@@ -1121,6 +1122,7 @@ test('clean Storybook metadata bootstrap executes a normalized generation comman
 
   const prepared = await prepareStorybookMetadata({
     needsMetadata: true,
+    environment: {},
     readCurrentText: async () => null,
     commandRunner,
     log: () => {},
@@ -1147,6 +1149,85 @@ test('clean Storybook metadata bootstrap executes a normalized generation comman
   });
   assert.equal(result, 0);
   assert.equal(spawnCalls[1][2].env.MUXUI_BOOTSTRAP_TEST_ENV, 'defaulted');
+});
+
+// A group job that restored the plan job's metadata sets MUXUI_CI_METADATA_READY; the planner trusts it only when
+// both files it reads are there, and answers true like a run that generated them, so the group skips that closure's generation.
+test('a group takes the plan job\'s restored metadata without regenerating it, and discards a partial restore', async () => {
+  const run = async ({ environment = {}, files = ['contract', 'manifest'], preview = false, needsMetadata = true } = {}) => {
+    const calls = [];
+    const present = new Set(files.map((name) => ({ contract: 'packages/react/generated/r1-6-contract.json', manifest: 'apps/react-storybook/.storybook/generated/manifest.mjs' })[name]));
+    const options = {
+      needsMetadata, preview, environment,
+      readCurrentText: async (path) => (present.has(path) ? 'present' : null),
+      commandRunner: (command) => { calls.push(['generate', command.args.join(' ')]); return 0; },
+      removeGenerated: async () => { calls.push(['remove']); },
+      log: () => {},
+    };
+    return { result: await prepareStorybookMetadata(options).catch((error) => error), calls };
+  };
+  const ready = { MUXUI_CI_METADATA_READY: '1' };
+  const generate = ['generate', '--filter @muxui/react-storybook run generate'];
+
+  // Restored and complete: prepared, with no generation.
+  assert.deepEqual(await run({ environment: ready }), { result: true, calls: [] });
+  // Present without a restore (a local checkout): not prepared by this process, as before.
+  assert.deepEqual(await run(), { result: false, calls: [] });
+  assert.deepEqual(await run({ environment: { MUXUI_CI_METADATA_READY: '' } }), { result: false, calls: [] });
+  // A restore missing either file is dropped whole before the normal generation.
+  for (const files of [['contract'], ['manifest'], []]) {
+    assert.deepEqual(await run({ environment: ready, files }), { result: true, calls: [['remove'], generate] }, files.join());
+  }
+  // Without a restore nothing is removed.
+  assert.deepEqual(await run({ files: [] }), { result: true, calls: [generate] });
+  // Dry-run planning never deletes or generates.
+  const dry = await run({ environment: ready, files: ['contract'], preview: true });
+  assert.match(dry.result.message, /MUXUI_CI_IMPACT_METADATA_MISSING/u);
+  assert.deepEqual(dry.calls, []);
+  // An owner scope without metadata needs none of this.
+  assert.deepEqual(await run({ environment: ready, files: [], needsMetadata: false }), { result: false, calls: [] });
+});
+
+test('the plan job hands its generated metadata to the pull request groups through one short-lived artifact', () => {
+  const workflow = readFileSync(resolve(repositoryRoot, '.github/workflows/ci.yml'), 'utf8');
+  const [planJob, runJob] = workflow.split(/\n {2}run:\n/u);
+  const steps = (job) => job.split('\n      - ');
+  const step = (job, name) => {
+    const block = steps(job).find((candidate) => candidate.startsWith(`name: ${name}\n`));
+    assert.ok(block, `missing workflow step: ${name}`);
+    return block;
+  };
+  const position = (job, name) => steps(job).findIndex((candidate) => candidate.startsWith(`name: ${name}\n`));
+
+  // Upload: after planning, pull requests only, best effort, one day, and the hidden Storybook directory included.
+  const upload = step(planJob, 'Upload plan metadata');
+  assert.ok(position(planJob, 'Plan check groups') < position(planJob, 'Upload plan metadata'));
+  assert.match(upload, /\n {8}id: metadata\n/u);
+  assert.match(upload, /\n {8}if: github\.event_name == 'pull_request'\n/u);
+  // The groups restore only what was uploaded: a plan without metadata leaves no artifact to fail to find.
+  assert.match(planJob, /\n {6}metadata: \$\{\{ steps\.metadata\.outputs\.artifact-id \}\}\n/u);
+  assert.match(upload, /\n {8}continue-on-error: true\n/u);
+  assert.match(upload, /\n {8}uses: actions\/upload-artifact@v4\n/u);
+  for (const setting of ['name: ci-plan-metadata', 'if-no-files-found: ignore', 'include-hidden-files: true', 'retention-days: 1', 'overwrite: true']) {
+    assert.match(upload, new RegExp(`\\n {10}${setting}\\n`, 'u'), setting);
+  }
+  // The artifact paths are the planner's directories, which are exactly the ignored projections: nothing tracked travels.
+  const uploaded = upload.match(/\n {10}path: \|\n((?: {12}\S+\n)+)/u)?.[1].trim().split(/\s+/u);
+  assert.deepEqual(uploaded, generatedMetadataDirectories);
+  const ignored = new Set(readFileSync(resolve(repositoryRoot, '.gitignore'), 'utf8').split('\n'));
+  for (const directory of generatedMetadataDirectories) assert.ok(ignored.has(`/${directory}/`), `${directory} is gitignored`);
+
+  // Restore: a group that runs, on pull requests, before its checks; its success alone sets the planner's variable.
+  const restore = step(runJob, 'Restore plan metadata');
+  assert.ok(position(runJob, 'Restore plan metadata') < position(runJob, 'Run ${{ matrix.group.id }} checks'));
+  assert.match(restore, /\n {8}id: metadata\n/u);
+  assert.match(restore, /\n {8}if: github\.event_name == 'pull_request' && matrix\.group\.reusedFrom == '' && needs\.plan\.outputs\.metadata != ''\n/u);
+  assert.match(restore, /\n {8}continue-on-error: true\n/u);
+  assert.match(restore, /\n {8}uses: actions\/download-artifact@v4\n/u);
+  assert.match(restore, /\n {10}name: ci-plan-metadata\n/u);
+  assert.match(step(runJob, 'Run ${{ matrix.group.id }} checks'), /\n {10}MUXUI_CI_METADATA_READY: \$\{\{ steps\.metadata\.outcome == 'success' && '1' \|\| '' \}\}\n/u);
+  // Main, scheduled, and manual runs neither upload nor restore.
+  assert.doesNotMatch(workflow, /MUXUI_CI_METADATA_READY: 1/u);
 });
 
 function runFixture(statuses, prerequisites = []) {

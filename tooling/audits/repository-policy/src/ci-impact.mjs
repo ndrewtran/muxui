@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
-import { appendFile, readFile, readdir, writeFile } from 'node:fs/promises';
+import { appendFile, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parse } from 'acorn';
 import { pathToFileURL } from 'node:url';
@@ -2587,11 +2587,34 @@ function storybookGenerationCommand() {
   return pnpmCommand(['--filter', '@muxui/react-storybook', 'run', 'generate']);
 }
 
+// The ignored projections that metadata preparation writes (see .gitignore). The CI plan job
+// uploads them, one artifact for the whole run, and its groups restore them in place of
+// regenerating.
+export const generatedMetadataDirectories = [
+  'apps/react-storybook/.storybook/generated',
+  'packages/catalog/generated',
+  'packages/react/generated',
+  'packages/schema/generated',
+  'packages/tooling/generated',
+];
+// Set by the workflow in a group job after it restored that artifact; never export it by hand.
+const metadataReadyVariable = 'MUXUI_CI_METADATA_READY';
+
+const removeGeneratedMetadata = () => Promise.all(
+  generatedMetadataDirectories.map((directory) => rm(resolve(repositoryRoot, directory), { recursive: true, force: true })),
+);
+
+// Makes the React contract and the Storybook page index available. Returns true when this
+// process prepared them (generated them or took the plan job's restored copy), which also
+// covers the generation of the closure of @muxui/react-storybook, and false when they were
+// already there, as in a local checkout.
 export async function prepareStorybookMetadata({
   needsMetadata,
   preview = false,
+  environment = process.env,
   readCurrentText = currentText,
   commandRunner = executeCommand,
+  removeGenerated = removeGeneratedMetadata,
   log = console.log,
 } = {}) {
   if (!needsMetadata) return false;
@@ -2599,9 +2622,19 @@ export async function prepareStorybookMetadata({
     readCurrentText(reactContractPath),
     readCurrentText(storybookManifestPath),
   ]);
-  if (contractSource && manifestSource) return false;
+  const restored = environment[metadataReadyVariable] === '1';
+  if (contractSource && manifestSource) {
+    if (!restored) return false;
+    log('[ci-impact] metadata preparation: using the metadata the plan job generated');
+    return true;
+  }
   if (preview) {
     throw new Error('MUXUI_CI_IMPACT_METADATA_MISSING: run the scoped React/Storybook generation prerequisite before dry-run planning');
+  }
+  if (restored) {
+    // A restore that lacks either file is not trusted: nothing of it is kept.
+    log('[ci-impact] metadata preparation: the restored plan metadata is incomplete; discarding it');
+    await removeGenerated();
   }
   log('[ci-impact] metadata preparation: generate the React contract and Storybook page index required by this owner scope');
   const status = commandRunner(storybookGenerationCommand());
@@ -2684,7 +2717,7 @@ export function groupMatrix(groups, decisions = []) {
 
 // Plans the owner-scoped checks for `changedPaths` between `base` and the
 // current worktree; the pull-request plan and the reuse delta plan share it.
-async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
+async function planAgainstBase({ base: mergeBase, changedPaths, preview, environment }) {
   const config = (await loadPolicy(repositoryRoot)).pullRequestImpact;
   if (!config || config.schemaVersion !== 1) throw new Error('MUXUI_CI_IMPACT_POLICY_MISSING: pullRequestImpact schemaVersion 1 is required');
   const packages = await discoverWorkspacePackages(repositoryRoot);
@@ -2714,7 +2747,7 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
     reactPackagePagesAffected: reactPackageImpact.pagesAffected,
     patternManifestChanged,
   });
-  const metadataPrepared = await prepareStorybookMetadata({ needsMetadata, preview });
+  const metadataPrepared = await prepareStorybookMetadata({ needsMetadata, preview, environment });
 
   const records = needsMetadata ? await generatedReactRecords() : [];
   const pageIndex = needsMetadata ? await generatedStoryIndex() : [];
@@ -2762,7 +2795,7 @@ async function pullRequestPlan({ preview, includeWorktree, environment }) {
   const baseRef = baseRefFor(environment);
   const mergeBase = resolveMergeBase(baseRef);
   const changedPaths = collectPullRequestPaths({ baseRef: mergeBase, includeWorktree });
-  return { ...(await planAgainstBase({ base: mergeBase, changedPaths, preview })), baseRef, mergeBase };
+  return { ...(await planAgainstBase({ base: mergeBase, changedPaths, preview, environment })), baseRef, mergeBase };
 }
 
 // The Storybook commands CI would plan for exactly `changedPaths`, compared

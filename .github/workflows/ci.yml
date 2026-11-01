@@ -30,6 +30,9 @@ jobs:
     timeout-minutes: 15
     outputs:
       groups: ${{ steps.plan.outputs.groups }}
+      # Set only when the metadata artifact was uploaded, so a plan that generated no
+      # metadata (a docs-only pull request) does not make every group try to restore it.
+      metadata: ${{ steps.metadata.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,6 +80,30 @@ jobs:
           else
             node tooling/audits/repository-policy/src/ci-impact.mjs --plan --github-output --full
           fi
+
+      # Planning generated the React and Storybook metadata (ignored projections) that every
+      # group of a pull request needs, so the groups restore it instead of generating it again,
+      # which takes 20 to 40 seconds in each. The directories are the planner's
+      # generatedMetadataDirectories; a missing one is skipped. The artifact lives for the run
+      # only, and a group that cannot restore it generates the metadata itself. Hidden files
+      # are included because Storybook's directory sits under `.storybook`.
+      - name: Upload plan metadata
+        id: metadata
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-plan-metadata
+          path: |
+            apps/react-storybook/.storybook/generated
+            packages/catalog/generated
+            packages/react/generated
+            packages/schema/generated
+            packages/tooling/generated
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 1
+          overwrite: true
 
       # Later runs of this PR read this record to reuse passed groups.
       - name: Upload reuse record
@@ -176,12 +203,23 @@ jobs:
           BROWSER_ENGINES: ${{ matrix.group.browserEngines }}
         run: pnpm --filter @muxui/react exec playwright-core install --with-deps $BROWSER_ENGINES
 
+      # The plan job's metadata (see Upload plan metadata). The planner uses it only when both
+      # files it reads came with it, and otherwise discards it and generates.
+      - name: Restore plan metadata
+        id: metadata
+        if: github.event_name == 'pull_request' && matrix.group.reusedFrom == '' && needs.plan.outputs.metadata != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ci-plan-metadata
+
       - name: Run ${{ matrix.group.id }} checks
         if: matrix.group.reusedFrom == ''
         timeout-minutes: ${{ matrix.group.timeoutMinutes }}
         env:
           GITHUB_BASE_REF: ${{ github.base_ref }}
           MUXUI_CI_GROUP: ${{ matrix.group.id }}
+          MUXUI_CI_METADATA_READY: ${{ steps.metadata.outcome == 'success' && '1' || '' }}
         run: |
           scope=--full
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then scope=; fi
