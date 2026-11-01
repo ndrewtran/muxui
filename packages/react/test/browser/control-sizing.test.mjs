@@ -120,7 +120,7 @@ async function clickAfterScroll(page, locator) {
 
 function fixtureDocument() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(ControlSizingFixture)));
-  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-density="comfortable"', head: `<link rel="stylesheet" href="/packages/react/generated/styles.css"><link rel="stylesheet" href="/packages/react/generated/supplemental.css"><style>
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-density="comfortable"', head: `<link rel="stylesheet" href="/packages/react/generated/styles.css"><style>
     :root { color-scheme: light; }
     html[data-muxui-color-scheme='dark'] { color-scheme: dark; }
     body { box-sizing: border-box; min-width: 1240px; margin: 24px; background: var(--muxui-semantic-surface-canvas, #fff); color: var(--muxui-semantic-content-strong, #111); font-family: Inter, system-ui, sans-serif; font-size: 16px; }

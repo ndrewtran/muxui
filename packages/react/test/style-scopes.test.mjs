@@ -117,7 +117,7 @@ test('the mode-aware guard reads the renamed part classes of the migrated famili
 // when one is added, removed, changed or moved, so each such change is reviewed on its own.
 const importantPin = JSON.parse(await readFile(new URL('./fixtures/important-declarations.json', import.meta.url), 'utf8'));
 const authoredCss = Object.fromEntries(await Promise.all(sourceFiles.map(async (url) => [url.pathname.slice(sourceRoot.pathname.length), await readFile(url, 'utf8')])));
-const generatedCss = Object.fromEntries(await Promise.all(['styles.css', 'supplemental.css', 'themes.css'].map(async (name) => [name, await readFile(new URL(`../generated/${name}`, import.meta.url), 'utf8')])));
+const generatedCss = Object.fromEntries(await Promise.all(['styles.css', 'themes.css'].map(async (name) => [name, await readFile(new URL(`../generated/${name}`, import.meta.url), 'utf8')])));
 
 /** The authored declarations by category, as sorted `file | context` identities. */
 function importantByCategory(files) {
@@ -152,10 +152,10 @@ test('the authored !important declarations are exactly the pinned ones, by categ
 
 test('the generated stylesheets keep every !important declaration in muxui.components', () => {
   const authored = authoredIdentities(authoredCss);
-  // styles.css carries all 86 once; supplemental.css carries the shared stylesheet's 15; themes.css carries none.
+  // styles.css carries all 86 once, including the shared supplemental stylesheet's 15; themes.css carries none.
   assert.equal(authored.length, 86);
+  assert.equal(authored.filter(([file]) => file === 'supplemental/styles.css').length, 15);
   assert.deepEqual(generatedIdentities(generatedCss['styles.css']), inComponentsLayer(authored));
-  assert.deepEqual(generatedIdentities(generatedCss['supplemental.css']), inComponentsLayer(authored.filter(([file]) => file === 'supplemental/styles.css')));
   assert.deepEqual(importantDeclarations(generatedCss['themes.css']), []);
 });
 

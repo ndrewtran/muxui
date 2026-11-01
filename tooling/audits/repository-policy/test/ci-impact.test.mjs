@@ -3948,9 +3948,9 @@ async function reactTestTexts() {
   ])));
 }
 
-// Decision 0031 item 13: the surface check moved from @muxui/web into this React test, so a change to
-// anything it reads must still run it. It reads Button's record and React example, the token source,
-// the React manifest `exports`, and the stylesheet generated from React's sources.
+// Decision 0031 item 19 keeps the layer, style-entry and instance-token checks. Their inputs are
+// the token source, the React manifest exports and generated CSS. A component route also selects
+// this shared proof, but the retired compiler's Button catalog inputs no longer plan it on their own.
 test('the React public-surface test runs for every input it reads', async () => {
   const surfaceTest = 'test/public-surface.test.mjs';
   const artifact = 'catalog/components/button/artifact.json';
@@ -3978,23 +3978,23 @@ test('the React public-surface test runs for every input it reads', async () => 
   const surfaceTestRuns = (result) => executionCommands(result, { packages })
     .some(({ args }) => args.at(-1) === surfaceTest && args.includes('--test'));
 
-  // Button's record and its React example, when no story uses the example, run Button's component route,
-  // which names every test of the file so the negative cases run too.
+  // Button's catalog inputs run its component route when no story uses the example,
+  // including the whole shared CSS proof without a family-specific test-name filter.
   for (const [path, options] of [[artifact, unusedExample], [exampleRecord, unusedExample], [exampleSource, unusedExample]]) {
     const result = await plan([path], { ...options, ...withButtonTests });
     assert.deepEqual(result.reactFamilies, ['Button'], path);
     assert.ok(result.reactComponentTests.includes(surfaceTest), path);
-    assert.ok(result.reactComponentTestNames[surfaceTest].includes('the Button surface refuses a missing style export, a missing binding, and a non-component identity'), path);
+    assert.equal(result.reactComponentTestNames[surfaceTest], undefined, path);
     assert.equal(result.reactPackageFull, false, path);
   }
 
-  // A story that uses the example source sends it to that page and not to Button's family,
-  // so the test is planned on its own.
+  // A story that uses the example source sends it to that page and not to Button's family.
+  // The CSS proof no longer reads that example, so it is not planned on its own.
   const used = await plan([exampleSource], { ...usedExample, ...withButtonTests });
   assert.deepEqual(used.reactFamilies, []);
   assert.deepEqual(used.storyIds, ['muxui-react-r1-1-button--basic']);
-  assert.ok(used.reactTestFiles.includes(surfaceTest));
-  assert.equal(surfaceTestRuns(used), true);
+  assert.equal(used.reactTestFiles.includes(surfaceTest), false);
+  assert.equal(surfaceTestRuns(used), false);
 
   // The token source plans the React theme proof, not the full React check, so the test is planned beside it.
   const tokens = await plan(['catalog/tokens/default-theme.json'], withButtonTests);
@@ -4016,14 +4016,13 @@ test('the React public-surface test runs for every input it reads', async () => 
   assert.match(check, /node --test 'test\/!\(/u);
   assert.doesNotMatch(check, /public-surface/u);
 
-  // A change to the scanners or the surface compiler reruns it as a referencing test.
-  for (const helper of ['compile-surface.mjs', 'scan-surface.mjs']) {
-    const result = await plan([`packages/react/test/support/${helper}`], {
-      reactTestReferenceSources: reactTests,
-      textSnapshots: { [`packages/react/test/support/${helper}`]: { after: 'present' } },
-    });
-    assert.ok(result.reactTestFiles.includes(surfaceTest), helper);
-  }
+  // A change to the shared CSS scanners reruns it as a referencing test.
+  const scanner = 'packages/react/test/support/scan-surface.mjs';
+  const result = await plan([scanner], {
+    reactTestReferenceSources: reactTests,
+    textSnapshots: { [scanner]: { after: 'present' } },
+  });
+  assert.ok(result.reactTestFiles.includes(surfaceTest), scanner);
 });
 
 // The public types are held against the declarations from before the TypeScript moves (test/public-surface-baseline.test.mjs).

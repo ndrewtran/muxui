@@ -1,15 +1,4 @@
-// Scanners the public-surface test uses to read what source and CSS actually consume.
-// They are deliberately conservative: a form they cannot resolve is reported as a
-// consumed hook, so it fails the topology check rather than slipping past it.
-
-// `class`/`className` as a JSX attribute, a property assignment, or an object key
-// (`{ className: '...' }`, `{ 'class': '...' }`), including inside a spread.
-const classCarrier = /(?:\b(?:class|className)\b|(["'])(?:class|className)\1)\s*[=:](?![=>])\s*/gu;
-
-// What may follow a string that is the whole value: the end of the source, `,` `;` `}` `)`,
-// the end of a JSX tag, or the next JSX attribute. Any operator, call, member access, or
-// index means the string is only the start of a larger expression.
-const afterWholeValue = /^\s*(?:$|[,;})>]|\/>|(?!in\b|instanceof\b)[A-Za-z_${])/u;
+// CSS scanners shared by the public-surface and styling inventory tests.
 
 function closingIndex(source, open, [begin, end]) {
   let depth = 0;
@@ -27,70 +16,6 @@ function stringEnd(text, quoteIndex) {
     else if (text[index] === text[quoteIndex] || (text[index] === '\n' && text[quoteIndex] !== '`')) return index;
   }
   return text.length;
-}
-
-// A string that is a single plain literal: no escapes and no `${}` substitutions.
-function plainLiteral(text) {
-  const match = /^(?:"([^"\\]*)"|'([^'\\]*)'|`([^`\\$]*)`)$/u.exec(text.trim());
-  return match ? (match[1] ?? match[2] ?? match[3]) : null;
-}
-
-// The end of a value expression that starts at `start`: the first `,` or `;` outside any
-// brackets, or the bracket that closes the enclosing one.
-function expressionEnd(source, start) {
-  let depth = 0;
-  for (let index = start; index < source.length; index += 1) {
-    const char = source[index];
-    if (char === '"' || char === "'" || char === '`') index = stringEnd(source, index);
-    else if ('([{'.includes(char)) depth += 1;
-    else if (')]}'.includes(char)) {
-      if (depth === 0) return index;
-      depth -= 1;
-    } else if (depth === 0 && (char === ',' || char === ';')) return index;
-  }
-  return source.length;
-}
-
-// The class names a value that starts at `start` consumes. Only a value that is exactly one
-// plain string literal contributes its words. Any other expression is reported whole, wrapped
-// in braces, so it can never equal a class name.
-function classesAt(source, start) {
-  let expression;
-  if (source[start] === '{') {
-    expression = source.slice(start, closingIndex(source, start, ['{', '}']) + 1);
-    const literal = plainLiteral(expression.slice(1, -1));
-    if (literal !== null) return literal.split(/\s+/u).filter(Boolean);
-  } else {
-    if ('"\'`'.includes(source[start])) {
-      const end = stringEnd(source, start) + 1;
-      const literal = plainLiteral(source.slice(start, end));
-      if (literal !== null && afterWholeValue.test(source.slice(end))) return literal.split(/\s+/u).filter(Boolean);
-    }
-    expression = source.slice(start, expressionEnd(source, start)).trim();
-  }
-  return [expression.startsWith('{') ? expression : `{${expression}}`];
-}
-
-/**
- * What a source file consumes: the classes it sets, the `data-muxui-*` attributes it
- * names, and every `querySelector`/`querySelectorAll` use, as its call argument or, when
- * the name is used without a plain call (`.call`, an alias, bracket access), the name.
- */
-export function consumedHooks(source) {
-  const classes = [...source.matchAll(classCarrier)]
-    .flatMap((match) => classesAt(source, match.index + match[0].length));
-  const selectors = [...source.matchAll(/\bquerySelector(?:All)?\b/gu)].map((match) => {
-    const end = match.index + match[0].length;
-    const call = /^\s*(?:\?\.\s*)?\(/u.exec(source.slice(end));
-    if (!call) return match[0];
-    const open = end + call[0].length - 1;
-    return source.slice(open + 1, closingIndex(source, open, ['(', ')'])).trim();
-  });
-  return {
-    classes,
-    attributes: [...source.matchAll(/\b(data-muxui-[a-z0-9-]+)(?:\s*=|\b)/gu)].map((match) => match[1]),
-    selectors,
-  };
 }
 
 // The index of the last character of the comment or string that starts at `index`, or -1.

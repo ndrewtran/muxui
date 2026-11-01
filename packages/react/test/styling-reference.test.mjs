@@ -50,7 +50,9 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
   assert.equal(read('styles.css').rules.length, 2085);
-  assert.equal(read('supplemental.css').rules.length, 518);
+  const shared = readFileSync(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').trim();
+  assert.equal(readStyleRules(shared).rules.length, 518);
+  assert.equal(readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8').split(shared).length, 2, 'styles.css includes the shared stylesheet verbatim exactly once');
   assert.equal(read('themes.css').rules.length, 60);
   // The shapes it models: grouping at-rules with a chain, statements, leaf at-rules it skips, !important, a block in a custom property.
   const parsed = readStyleRules('@layer a, b;\n@layer a { @media (forced-colors: active) { .x:where(.y) { color: red !important; --z: { a: b }; } } }\n@keyframes k { from { top: 0 } to { top: 1px } }\n@font-face { font-family: f; }');
