@@ -54,13 +54,19 @@ shard is a hash of its path, so shards keep their identity as the selection
 changes. A pull request that selects test files shards a cross-engine list at
 most two ways and the Chromium-only list at most three. A plan that runs the
 whole browser suite (main, the weekly run, and a pull request that needs the
-full React proof) keeps the cross-engine groups whole and shards
-`browser-chromium-only` two ways, so main plans 13 groups. Scale's browser
-checks, including the docs build, run in the `browser-scale` group in every plan,
-main included, whatever the React browser layout is, so reuse routes a docs or
-Scale change to the same group whichever plan ran the earlier pass. Reuse treats
-a React browser group and its shards as one family: a change routed to any shard
-reruns its siblings, and a shard is reused only when its id and file list match.
+full React proof) shards each list two ways, so a shard runs about eight
+minutes. Scale's browser checks, including the docs build, run in the
+`browser-scale` group in every plan, main included, whatever the React browser
+layout is, so reuse routes a docs or Scale change to the same group whichever
+plan ran the earlier pass. Reuse treats a React browser group and its shards as
+one family: a change routed to any shard reruns its siblings, and a shard is
+reused only when its id and file list match.
+
+GitHub's Free plan runs 20 jobs at once, and a job over that queues instead of
+failing. Main plans 15 groups. A full-proof React pull request plans 21 run jobs
+(23 with the two Storybook theme groups). The Storybook groups come last in the
+matrix and are the shortest browser-driven jobs, so they are the ones that wait
+for a free slot.
 
 Each group's `timeoutMinutes` limits its checks step. A group that installs
 Firefox or WebKit (`browserEngines` is set) also gets a 30 minute setup
@@ -114,7 +120,10 @@ group repeats the plan's generation prerequisites in its own runner, keeps the
 and exists only when it has work. Main and scheduled runs plan the same groups
 from the workspace packages: one `pnpm --filter <package> run check` per package
 with a `check` script except React and Storybook, which have their own groups,
-checked in dependency order within `checks`.
+checked in dependency order within `checks`. The Tailwind consumer fixture's
+install and check take about a minute, so they run last in `checks-tooling`
+whenever the plan has it; a plan without the tooling check keeps a `tailwind`
+group.
 
 ### Retained-evidence tests
 

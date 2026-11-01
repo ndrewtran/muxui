@@ -1784,8 +1784,21 @@ test('scoped plans split into independent groups that each repeat the generation
 
   // Tokens reach policy through tooling and the workspace links, so its evidence tests run as well.
   const tokens = executionGroups(await plan(['catalog/tokens/default-theme.json']), { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(tokens), ['checks-policy', 'checks-tooling', 'checks', 'browser-scale', 'react', 'storybook-theme', 'storybook-chrome', 'tailwind']);
-  assert.deepEqual(tokens.at(-1).commands.slice(1).map(({ prerequisite }) => prerequisite === true), [true, false]);
+  assert.deepEqual(groupIds(tokens), ['checks-policy', 'checks-tooling', 'checks', 'browser-scale', 'react', 'storybook-theme', 'storybook-chrome']);
+  // The Tailwind fixture's install (a prerequisite) and check end the checks-tooling group, after the tooling tests.
+  assert.deepEqual(tokens[1].commands.slice(1).map(({ args, prerequisite }) => [args.join(' '), prerequisite === true]), [
+    ['--filter @muxui/tooling run check', false],
+    ['--dir tests/fixtures/tailwind-consumer install --ignore-workspace --frozen-lockfile', true],
+    ['--dir tests/fixtures/tailwind-consumer run check', false],
+  ]);
+});
+
+test('the Tailwind fixture keeps a group of its own in a plan without the tooling check', async () => {
+  const groups = executionGroups(await plan(['tests/fixtures/tailwind-consumer/check.mjs']), { packages, environment: {}, pageIndex });
+  assert.ok(!groupIds(groups).includes('checks-tooling'));
+  const tailwind = groups.find(({ id }) => id === 'tailwind');
+  assert.deepEqual([tailwind.kind, tailwind.timeoutMinutes], ['tailwind', 15]);
+  assert.deepEqual(tailwind.commands.slice(1).map(({ prerequisite }) => prerequisite === true), [true, false]);
 });
 
 test('only groups that run a cross-engine browser test request Firefox and WebKit', async () => {
@@ -1794,7 +1807,7 @@ test('only groups that run a cross-engine browser test request Firefox and WebKi
 
   const full = groupMatrix(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} }));
   assert.deepEqual(full.filter(({ browserEngines }) => browserEngines).map(({ id, browserEngines }) => [id, browserEngines]), [
-    ['browser-firefox', 'firefox'], ['browser-webkit', 'webkit'],
+    ['browser-firefox-1', 'firefox'], ['browser-firefox-2', 'firefox'], ['browser-webkit-1', 'webkit'], ['browser-webkit-2', 'webkit'],
   ]);
 
   const tree = executionGroups(await plan([collectionsPath], treeRuntimeChange), { packages, environment: {}, pageIndex });
@@ -1814,9 +1827,9 @@ test('groups that install browser system libraries get a setup allowance outside
   const limits = (groups) => groupMatrix(groups).map(({ id, timeoutMinutes, jobTimeoutMinutes }) => [id, timeoutMinutes, jobTimeoutMinutes]);
   assert.deepEqual(limits(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} })), [
     ['checks-policy', 30, 30], ['checks-tooling', 30, 30], ['checks', 30, 30], ['react', 30, 30],
-    ['browser-chromium', 30, 30], ['browser-chromium-only-1', 30, 30], ['browser-chromium-only-2', 30, 30],
-    ['browser-firefox', 30, 60], ['browser-webkit', 30, 60], ['browser-scale', 30, 30],
-    ['storybook-a11y', 30, 30], ['storybook', 30, 30], ['tailwind', 15, 15],
+    ['browser-chromium-1', 30, 30], ['browser-chromium-2', 30, 30], ['browser-chromium-only-1', 30, 30], ['browser-chromium-only-2', 30, 30],
+    ['browser-firefox-1', 30, 60], ['browser-firefox-2', 30, 60], ['browser-webkit-1', 30, 60], ['browser-webkit-2', 30, 60],
+    ['browser-scale', 30, 30], ['storybook-a11y', 30, 30], ['storybook', 30, 30],
   ]);
 
   const dismissal = await plan(['packages/react/test/browser/autocomplete-dismissal.test.mjs']);
@@ -1833,7 +1846,7 @@ test('the workflow limits the job, the browser install and the checks separately
   // The checks keep the group's own limit as a step limit.
   assert.match(step('Run ${{ matrix.group.id }} checks'), /\n {8}timeout-minutes: \$\{\{ matrix\.group\.timeoutMinutes \}\}\n/u);
   // A stuck install fails by itself, inside the allowance and with time left for the other setup steps.
-  const [firefox] = groupMatrix(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} })).filter(({ id }) => id === 'browser-firefox');
+  const [firefox] = groupMatrix(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} })).filter(({ id }) => id === 'browser-firefox-1');
   const installLimit = Number(step('Install Playwright browsers').match(/\n {8}timeout-minutes: (\d+)\n/u)?.[1]);
   assert.ok(installLimit > 0 && installLimit < firefox.jobTimeoutMinutes - firefox.timeoutMinutes, `install step limit ${installLimit}`);
 });
@@ -1984,37 +1997,36 @@ test('the full plan runs the browser checks as parallel groups, each React test 
   assert.ok(crossEngine.includes('test/browser/autocomplete-dismissal.test.mjs'));
   assert.ok(chromiumOnly.includes('test/browser/dialog-motion.test.mjs'), 'engine-agnostic tests are Chromium-only');
 
-  // The Chromium-only list splits into two stable shards; the cross-engine lists stay whole.
-  // Scale's browser checks get a group of their own, which keeps main's matrix at 13 groups.
-  const shards = Array.from({ length: 2 }, (_, index) => chromiumOnly.filter((file) => shardOf(file, 2) === index));
-  assert.ok(shards.every((files) => files.length > 0), 'each Chromium-only shard has files');
+  // Each list splits into two stable shards. Scale's browser checks get a group of their own.
+  const shardsOf = (files) => Array.from({ length: 2 }, (_, index) => files.filter((file) => shardOf(file, 2) === index));
+  const crossShards = shardsOf(crossEngine);
+  const onlyShards = shardsOf(chromiumOnly);
+  assert.ok([...crossShards, ...onlyShards].every((files) => files.length > 0), 'each shard has files');
 
   const plan = fullWorkspacePlan('test');
   const groups = browserGroups(executionGroups(plan, { packages, environment: {} }));
   assert.deepEqual(groups.map(({ id, browserEngines, timeoutMinutes }) => [id, browserEngines, timeoutMinutes]), [
-    ['browser-chromium', '', 30],
+    ['browser-chromium-1', '', 30], ['browser-chromium-2', '', 30],
     ['browser-chromium-only-1', '', 30], ['browser-chromium-only-2', '', 30],
-    ['browser-firefox', 'firefox', 30], ['browser-webkit', 'webkit', 30],
+    ['browser-firefox-1', 'firefox', 30], ['browser-firefox-2', 'firefox', 30],
+    ['browser-webkit-1', 'webkit', 30], ['browser-webkit-2', 'webkit', 30],
     ['browser-scale', '', 30],
   ]);
   assert.ok(groupMatrix(groups).every(({ kind }) => kind === 'browser'));
 
   const exec = ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1'];
-  const [chromium, ...only] = groups.slice(0, 3);
-  const [firefox, webkit, scaleGroup] = groups.slice(3);
-  assert.deepEqual(ownCommands(chromium).map(({ args, env }) => [args, env]), [[[...exec, ...crossEngine], { MUXUI_BROWSER_ENGINES: 'chromium' }]]);
-  only.forEach((group, index) => {
-    assert.deepEqual(ownCommands(group), [{ command: 'pnpm', args: [...exec, ...shards[index]], env: {}, unsetEnv: [] }], group.id);
-  });
+  const shardCommand = (files, env) => ({ command: 'pnpm', args: [...exec, ...files], env, unsetEnv: [] });
+  const byId = Object.fromEntries(groups.map((group) => [group.id, ownCommands(group)]));
+  for (const [index, files] of onlyShards.entries()) assert.deepEqual(byId[`browser-chromium-only-${index + 1}`], [shardCommand(files, {})]);
+  for (const engine of ['chromium', 'firefox', 'webkit']) {
+    for (const [index, files] of crossShards.entries()) {
+      assert.deepEqual(byId[`browser-${engine}-${index + 1}`], [shardCommand(files, { MUXUI_BROWSER_ENGINES: engine })], `${engine} ${index + 1}`);
+    }
+  }
   // Scale's browser checks, one of which builds the docs site, are a group of their own, whatever the browser layout.
-  assert.deepEqual(ownCommands(scaleGroup).map(({ args }) => args), [
+  assert.deepEqual(byId['browser-scale'].map(({ args }) => args), [
     ['--filter', '@muxui/scale', 'run', 'check:browser'], ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
   ]);
-  for (const [group, engine] of [[firefox, 'firefox'], [webkit, 'webkit']]) {
-    assert.deepEqual(ownCommands(group).map(({ args, env }) => [args, env]), [
-      [[...exec, ...crossEngine], { MUXUI_BROWSER_ENGINES: engine }],
-    ], group.id);
-  }
 
   // Every file runs exactly once in each engine it supports, and none is missed.
   const expected = [
@@ -2087,18 +2099,19 @@ test('scoped plans emit only the browser groups that have work', async () => {
   const optIn = "import { browserEngines } from './harness.mjs'; browserEngines();";
   const shardIds = (id, count) => Array.from({ length: count }, (_, index) => `${id}-${index + 1}`);
 
-  // The full React package proof runs every browser group as the full plan does: the Chromium-only list in shards.
+  // The full React package proof runs every browser group as the full plan does: each list in two shards.
   const react = await plan(['packages/react/src/generate.mjs']);
   assert.equal(react.reactPackageFull, true);
   assert.deepEqual(browserIds(react), [
-    'browser-scale', 'browser-chromium', ...shardIds('browser-chromium-only', 2), 'browser-firefox', 'browser-webkit',
+    'browser-scale', ...shardIds('browser-chromium', 2), ...shardIds('browser-chromium-only', 2),
+    ...shardIds('browser-firefox', 2), ...shardIds('browser-webkit', 2),
   ]);
   // Without a cross-engine test there is nothing for Firefox or WebKit; Scale's browser checks keep browser-scale.
   const none = browserIds(react, { testSources: fixedBrowserSources('export {};') });
   assert.deepEqual(none, ['browser-scale', ...shardIds('browser-chromium-only', 2)]);
   // Without a Chromium-only test there is no Chromium-only group.
   const all = browserIds(react, { testSources: fixedBrowserSources(optIn) });
-  assert.deepEqual(all, ['browser-scale', 'browser-chromium', 'browser-firefox', 'browser-webkit']);
+  assert.deepEqual(all, ['browser-scale', ...shardIds('browser-chromium', 2), ...shardIds('browser-firefox', 2), ...shardIds('browser-webkit', 2)]);
 
   // Docs and Scale browser checks are Chromium-only and need no React browser group.
   assert.deepEqual(browserIds(await plan(['apps/docs/src/content/docs/foundations/index.mdx'])), ['browser-scale']);
@@ -2529,8 +2542,8 @@ test('the full plan splits check:all into independently runnable groups', () => 
     packages, environment: { RUNNER_TEMP: '/tmp/runner' },
   });
   assert.deepEqual(groupIds(groups), [
-    'checks-policy', 'checks-tooling', 'checks', 'react', 'browser-chromium', 'browser-chromium-only-1', 'browser-chromium-only-2',
-    'browser-firefox', 'browser-webkit', 'browser-scale', 'storybook-a11y', 'storybook', 'tailwind',
+    'checks-policy', 'checks-tooling', 'checks', 'react', 'browser-chromium-1', 'browser-chromium-2', 'browser-chromium-only-1', 'browser-chromium-only-2',
+    'browser-firefox-1', 'browser-firefox-2', 'browser-webkit-1', 'browser-webkit-2', 'browser-scale', 'storybook-a11y', 'storybook',
   ]);
   for (const group of groups) {
     assert.deepEqual(group.commands[0].args, ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'generate']);
@@ -2540,7 +2553,13 @@ test('the full plan splits check:all into independently runnable groups', () => 
   const byId = Object.fromEntries(groups.map((group) => [group.id, group.commands.slice(1).map(({ args }) => args.join(' '))]));
   // Policy keeps both its scripts on the full plan, and tooling has its own group.
   assert.deepEqual(byId['checks-policy'], ['--filter @muxui/repository-policy run check', '--filter @muxui/repository-policy run check:evidence']);
-  assert.deepEqual(byId['checks-tooling'], ['--filter @muxui/tooling run check']);
+  // The Tailwind fixture's install and check end the tooling group instead of taking a group of their own.
+  assert.deepEqual(byId['checks-tooling'], [
+    '--filter @muxui/tooling run check',
+    '--dir tests/fixtures/tailwind-consumer install --ignore-workspace --frozen-lockfile',
+    '--dir tests/fixtures/tailwind-consumer run check',
+  ]);
+  assert.equal(groups.find(({ id }) => id === 'checks-tooling').commands[2].prerequisite, true);
   // Every other package check is one command per package, as in pull-request plans, and the root's `check` (the affected-scope runner) stays out.
   assert.equal(byId.checks.at(-1), 'generate:check');
   const rest = byId.checks.slice(0, -1);
@@ -2556,7 +2575,9 @@ test('the full plan splits check:all into independently runnable groups', () => 
   }
   assert.deepEqual(byId.react, ['--filter @muxui/react run check']);
   const reactBrowser = '--filter @muxui/react exec node --test --test-concurrency=1 test/browser/';
-  for (const id of ['browser-chromium', 'browser-chromium-only-1', 'browser-chromium-only-2', 'browser-firefox', 'browser-webkit']) {
+  const reactBrowserGroupIds = groupIds(groups).filter((id) => id.startsWith('browser-') && id !== 'browser-scale');
+  assert.equal(reactBrowserGroupIds.length, 8);
+  for (const id of reactBrowserGroupIds) {
     assert.ok(byId[id][0].startsWith(reactBrowser), id);
     assert.equal(byId[id].length, 1, id);
   }

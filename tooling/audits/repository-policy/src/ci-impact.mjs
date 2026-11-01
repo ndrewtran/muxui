@@ -2090,17 +2090,24 @@ const scaleBrowserGroup = 'browser-scale';
 
 // A browser list runs as ceil(files / limit) shards, at most the plan's cap. A
 // cross-engine file takes about 30 s per engine and a Chromium-only file about
-// 15 s. A pull request that selects test files splits a long cross-engine list in
-// two. A plan that runs the whole browser suite (main, the weekly run, and a pull
-// request that needs the full React proof) keeps that list whole, so each engine's
-// job runs about 16 minutes and is the long pole. The Chromium-only list (about 63
-// files) takes two shards of about 8 minutes beside Scale's group, which adds one
-// job, so main plans 13 groups and a full-proof pull request 19 run jobs, within
-// the 20 concurrent jobs of GitHub's Free plan.
+// 15 s, so the whole cross-engine list (about 30 files) is about 16 minutes in one
+// job and the Chromium-only list (about 60 files) about as long. A pull request that
+// selects test files caps cross-engine lists at two shards and Chromium-only
+// lists at three. A plan that runs the whole browser suite (main, the weekly run,
+// and a pull request that needs the full React proof) caps both at two, which
+// puts every shard near 8 minutes beside the React job and Scale's group.
+//
+// Job budget: GitHub Free runs 20 jobs at once, and a job over the ceiling queues
+// rather than fails. Main plans 15 groups. A full-proof React pull request plans 21
+// run jobs (23 when a theme change adds the two Storybook theme groups), among them
+// 6 cross-engine shards, 2 Chromium-only shards, Scale's group, and 7 Storybook
+// component shards. The Storybook groups come last in the matrix and are short,
+// so they are the ones that wait. The Tailwind fixture rides in checks-tooling
+// instead of a job of its own, to keep those counts down.
 const browserShardLimit = { crossEngine: 6, chromiumOnly: 18 };
 const browserShardCap = {
   selected: { crossEngine: 2, chromiumOnly: 3 },
-  suite: { crossEngine: 1, chromiumOnly: 2 },
+  suite: { crossEngine: 2, chromiumOnly: 2 },
 };
 
 // The shard a test file belongs to: a hash of its path, so a file keeps its
@@ -2279,6 +2286,15 @@ function addScaleDocsBrowserCommand(add) {
   add(scaleBrowserGroup, ['--filter', '@muxui/scale', 'run', 'check:browser:docs']);
 }
 
+// The Tailwind consumer fixture installs its own dependencies, then checks (about a minute in
+// all). Taking a runner slot of its own is not worth that, so a plan that has the tooling check
+// runs it at the end of that group, after the tooling tests; a plan without one keeps `tailwind`.
+function addTailwindCommands(add, { withTooling }) {
+  const group = withTooling ? toolingChecksGroup : 'tailwind';
+  add(group, ['--dir', tailwindFixture, 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
+  add(group, ['--dir', tailwindFixture, 'run', 'check']);
+}
+
 function fullPlannedCommands(environment, testSources, packages) {
   const planned = [];
   const add = (group, args, options) => planned.push({ group, command: pnpmCommand(args, options) });
@@ -2321,8 +2337,7 @@ function fullPlannedCommands(environment, testSources, packages) {
     env: { ...storybookEnv, ...(environment.GITHUB_EVENT_NAME === 'push' ? { MUXUI_STORYBOOK_UI_PROOF: 'skip' } : {}) },
     unsetEnv: storybookSelectionKeys,
   });
-  add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
-  add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
+  addTailwindCommands(add, { withTooling: longSuites.includes(toolingPackage) });
   return planned;
 }
 
@@ -2444,10 +2459,7 @@ function plannedCommands(plan, {
       planned.at(-1).storyRun = { proof: shard.proof, families: shard.families };
     });
   }
-  if (plan.tailwind) {
-    add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
-    add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
-  }
+  if (plan.tailwind) addTailwindCommands(add, { withTooling: plan.packageChecks.includes(toolingPackage) });
   return planned;
 }
 
