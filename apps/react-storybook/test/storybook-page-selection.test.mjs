@@ -144,7 +144,7 @@ test('storybook scoped check runner includes only suites for the selected proof'
   assert.match(theme.args.join(' '), /all selected Storybook pages meet theme contrast in light and dark/u);
   assert.match(theme.args.join(' '), /Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity/u);
   assert.doesNotMatch(theme.args.join(' '), /selected Mux UI React Storybook pages are axe-clean/u);
-  assert.match(theme.args.join(' '), /selected Storybook pages paint only canonical Mux colours/u);
+  assert.doesNotMatch(theme.args.join(' '), /selected Storybook pages paint only canonical Mux colours/u);
   assert.doesNotMatch(theme.args.join(' '), /Browser Proof/u);
 
   const chrome = scopedStorybookCheckPlan(resolveStorybookPageSelection(env('chrome')));

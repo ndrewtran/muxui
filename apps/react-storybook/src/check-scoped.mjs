@@ -15,6 +15,9 @@ export function scopedStorybookCheckPlan(selection) {
 
   const files = [testFiles.selection];
   let testNamePattern;
+  // The a11y file's page tests also collect each page's canonical-colour paints during their one
+  // visit, so the story, component, and theme shards start one Storybook and one Chrome. The colour
+  // file adds only its pure unit test here, which needs no Storybook server.
   if (selection.proof === 'story' || selection.proof === 'component') {
     files.push(testFiles.a11y, testFiles.colours);
     const selectedPageTests = selection.pages.some(({ id }) => id === 'muxui-react-r1-2-number-field--sizing')
@@ -25,7 +28,6 @@ export function scopedStorybookCheckPlan(selection) {
       'selected Mux UI React Storybook pages are axe-clean in light and dark',
       ...selectedPageTests,
       'Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity',
-      'selected Storybook pages paint only canonical Mux colours in light and dark',
     ].join('|');
   } else if (selection.proof === 'theme') {
     files.push(testFiles.a11y);
@@ -34,7 +36,6 @@ export function scopedStorybookCheckPlan(selection) {
       'storybook page|storybook scoped check runner',
       'all selected Storybook pages meet theme contrast in light and dark',
       'Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity',
-      'selected Storybook pages paint only canonical Mux colours in light and dark',
     ].join('|');
   } else if (selection.proof === 'chrome') {
     files.push(testFiles.colours);

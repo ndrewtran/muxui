@@ -9,6 +9,7 @@ import axe from 'axe-core';
 import { chromium } from 'playwright-core';
 import test from 'node:test';
 import manifest from '../.storybook/generated/manifest.mjs';
+import { auditPagePaints, pageVisitViewport, paintCoverageKey } from './helpers/page-visit.mjs';
 import { assertNoPageFailures, recordPageFailure } from './storybook-audit-failures.mjs';
 import { selectedStorybookFamilies, storybookSelectionLabel } from './storybook-family-selection.mjs';
 import { resolveStorybookPageSelection, validateRuntimeStoryPages } from './storybook-page-selection.mjs';
@@ -1399,8 +1400,9 @@ async function runA11yWorker({
   }
 }
 
+// Each page visit also collects the canonical-colour paints, so the workers measure at the colour proof's viewport.
 async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, signal, onProgress, failures }) {
-  const context = await browser.newContext();
+  const context = await browser.newContext({ viewport: pageVisitViewport });
   const page = await context.newPage();
   page.setDefaultNavigationTimeout(storyTimeoutMs);
   page.setDefaultTimeout(storyTimeoutMs);
@@ -1431,6 +1433,8 @@ async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, s
           await waitForStory(page, scheme);
           await waitForDocumentAnimations(page);
           if (story.name === 'States') await waitForLifecycleReadiness(page);
+          // Paints are collected before any overlay opens or axe is injected, as the standalone colour proof did.
+          await auditPagePaints(page, { scheme, id: story.id, coverage, failures, signal });
           await page.addScriptTag({ content: axe.source });
 
           const interactionOpen = story.name === 'States' && INTERACTION_OPEN_LOCATORS[family];
@@ -1508,6 +1512,7 @@ async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, s
 function expectedSelectedPageCoverage(stories, schemes) {
   return schemes.flatMap((scheme) => stories.flatMap((story) => [
     `${scheme}:axe:${story.id}`,
+    paintCoverageKey(scheme, story.id),
     ...(story.exportName === 'BrowserProof' ? [`${scheme}:browser-proof:${story.id}`] : []),
     ...(story.exportName === 'Controlled' && ['PromptComposer', 'Message'].includes(storyFamily(story)) ? [`${scheme}:controlled-callbacks:${story.id}`] : []),
     ...(story.name === 'Disabled items keyboard navigation' ? [`${scheme}:autocomplete-keyboard:${story.id}`] : []),
@@ -1620,7 +1625,7 @@ test('selected Mux UI React Storybook pages are axe-clean in light and dark', {
       }
     }
     throwIfAborted(t.signal);
-    successMessage = `partial ${selection.proof} proof: ${selection.label} (${stories.length} pages, light+dark, ${workerTotal} worker${workerTotal === 1 ? '' : 's'}`;
+    successMessage = `partial ${selection.proof} proof: ${selection.label} (${stories.length} pages, light+dark, axe and canonical colours, ${workerTotal} worker${workerTotal === 1 ? '' : 's'}`;
   } finally {
     activeProof = 'cleanup';
     try {
@@ -1633,8 +1638,9 @@ test('selected Mux UI React Storybook pages are axe-clean in light and dark', {
   console.log(`[storybook-a11y] ${successMessage}, ${Math.round(performance.now() - startedAt)}ms)`);
 });
 
+// Each page visit also collects the canonical-colour paints, so the workers measure at the colour proof's viewport.
 async function runThemeContrastWorker({ browser, baseUrl, stories, schemes, signal, onProgress, failures }) {
-  const context = await browser.newContext();
+  const context = await browser.newContext({ viewport: pageVisitViewport });
   const page = await context.newPage();
   page.setDefaultNavigationTimeout(storyTimeoutMs);
   page.setDefaultTimeout(storyTimeoutMs);
@@ -1650,12 +1656,12 @@ async function runThemeContrastWorker({ browser, baseUrl, stories, schemes, sign
           await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
           await waitForStory(page, scheme);
           await waitForDocumentAnimations(page);
-          if (story.name === 'States') {
-            await waitForLifecycleReadiness(page);
-            if (INTERACTION_OPEN_LOCATORS[family]) {
-              await waitForInteractionOpen(page, family);
-              await waitForDocumentAnimations(page);
-            }
+          if (story.name === 'States') await waitForLifecycleReadiness(page);
+          // Paints are collected before any overlay opens or axe is injected, as the standalone colour proof did.
+          await auditPagePaints(page, { scheme, id: story.id, coverage, failures, signal });
+          if (story.name === 'States' && INTERACTION_OPEN_LOCATORS[family]) {
+            await waitForInteractionOpen(page, family);
+            await waitForDocumentAnimations(page);
           }
           await page.addScriptTag({ content: axe.source });
           const result = await runAxe(page, undefined, {
@@ -1760,10 +1766,13 @@ test('all selected Storybook pages meet theme contrast in light and dark', {
     }
     assertNoPageFailures('Storybook theme contrast audit', failures);
     const actualCoverage = workerResults.flatMap(({ value }) => value).sort();
-    const expectedCoverage = ['light', 'dark'].flatMap((scheme) => stories.map(({ id }) => `${scheme}:${id}:color-contrast`)).sort();
-    assert.deepEqual(actualCoverage, expectedCoverage, 'theme contrast coverage must include every selected consumer page and scheme');
+    const expectedCoverage = ['light', 'dark'].flatMap((scheme) => stories.flatMap(({ id }) => [
+      `${scheme}:${id}:color-contrast`,
+      paintCoverageKey(scheme, id),
+    ])).sort();
+    assert.deepEqual(actualCoverage, expectedCoverage, 'theme coverage must include contrast and canonical colours for every selected consumer page and scheme');
     throwIfAborted(t.signal);
-    successMessage = `partial theme proof: ${selection.label} (${stories.length} pages, both schemes, ${workerTotal} worker${workerTotal === 1 ? '' : 's'}`;
+    successMessage = `partial theme proof: ${selection.label} (${stories.length} pages, both schemes, contrast and canonical colours, ${workerTotal} worker${workerTotal === 1 ? '' : 's'}`;
   } finally {
     activeProof = 'cleanup';
     try {

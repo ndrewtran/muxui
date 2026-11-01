@@ -1,3 +1,5 @@
+// Component and Block page colours are collected during the axe visit (./helpers/page-visit.mjs).
+// This file keeps the colour audit's unit proofs and the manager, docs, and reference proofs.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -10,13 +12,10 @@ import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { convert, create as createStorybookTheme } from 'storybook/theming';
 import { FILE_COMPONENT_SEARCH_REQUEST, FILE_COMPONENT_SEARCH_RESPONSE } from 'storybook/internal/core-events';
-import { compilePureTokenGraph } from '@muxui/tokens/core';
-import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { collectStorybookPaints } from './helpers/color-audit.mjs';
+import { tokenGraphs as graphs } from './helpers/page-visit.mjs';
 import { fetchStorybookIndex } from './helpers/storybook-index.mjs';
-import { assertNoPageFailures, recordPageFailure } from './storybook-audit-failures.mjs';
 import { colourStateSignatures } from './storybook-colors-report.mjs';
-import { resolveStorybookPageSelection, validateRuntimeStoryPages } from './storybook-page-selection.mjs';
 import { AVATAR_LOADED_SRC } from '../src/storybook-factory.mjs';
 import { backgroundOptions, buildTheme, managerThemeCss, previewThemeCss } from '../.storybook/theme.mjs';
 import { projectMeasurePalette } from '../.storybook/measure-palette.mjs';
@@ -50,190 +49,12 @@ function installWhatsNewFixture() {
   };
 }
 const storybookNetworkFixture = `data:text/javascript,${encodeURIComponent(`(${installWhatsNewFixture})();`)}`;
-const graphs = Object.fromEntries(['light', 'dark'].map((colorScheme) => [
-  colorScheme, compilePureTokenGraph(defaultTheme, { modes: { colorScheme } }).tokens,
-]));
 
 function workerCount(variable) {
   const value = process.env[variable] ?? '2';
   assert.ok(value === '1' || value === '2', `${variable} must be 1 or 2, got ${value}`);
   return Number(value);
 }
-
-function pageColourAuditTimeout(selection) {
-  return Math.min(900000, Math.max(120000, 120000 + selection.pages.length * 1200));
-}
-
-function createColourAuditResources(signal) {
-  let browser;
-  let server;
-  let closed = false;
-  let closePromise;
-  const closeResources = () => {
-    closed = true;
-    closePromise ??= Promise.allSettled([
-      ...(browser ? [browser.close()] : []),
-      ...(server ? [server.stop()] : []),
-    ]).then((results) => {
-      const failure = results.find((result) => result.status === 'rejected');
-      if (failure?.status === 'rejected') throw failure.reason;
-    });
-    return closePromise;
-  };
-  const closeOnAbort = () => { void closeResources().catch(() => {}); };
-  signal.addEventListener('abort', closeOnAbort, { once: true });
-
-  return {
-    async trackBrowser(instance) {
-      browser = instance;
-      if (closed) await instance.close();
-    },
-    async trackServer(instance) {
-      server = instance;
-      if (closed) await instance.stop();
-    },
-    close() {
-      signal.removeEventListener('abort', closeOnAbort);
-      return closeResources();
-    },
-  };
-}
-
-test('selected Storybook pages paint only canonical Mux colours in light and dark', {
-  timeout: pageColourAuditTimeout(resolveStorybookPageSelection()),
-  skip: (() => {
-    const { proof, pages } = resolveStorybookPageSelection();
-    // The full audit lists only the Block pages here.
-    if (proof === 'full') return pages.length > 0 ? false : 'the catalog has no Block pages';
-    return ['story', 'component', 'theme'].includes(proof) ? false : `not part of ${proof} proof`;
-  })(),
-}, async (t) => {
-  const selection = resolveStorybookPageSelection();
-  assert.ok(selection.pages.length > 0, 'selected Storybook colour proof must include at least one page');
-  const resources = createColourAuditResources(t.signal);
-  const startedAt = performance.now();
-  let activeProof = 'browser discovery';
-  const reportAbort = () => {
-    t.diagnostic(`[storybook-colours] aborted after ${Math.round(performance.now() - startedAt)}ms during ${activeProof}`);
-  };
-  t.signal.addEventListener('abort', reportAbort, { once: true });
-  const coverage = [];
-  const failures = [];
-  let successMessage;
-  try {
-    t.signal.throwIfAborted();
-    const executablePath = await browserPath();
-    t.signal.throwIfAborted();
-    activeProof = 'launching Chrome';
-    const browser = await chromium.launch({ executablePath, headless: true });
-    await resources.trackBrowser(browser);
-    t.signal.throwIfAborted();
-    activeProof = 'Storybook startup';
-    const server = await startStorybook(t.signal);
-    await resources.trackServer(server);
-    t.signal.throwIfAborted();
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-    page.setDefaultTimeout(15000);
-    const index = await fetchStorybookIndex(`${server.url}/index.json`, { signal: t.signal });
-    t.signal.throwIfAborted();
-    const stories = validateRuntimeStoryPages(selection, index);
-    assert.equal(stories.length, selection.pages.length, 'runtime Storybook pages must exactly match the selected page IDs');
-
-    for (const scheme of ['light', 'dark']) {
-      for (const story of stories) {
-        t.signal.throwIfAborted();
-        activeProof = `${scheme} ${story.id} colour audit`;
-        try {
-          await page.goto(`${server.url}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`, {
-            waitUntil: 'domcontentloaded',
-          });
-          await page.waitForFunction((expectedScheme) => {
-            const root = document.querySelector('#storybook-root');
-            const visible = (element) => {
-              if (!element) return false;
-              const style = getComputedStyle(element);
-              return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-            };
-            return Boolean(root?.firstElementChild)
-              && Boolean(document.querySelector('.muxui-storybook-surface'))
-              && document.documentElement.getAttribute('data-muxui-color-scheme') === expectedScheme
-              && !visible(document.querySelector('.sb-errordisplay'))
-              && !visible(document.querySelector('.sb-preparing-story'));
-          }, scheme);
-          await page.evaluate(async () => {
-            document.documentElement.setAttribute('data-muxui-motion', 'reduced');
-            await document.fonts.ready;
-            await new Promise(requestAnimationFrame);
-            document.getAnimations().forEach((animation) => {
-              try {
-                if (animation.effect?.getTiming?.().iterations === Infinity) animation.cancel();
-                else animation.finish();
-              } catch {
-                animation.cancel();
-              }
-            });
-            await new Promise(requestAnimationFrame);
-          });
-          if (story.name === 'States') {
-            await page.waitForFunction(() => {
-              const status = document.querySelector(
-                '.muxui-storybook-lifecycle-showcase [data-muxui-storybook-lifecycle] .muxui-storybook-transition-status',
-              );
-              return !status || status.getAttribute('data-muxui-storybook-transition') === 'open';
-            });
-          }
-          const result = await page.evaluate(collectStorybookPaints, {
-            tokens: graphs[scheme],
-            scope: 'canvas',
-          });
-          if (result.nonToken.length > 0) {
-            const paints = result.nonToken;
-            const diagnostics = await page.evaluate((unexpected) => ({
-              scheme: document.documentElement.getAttribute('data-muxui-color-scheme'),
-              matches: unexpected.flatMap((paint) => [...document.querySelectorAll('*')]
-                .filter((element) => getComputedStyle(element).backgroundColor === paint.value)
-                .map((element) => ({
-                  tag: element.tagName,
-                  className: element.className,
-                  id: element.id,
-                  background: getComputedStyle(element).backgroundColor,
-                  transition: getComputedStyle(element).transition,
-                }))).slice(0, 12),
-              animations: document.getAnimations().map((animation) => ({
-                playState: animation.playState,
-                currentTime: animation.currentTime,
-                timing: animation.effect?.getTiming?.(),
-              })),
-            }), paints);
-            t.diagnostic(`${scheme}/${story.id} unexpected-paint-details=${JSON.stringify(diagnostics)}`);
-          }
-          assert.ok(result.elements > 0 && result.paintOccurrences > 0, `${scheme}/${story.id}: empty canvas colour audit`);
-          assert.deepEqual(result.problems, [], `${scheme}/${story.id}: colour audit could not resolve all paints: ${JSON.stringify(result.problems.slice(0, 6))}`);
-          assert.deepEqual(result.media, [], `${scheme}/${story.id}: image colours require explicit verification: ${JSON.stringify(result.media.slice(0, 6))}`);
-          assert.deepEqual(result.nonToken, [], `${scheme}/${story.id}: page painted colours outside canonical Mux tokens: ${JSON.stringify(result.nonToken.slice(0, 6))}`);
-          coverage.push(`${scheme}:${story.id}`);
-          t.diagnostic(`${scheme}/${story.id}: ${result.elements} visible elements, ${result.paintOccurrences} paint occurrences`);
-        } catch (error) {
-          recordPageFailure(failures, { scheme, id: story.id }, error, { signal: t.signal });
-        }
-      }
-    }
-
-    assertNoPageFailures('selected Storybook page colour audit', failures);
-    const expected = ['light', 'dark'].flatMap((scheme) => stories.map(({ id }) => `${scheme}:${id}`)).sort();
-    assert.deepEqual(coverage.sort(), expected, 'colour coverage must include every selected page in both schemes');
-    successMessage = `partial ${selection.proof} proof: ${selection.label}, ${coverage.length} page-scheme checks`;
-  } finally {
-    activeProof = 'cleanup';
-    try {
-      await resources.close();
-    } finally {
-      t.signal.removeEventListener('abort', reportAbort);
-    }
-  }
-  t.signal.throwIfAborted();
-  console.log(`[storybook-colours] ${successMessage}, ${Math.round(performance.now() - startedAt)}ms`);
-});
 
 async function browserPath() {
   for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN, process.env.CHROME_PATH,
