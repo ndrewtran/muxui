@@ -26,6 +26,7 @@ export function scopedStorybookCheckPlan(selection) {
     testNamePattern = [
       'storybook page|storybook scoped check runner',
       'selected Mux UI React Storybook pages are axe-clean in light and dark',
+      'page workers keep paint collection, axe, and the dedicated check independent',
       ...selectedPageTests,
       'Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity',
     ].join('|');
@@ -35,6 +36,7 @@ export function scopedStorybookCheckPlan(selection) {
     testNamePattern = [
       'storybook page|storybook scoped check runner',
       'all selected Storybook pages meet theme contrast in light and dark',
+      'page workers keep paint collection, axe, and the dedicated check independent',
       'Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity',
     ].join('|');
   } else if (selection.proof === 'chrome') {

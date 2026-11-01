@@ -134,6 +134,7 @@ test('storybook scoped check runner includes only suites for the selected proof'
   assert.match(story.args.join(' '), /storybook-a11y\.test\.mjs/u);
   assert.match(story.args.join(' '), /storybook-colors\.test\.mjs/u);
   assert.match(story.args.join(' '), /NumberField sizing story computes fit-content/u);
+  assert.match(story.args.join(' '), /page workers keep paint collection, axe, and the dedicated check independent/u);
   assert.match(story.args.join(' '), /Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity/u);
 
   const unrelatedPages = scopedStorybookCheckPlan(resolveStorybookPageSelection(env('component', 'Tree,TagSelect')));
@@ -145,6 +146,7 @@ test('storybook scoped check runner includes only suites for the selected proof'
   assert.match(theme.args.join(' '), /Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity/u);
   assert.doesNotMatch(theme.args.join(' '), /selected Mux UI React Storybook pages are axe-clean/u);
   assert.doesNotMatch(theme.args.join(' '), /selected Storybook pages paint only canonical Mux colours/u);
+  assert.match(theme.args.join(' '), /page workers keep paint collection, axe, and the dedicated check independent/u);
   assert.doesNotMatch(theme.args.join(' '), /Browser Proof/u);
 
   const chrome = scopedStorybookCheckPlan(resolveStorybookPageSelection(env('chrome')));
