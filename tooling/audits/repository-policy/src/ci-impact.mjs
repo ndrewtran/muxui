@@ -2076,27 +2076,31 @@ export function shardStoryRun(storyRun, pageIndex = [], budget = storyShardPageB
 const crossEngineEnvironment = { MUXUI_BROWSER_ENGINES: 'chromium,firefox,webkit' };
 
 // Browser suites run as parallel CI groups: one per engine for the React tests
-// that call browserEngines() plus, in the Chromium group, Scale. The React tests
-// that are not engine-aware only exist in Chromium, so they get their own group
-// to keep the Chromium job from being the long pole. A long list splits further
-// into numbered shards (browser-chromium-only-1, ...).
+// that call browserEngines(), one for the React tests that are not engine-aware
+// (they only exist in Chromium), and one for Scale's browser checks. A long list
+// splits further into numbered shards (browser-chromium-only-1, ...).
 const browserGroup = (engine) => `browser-${engine}`;
 const chromiumGroup = browserGroup('chromium');
 const chromiumOnlyGroup = 'browser-chromium-only';
+// Scale's browser checks (the second one builds the docs site and runs ~10 minutes)
+// have a fixed group of their own in every plan. The id never depends on the plan's
+// browser layout, so reuse routes a docs or Scale change to the same group
+// whichever plan planned the earlier run, and the slowest check overlaps the rest.
+const scaleBrowserGroup = 'browser-scale';
 
 // A browser list runs as ceil(files / limit) shards, at most the plan's cap. A
-// cross-engine file takes about 35 s per engine and a Chromium-only file about
-// 13 s, so a full shard of 6 or 18 files runs about 4 minutes. A pull request
-// that selects test files splits a long cross-engine list in two. A plan that
-// runs the whole browser suite (main, the weekly run, and a pull request that
-// needs the full React proof) keeps those lists whole: main's matrix stays near
-// 14 jobs so that a main push and a pull request fit in the 20 concurrent jobs
-// of GitHub's Free plan, and the Chromium-only list is its long pole, so that
-// list takes the shards.
+// cross-engine file takes about 30 s per engine and a Chromium-only file about
+// 15 s. A pull request that selects test files splits a long cross-engine list in
+// two. A plan that runs the whole browser suite (main, the weekly run, and a pull
+// request that needs the full React proof) keeps that list whole, so each engine's
+// job runs about 16 minutes and is the long pole. The Chromium-only list (about 63
+// files) takes two shards of about 8 minutes beside Scale's group, which adds one
+// job, so main plans 13 groups and a full-proof pull request 19 run jobs, within
+// the 20 concurrent jobs of GitHub's Free plan.
 const browserShardLimit = { crossEngine: 6, chromiumOnly: 18 };
 const browserShardCap = {
   selected: { crossEngine: 2, chromiumOnly: 3 },
-  suite: { crossEngine: 1, chromiumOnly: 3 },
+  suite: { crossEngine: 1, chromiumOnly: 2 },
 };
 
 // The shard a test file belongs to: a hash of its path, so a file keeps its
@@ -2253,14 +2257,6 @@ function browserLayout(runs, testSources, caps) {
   };
 }
 
-// The group for Scale's browser checks, one of which builds the docs site (~95 s).
-// Pull requests keep them in the browser-chromium family, whatever else the plan
-// runs: reuse routes a docs or Scale change to that family, so an earlier and a
-// later plan must host them in the same one. Main never reuses, so the full plan
-// puts them in the last Chromium-only shard, which has the slack and keeps the
-// cross-engine groups, its long pole, clear of them.
-const scaleHost = (layout, full) => (full ? layout.chromiumOnly.at(-1)?.id : undefined) ?? layout.chromium[0]?.id ?? chromiumGroup;
-
 function addBrowserLayout(add, layout) {
   for (const { id, runs, env } of [...layout.chromium, ...layout.chromiumOnly, ...layout.firefox, ...layout.webkit]) {
     const addTests = (args) => add(id, ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', ...args], { env });
@@ -2279,8 +2275,8 @@ function storybookTestFiles() {
 
 // Scale's `check:browser:docs` builds `apps/docs/dist` and then serves it, so a
 // failed docs build fails only this command, never later checks.
-function addScaleDocsBrowserCommand(add, group) {
-  add(group, ['--filter', '@muxui/scale', 'run', 'check:browser:docs']);
+function addScaleDocsBrowserCommand(add) {
+  add(scaleBrowserGroup, ['--filter', '@muxui/scale', 'run', 'check:browser:docs']);
 }
 
 function fullPlannedCommands(environment, testSources, packages) {
@@ -2315,8 +2311,8 @@ function fullPlannedCommands(environment, testSources, packages) {
   add('react', ['--filter', '@muxui/react', 'run', 'check']);
   const browser = browserLayout(reactBrowserSuiteRuns(packages), testSources, browserShardCap.suite);
   addBrowserLayout(add, browser);
-  add(scaleHost(browser, true), ['--filter', '@muxui/scale', 'run', 'check:browser']);
-  addScaleDocsBrowserCommand(add, scaleHost(browser, true));
+  add(scaleBrowserGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
+  addScaleDocsBrowserCommand(add);
   add('storybook-a11y', [...nodeTest, a11yFile], { env: storybookEnv, unsetEnv: storybookSelectionKeys });
   add('storybook', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
   // Storybook's own-interface colour proofs are not release proof (Decision 0030): a main push skips
@@ -2362,7 +2358,6 @@ function plannedCommands(plan, {
   const browser = browserLayout(
     pullRequestBrowserRuns(plan, packages), testSources, plan.reactPackageFull ? browserShardCap.suite : browserShardCap.selected,
   );
-  const scaleGroup = scaleHost(browser, false);
 
   // Every group repeats this generation in its own fresh runner. Only skip
   // what metadata preparation already generated earlier in this same process:
@@ -2389,7 +2384,7 @@ function plannedCommands(plan, {
   if (plan.docs) add(checksGroup, ['--filter', '@muxui/docs', 'run', 'check']);
   if (plan.scale) {
     add(checksGroup, ['--filter', '@muxui/scale', 'run', 'check']);
-    add(scaleGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
+    add(scaleBrowserGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
   }
   if (plan.reactTheme) {
     add('react', ['--filter', '@muxui/react', 'run', 'generate:check']);
@@ -2417,7 +2412,7 @@ function plannedCommands(plan, {
       unsetEnv: ['MUXUI_COMPONENT_BROWSER_PROOF_FAMILIES'],
     });
   }
-  if (plan.docs || plan.scale) addScaleDocsBrowserCommand(add, scaleGroup);
+  if (plan.docs || plan.scale) addScaleDocsBrowserCommand(add);
   for (const testFile of plan.reactTestFiles.filter((file) => !isBrowserTestFile(file))) {
     add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', testFile], {
       env: runsInEveryEngine(testFile, testSources) ? crossEngineEnvironment : {},

@@ -468,7 +468,7 @@ test('foundation guide changes validate the catalog, tooling dense goldens, and 
   assert.deepEqual(result.storyRuns, []);
   assert.equal(result.reasons[0], `${path} is a canonical guide; validate the catalog, its dense goldens, and the docs that render it`);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks-tooling', 'checks', 'browser-scale']);
   // A catalog change reaches policy through tooling, so the evidence tests run too.
   assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/repository-policy', 'run', 'check'],
@@ -892,7 +892,7 @@ test('an evidence input alone plans a policy group that runs only the evidence t
   assert.equal(result.policy, false);
   assert.equal(result.evidence, true);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-chromium']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-scale']);
   assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [evidenceCommand]);
   // The group generates what policy's closure needs, like any policy group.
   const generation = groups[0].commands[0].args.filter((_, index, args) => args[index - 1] === '--filter');
@@ -941,8 +941,9 @@ test('Scale and docs changes run the Scale docs browser test as one ordinary che
   assert.match(scripts['check:browser:docs'], /^pnpm --filter @muxui\/docs build && /u);
   for (const path of ['apps/scale/src/App.jsx', 'apps/scale/test/browser/docs-theme.test.mjs', 'apps/docs/src/pages/scale.astro']) {
     const groups = executionGroups(await plan([path]), { packages, environment: {}, pageIndex });
-    const browser = groups.find(({ id }) => id === 'browser-chromium');
+    const browser = groups.find(({ id }) => id === 'browser-scale');
     assert.ok(browser, path);
+    assert.equal(browser.kind, 'browser', path);
     const command = browser.commands.find(({ args }) => args.includes('check:browser:docs'));
     assert.deepEqual(command?.args, ['--filter', '@muxui/scale', 'run', 'check:browser:docs'], path);
     assert.notEqual(command.prerequisite, true, path);
@@ -1753,7 +1754,7 @@ test('scoped plans split into independent groups that each repeat the generation
   // run whole (with the browser checks) while React and Storybook keep the Tree
   // family scope. The family's browser test runs in the browser group, not the component check.
   // The catalog compiles React's derived APIs (Decision 0031), so it runs its own check.
-  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-chromium', 'react', 'browser-chromium-only', 'storybook-component']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-scale', 'react', 'browser-chromium-only', 'storybook-component']);
   const generation = executionCommands(result, { packages })[0];
   assert.equal(generation.prerequisite, true);
   for (const group of groups) assert.deepEqual(group.commands[0], generation, `${group.id} starts with generation`);
@@ -1778,12 +1779,12 @@ test('scoped plans split into independent groups that each repeat the generation
   assert.deepEqual(groups[4].commands.slice(1).map(({ args }) => args.slice(-1)), [['test/browser/tree-toggle-browser.test.mjs']]);
   assert.equal(groups[5].commands.at(-1).env.MUXUI_STORYBOOK_FAMILIES, 'Tree');
   assert.deepEqual(groupMatrix(groups).map(({ id, kind }) => [id, kind]), [
-    ['checks-policy', 'checks'], ['checks', 'checks'], ['browser-chromium', 'browser'], ['react', 'react'], ['browser-chromium-only', 'browser'], ['storybook-component', 'storybook'],
+    ['checks-policy', 'checks'], ['checks', 'checks'], ['browser-scale', 'browser'], ['react', 'react'], ['browser-chromium-only', 'browser'], ['storybook-component', 'storybook'],
   ]);
 
   // Tokens reach policy through tooling and the workspace links, so its evidence tests run as well.
   const tokens = executionGroups(await plan(['catalog/tokens/default-theme.json']), { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(tokens), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium', 'react', 'storybook-theme', 'storybook-chrome', 'tailwind']);
+  assert.deepEqual(groupIds(tokens), ['checks-policy', 'checks-tooling', 'checks', 'browser-scale', 'react', 'storybook-theme', 'storybook-chrome', 'tailwind']);
   assert.deepEqual(tokens.at(-1).commands.slice(1).map(({ prerequisite }) => prerequisite === true), [true, false]);
 });
 
@@ -1813,8 +1814,8 @@ test('groups that install browser system libraries get a setup allowance outside
   const limits = (groups) => groupMatrix(groups).map(({ id, timeoutMinutes, jobTimeoutMinutes }) => [id, timeoutMinutes, jobTimeoutMinutes]);
   assert.deepEqual(limits(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} })), [
     ['checks-policy', 30, 30], ['checks-tooling', 30, 30], ['checks', 30, 30], ['react', 30, 30],
-    ['browser-chromium', 30, 30], ['browser-chromium-only-1', 30, 30], ['browser-chromium-only-2', 30, 30], ['browser-chromium-only-3', 30, 30],
-    ['browser-firefox', 30, 60], ['browser-webkit', 30, 60],
+    ['browser-chromium', 30, 30], ['browser-chromium-only-1', 30, 30], ['browser-chromium-only-2', 30, 30],
+    ['browser-firefox', 30, 60], ['browser-webkit', 30, 60], ['browser-scale', 30, 30],
     ['storybook-a11y', 30, 30], ['storybook', 30, 30], ['tailwind', 15, 15],
   ]);
 
@@ -1983,31 +1984,32 @@ test('the full plan runs the browser checks as parallel groups, each React test 
   assert.ok(crossEngine.includes('test/browser/autocomplete-dismissal.test.mjs'));
   assert.ok(chromiumOnly.includes('test/browser/dialog-motion.test.mjs'), 'engine-agnostic tests are Chromium-only');
 
-  // The Chromium-only list is main's long pole, so it splits into three stable shards; the
-  // cross-engine lists stay whole to keep main's matrix near 14 jobs.
-  const shards = Array.from({ length: 3 }, (_, index) => chromiumOnly.filter((file) => shardOf(file, 3) === index));
+  // The Chromium-only list splits into two stable shards; the cross-engine lists stay whole.
+  // Scale's browser checks get a group of their own, which keeps main's matrix at 13 groups.
+  const shards = Array.from({ length: 2 }, (_, index) => chromiumOnly.filter((file) => shardOf(file, 2) === index));
   assert.ok(shards.every((files) => files.length > 0), 'each Chromium-only shard has files');
 
   const plan = fullWorkspacePlan('test');
   const groups = browserGroups(executionGroups(plan, { packages, environment: {} }));
   assert.deepEqual(groups.map(({ id, browserEngines, timeoutMinutes }) => [id, browserEngines, timeoutMinutes]), [
     ['browser-chromium', '', 30],
-    ['browser-chromium-only-1', '', 30], ['browser-chromium-only-2', '', 30], ['browser-chromium-only-3', '', 30],
+    ['browser-chromium-only-1', '', 30], ['browser-chromium-only-2', '', 30],
     ['browser-firefox', 'firefox', 30], ['browser-webkit', 'webkit', 30],
+    ['browser-scale', '', 30],
   ]);
   assert.ok(groupMatrix(groups).every(({ kind }) => kind === 'browser'));
 
   const exec = ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1'];
-  const [chromium, ...only] = groups.slice(0, 4);
-  const [firefox, webkit] = groups.slice(4);
+  const [chromium, ...only] = groups.slice(0, 3);
+  const [firefox, webkit, scaleGroup] = groups.slice(3);
   assert.deepEqual(ownCommands(chromium).map(({ args, env }) => [args, env]), [[[...exec, ...crossEngine], { MUXUI_BROWSER_ENGINES: 'chromium' }]]);
-  // Scale's browser checks, one of which builds the docs site, join the last shard, which has the most slack.
-  const scale = [['--filter', '@muxui/scale', 'run', 'check:browser'], ['--filter', '@muxui/scale', 'run', 'check:browser:docs']];
   only.forEach((group, index) => {
-    const own = ownCommands(group);
-    assert.deepEqual(own[0], { command: 'pnpm', args: [...exec, ...shards[index]], env: {}, unsetEnv: [] }, group.id);
-    assert.deepEqual(own.slice(1).map(({ args }) => args), index === only.length - 1 ? scale : [], group.id);
+    assert.deepEqual(ownCommands(group), [{ command: 'pnpm', args: [...exec, ...shards[index]], env: {}, unsetEnv: [] }], group.id);
   });
+  // Scale's browser checks, one of which builds the docs site, are a group of their own, whatever the browser layout.
+  assert.deepEqual(ownCommands(scaleGroup).map(({ args }) => args), [
+    ['--filter', '@muxui/scale', 'run', 'check:browser'], ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
+  ]);
   for (const [group, engine] of [[firefox, 'firefox'], [webkit, 'webkit']]) {
     assert.deepEqual(ownCommands(group).map(({ args, env }) => [args, env]), [
       [[...exec, ...crossEngine], { MUXUI_BROWSER_ENGINES: engine }],
@@ -2089,18 +2091,18 @@ test('scoped plans emit only the browser groups that have work', async () => {
   const react = await plan(['packages/react/src/generate.mjs']);
   assert.equal(react.reactPackageFull, true);
   assert.deepEqual(browserIds(react), [
-    'browser-chromium', ...shardIds('browser-chromium-only', 3), 'browser-firefox', 'browser-webkit',
+    'browser-scale', 'browser-chromium', ...shardIds('browser-chromium-only', 2), 'browser-firefox', 'browser-webkit',
   ]);
-  // Without a cross-engine test there is nothing for Firefox or WebKit; Scale's browser checks keep browser-chromium.
+  // Without a cross-engine test there is nothing for Firefox or WebKit; Scale's browser checks keep browser-scale.
   const none = browserIds(react, { testSources: fixedBrowserSources('export {};') });
-  assert.deepEqual(none, ['browser-chromium', ...shardIds('browser-chromium-only', 3)]);
+  assert.deepEqual(none, ['browser-scale', ...shardIds('browser-chromium-only', 2)]);
   // Without a Chromium-only test there is no Chromium-only group.
   const all = browserIds(react, { testSources: fixedBrowserSources(optIn) });
-  assert.deepEqual(all, ['browser-chromium', 'browser-firefox', 'browser-webkit']);
+  assert.deepEqual(all, ['browser-scale', 'browser-chromium', 'browser-firefox', 'browser-webkit']);
 
   // Docs and Scale browser checks are Chromium-only and need no React browser group.
-  assert.deepEqual(browserIds(await plan(['apps/docs/src/content/docs/foundations/index.mdx'])), ['browser-chromium']);
-  assert.deepEqual(browserIds(await plan(['apps/scale/test/browser/theme-builder.test.mjs'])), ['browser-chromium']);
+  assert.deepEqual(browserIds(await plan(['apps/docs/src/content/docs/foundations/index.mdx'])), ['browser-scale']);
+  assert.deepEqual(browserIds(await plan(['apps/scale/test/browser/theme-builder.test.mjs'])), ['browser-scale']);
 
   // A changed cross-engine test plans one group per engine and nothing in the React group.
   const dismissal = await plan(['packages/react/test/browser/autocomplete-dismissal.test.mjs']);
@@ -2346,7 +2348,7 @@ test('an Autocomplete runtime change runs its browser test in every engine, in t
     `chromium ${dismissalTest}`, `firefox ${dismissalTest}`, `webkit ${dismissalTest}`,
   ]);
   assert.deepEqual(browserGroups(groups).map(({ id, browserEngines }) => [id, browserEngines]), [
-    ['browser-chromium', ''], ['browser-firefox', 'firefox'], ['browser-webkit', 'webkit'],
+    ['browser-scale', ''], ['browser-chromium', ''], ['browser-firefox', 'firefox'], ['browser-webkit', 'webkit'],
   ]);
 });
 
@@ -2366,7 +2368,7 @@ test('a React-test-only group generates the React closure it imports in its own 
 test('story page groups generate Storybook metadata unless this process already prepared it', async () => {
   const result = await plan([sizingExamplePath]);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium', 'react', 'storybook-story']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks-tooling', 'checks', 'browser-scale', 'react', 'storybook-story']);
   for (const group of groups) {
     assert.equal(group.commands[0].prerequisite, true);
     assert.ok(generationFilters(group.commands[0]).includes('@muxui/react-storybook'), `${group.id} generates Storybook`);
@@ -2528,7 +2530,7 @@ test('the full plan splits check:all into independently runnable groups', () => 
   });
   assert.deepEqual(groupIds(groups), [
     'checks-policy', 'checks-tooling', 'checks', 'react', 'browser-chromium', 'browser-chromium-only-1', 'browser-chromium-only-2',
-    'browser-chromium-only-3', 'browser-firefox', 'browser-webkit', 'storybook-a11y', 'storybook', 'tailwind',
+    'browser-firefox', 'browser-webkit', 'browser-scale', 'storybook-a11y', 'storybook', 'tailwind',
   ]);
   for (const group of groups) {
     assert.deepEqual(group.commands[0].args, ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'generate']);
@@ -2554,12 +2556,12 @@ test('the full plan splits check:all into independently runnable groups', () => 
   }
   assert.deepEqual(byId.react, ['--filter @muxui/react run check']);
   const reactBrowser = '--filter @muxui/react exec node --test --test-concurrency=1 test/browser/';
-  for (const id of ['browser-chromium', 'browser-chromium-only-1', 'browser-chromium-only-2', 'browser-chromium-only-3', 'browser-firefox', 'browser-webkit']) {
+  for (const id of ['browser-chromium', 'browser-chromium-only-1', 'browser-chromium-only-2', 'browser-firefox', 'browser-webkit']) {
     assert.ok(byId[id][0].startsWith(reactBrowser), id);
-    assert.equal(byId[id].length, id === 'browser-chromium-only-3' ? 3 : 1, id);
+    assert.equal(byId[id].length, 1, id);
   }
-  // Scale's browser checks, one of which builds the docs site, ride in the last Chromium-only shard, away from the cross-engine groups.
-  assert.deepEqual(byId['browser-chromium-only-3'].slice(1), ['--filter @muxui/scale run check:browser', '--filter @muxui/scale run check:browser:docs']);
+  // Scale's browser checks, one of which builds the docs site, have a group of their own.
+  assert.deepEqual(byId['browser-scale'], ['--filter @muxui/scale run check:browser', '--filter @muxui/scale run check:browser:docs']);
   assert.ok(byId['storybook-a11y'][0].endsWith('test/storybook-a11y.test.mjs'));
   assert.ok(!byId.storybook.at(-1).includes('storybook-a11y'));
   assert.ok(byId.storybook.at(-1).includes('test/storybook-colors.test.mjs'));
@@ -2680,7 +2682,7 @@ test('group signatures are stable under key order and change with any command de
   ]) assert.notEqual(groupSignature([changed]), signature);
 });
 
-test('a docs change after a full React proof reruns whichever group hosts the Scale docs check', async () => {
+test('a docs change after a full React proof reruns browser-scale, the one group that hosts the Scale docs check', async () => {
   const docsFile = 'apps/docs/src/theme-prepaint-entry.mjs';
   const scaleDocs = 'check:browser:docs';
   // Workspace links as in the repository: the Scale docs check builds the docs site inside its script.
@@ -2692,10 +2694,10 @@ test('a docs change after a full React proof reruns whichever group hosts the Sc
     id: group.id, kind: group.kind, signature: groupSignature(group.commands), packageDirectories: groupPackageDirectories(ownCommands(group), workspace),
   });
 
-  // Before the fix a docs-only follow-up routed to browser-chromium while the earlier run hosted the check elsewhere.
+  // A docs-only follow-up routes to the group the earlier run hosted the check in, whatever that run's browser layout.
   const later = await plan([docsFile]);
   const laterGroups = executionGroups(later, options);
-  assert.ok(laterGroups.some(({ id }) => id === 'browser-chromium'), 'a docs change plans the docs check in browser-chromium');
+  assert.equal(host(laterGroups).id, 'browser-scale', 'a docs change plans the docs check in browser-scale');
   const delta = { changedPaths: [docsFile], groupIds: groupIds(laterGroups), storyRuns: [], storyTooling: false };
 
   // The earlier run: the full React proof, a pull request plan, and the full plan that main runs.
@@ -2713,13 +2715,18 @@ test('a docs change after a full React proof reruns whichever group hosts the Sc
     const decisions = await decide([passed], delta, groups.map(forReuse));
     assert.equal(decisions.find(({ id }) => id === hosting.id).reusedFrom, '', `${label}: ${hosting.id} reruns`);
   }
-  // A pull request plan keeps the check in the browser-chromium family, the family a docs change routes to.
-  assert.equal(groupFamily(host(earlier['a full React proof']).id), 'browser-chromium');
+  // Every plan hosts the check in browser-scale: full, a selected test, and sharded lists.
+  for (const groups of Object.values(earlier)) assert.equal(host(groups).id, 'browser-scale');
   const selected = await plannedWith(['test/browser/sidebar.test.mjs'], { docs: true });
-  assert.equal(groupFamily(host(executionGroups(selected, options)).id), 'browser-chromium');
+  assert.equal(host(executionGroups(selected, options)).id, 'browser-scale');
   const sharded = syntheticBrowserTests(12, 19);
   const wide = executionGroups(await plannedWith(sharded.files, { docs: true }), { ...options, testSources: sharded.testSources });
-  assert.equal(groupFamily(host(wide).id), 'browser-chromium');
+  assert.equal(host(wide).id, 'browser-scale');
+  // Scale's group is not a shard of a React browser group, so a React browser change never reruns it by family.
+  const group = { id: 'browser-scale', kind: 'browser', packageDirectories: ['apps/docs', 'apps/scale'] };
+  const routed = (ids) => ({ changedPaths: ['packages/other/index.mjs'], groupIds: ids, storyRuns: [], storyTooling: false });
+  assert.equal(affectedReason(group, routed(['browser-chromium-only-1', 'browser-chromium-2'])), null);
+  assert.match(affectedReason(group, routed(['browser-scale'])), /route to browser-scale/u);
 });
 
 test('a package script that builds another package makes that package an input of the group', () => {
@@ -2966,16 +2973,16 @@ test('checks-policy and checks-tooling are reused and rerun independently of the
   const signedGroups = async (paths, options = {}) => executionGroups(await plan(paths, options), { packages, environment: {}, pageIndex })
     .map(({ id, kind, commands }) => ({ id, kind, signature: groupSignature(commands), packageDirectories: groupPackageDirectories(commands, packages) }));
   const groups = await signedGroups(['catalog/guides/foundations-component-tokens.md']);
-  assert.deepEqual(groups.map(({ id }) => id), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium']);
+  assert.deepEqual(groups.map(({ id }) => id), ['checks-policy', 'checks-tooling', 'checks', 'browser-scale']);
   const passed = earlierRun(3, Object.fromEntries(groups.map(({ id }) => [id, 'success'])), { groups });
   const decideAll = (delta, earlier = [passed], current = groups) => decide(earlier, delta, current);
   const reused = (decisions) => Object.fromEntries(decisions.map(({ id, reusedFrom }) => [id, reusedFrom !== '']));
 
-  assert.deepEqual(reused(await decideAll(noDelta)), { 'checks-policy': true, 'checks-tooling': true, checks: true, 'browser-chromium': true });
+  assert.deepEqual(reused(await decideAll(noDelta)), { 'checks-policy': true, 'checks-tooling': true, checks: true, 'browser-scale': true });
   // A follow-up that routes only to `checks` leaves the two long suites reused.
   const docsOnly = { changedPaths: ['apps/docs/src/index.md'], groupIds: ['checks'], storyRuns: [], storyTooling: false };
   const afterDocs = await decideAll(docsOnly);
-  assert.deepEqual(reused(afterDocs), { 'checks-policy': true, 'checks-tooling': true, checks: false, 'browser-chromium': true });
+  assert.deepEqual(reused(afterDocs), { 'checks-policy': true, 'checks-tooling': true, checks: false, 'browser-scale': true });
   assert.match(afterDocs.find(({ id }) => id === 'checks').reason, /affected since .*: changes (?:touch apps\/docs|route to checks)/u);
   // Each group reruns for its own id, never for a sibling's.
   for (const [id, others] of [['checks-tooling', ['checks-policy', 'checks']], ['checks-policy', ['checks-tooling', 'checks']]]) {
@@ -3192,7 +3199,7 @@ test('deltaImpact diffs trees directly and maps story IDs to families in a real 
     assert.equal(result.status, 0, result.stderr);
     const delta = JSON.parse(result.stdout.trim().split('\n').at(-1));
     assert.deepEqual(delta.changedPaths, ['apps/docs/guide.md', 'apps/docs/handbook.md', 'apps/scale/src/app.mjs', example]);
-    assert.deepEqual(delta.groupIds, ['checks-tooling', 'checks', 'browser-chromium', 'react', 'storybook-story']);
+    assert.deepEqual(delta.groupIds, ['checks-tooling', 'checks', 'browser-scale', 'react', 'storybook-story']);
     assert.deepEqual(delta.storyRuns, [{ proof: 'story', families: ['NumberField'] }]);
   } finally {
     rmSync(root, { recursive: true, force: true });
