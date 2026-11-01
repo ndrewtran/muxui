@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { canonicalJson, parseJsonStrict } from '@muxui/schema';
 import { generatedText } from '../../../tooling/audits/repository-policy/src/policy.mjs';
 import { compileCatalog } from './compiler.mjs';
-import { syncSourceRecords } from './completeness.mjs';
+import { synchronizedSourceManifest } from './completeness.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const source = 'packages/catalog/catalog-sources.json';
@@ -16,20 +16,17 @@ const repositoryPolicy = parseJsonStrict(await readFile(
 ));
 const checking = process.argv.includes('--check');
 // The manifest lists exactly the canonical records on disk; only its settings
-// are authored. The compiler reads the file, so it is written before compiling.
+// are authored. The compiler takes the synchronized manifest directly, so it
+// never depends on the file having been written first.
 const sourcePath = join(repositoryRoot, source);
-const listedManifest = parseJsonStrict(await readFile(sourcePath, 'utf8'));
+const syncedManifest = await synchronizedSourceManifest(repositoryRoot);
 const manifestOutput = {
   path: sourcePath,
-  expected: `${JSON.stringify({
-    ...listedManifest,
-    records: await syncSourceRecords(repositoryRoot, listedManifest.records),
-  }, null, 2)}\n`,
+  expected: `${JSON.stringify(syncedManifest, null, 2)}\n`,
   label: source,
   from: 'catalog/',
 };
-if (!checking) await writeFile(sourcePath, manifestOutput.expected);
-const { bundle, bytes } = await compileCatalog({ repositoryRoot, sourceManifestPath: source });
+const { bundle, bytes } = await compileCatalog({ repositoryRoot, sourceManifest: syncedManifest });
 const tokenArtifact = bundle.artifacts.find(({ kind }) => kind === 'token');
 if (!tokenArtifact) throw new Error('CATALOG_TOKEN_CONTRACT_MISSING: expected one canonical token source');
 if (packageManifest.version !== bundle.catalogVersion) {
