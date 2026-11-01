@@ -1,0 +1,14 @@
+{
+  "row": "A sentence added under an existing guide heading (no section was added)",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/records/muxui:guide:button-usage/source",
+      "value": "# Button usage\n\n## When to use\n\nUse Button for an immediate action.\n\n## Accessibility\n\nGive it an accessible name.\n\nLabel an icon-only Button.\n"
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "publish": ["@muxui/catalog"]
+  }
+}

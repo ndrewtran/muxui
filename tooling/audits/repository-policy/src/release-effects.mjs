@@ -3,11 +3,13 @@
 // table; this module applies it and reuses the authoring semantic diff (component, pattern, and example records) and
 // `schema-evolution.json` (schema documents) rather than classifying changes a second way.
 //
-// Governing principle (root decision): under-classifying a change is a defect, and over-classifying is safe. When no
-// precise rule covers a change it is `major` for the units it can affect, and `reasons` says why: a schema change inside
-// a logical combinator (polarity is not tracked), a token field outside the contract and data fields, a capability
-// edit, a platform-safety contract change, a binding spec revision no record change explains, and a prior record the
-// current schema rejects (Decision 0016: no old-format reader).
+// Governing principle (root decision): under-classifying a change is a defect, and over-classifying is safe. The precise
+// rules are few: the authoring semantic diff's field-ownership effects for component, pattern, and example records, a new
+// artifact (minor), an editorial-only record field (patch), a token value-only edit (patch), a schema annotation (patch)
+// or optional property (minor), and a renderer change confined to its implementation (patch). Every other change is
+// `major` for the units it can affect, and `reasons` says why: a schema edit outside those, a token field outside the
+// contract and data fields, a guide's wording, a capability edit, a platform-safety contract change, a binding spec
+// revision no record change explains, and a prior record the current schema rejects (Decision 0016: no old-format reader).
 //
 // Units: the catalog (its package version is `catalogVersion`), each renderer package, and the schema, query API, and
 // token contract versions. The schema and tooling packages are not units (Decision 0032 item 7): they publish when the
@@ -114,51 +116,39 @@ export function compareVersions(left, right) {
 // Schema documents
 
 const ANNOTATIONS = new Set(['description', 'title', '$comment', 'examples', 'x-muxui-authoring']);
-const LOWER_BOUNDS = ['minimum', 'exclusiveMinimum', 'minLength', 'minItems', 'minProperties'];
-const UPPER_BOUNDS = ['maximum', 'exclusiveMaximum', 'maxLength', 'maxItems', 'maxProperties'];
-/** Inside these the polarity of a constraint is not tracked (`not` inverts it), so any change in them is major. */
+/** Inside these the polarity of a constraint is not tracked (`not` inverts it); a schema they reach by `$ref` is judged the same. */
 const COMBINATORS = new Set(['not', 'anyOf', 'oneOf', 'allOf', 'if', 'then', 'else']);
-const isMapKey = (key) => ['properties', '$defs', 'definitions', 'patternProperties'].includes(key) || key.startsWith('x-muxui-');
 
 /**
- * The `schema-evolution.json` change types between two versions of a JSON Schema node. A shape change this does not
- * recognise counts as a changed interpretation, so an unknown edit never classifies below `major`.
+ * The `schema-evolution.json` change types between two versions of a JSON Schema node. Only three edits have a precise
+ * rule: an annotation (patch) and an optional property added under `properties` (minor). A required property, a removed
+ * one, and any `required` change are major, an edit inside a property, `items`, or a definition recurses, and every other
+ * difference (`patternProperties`, `additionalProperties`, `propertyNames`, `dependentSchemas`, a constraint keyword, a
+ * combinator, a new or removed definition) counts as a changed interpretation, so an edit with no rule is never below major.
  */
 function schemaChangeTypes(before, after, out = []) {
   for (const key of union(before, after)) {
     const left = before[key];
     const right = after[key];
     if (same(left, right)) continue;
-    if (COMBINATORS.has(key)) {
-      out.push('changed-interpretation');
-    } else if (ANNOTATIONS.has(key)) {
+    if (ANNOTATIONS.has(key)) {
       out.push('description-or-annotation');
-    } else if (key === 'required') {
-      if ((right ?? []).some((name) => !(left ?? []).includes(name))) out.push('required-field');
-      if ((left ?? []).some((name) => !(right ?? []).includes(name))) out.push('relaxed-constraint');
-    } else if (key === 'enum') {
-      if (left === undefined) out.push('tightened-constraint');
-      else if (right === undefined) out.push('relaxed-constraint');
-      else {
-        if (right.some((value) => !left.some((other) => same(value, other)))) out.push('closed-enum-value');
-        if (left.some((value) => !right.some((other) => same(value, other)))) out.push('tightened-constraint');
-      }
-    } else if (LOWER_BOUNDS.includes(key) || UPPER_BOUNDS.includes(key)) {
-      const tighter = left === undefined || (right !== undefined && (LOWER_BOUNDS.includes(key) ? right > left : right < left));
-      out.push(tighter ? 'tightened-constraint' : 'relaxed-constraint');
-    } else if (isObject(left) && isObject(right) && isMapKey(key)) {
+    } else if (key === 'properties' && isObject(left) && isObject(right)) {
       for (const name of union(left, right)) {
-        if (left[name] === undefined) out.push(key === 'properties' && after.required?.includes(name) ? 'required-field' : 'optional-stable-field');
+        if (left[name] === undefined) out.push(after.required?.includes(name) ? 'required-field' : 'optional-stable-field');
         else if (right[name] === undefined) out.push('field-removal');
         else if (isObject(left[name]) && isObject(right[name])) schemaChangeTypes(left[name], right[name], out);
-        else if (!same(left[name], right[name])) out.push('changed-interpretation');
+        else out.push('changed-interpretation');
       }
-    } else if (isObject(left) && isObject(right)) {
+    } else if ((key === '$defs' || key === 'definitions') && isObject(left) && isObject(right)) {
+      for (const name of union(left, right)) {
+        if (isObject(left[name]) && isObject(right[name])) schemaChangeTypes(left[name], right[name], out);
+        else out.push('changed-interpretation');
+      }
+    } else if (key === 'items' && isObject(left) && isObject(right)) {
       schemaChangeTypes(left, right, out);
-    } else if (left === undefined) {
-      out.push(isMapKey(key) ? 'optional-stable-field' : 'tightened-constraint');
-    } else if (right === undefined) {
-      out.push(isMapKey(key) ? 'field-removal' : 'relaxed-constraint');
+    } else if (key === 'required') {
+      out.push('required-field');
     } else {
       out.push('changed-interpretation');
     }
@@ -263,6 +253,12 @@ function classifySchemaDocuments(prior, current) {
     effects[unit] = maxEffect(effects[unit], effect);
     if (effect !== 'none') reasons.push(`${unit} ${effect}: ${name} (${[...new Set(types)].join(', ')})`);
   }
+  // A source record schema is reachable from a response (a `get` returns records), so any schema change moves the query API
+  // at least as far.
+  if (rank(effects.schema) > rank(effects.queryApi)) {
+    effects.queryApi = effects.schema;
+    reasons.push(`queryApi ${effects.schema}: a source schema changed and responses carry its records`);
+  }
   return { ...effects, reasons, problems };
 }
 
@@ -272,19 +268,18 @@ function classifySchemaDocuments(prior, current) {
 /** The catalog source family of a token source. */
 const TOKEN_FAMILY = 'token-source';
 /**
- * The fields that carry a token's value in the default theme. Their edits are data (patch) and reach a binding through its
- * requirement-set closure. Every other entry field (name, layer, type, unit, meaning, alias, override policy, platform
- * restrictions, equivalence) is the contract, and an unknown field has no rule: all of them are major.
+ * The fields that carry a token's value in the default theme: editing only them is patch. Every other entry field (layer,
+ * type, unit, meaning, alias, override policy, platform restrictions, equivalence) is the contract, and an unknown one has
+ * no rule: all are major.
  */
 const TOKEN_DATA_FIELDS = new Set(['value', 'fluid', 'formula', 'relative', 'mix', 'modes']);
-/** The artifact's editorial fields, and the theme fields that are default-theme data; extensions are inert (Architecture). */
+/** The artifact's editorial fields; extensions are inert (Architecture "Schema evolution and extensions"). */
 const TOKEN_EDITORIAL_FIELDS = new Set(['name', 'summary', 'extensions']);
-const THEME_DATA_FIELDS = new Set(['fonts', 'typography', 'scale']);
 
 /**
- * The token contract effect and the effect on each token. A public token's name, layer, type, unit, meaning, alias, or
- * override policy is the contract: adding one is minor, and removing or changing one is major. A value edit and an
- * editorial field are patch. A mode axis follows the same rule by value. Any other field is major for want of a rule.
+ * The token contract effect. A token source that is new is minor, a removed one is major. Within one, a value-only edit
+ * and an editorial field are patch. Everything else is major for want of a rule: a token added or removed (a theme may
+ * have to assign it), a changed contract field, a mode axis, any theme field, lifecycle, or an unknown field.
  * `tokenContractVersion` itself is the answer, not an input.
  */
 function classifyTokens(prior, current) {
@@ -306,24 +301,17 @@ function classifyTokens(prior, current) {
       continue;
     }
     for (const name of union(before.tokens, after.tokens)) {
-      const left = before.tokens[name];
-      const right = after.tokens[name];
+      const [left, right] = [before.tokens[name], after.tokens[name]];
       if (same(left, right)) continue;
-      if (left === undefined) raise(name, 'minor');
-      else if (right === undefined) raise(name, 'major');
-      else {
-        const fields = union(left, right).filter((field) => !same(left[field], right[field]));
-        const contract = fields.filter((field) => !TOKEN_DATA_FIELDS.has(field));
+      if (left === undefined || right === undefined) {
+        raise(name, 'major', left === undefined ? 'added' : 'removed');
+      } else {
+        const contract = union(left, right).filter((field) => !same(left[field], right[field]) && !TOKEN_DATA_FIELDS.has(field));
         raise(name, contract.length > 0 ? 'major' : 'patch', contract.join(', '));
       }
     }
-    for (const axis of union(before.theme?.modeAxes, after.theme?.modeAxes)) {
-      const [left, right] = [before, after].map((record) => record.theme?.modeAxes?.[axis] ?? []);
-      if (left.some((mode) => !right.includes(mode))) raise(`${id}#mode.${axis}`, 'major');
-      else if (right.some((mode) => !left.includes(mode))) raise(`${id}#mode.${axis}`, 'minor');
-    }
     for (const field of union(before.theme, after.theme)) {
-      if (field !== 'modeAxes' && !same(before.theme?.[field], after.theme?.[field])) raise(`${id}#theme.${field}`, THEME_DATA_FIELDS.has(field) ? 'patch' : 'major', 'no rule for this theme field');
+      if (!same(before.theme?.[field], after.theme?.[field])) raise(`${id}#theme.${field}`, 'major', 'no rule for the theme');
     }
     for (const field of union(before, after)) {
       if (['tokens', 'theme', 'tokenContractVersion'].includes(field) || same(before[field], after[field])) continue;
@@ -336,40 +324,24 @@ function classifyTokens(prior, current) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Guides and capabilities
 
-/** Editorial fields stay patch; a list in `lists` is minor when it only grows; every other field has no rule (major). */
-const GUIDE_FIELDS = { editorial: new Set(['name', 'summary', 'keywords']), lists: ['platforms'] };
-const CAPABILITY_FIELDS = { editorial: new Set(['name', 'summary']), lists: [] };
-
-/** The Markdown headings of a guide outside code fences: its sections. */
-function sections(text = '') {
-  let fenced = false;
-  const found = new Set();
-  for (const line of text.split('\n')) {
-    if (/^\s*(?:```|~~~)/u.test(line)) fenced = !fenced;
-    else if (!fenced && /^#{1,6}\s+\S/u.test(line)) found.add(line.trim());
-  }
-  return found;
-}
+/** Editorial fields are patch (a guide's `source` is the path of its content); every other field has no rule and is major. */
+const GUIDE_FIELDS = new Set(['name', 'summary', 'keywords', 'source']);
+const CAPABILITY_FIELDS = new Set(['name', 'summary']);
+/** A guide's content with whitespace and punctuation removed: a change to what is left is a change to what it says. */
+const wording = (text = '') => text.replace(/[\s\p{P}]+/gu, '');
 
 /**
- * The effect of an edit to a guide or capability record: its fields by `rules`, and for a guide its content, where an
- * added section is minor, a removed one major, and any other edit patch.
+ * The effect of an edit to a guide or capability record: an editorial field is patch and any other field is major. A
+ * guide's content follows the same line: an edit of whitespace or punctuation alone is patch, and any other edit,
+ * whatever its headings, is major.
  */
-function classifyAuthoredRecord(before, after, rules) {
+function classifyAuthoredRecord(before, after, editorial) {
   const found = [];
   for (const field of union(before.record, after.record)) {
-    if (field === 'source') continue;
-    const [left, right] = [before.record[field], after.record[field]];
-    if (same(left, right)) continue;
-    if (rules.editorial.has(field)) found.push(['patch', field]);
-    else if (rules.lists.includes(field) && Array.isArray(left) && Array.isArray(right)) found.push([left.some((item) => !right.includes(item)) ? 'major' : 'minor', field]);
-    else found.push(['major', `${field} (no rule)`]);
+    if (!same(before.record[field], after.record[field])) found.push([editorial.has(field) ? 'patch' : 'major', editorial.has(field) ? field : `${field} (no rule)`]);
   }
   if (before.source !== after.source) {
-    const [was, now] = [sections(before.source), sections(after.source)];
-    if ([...was].some((heading) => !now.has(heading))) found.push(['major', 'a section removed']);
-    else if ([...now].some((heading) => !was.has(heading))) found.push(['minor', 'a section added']);
-    else found.push(['patch', 'content edited']);
+    found.push(wording(before.source) === wording(after.source) ? ['patch', 'whitespace or punctuation'] : ['major', 'content changed']);
   }
   return { effect: maxEffect(...found.map(([effect]) => effect)), because: found.map(([effect, what]) => `${what} (${effect})`).join(', ') };
 }
@@ -462,7 +434,9 @@ export function classifyReleaseEffects({ prior, current, packageNames, renderers
   // The catalog bundle embeds the schema, query API, token sources, and platform-safety contract, and renderer
   // stylesheets are generated from the tokens.
   raiseCatalog(maxEffect(documents.schema, documents.queryApi, tokens.effect), 'its bundle embeds the schema, query API, and token contract');
-  if (tokens.effect !== 'none') for (const bindingId of Object.keys(renderers)) raiseRenderer(bindingId, 'patch', 'its stylesheets are generated from the token sources');
+  // A renderer ships every token (its stylesheets are generated from the token sources), so a token change reaches it whether
+  // a recipe requires the token, falls back to it, or reaches it through an alias.
+  for (const bindingId of Object.keys(renderers)) raiseRenderer(bindingId, tokens.effect, 'its stylesheets are generated from the token sources');
   const safetyContractChanged = !same(prior.platformSafetyContract, current.platformSafetyContract);
   if (safetyContractChanged) raiseCatalog('major', 'the platform-safety contract changed (its digest is in every requirement set)');
 
@@ -551,7 +525,6 @@ export function classifyReleaseEffects({ prior, current, packageNames, renderers
       for (const bindingId of Object.keys(renderers)) {
         const ownChange = (path) => !path.startsWith('$/bindings/') || path === `$/bindings/${bindingId}` || path.startsWith(`$/bindings/${bindingId}/`);
         const fields = diff.changes.filter(({ path, revisionAxes }) => revisionAxes.includes('binding-spec') && ownChange(path)).map(({ effect }) => fieldEffect(effect));
-        const required = [before, after].flatMap(({ record }) => record.bindings?.[bindingId]?.tokenRecipe?.requirements ?? []).map(({ token }) => tokens.entries.get(token) ?? 'none');
         const causes = [];
         if (moved.includes(bindingId)) {
           if (fields.length > 0) causes.push(...fields);
@@ -566,7 +539,7 @@ export function classifyReleaseEffects({ prior, current, packageNames, renderers
             raiseCatalog('major', `${id}#${bindingId} binding spec revision changed for no classified reason`);
           }
         }
-        raiseRenderer(bindingId, maxEffect(...causes, ...required), `${id}#${bindingId} binding spec revision or required token`);
+        raiseRenderer(bindingId, maxEffect(...causes), `${id}#${bindingId} binding spec revision`);
       }
     });
   }
@@ -591,13 +564,21 @@ export function classifyReleaseEffects({ prior, current, packageNames, renderers
 // ---------------------------------------------------------------------------------------------------------------------
 // Checking proposed versions
 
+const PORTFOLIO_SCHEMA_PREFIX = 'muxui-portfolio-release-';
+
 /**
  * Problems (strings) in a prior portfolio manifest, judged against the publish set it must inventory in full: the
- * schema, the source commit, the digest and release id recomputed from its content, every package once and in order with
- * a valid version, valid contract versions, and recorded edges between members whose range admits the recorded version.
+ * schema (an unknown portfolio version is refused), the source commit, the digest and release id recomputed from its
+ * content, every package once and in order with a valid version, valid contract versions, and exactly the publish set's
+ * runtime edges, each with a range that admits the recorded version of its target.
  */
-export function findPriorManifestProblems(manifest, packageNames) {
-  if (manifest?.schema !== PORTFOLIO_SCHEMA) return [`it is not a ${PORTFOLIO_SCHEMA} document`];
+export function findPriorManifestProblems(manifest, publishSet) {
+  if (manifest?.schema !== PORTFOLIO_SCHEMA) {
+    return [typeof manifest?.schema === 'string' && manifest.schema.startsWith(PORTFOLIO_SCHEMA_PREFIX)
+      ? `${manifest.schema} is an unknown portfolio release schema version (this tool reads ${PORTFOLIO_SCHEMA})`
+      : `it is not a ${PORTFOLIO_SCHEMA} document`];
+  }
+  const packageNames = publishSet.packages.map(({ name }) => name);
   const problems = [];
   const versionProblem = (version) => {
     try {
@@ -625,9 +606,13 @@ export function findPriorManifestProblems(manifest, packageNames) {
     problems.push('its release id does not name its commit and published versions');
   }
   const recorded = new Map(records.map(({ name, version }) => [name, version]));
-  for (const edge of Array.isArray(manifest.compatibility?.edges) ? manifest.compatibility.edges : [null]) {
-    if (!recorded.has(edge?.from) || !recorded.has(edge?.to)) problems.push(`an edge names ${edge?.from} to ${edge?.to}, which are not both members`);
-    else if (edge.version !== recorded.get(edge.to)) problems.push(`the edge ${edge.from} to ${edge.to} records ${edge.version}, not ${recorded.get(edge.to)}`);
+  const edges = Array.isArray(manifest.compatibility?.edges) ? manifest.compatibility.edges : [];
+  const expected = publishSet.packages.flatMap(({ name, runtimeEdges }) => runtimeEdges.map((to) => `${name} > ${to}`));
+  const actual = edges.map((edge) => `${edge?.from} > ${edge?.to}`);
+  if (!same([...actual].sort(), [...expected].sort())) problems.push(`its edges are ${actual.join(', ') || 'none'}, not the publish set's runtime edges ${expected.join(', ')}`);
+  for (const edge of edges) {
+    if (!recorded.has(edge?.from) || !recorded.has(edge?.to)) continue;
+    if (edge.version !== recorded.get(edge.to)) problems.push(`the edge ${edge.from} to ${edge.to} records ${edge.version}, not ${recorded.get(edge.to)}`);
     else if (!caretAllows(edge.range, edge.version)) problems.push(`${edge.from} requires ${edge.to}@${edge.range}, which does not admit ${edge.version}`);
   }
   return problems;
@@ -635,20 +620,22 @@ export function findPriorManifestProblems(manifest, packageNames) {
 
 /**
  * Problems (`{ code, detail }`) in the versions a release proposes against the effects the change requires. `versions`
- * maps each package of the publish set to its proposed version and `contracts` holds the current source's contract
- * versions; both are compared with `priorManifest`, the portfolio manifest of the prior release, which must inventory
- * the whole set. Every package must move forward when it changes version. A unit whose contract changed must move by at
+ * maps each package of `publishSet` to its proposed version and `contracts` holds the current source's contract versions;
+ * both are compared with `priorManifest`, the portfolio manifest of the prior release, which must inventory the whole set
+ * and its edges. Every package must move forward when it changes version. A unit whose contract changed must move by at
  * least its effect, and one whose contract did not change must not be released. A package whose shipped contract or
  * implementation changed must publish a new version. A package that stays at its prior version keeps the dependency
  * ranges its release recorded, so one of those ranges that does not admit a sibling's new version forces the package
  * to publish too (at least a patch for a unit). `stable` maps a unit to its last stable release when the prior
  * release's version is an rc.
  */
-export function findVersionEffectProblems({ effects, priorManifest, versions, contracts, stable = new Map() }) {
+export function findVersionEffectProblems({ effects, priorManifest, publishSet, versions, contracts, stable = new Map() }) {
   const problems = [];
   const add = (code, detail) => problems.push({ code, detail });
-  const inventory = findPriorManifestProblems(priorManifest, [...versions.keys()]);
+  const inventory = findPriorManifestProblems(priorManifest, publishSet);
   if (inventory.length > 0) return inventory.map((detail) => ({ code: 'P2_1_PRIOR_RELEASE_INVALID', detail: `the prior release manifest is unusable: ${detail}` }));
+  const missing = publishSet.packages.filter(({ name }) => !versions.has(name)).map(({ name }) => name);
+  if (missing.length > 0) return [{ code: 'P2_1_RELEASE_VERSIONS_INVALID', detail: `no proposed version for ${missing.join(', ')}` }];
   const judge = (label, before, after, required) => {
     const order = compareVersions(after, before);
     if (order < 0) add('P2_1_VERSION_NOT_AHEAD', `${label} goes back from ${before} to ${after}`);
@@ -804,21 +791,48 @@ export function readCommittedSide(revision, cwd) {
   }
 }
 
-/** Retained portfolio release manifests (`tests/evidence`) in the tree at `revision`: the first release has none. */
-function retainedPortfolioManifests(revision, cwd) {
-  try {
-    return execFileSync('git', ['grep', '-lE', `"schema": *"${PORTFOLIO_SCHEMA}"`, revision, '--', ':(glob)tests/evidence/**/*.json'], { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
-      .split('\n').filter(Boolean).map((line) => line.slice(revision.length + 1));
-  } catch (error) {
-    if (error.status === 1) return [];
-    throw error;
+/** The blobs of a tree as buffers, in one `git cat-file --batch`, keyed by object id. */
+function readBlobs(ids, cwd) {
+  const output = execFileSync('git', ['cat-file', '--batch'], { cwd, input: `${ids.join('\n')}\n`, maxBuffer: 1024 * 1024 * 1024 });
+  const blobs = new Map();
+  for (let offset = 0; offset < output.length;) {
+    const end = output.indexOf(0x0a, offset);
+    const [id, , size] = output.toString('utf8', offset, end).split(' ');
+    blobs.set(id, output.subarray(end + 1, end + 1 + Number(size)));
+    offset = end + 1 + Number(size) + 1;
   }
+  return blobs;
+}
+
+/**
+ * Every tracked file at `revision` that parses as a JSON object whose `schema` is a portfolio release schema, of any
+ * version, wherever it lives and however it is spaced: the first release has none. Files are judged by content, so a
+ * manifest does not escape by its name, its folder, or its formatting.
+ */
+function portfolioManifestsIn(revision, cwd) {
+  const listing = execFileSync('git', ['ls-tree', '-r', '-z', '-l', revision], { cwd, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 })
+    .split('\0').filter(Boolean).map((line) => /^\d+ blob ([0-9a-f]+)\s+(\d+)\t(.*)$/su.exec(line)).filter(Boolean)
+    .map(([, id, , path]) => ({ id, path }));
+  const blobs = readBlobs([...new Set(listing.map(({ id }) => id))], cwd);
+  const found = [];
+  for (const { id, path } of listing) {
+    const text = blobs.get(id)?.toString('utf8').trimStart() ?? '';
+    if (!text.startsWith('{')) continue;
+    let schema;
+    try {
+      schema = JSON.parse(text)?.schema;
+    } catch {
+      continue;
+    }
+    if (typeof schema === 'string' && schema.startsWith(PORTFOLIO_SCHEMA_PREFIX)) found.push(`${path} (${schema})`);
+  }
+  return found;
 }
 
 /**
  * What a release compares with. It must say so: `MUXUI_PRIOR_RELEASE_MANIFEST` is the path of the prior portfolio
- * manifest, or `MUXUI_FIRST_PORTFOLIO_RELEASE=true` declares there is none, which holds only while the tree at `revision`
- * retains no portfolio release manifest under `tests/evidence`. Neither, both, or a flag that contradicts the evidence
+ * manifest, or `MUXUI_FIRST_PORTFOLIO_RELEASE=true` declares there is none, which holds only while no tracked file at
+ * `revision` is a portfolio release manifest of any schema version. Neither, both, or a flag that contradicts the evidence
  * is refused, so a later release cannot skip the check by leaving the variable unset.
  */
 export function resolvePriorRelease({ environment, revision, cwd }) {
@@ -830,8 +844,8 @@ export function resolvePriorRelease({ environment, revision, cwd }) {
   }
   if (first !== '') {
     if (first !== 'true') fail('P2_1_PRIOR_RELEASE_REQUIRED', `${FIRST_RELEASE_VARIABLE} must be true, not ${JSON.stringify(first)}`);
-    const retained = retainedPortfolioManifests(revision, cwd);
-    if (retained.length > 0) fail('P2_1_FIRST_RELEASE_CONTRADICTED', `${FIRST_RELEASE_VARIABLE}=true, but ${retained.join(', ')} retains a portfolio release; give ${PRIOR_RELEASE_VARIABLE}`);
+    const retained = portfolioManifestsIn(revision, cwd);
+    if (retained.length > 0) fail('P2_1_FIRST_RELEASE_CONTRADICTED', `${FIRST_RELEASE_VARIABLE}=true, but ${retained.join(', ')} is a portfolio release; give ${PRIOR_RELEASE_VARIABLE}`);
     return { first: true };
   }
   try {
@@ -846,8 +860,9 @@ export function resolvePriorRelease({ environment, revision, cwd }) {
  * rejects proposed `versions` that do not carry it. Returns the record the preparation data keeps. `revision` is the
  * release commit, in `cwd`'s clone.
  */
-export function assertVersionEffects({ priorManifest, revision, cwd, versions, packageNames, stable, renderers = RENDERER_PACKAGES }) {
-  const unusable = findPriorManifestProblems(priorManifest, packageNames);
+export function assertVersionEffects({ priorManifest, revision, cwd, versions, publishSet, stable, renderers = RENDERER_PACKAGES }) {
+  const packageNames = publishSet.packages.map(({ name }) => name);
+  const unusable = findPriorManifestProblems(priorManifest, publishSet);
   if (unusable.length > 0) fail('P2_1_PRIOR_RELEASE_INVALID', `the prior release manifest is unusable: ${unusable.join('; ')}`);
   let prior;
   try {
@@ -861,7 +876,7 @@ export function assertVersionEffects({ priorManifest, revision, cwd, versions, p
   const current = readCommittedSide(revision, cwd);
   const effects = classifyReleaseEffects({ prior, current, packageNames, renderers });
   const problems = [
-    ...findVersionEffectProblems({ effects, priorManifest, versions, contracts: current.contracts, stable }),
+    ...findVersionEffectProblems({ effects, priorManifest, publishSet, versions, contracts: current.contracts, stable }),
     ...effects.problems.map((detail) => ({ code: 'P2_1_VERSION_MARKER_MISMATCH', detail })),
   ];
   if (problems.length > 0) {

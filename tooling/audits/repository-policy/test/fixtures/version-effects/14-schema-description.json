@@ -10,6 +10,7 @@
   "expect": {
     "catalog": "patch",
     "schema": "patch",
-    "publish": ["@muxui/schema", "@muxui/catalog"]
+    "queryApi": "patch",
+    "publish": ["@muxui/schema", "@muxui/catalog", "@muxui/tooling"]
   }
 }

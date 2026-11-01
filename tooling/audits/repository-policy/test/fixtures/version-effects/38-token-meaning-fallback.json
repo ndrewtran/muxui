@@ -1,0 +1,18 @@
+{
+  "row": "Change the meaning of a token a recipe names only as the fallback of another requirement",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/records/muxui:token:default-theme/record/tokens/semantic.action.border/meaning",
+      "value": "Edge of a destructive action."
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "tokenContract": "major",
+    "renderers": {
+      "@muxui/react": "major"
+    },
+    "publish": ["@muxui/catalog", "@muxui/react"]
+  }
+}

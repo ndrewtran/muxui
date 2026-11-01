@@ -10,6 +10,7 @@
   "expect": {
     "catalog": "major",
     "schema": "major",
-    "publish": ["@muxui/schema", "@muxui/catalog"]
+    "queryApi": "major",
+    "publish": ["@muxui/schema", "@muxui/catalog", "@muxui/tooling"]
   }
 }

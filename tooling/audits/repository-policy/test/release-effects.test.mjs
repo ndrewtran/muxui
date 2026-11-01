@@ -21,12 +21,13 @@ import {
   readCommittedSide,
   resolvePriorRelease,
 } from '../src/release-effects.mjs';
-import { PORTFOLIO_SCHEMA, releaseIdFor, sha256 } from '../src/release-manifest.mjs';
+import { PORTFOLIO_SCHEMA, caretAllows, releaseIdFor, sha256 } from '../src/release-manifest.mjs';
 import { readPublishSet } from '../src/release-set.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const fixtureDirectory = join(import.meta.dirname, 'fixtures/version-effects');
-const packageNames = readPublishSet(repositoryRoot).packages.map(({ name }) => name);
+const publishSet = readPublishSet(repositoryRoot);
+const packageNames = publishSet.packages.map(({ name }) => name);
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 const base = readJson(join(fixtureDirectory, 'base.json'));
 
@@ -86,6 +87,24 @@ test('the corpus asks for every effect level of the catalog and of a renderer', 
   assert.deepEqual([...levels(({ renderers }) => renderers?.['@muxui/react'])].sort(), ['major', 'minor', 'none', 'patch']);
 });
 
+// Only an annotation (patch) and an optional property under `properties` (minor) have a rule; any other schema edit is major.
+test('a schema edit with no precise rule is major', () => {
+  const component = '/schemas/component.schema.json';
+  const edits = {
+    additionalProperties: [{ op: 'add', path: `${component}/additionalProperties`, value: false }],
+    propertyNames: [{ op: 'add', path: `${component}/propertyNames`, value: { pattern: '^[a-z]' } }],
+    dependentSchemas: [{ op: 'add', path: `${component}/dependentSchemas`, value: { summary: { required: ['id'] } } }],
+    'a constraint keyword': [{ op: 'replace', path: `${component}/properties/summary/minLength`, value: 5 }],
+    'a property type': [{ op: 'replace', path: `${component}/properties/id/type`, value: 'number' }],
+    'a removed definition': [{ op: 'remove', path: `${component}/$defs/valueOrAlias` }],
+  };
+  for (const [what, patch] of Object.entries(edits)) {
+    const effects = classifyReleaseEffects({ prior: base, current: applyPatch(base, patch), packageNames });
+    assert.equal(effects.units.schema, 'major', `${what}: ${effects.reasons.join('; ')}`);
+    assert.equal(effects.units.queryApi, 'major', what);
+  }
+});
+
 test('the first portfolio release has no prior and publishes every package', () => {
   const effects = classifyReleaseEffects({ prior: null, current: base, packageNames });
   assert.equal(effects.first, true);
@@ -140,16 +159,22 @@ const effectsOf = (units, publish = []) => ({ first: false, units: { catalog: 'n
 const problemCodes = ({ units, publish, versions = proposed(), contracts = {}, manifest = priorManifest, stable }) => findVersionEffectProblems({
   effects: effectsOf(units, publish),
   priorManifest: manifest,
+  publishSet,
   versions,
   contracts: { ...priorManifest.contracts, ...contracts },
   stable,
 }).map(({ code }) => code);
-// A prior release whose catalog and React are stable, so the next release is judged against them.
-const stableManifest = variant((manifest) => {
-  for (const entry of manifest.packages) entry.version = { '@muxui/catalog': '2.1.0', '@muxui/react': '0.1.0' }[entry.name] ?? entry.version;
-  manifest.compatibility.edges = [];
+// A release of other versions: each recorded edge keeps the caret range its target's version gives, as a release derives it.
+const releasedAs = (versions) => variant((manifest) => {
+  for (const entry of manifest.packages) entry.version = versions[entry.name] ?? entry.version;
+  for (const edge of manifest.compatibility.edges) {
+    edge.version = versions[edge.to] ?? edge.version;
+    edge.range = `^${edge.version}`;
+  }
   return manifest;
 });
+// A prior release whose catalog and React are stable, so the next release is judged against them.
+const stableManifest = releasedAs({ '@muxui/catalog': '2.1.0', '@muxui/react': '0.1.0' });
 
 test('with no stable release, a unit\'s rc series admits any change but must move forward', () => {
   assert.deepEqual(problemCodes({}), []);
@@ -171,17 +196,18 @@ test('every publishing package moves forward, not only a unit', () => {
   assert.deepEqual(tooling(['@muxui/tooling'], '1.1.0-rc.1'), ['P2_1_VERSION_PUBLICATION_MISSING']);
   assert.deepEqual(tooling(['@muxui/tooling'], '1.0.9-rc.3'), ['P2_1_VERSION_NOT_AHEAD']);
   assert.deepEqual(tooling([], '1.0.9-rc.3'), ['P2_1_VERSION_NOT_AHEAD']);
-  const later = variant((manifest) => {
-    manifest.packages.find(({ name }) => name === '@muxui/tooling').version = '1.1.0-rc.2';
-    manifest.compatibility.edges = [];
-    return manifest;
-  });
+  const later = releasedAs({ '@muxui/tooling': '1.1.0-rc.2' });
   assert.deepEqual(problemCodes({ publish: ['@muxui/tooling'], manifest: later, versions: proposed({ '@muxui/tooling': '1.1.0-rc.1' }, later) }), ['P2_1_VERSION_NOT_AHEAD']);
   assert.deepEqual(problemCodes({ publish: ['@muxui/schema'], versions: proposed({ '@muxui/schema': '0.5.0-rc.1' }) }).includes('P2_1_VERSION_NOT_AHEAD'), true);
 });
 
 test('after a stable release, a version must carry the effect of the change from that release', () => {
-  const catalog = (effect, version, { manifest = stableManifest, stable } = {}) => problemCodes({ units: { catalog: effect }, publish: ['@muxui/catalog'], manifest, versions: proposed({ '@muxui/catalog': version }, manifest), stable });
+  // A catalog version outside tooling's recorded range forces tooling to republish alongside (see the forced-publication test).
+  const catalog = (effect, version, { manifest = stableManifest, stable } = {}) => {
+    const { range } = manifest.compatibility.edges.find(({ from, to }) => from === '@muxui/tooling' && to === '@muxui/catalog');
+    const tooling = caretAllows(range, version) ? {} : { '@muxui/tooling': '1.1.0-rc.2' };
+    return problemCodes({ units: { catalog: effect }, publish: ['@muxui/catalog'], manifest, versions: proposed({ '@muxui/catalog': version, ...tooling }, manifest), stable });
+  };
   // The stable 2.1.0 followed by 2.1.1-rc.1 carries a patch at most.
   assert.deepEqual(catalog('major', '2.1.1-rc.1'), ['P2_1_VERSION_EFFECT_TOO_SMALL']);
   assert.deepEqual(catalog('minor', '2.1.1-rc.1'), ['P2_1_VERSION_EFFECT_TOO_SMALL']);
@@ -193,11 +219,7 @@ test('after a stable release, a version must carry the effect of the change from
   assert.deepEqual(catalog('patch', '2.1.0-rc.2'), ['P2_1_VERSION_NOT_AHEAD']);
   // A prior rc after the stable release is judged from the stable release the caller names.
   const prerelease = {
-    manifest: variant((manifest) => {
-      for (const entry of manifest.packages) entry.version = { '@muxui/catalog': '2.2.0-rc.1', '@muxui/react': '0.1.0' }[entry.name] ?? entry.version;
-      manifest.compatibility.edges = [];
-      return manifest;
-    }),
+    manifest: releasedAs({ '@muxui/catalog': '2.2.0-rc.1', '@muxui/react': '0.1.0' }),
     stable: new Map([['@muxui/catalog', '2.1.0']]),
   };
   assert.deepEqual(catalog('minor', '2.2.0-rc.2', prerelease), []);
@@ -232,28 +254,52 @@ test('a contract version moves by its effect, and does not move when the contrac
 });
 
 test('a prior manifest must inventory the whole publish set, or nothing is compared with it', () => {
-  assert.deepEqual(findPriorManifestProblems(priorManifest, packageNames), []);
+  assert.deepEqual(findPriorManifestProblems(priorManifest, publishSet), []);
   // Arbitrary bumps pass against an empty or partial inventory unless the inventory itself is checked.
   const bumped = proposed({ '@muxui/react': '9.9.9-rc.1', '@muxui/catalog': '9.9.9-rc.1' });
-  const unusable = (manifest, versions = bumped) => [...new Set(findVersionEffectProblems({ effects: effectsOf({}), priorManifest: manifest, versions, contracts: priorManifest.contracts }).map(({ code }) => code))];
+  const unusable = (manifest, versions = bumped) => [...new Set(findVersionEffectProblems({ effects: effectsOf({}), priorManifest: manifest, publishSet, versions, contracts: priorManifest.contracts }).map(({ code }) => code))];
   assert.deepEqual(unusable(variant((manifest) => ({ ...manifest, packages: [] }))), ['P2_1_PRIOR_RELEASE_INVALID']);
   assert.deepEqual(unusable(variant((manifest) => ({ ...manifest, packages: manifest.packages.slice(0, 3) }))), ['P2_1_PRIOR_RELEASE_INVALID']);
   assert.deepEqual(unusable(variant((manifest) => ({ ...manifest, packages: [...manifest.packages].reverse() }))), ['P2_1_PRIOR_RELEASE_INVALID']);
-  const problems = (change, sealed = true) => findPriorManifestProblems(sealed ? variant(change) : change(structuredClone(priorManifest)), packageNames).join('; ');
+  const problems = (change, sealed = true) => findPriorManifestProblems(sealed ? variant(change) : change(structuredClone(priorManifest)), publishSet).join('; ');
   assert.match(problems((manifest) => { manifest.packages[2].version = 'one'; return manifest; }), /@muxui\/tooling: "one" is not a semantic version/u);
   assert.match(problems((manifest) => { manifest.packages[0].role = 'adopted'; return manifest; }), /@muxui\/schema has role "adopted"/u);
   assert.match(problems((manifest) => { manifest.contracts.schemaVersion = '3'; return manifest; }), /contracts\.schemaVersion/u);
   assert.match(problems((manifest) => { manifest.source.revision = 'main'; return manifest; }), /no source commit/u);
   assert.match(problems((manifest) => { manifest.packages[1].version = '2.1.0-rc.9'; return manifest; }, false), /digest does not match/u);
-  assert.match(problems((manifest) => { delete manifest.compatibility; return manifest; }), /an edge names undefined to undefined/u);
   assert.match(problems((manifest) => { manifest.compatibility.edges[1].version = '2.1.0-rc.4'; return manifest; }), /records 2\.1\.0-rc\.4, not 2\.1\.0-rc\.1/u);
   assert.match(problems((manifest) => { manifest.compatibility.edges[1].range = '^2.2.0-rc.1'; return manifest; }), /does not admit 2\.1\.0-rc\.1/u);
-  assert.match(problems((manifest) => { manifest.compatibility.edges.push({ from: '@muxui/react', to: '@muxui/other', range: '^1.0.0', version: '1.0.0' }); return manifest; }), /@muxui\/other, which are not both members/u);
+  // The edges are the publish set's runtime edges, all of them and no other: a missing, partial, or extra inventory is refused.
+  for (const change of [
+    (manifest) => { manifest.compatibility.edges = []; },
+    (manifest) => { delete manifest.compatibility; },
+    (manifest) => { manifest.compatibility.edges.pop(); },
+    (manifest) => { manifest.compatibility.edges.push({ from: '@muxui/react', to: '@muxui/schema', range: '^0.6.0-rc.1', version: '0.6.0-rc.1' }); },
+  ]) {
+    assert.match(problems((manifest) => { change(manifest); return manifest; }), /its edges are .*, not the publish set's runtime edges @muxui\/catalog > @muxui\/schema, @muxui\/tooling > @muxui\/catalog, @muxui\/tooling > @muxui\/schema/u);
+  }
   // A digest that matches but a release id that names other versions.
   const { digest: _digest, ...forged } = { ...priorManifest, id: 'muxui-portfolio:forged' };
-  assert.match(findPriorManifestProblems({ ...forged, digest: sha256(canonicalJson(forged)) }, packageNames).join('; '), /release id does not name/u);
+  assert.match(findPriorManifestProblems({ ...forged, digest: sha256(canonicalJson(forged)) }, publishSet).join('; '), /release id does not name/u);
   // The check that reads the manifest stops on the same inventory before reading any commit.
-  assert.throws(() => assertVersionEffects({ priorManifest: variant((manifest) => ({ ...manifest, packages: [] })), revision: 'f'.repeat(40), cwd: repositoryRoot, versions: bumped, packageNames }), /P2_1_PRIOR_RELEASE_INVALID: the prior release manifest is unusable/u);
+  assert.throws(() => assertVersionEffects({ priorManifest: variant((manifest) => ({ ...manifest, packages: [] })), revision: 'f'.repeat(40), cwd: repositoryRoot, versions: bumped, publishSet }), /P2_1_PRIOR_RELEASE_INVALID: the prior release manifest is unusable/u);
+});
+
+test('a portfolio schema version this tool does not read is refused wherever a prior manifest is read', () => {
+  const next = variant((manifest) => ({ ...manifest, schema: 'muxui-portfolio-release-v2' }));
+  assert.match(findPriorManifestProblems(next, publishSet).join('; '), /muxui-portfolio-release-v2 is an unknown portfolio release schema version/u);
+  assert.match(findPriorManifestProblems({ ...priorManifest, schema: 'other' }, publishSet).join('; '), /it is not a muxui-portfolio-release-v1 document/u);
+  assert.deepEqual(findVersionEffectProblems({ effects: effectsOf({}), priorManifest: next, publishSet, versions: proposed(), contracts: priorManifest.contracts }).map(({ code }) => code), ['P2_1_PRIOR_RELEASE_INVALID']);
+  assert.throws(() => assertVersionEffects({ priorManifest: next, revision: 'f'.repeat(40), cwd: repositoryRoot, versions: proposed(), publishSet }), /P2_1_PRIOR_RELEASE_INVALID: .*unknown portfolio release schema version/u);
+});
+
+test('a catalog major release forces tooling to republish when its recorded range stops admitting the catalog', () => {
+  const catalog = { units: { catalog: 'major' }, publish: ['@muxui/catalog'] };
+  assert.deepEqual(problemCodes({ ...catalog, versions: proposed({ '@muxui/catalog': '3.0.0-rc.1' }) }), ['P2_1_VERSION_RANGE_BROKEN']);
+  assert.deepEqual(problemCodes({ ...catalog, versions: proposed({ '@muxui/catalog': '3.0.0-rc.1', '@muxui/tooling': '1.1.0-rc.2' }) }), []);
+  // The same release against an inventory with no edges would have passed, which is why the inventory is checked first.
+  const withoutEdges = variant((manifest) => { manifest.compatibility.edges = []; return manifest; });
+  assert.deepEqual(problemCodes({ ...catalog, manifest: withoutEdges, versions: proposed({ '@muxui/catalog': '3.0.0-rc.1' }, withoutEdges) }), ['P2_1_PRIOR_RELEASE_INVALID']);
 });
 
 test('the installed candidate set is prereleases, the catalog version is catalogVersion, and tooling admits the catalog', () => {
@@ -344,7 +390,7 @@ test('a release commit is classified from its committed sources against the prio
     const priorHere = variant((manifest) => ({ ...manifest, source: { ...manifest.source, revision: first } }));
     // The catalog and React have stable releases, so the added prop is judged from them.
     const stable = new Map([['@muxui/catalog', '2.1.0'], ['@muxui/react', '0.1.0']]);
-    const check = (revision, versions, manifest = priorHere) => assertVersionEffects({ priorManifest: manifest, revision, cwd: scratch, versions, packageNames, stable });
+    const check = (revision, versions, manifest = priorHere) => assertVersionEffects({ priorManifest: manifest, revision, cwd: scratch, versions, publishSet, stable });
     const message = (revision, versions) => {
       try {
         check(revision, versions);
@@ -371,7 +417,7 @@ test('a release commit is classified from its committed sources against the prio
     const side = readCommittedSide(second, scratch);
     assert.deepEqual(side.records.map(({ family }) => family), ['component', 'token-source', 'example', 'guide']);
     assert.deepEqual(Object.keys(side.records[0].derivedApis), ['web.react']);
-    assert.deepEqual(Object.keys(side.schemas), ['component.schema.json', 'query-envelope.schema.json']);
+    assert.deepEqual(Object.keys(side.schemas), ['component.schema.json', 'query-envelope.schema.json', 'token-source.schema.json']);
     assert.deepEqual(side.platformSafetyContract, base.platformSafetyContract);
     assert.deepEqual(side.contracts, { schemaVersion: '3.0.0', queryApiVersion: '2.1.0', querySchemaVersion: '2.1.0', tokenContractVersion: '1.1.0' });
     assert.deepEqual(Object.keys(side.implementation), packageNames);
@@ -431,6 +477,20 @@ test('a release names its prior release, or declares the first and agrees with t
     git('commit', '-q', '-m', 'retain a portfolio release');
     const retained = git('rev-parse', 'HEAD');
     assert.match(refusal({ [FIRST_RELEASE_VARIABLE]: 'true' }, retained), /P2_1_FIRST_RELEASE_CONTRADICTED: .*tests\/evidence\/p2-1\/release\.json/u);
+    // A manifest is found by what it says, not where it lives, which schema version it names, or how it is spaced.
+    const attacks = {
+      'a manifest outside tests/evidence': ['release/portfolio.json', priorManifest],
+      'a later schema version': ['tests/evidence/p2-1/next.json', { ...priorManifest, schema: 'muxui-portfolio-release-v2' }],
+      'a newline after the schema key': ['docs/archive/old.json', `{\n  "schema":\n    "muxui-portfolio-release-v1",\n  "id": "x"\n}\n`],
+    };
+    for (const [what, [path, content]] of Object.entries(attacks)) {
+      write(path, content);
+      git('add', '-A');
+      git('commit', '-q', '-m', what);
+      const revision = git('rev-parse', 'HEAD');
+      rmSync(join(scratch, path));
+      assert.match(refusal({ [FIRST_RELEASE_VARIABLE]: 'true' }, revision), new RegExp(`P2_1_FIRST_RELEASE_CONTRADICTED: .*${path.replace(/[./]/gu, '\\$&')}`, 'u'), what);
+    }
     // The prior manifest's path is read as given.
     const path = join(scratch, 'tests/evidence/p2-1/release.json');
     assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, retained), { first: false, priorManifest });

@@ -430,7 +430,7 @@ const versionEffects = priorRelease.first
     revision: sourceRevision,
     cwd: repositoryRoot,
     versions,
-    packageNames: publishSet.packages.map(({ name }) => name),
+    publishSet,
   });
 console.log(versionEffects.status === 'checked'
   ? `P2.1 version effects match the change since ${versionEffects.priorRelease}; publishing ${versionEffects.publish.join(', ') || 'nothing'}`

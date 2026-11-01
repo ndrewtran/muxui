@@ -15,6 +15,7 @@
   "expect": {
     "catalog": "minor",
     "schema": "minor",
-    "publish": ["@muxui/schema", "@muxui/catalog"]
+    "queryApi": "minor",
+    "publish": ["@muxui/schema", "@muxui/catalog", "@muxui/tooling"]
   }
 }

@@ -1,5 +1,5 @@
 {
-  "row": "Editorial correction inside a guide section",
+  "row": "A wording change inside a guide section (it may change what the guide asks for)",
   "patch": [
     {
       "op": "replace",
@@ -8,7 +8,7 @@
     }
   ],
   "expect": {
-    "catalog": "patch",
+    "catalog": "major",
     "publish": ["@muxui/catalog"]
   }
 }
