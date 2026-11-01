@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -646,4 +647,47 @@ test('npm-publish.yml publishes the set in one approved job and keeps every inpu
     const run = step.indexOf('\n        run:');
     if (run >= 0) assert.doesNotMatch(step.slice(run), /\$\{\{/u, step.split('\n')[0]);
   }
+});
+
+// E-P2.1-04: a dry run names the release it compares with, only through the environment, and the shape fails before the long preparation.
+test('npm-publish.yml names the prior release in a dry run, validates it before preparing, and leaves publish to the recorded outcome', () => {
+  const workflow = readFileSync(resolve(import.meta.dirname, '../../../../.github/workflows/npm-publish.yml'), 'utf8');
+  const job = (name) => new RegExp(`^  ${name}:\\n([\\s\\S]*?)(?=^  [a-z-]+:\\n|(?![\\s\\S]))`, 'mu').exec(workflow)[1];
+  const prepare = job('prepare');
+  const step = (title) => prepare.split(/^      - /mu).find((entry) => entry.startsWith(`name: ${title}\n`));
+  assert.match(workflow, /^      prior-release:\n        description: .+\n        required: false\n        type: string\n        default: ''$/mu);
+  assert.match(workflow, /^      first-portfolio-release:\n        description: .+\n        required: false\n        type: boolean\n        default: false$/mu);
+  // The preparing step reads both from its environment; no other job or step does, and publish re-derives nothing.
+  const preparing = step('Prepare release candidate');
+  assert.match(preparing, /env:\n[\s\S]*\n          MUXUI_PRIOR_RELEASE_MANIFEST: \$\{\{ inputs\.prior-release \}\}\n          MUXUI_FIRST_PORTFOLIO_RELEASE: \$\{\{ inputs\.first-portfolio-release && 'true' \|\| '' \}\}\n        run: /u);
+  assert.equal(workflow.match(/MUXUI_(?:PRIOR_RELEASE_MANIFEST|FIRST_PORTFOLIO_RELEASE):/gu)?.length, 2);
+  assert.doesNotMatch(job('registry-preflight') + job('publish'), /prior-release|first-portfolio-release|MUXUI_PRIOR|MUXUI_FIRST|versionEffects/u);
+  // The input check sits with the version checks, ahead of the install, the checks, and the pack.
+  const titles = [...prepare.matchAll(/^      - name: (.+)$/gmu)].map(([, title]) => title);
+  assert.ok(titles.indexOf('Validate prior release inputs') > titles.indexOf('Validate release versions'));
+  assert.ok(titles.indexOf('Validate prior release inputs') < titles.indexOf('Install workspace'));
+  const validating = step('Validate prior release inputs');
+  assert.match(validating, /env:\n          MODE: \$\{\{ inputs\.mode \}\}\n          PRIOR_RELEASE: \$\{\{ inputs\.prior-release \}\}\n          FIRST_RELEASE: \$\{\{ inputs\.first-portfolio-release \}\}\n        run: \|/u);
+  // Run the step's script: a dry run needs exactly one of the two, and the path is a tracked-evidence JSON path.
+  const script = validating.split('        run: |\n')[1].replace(/^ {10}/gmu, '');
+  const outcome = (mode, prior, first) => {
+    try {
+      execFileSync('bash', ['-c', script], { env: { PATH: process.env.PATH, MODE: mode, PRIOR_RELEASE: prior, FIRST_RELEASE: first }, encoding: 'utf8', stdio: 'pipe' });
+      return 'accepted';
+    } catch (error) {
+      return /title=([^:]+)::/u.exec(error.stdout)?.[1] ?? error.message;
+    }
+  };
+  const evidence = 'tests/evidence/p2-1/release-manifest.json';
+  assert.equal(outcome('dry-run', evidence, 'false'), 'accepted');
+  assert.equal(outcome('dry-run', '', 'true'), 'accepted');
+  assert.equal(outcome('dry-run', '', 'false'), 'Prior release required');
+  assert.equal(outcome('dry-run', evidence, 'true'), 'Prior release ambiguous');
+  for (const bad of ['/etc/release.json', 'release.json', 'docs/release.json', 'tests/evidence/release.txt', 'tests/evidence/../../release.json', 'tests/evidence/a..b.json', 'tests/evidence/a b.json', 'tests/evidence/$(id).json']) {
+    assert.equal(outcome('dry-run', bad, 'false'), 'Prior release path', bad);
+    assert.equal(outcome('publish', bad, 'false'), 'Prior release path', bad);
+  }
+  // Publish promotes the dry run's candidate: it neither needs the setting nor reads it.
+  assert.equal(outcome('publish', '', 'false'), 'accepted');
+  assert.equal(outcome('publish', evidence, 'false'), 'accepted');
 });
