@@ -6,59 +6,14 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve as resolvePath } from 'node:path';
 import test from 'node:test';
 import { canonicalJson, parseJsonStrict, validateFamily } from '@muxui/schema';
-import {
-  RESOLVER_ERROR_PRECEDENCE,
-  resolveCatalogGraph,
-} from '../src/local-resolver.mjs';
+import { RESOLVER_ERROR_PRECEDENCE } from '../src/local-resolver.mjs';
 import { resolvePnpmProjectCatalog } from '../src/pnpm-adapter.mjs';
 import { runCli } from '../src/cli.mjs';
 import { compileFixtureBundle } from './pattern-fixture.mjs';
 import { packWorkspacePackage, writeProjection } from './support/packed-tuple.mjs';
+import { corpus, directGraph, resolve } from './support/resolver-corpus.mjs';
 
 const repositoryRoot = resolvePath(import.meta.dirname, '../../..');
-
-function projectCurrentIdentity(value) {
-  if (typeof value === 'string') {
-    return value
-      .replaceAll('core-ui', 'muxui')
-      .replaceAll('Core UI', 'Mux UI')
-      .replaceAll('core:', 'muxui:')
-      .replaceAll('@core-ui/', '@muxui/')
-      .replaceAll('coreVersion', 'muxuiVersion')
-      .replaceAll('CORE_', 'MUXUI_');
-  }
-  if (Array.isArray(value)) return value.map(projectCurrentIdentity);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [
-      projectCurrentIdentity(key),
-      projectCurrentIdentity(item),
-    ]));
-  }
-  return value;
-}
-
-async function corpus() {
-  const historicalCorpus = parseJsonStrict(await readFile(
-    new URL('../../../tests/fixtures/g0.4/corpus.json', import.meta.url),
-    'utf8',
-  ));
-  const current = projectCurrentIdentity(historicalCorpus);
-  // Reuse the retained resolver scenarios against the current query contract.
-  for (const catalog of current.catalogs) catalog.supportedQueryApiVersions = [catalog.queryApiVersion];
-  current.graphs = current.graphs.filter(({ id }) => id !== 'query-api-version-unsupported');
-  return current;
-}
-
-function resolve(value, graph) {
-  const { expected: _expected, ...normalizedGraph } = graph;
-  return resolveCatalogGraph({
-    packageManager: value.packageManager,
-    catalogs: value.catalogs,
-    rendererDescriptors: value.rendererDescriptors,
-    releaseManifests: value.releaseManifests,
-    graph: normalizedGraph,
-  });
-}
 
 async function writeJson(path, value) {
   await writeFile(path, `${canonicalJson(value)}\n`);
@@ -313,7 +268,6 @@ test('E-G1.0-04 compatibility rejects jointly stale descriptor and release maps'
   }
 });
 
-const directGraph = (value) => value.graphs.find(({ id }) => id === 'selected-direct-compatible');
 const reactDescriptor = (value) => value.rendererDescriptors.find(({ id }) => id === 'renderer-react-compatible');
 
 /** The renderer package of the corpus' direct graph, installed and locked at `version`. */
@@ -519,9 +473,9 @@ test('G0.4 production resolver input rejects duplicate or undeclared normalized 
   const unknown = structuredClone(value.graphs[0]);
   unknown.undocumented = true;
   assert.throws(() => resolve(value, unknown), /MUXUI_RESOLVER_INPUT_INVALID/);
-  const unsupportedQuery = structuredClone(value.graphs[0]);
-  unsupportedQuery.request.queryApiVersion = '99.0.0';
-  assert.throws(() => resolve(value, unsupportedQuery), /MUXUI_RESOLVER_INPUT_INVALID/);
+  const malformedQuery = structuredClone(value.graphs[0]);
+  malformedQuery.request.queryApiVersion = 'latest';
+  assert.throws(() => resolve(value, malformedQuery), /MUXUI_RESOLVER_INPUT_INVALID/);
 
   const tilde = structuredClone(value.graphs.find(({ id }) => id === 'selected-direct-compatible'));
   tilde.workspaces.find(({ path }) => path === tilde.selectedWorkspace).catalogRange = '~1.0.0';

@@ -10,6 +10,8 @@ import {
   QUERY_SELECTORS,
   canonicalDigest,
   canonicalJson,
+  isQueryApiVersion,
+  negotiateQueryApiVersion,
   parseJsonStrict,
   patternCategoryRegistry,
   patternGroup,
@@ -79,11 +81,13 @@ function assertBundle(bundle) {
     bundle.artifacts.map(({ record }) => record),
     { patternCategories },
   );
+  // Well-formed versions this build does not read are valid in a catalog's list: the resolver negotiates, and a catalog
+  // with no shared version answers every query with MUXUI_QUERY_API_VERSION_UNSUPPORTED. A malformed one is an integrity failure.
   if (
-    !QUERY_API_VERSIONS.includes(bundle.apiVersion)
+    !isQueryApiVersion(bundle.apiVersion)
     || !Array.isArray(bundle.supportedQueryApiVersions)
     || bundle.supportedQueryApiVersions.length === 0
-    || bundle.supportedQueryApiVersions.some((version) => !QUERY_API_VERSIONS.includes(version))
+    || !bundle.supportedQueryApiVersions.every(isQueryApiVersion)
     || new Set(bundle.supportedQueryApiVersions).size !== bundle.supportedQueryApiVersions.length
     || !bundle.supportedQueryApiVersions.includes(bundle.apiVersion)
   ) {
@@ -191,8 +195,8 @@ function tokenAvailableSections(artifact) {
 }
 
 function normalizeRequest(request, operation, bundle) {
-  const currentQueryApiVersion = bundle.apiVersion;
   const supportedQueryApiVersions = bundle.supportedQueryApiVersions;
+  const currentQueryApiVersion = negotiateQueryApiVersion(supportedQueryApiVersions) ?? API_VERSION;
   if (request === undefined) request = {};
   if (request === null || typeof request !== 'object' || Array.isArray(request)) {
     return { error: queryError(
