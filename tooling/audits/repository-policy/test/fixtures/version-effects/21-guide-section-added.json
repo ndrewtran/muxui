@@ -1,0 +1,14 @@
+{
+  "row": "Add guidance: a new section of a guide",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/records/muxui:guide:button-usage/source",
+      "value": "# Button usage\n\n## When to use\n\nUse Button for an immediate action.\n\n## Accessibility\n\nGive it an accessible name.\n\n## Pending\n\nA pending Button keeps focus.\n"
+    }
+  ],
+  "expect": {
+    "catalog": "minor",
+    "publish": ["@muxui/catalog"]
+  }
+}

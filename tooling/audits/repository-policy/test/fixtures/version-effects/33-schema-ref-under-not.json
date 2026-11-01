@@ -1,0 +1,15 @@
+{
+  "row": "Schema: a change to a definition that `not` reaches through $ref",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/schemas/component.schema.json/$defs/banned/required",
+      "value": []
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "schema": "major",
+    "publish": ["@muxui/schema", "@muxui/catalog"]
+  }
+}

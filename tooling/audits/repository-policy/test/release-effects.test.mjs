@@ -5,18 +5,23 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { validateFamily } from '@muxui/schema';
+import { canonicalJson } from '../src/canonical-json.mjs';
 import {
-  IMPLEMENTATION_ROOTS,
+  FIRST_RELEASE_VARIABLE,
+  GENERATION_INPUTS,
   NEW_PACKAGES,
+  PRIOR_RELEASE_VARIABLE,
   assertVersionEffects,
   classifyReleaseEffects,
   compareVersions,
   findCandidateSetProblems,
+  findPriorManifestProblems,
   findVersionEffectProblems,
   movedEffect,
   readCommittedSide,
+  resolvePriorRelease,
 } from '../src/release-effects.mjs';
-import { PORTFOLIO_SCHEMA } from '../src/release-manifest.mjs';
+import { PORTFOLIO_SCHEMA, releaseIdFor, sha256 } from '../src/release-manifest.mjs';
 import { readPublishSet } from '../src/release-set.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -67,8 +72,8 @@ for (const { name, row, priorPatch = [], patch = [], renderers, expect } of case
     for (const { family, record } of current.records) validateFamily(family, record);
     const effects = classifyReleaseEffects({ prior: applyPatch(base, priorPatch), current, packageNames, ...(renderers === undefined ? {} : { renderers }) });
     assert.deepEqual(
-      { catalog: effects.units.catalog, tokenContract: effects.units.tokenContract, schema: effects.units.schema, queryApi: effects.units.queryApi, renderers: effects.units.renderers, publish: effects.publish },
-      { catalog: 'none', tokenContract: 'none', schema: 'none', queryApi: 'none', renderers: { '@muxui/react': 'none' }, publish: [], ...expect },
+      { catalog: effects.units.catalog, tokenContract: effects.units.tokenContract, schema: effects.units.schema, queryApi: effects.units.queryApi, renderers: effects.units.renderers, publish: effects.publish, problems: effects.problems.length },
+      { catalog: 'none', tokenContract: 'none', schema: 'none', queryApi: 'none', renderers: { '@muxui/react': 'none' }, publish: [], problems: 0, ...expect },
       `${row}: ${effects.reasons.join('; ')}`,
     );
   });
@@ -108,12 +113,18 @@ test('a move counts by base from the stable release, and a pre-1.0 minor bump cl
   }
 });
 
-// A prior portfolio manifest with the fields the check reads: package versions, contract versions, and recorded edges.
-const priorManifest = {
+// A prior portfolio manifest as the checks read it: package versions and roles, contract versions, and recorded edges,
+// sealed with the release id and digest its content gives, as `buildPortfolioManifest` writes them.
+const seal = (manifest) => {
+  const published = manifest.packages.filter(({ role }) => role === 'published');
+  const identified = { ...manifest, id: releaseIdFor({ revision: manifest.source.revision, published }) };
+  const { digest: _digest, preparation: _preparation, ...body } = identified;
+  return { ...identified, digest: sha256(canonicalJson(body)) };
+};
+const priorManifest = seal({
   schema: PORTFOLIO_SCHEMA,
-  id: 'muxui-portfolio:prior',
-  source: { revision: 'a'.repeat(40) },
-  packages: [['@muxui/schema', '0.6.0-rc.1'], ['@muxui/catalog', '2.1.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.1'], ['@muxui/react', '0.1.0-rc.5']].map(([name, version]) => ({ name, version })),
+  source: { revision: 'a'.repeat(40), tree: 'b'.repeat(40) },
+  packages: [['@muxui/schema', '0.6.0-rc.1'], ['@muxui/catalog', '2.1.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.1'], ['@muxui/react', '0.1.0-rc.5']].map(([name, version]) => ({ name, version, role: 'published' })),
   contracts: { schemaVersion: '3.0.0', queryApiVersion: '2.1.0', tokenContractVersion: '1.1.0' },
   compatibility: {
     edges: [
@@ -122,7 +133,8 @@ const priorManifest = {
       { from: '@muxui/tooling', to: '@muxui/schema', range: '^0.6.0-rc.1', version: '0.6.0-rc.1' },
     ],
   },
-};
+});
+const variant = (change) => seal(change(structuredClone(priorManifest)));
 const proposed = (changes = {}, manifest = priorManifest) => new Map([...manifest.packages.map(({ name, version }) => [name, version]), ...Object.entries(changes)]);
 const effectsOf = (units, publish = []) => ({ first: false, units: { catalog: 'none', tokenContract: 'none', schema: 'none', queryApi: 'none', renderers: { '@muxui/react': 'none' }, ...units }, publish, reasons: [] });
 const problemCodes = ({ units, publish, versions = proposed(), contracts = {}, manifest = priorManifest, stable }) => findVersionEffectProblems({
@@ -133,11 +145,11 @@ const problemCodes = ({ units, publish, versions = proposed(), contracts = {}, m
   stable,
 }).map(({ code }) => code);
 // A prior release whose catalog and React are stable, so the next release is judged against them.
-const stableManifest = {
-  ...priorManifest,
-  packages: priorManifest.packages.map((entry) => ({ ...entry, version: { '@muxui/catalog': '2.1.0', '@muxui/react': '0.1.0' }[entry.name] ?? entry.version })),
-  compatibility: { edges: [] },
-};
+const stableManifest = variant((manifest) => {
+  for (const entry of manifest.packages) entry.version = { '@muxui/catalog': '2.1.0', '@muxui/react': '0.1.0' }[entry.name] ?? entry.version;
+  manifest.compatibility.edges = [];
+  return manifest;
+});
 
 test('with no stable release, a unit\'s rc series admits any change but must move forward', () => {
   assert.deepEqual(problemCodes({}), []);
@@ -150,7 +162,22 @@ test('with no stable release, a unit\'s rc series admits any change but must mov
   assert.deepEqual(problemCodes({ ...react, versions: proposed({ '@muxui/react': '0.1.0-rc.4' }) }), ['P2_1_VERSION_NOT_AHEAD']);
   assert.deepEqual(problemCodes({ ...react, versions: proposed({ '@muxui/react': '0.1.0-rc.5' }) }), ['P2_1_VERSION_NOT_AHEAD']);
   assert.deepEqual(problemCodes({ versions: proposed({ '@muxui/react': '0.1.0-rc.6' }) }), ['P2_1_VERSION_UNIT_UNCHANGED']);
-  assert.deepEqual(problemCodes({ versions: proposed({ '@muxui/react': '0.1.0-rc.4' }) }), ['P2_1_VERSION_NOT_AHEAD']);
+});
+
+test('every publishing package moves forward, not only a unit', () => {
+  // Tooling and the schema package have no unit effect, so only direction checks them.
+  const tooling = (publish, version) => problemCodes({ publish, versions: proposed({ '@muxui/tooling': version }) });
+  assert.deepEqual(tooling(['@muxui/tooling'], '1.1.0-rc.2'), []);
+  assert.deepEqual(tooling(['@muxui/tooling'], '1.1.0-rc.1'), ['P2_1_VERSION_PUBLICATION_MISSING']);
+  assert.deepEqual(tooling(['@muxui/tooling'], '1.0.9-rc.3'), ['P2_1_VERSION_NOT_AHEAD']);
+  assert.deepEqual(tooling([], '1.0.9-rc.3'), ['P2_1_VERSION_NOT_AHEAD']);
+  const later = variant((manifest) => {
+    manifest.packages.find(({ name }) => name === '@muxui/tooling').version = '1.1.0-rc.2';
+    manifest.compatibility.edges = [];
+    return manifest;
+  });
+  assert.deepEqual(problemCodes({ publish: ['@muxui/tooling'], manifest: later, versions: proposed({ '@muxui/tooling': '1.1.0-rc.1' }, later) }), ['P2_1_VERSION_NOT_AHEAD']);
+  assert.deepEqual(problemCodes({ publish: ['@muxui/schema'], versions: proposed({ '@muxui/schema': '0.5.0-rc.1' }) }).includes('P2_1_VERSION_NOT_AHEAD'), true);
 });
 
 test('after a stable release, a version must carry the effect of the change from that release', () => {
@@ -165,7 +192,14 @@ test('after a stable release, a version must carry the effect of the change from
   // An rc of the stable base carries nothing, and no rc is ahead of its own release.
   assert.deepEqual(catalog('patch', '2.1.0-rc.2'), ['P2_1_VERSION_NOT_AHEAD']);
   // A prior rc after the stable release is judged from the stable release the caller names.
-  const prerelease = { manifest: { ...stableManifest, packages: stableManifest.packages.map((entry) => ({ ...entry, version: entry.name === '@muxui/catalog' ? '2.2.0-rc.1' : entry.version })) }, stable: new Map([['@muxui/catalog', '2.1.0']]) };
+  const prerelease = {
+    manifest: variant((manifest) => {
+      for (const entry of manifest.packages) entry.version = { '@muxui/catalog': '2.2.0-rc.1', '@muxui/react': '0.1.0' }[entry.name] ?? entry.version;
+      manifest.compatibility.edges = [];
+      return manifest;
+    }),
+    stable: new Map([['@muxui/catalog', '2.1.0']]),
+  };
   assert.deepEqual(catalog('minor', '2.2.0-rc.2', prerelease), []);
   assert.deepEqual(catalog('major', '2.2.0-rc.2', prerelease), ['P2_1_VERSION_EFFECT_TOO_SMALL']);
   assert.deepEqual(catalog('major', '3.0.0-rc.1', prerelease), []);
@@ -197,6 +231,31 @@ test('a contract version moves by its effect, and does not move when the contrac
   assert.deepEqual(contract({ tokenContract: 'major' }, { tokenContractVersion: '2.0.0' }), []);
 });
 
+test('a prior manifest must inventory the whole publish set, or nothing is compared with it', () => {
+  assert.deepEqual(findPriorManifestProblems(priorManifest, packageNames), []);
+  // Arbitrary bumps pass against an empty or partial inventory unless the inventory itself is checked.
+  const bumped = proposed({ '@muxui/react': '9.9.9-rc.1', '@muxui/catalog': '9.9.9-rc.1' });
+  const unusable = (manifest, versions = bumped) => [...new Set(findVersionEffectProblems({ effects: effectsOf({}), priorManifest: manifest, versions, contracts: priorManifest.contracts }).map(({ code }) => code))];
+  assert.deepEqual(unusable(variant((manifest) => ({ ...manifest, packages: [] }))), ['P2_1_PRIOR_RELEASE_INVALID']);
+  assert.deepEqual(unusable(variant((manifest) => ({ ...manifest, packages: manifest.packages.slice(0, 3) }))), ['P2_1_PRIOR_RELEASE_INVALID']);
+  assert.deepEqual(unusable(variant((manifest) => ({ ...manifest, packages: [...manifest.packages].reverse() }))), ['P2_1_PRIOR_RELEASE_INVALID']);
+  const problems = (change, sealed = true) => findPriorManifestProblems(sealed ? variant(change) : change(structuredClone(priorManifest)), packageNames).join('; ');
+  assert.match(problems((manifest) => { manifest.packages[2].version = 'one'; return manifest; }), /@muxui\/tooling: "one" is not a semantic version/u);
+  assert.match(problems((manifest) => { manifest.packages[0].role = 'adopted'; return manifest; }), /@muxui\/schema has role "adopted"/u);
+  assert.match(problems((manifest) => { manifest.contracts.schemaVersion = '3'; return manifest; }), /contracts\.schemaVersion/u);
+  assert.match(problems((manifest) => { manifest.source.revision = 'main'; return manifest; }), /no source commit/u);
+  assert.match(problems((manifest) => { manifest.packages[1].version = '2.1.0-rc.9'; return manifest; }, false), /digest does not match/u);
+  assert.match(problems((manifest) => { delete manifest.compatibility; return manifest; }), /an edge names undefined to undefined/u);
+  assert.match(problems((manifest) => { manifest.compatibility.edges[1].version = '2.1.0-rc.4'; return manifest; }), /records 2\.1\.0-rc\.4, not 2\.1\.0-rc\.1/u);
+  assert.match(problems((manifest) => { manifest.compatibility.edges[1].range = '^2.2.0-rc.1'; return manifest; }), /does not admit 2\.1\.0-rc\.1/u);
+  assert.match(problems((manifest) => { manifest.compatibility.edges.push({ from: '@muxui/react', to: '@muxui/other', range: '^1.0.0', version: '1.0.0' }); return manifest; }), /@muxui\/other, which are not both members/u);
+  // A digest that matches but a release id that names other versions.
+  const { digest: _digest, ...forged } = { ...priorManifest, id: 'muxui-portfolio:forged' };
+  assert.match(findPriorManifestProblems({ ...forged, digest: sha256(canonicalJson(forged)) }, packageNames).join('; '), /release id does not name/u);
+  // The check that reads the manifest stops on the same inventory before reading any commit.
+  assert.throws(() => assertVersionEffects({ priorManifest: variant((manifest) => ({ ...manifest, packages: [] })), revision: 'f'.repeat(40), cwd: repositoryRoot, versions: bumped, packageNames }), /P2_1_PRIOR_RELEASE_INVALID: the prior release manifest is unusable/u);
+});
+
 test('the installed candidate set is prereleases, the catalog version is catalogVersion, and tooling admits the catalog', () => {
   const versions = new Map([['@muxui/schema', '0.6.0-rc.1'], ['@muxui/catalog', '2.1.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.1'], ['@muxui/react', '0.1.0-rc.5']]);
   const good = { versions, installed: new Map(versions), toolingCatalogRange: '^2.1.0-rc.1', catalogVersion: '2.1.0-rc.1' };
@@ -213,74 +272,76 @@ test('the installed candidate set is prereleases, the catalog version is catalog
   assert.match(problems({ versions: next, installed: next, catalogVersion: '2.2.0-rc.1' })[0], /does not admit 2\.2\.0-rc\.1/u);
 });
 
-test('every file a package ships from a tracked source is covered by its implementation roots', () => {
-  const tracked = execFileSync('git', ['ls-files', 'packages'], { cwd: repositoryRoot, encoding: 'utf8' }).split('\n');
-  for (const name of packageNames) {
-    const directory = `packages/${name.slice('@muxui/'.length)}`;
-    const { files } = readJson(join(repositoryRoot, directory, 'package.json'));
-    for (const entry of files.filter((file) => !['README.md', 'LICENSE', 'NOTICE', 'package.json', 'generated'].includes(file))) {
-      const shipped = tracked.filter((path) => path === `${directory}/${entry}` || path.startsWith(`${directory}/${entry}/`));
-      assert.ok(shipped.length > 0, `${name} ships ${entry}`);
-      for (const path of shipped) assert.ok(IMPLEMENTATION_ROOTS[name].some((root) => path === root || path.startsWith(`${root}/`)), `${path} is not under ${name}'s implementation roots`);
+// A throwaway repository holding the sources a release reads, with the package manifests and shipped files of this
+// repository's four packages in miniature, so the loader, the implementation digests, and the first-release rule run on real history.
+function scratchRepository(scratch) {
+  const write = (path, value) => {
+    mkdirSync(dirname(join(scratch, path)), { recursive: true });
+    writeFileSync(join(scratch, path), typeof value === 'string' ? value : `${JSON.stringify(value)}\n`);
+  };
+  const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { cwd: scratch, encoding: 'utf8' }).trim();
+  const [{ record: button }, { record: token }, { record: example, source: exampleSource }, { record: guide, source: guideSource }] = base.records;
+  const placeholder = (path, content) => write(/\.\w+$/u.test(path) ? path : `${path}/shipped.mjs`, content);
+  // A commit of the sources. `edit` changes one thing: the added prop, the renderer source, or a tooling source.
+  const commit = ({ props, rendererSource = 'export const a = 1;\n', cli = 'export {};\n', authoring = 'export {};\n', dependency = '1.0.0' }) => {
+    write('packages/catalog/catalog-sources.json', {
+      derivedApiSources: { 'web.react': 'packages/react/api' },
+      platformSafetyContractPath: 'strategy/platform-safety-contract.json',
+      records: [['component', 'catalog/components/button/artifact.json'], ['token-source', 'catalog/tokens/default-theme.json'], ['example', 'catalog/examples/basic.json'], ['guide', 'catalog/guides/usage.json']]
+        .map(([family, path]) => ({ family, path })),
+    });
+    write('strategy/platform-safety-contract.json', base.platformSafetyContract);
+    // Button's React API is derived, as in the repository, so the loader has a derived document to read.
+    const { api: _api, ...react } = button.bindings['web.react'];
+    write('catalog/components/button/artifact.json', { ...button, bindings: { ...button.bindings, 'web.react': react } });
+    write('packages/react/api/button.json', {
+      schema: 'muxui-derived-api-v1',
+      generatedFrom: 'packages/react/src/button.ts',
+      component: button.id,
+      binding: 'web.react',
+      export: 'Button',
+      api: {
+        props,
+        events: [],
+        defaults: { disabled: false },
+        propDetails: Object.fromEntries(props.map((name) => [name, { type: { kind: 'boolean' }, required: false }])),
+        eventDetails: {},
+        types: {},
+      },
+    });
+    write('catalog/tokens/default-theme.json', token);
+    write('catalog/examples/basic.json', example);
+    write(example.source, exampleSource);
+    write('catalog/guides/usage.json', guide);
+    write(guide.source, guideSource);
+    for (const [name, schema] of Object.entries(base.schemas)) write(`packages/schema/schemas/${name}`, schema);
+    for (const [name, inputs] of Object.entries(GENERATION_INPUTS)) {
+      const directory = `packages/${name.slice('@muxui/'.length)}`;
+      const manifest = readJson(join(repositoryRoot, directory, 'package.json'));
+      write(`${directory}/package.json`, { ...manifest, dependencies: { ...manifest.dependencies, 'a-dependency': dependency }, version: '1.0.0' });
+      for (const entry of [...manifest.files.filter((file) => !['generated', 'README.md', 'LICENSE', 'NOTICE', 'package.json'].includes(file)), ...inputs.map((input) => input.slice(directory.length + 1))]) {
+        placeholder(`${directory}/${entry}`, name === '@muxui/react' ? rendererSource : 'export {};\n');
+      }
     }
-  }
-});
+    write('packages/tooling/src/cli.mjs', cli);
+    write('packages/tooling/src/authoring.mjs', authoring);
+    write('packages/schema/src/index.mjs', "export const SCHEMA_VERSION = '3.0.0';\nexport const API_VERSION = '2.1.0';\nexport const QUERY_SCHEMA_VERSION = '2.1.0';\n");
+    git('add', '-A');
+    git('commit', '-q', '--allow-empty', '-m', 'sources');
+    return git('rev-parse', 'HEAD');
+  };
+  git('init', '-q');
+  return { commit, git, write };
+}
 
-// The loader against real history: a throwaway repository with commits of the sources a release reads.
 test('a release commit is classified from its committed sources against the prior release commit', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'muxui-release-effects-test-'));
   try {
-    const write = (path, value) => {
-      mkdirSync(dirname(join(scratch, path)), { recursive: true });
-      writeFileSync(join(scratch, path), typeof value === 'string' ? value : `${JSON.stringify(value)}\n`);
-    };
-    const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { cwd: scratch, encoding: 'utf8' }).trim();
-    const [{ record: button }, { record: token }, { record: example, source: exampleSource }, { record: guide, source: guideSource }] = base.records;
-    const commit = (props, rendererSource) => {
-      write('packages/catalog/catalog-sources.json', {
-        derivedApiSources: { 'web.react': 'packages/react/api' },
-        records: [['component', 'catalog/components/button/artifact.json'], ['token-source', 'catalog/tokens/default-theme.json'], ['example', 'catalog/examples/basic.json'], ['guide', 'catalog/guides/usage.json']]
-          .map(([family, path]) => ({ family, path })),
-      });
-      // Button's React API is derived, as in the repository, so the loader has a derived document to read.
-      const { api: _api, ...react } = button.bindings['web.react'];
-      write('catalog/components/button/artifact.json', { ...button, bindings: { ...button.bindings, 'web.react': react } });
-      write('packages/react/api/button.json', {
-        schema: 'muxui-derived-api-v1',
-        generatedFrom: 'packages/react/src/button.ts',
-        component: button.id,
-        binding: 'web.react',
-        export: 'Button',
-        api: {
-          props,
-          events: [],
-          defaults: { disabled: false },
-          propDetails: Object.fromEntries(props.map((name) => [name, { type: { kind: 'boolean' }, required: false }])),
-          eventDetails: {},
-          types: {},
-        },
-      });
-      write('catalog/tokens/default-theme.json', token);
-      write('catalog/examples/basic.json', example);
-      write(example.source, exampleSource);
-      write('catalog/guides/usage.json', guide);
-      write(guide.source, guideSource);
-      for (const [name, schema] of Object.entries(base.schemas)) write(`packages/schema/schemas/${name}`, schema);
-      write('packages/schema/src/index.mjs', "export const SCHEMA_VERSION = '3.0.0';\nexport const API_VERSION = '2.1.0';\n");
-      for (const [name, roots] of Object.entries(IMPLEMENTATION_ROOTS)) {
-        write(`packages/${name.slice('@muxui/'.length)}/package.json`, { name, version: '1.0.0', scripts: { test: 'x' } });
-        for (const root of roots) write(/\.\w+$/u.test(root) ? root : `${root}/implementation.mjs`, name === '@muxui/react' ? rendererSource : 'export {};\n');
-      }
-      write('packages/schema/src/index.mjs', "export const SCHEMA_VERSION = '3.0.0';\nexport const API_VERSION = '2.1.0';\n");
-      git('add', '-A');
-      git('commit', '-q', '--allow-empty', '-m', 'sources');
-      return git('rev-parse', 'HEAD');
-    };
-    git('init', '-q');
-    const first = commit(['disabled'], 'export const a = 1;\n');
-    const second = commit(['disabled', 'size'], 'export const a = 2;\n');
-    const third = commit(['disabled', 'size'], 'export const a = 2;\n');
-    const priorHere = { ...priorManifest, source: { revision: first } };
+    const { commit } = scratchRepository(scratch);
+    const first = commit({ props: ['disabled'] });
+    const second = commit({ props: ['disabled', 'size'], rendererSource: 'export const a = 2;\n' });
+    const third = commit({ props: ['disabled', 'size'], rendererSource: 'export const a = 2;\n' });
+    const priorHere = variant((manifest) => ({ ...manifest, source: { ...manifest.source, revision: first } }));
     // The catalog and React have stable releases, so the added prop is judged from them.
     const stable = new Map([['@muxui/catalog', '2.1.0'], ['@muxui/react', '0.1.0']]);
     const check = (revision, versions, manifest = priorHere) => assertVersionEffects({ priorManifest: manifest, revision, cwd: scratch, versions, packageNames, stable });
@@ -301,20 +362,78 @@ test('a release commit is classified from its committed sources against the prio
     assert.deepEqual(checked.publish, ['@muxui/catalog', '@muxui/react']);
     assert.equal(checked.priorRevision, first);
     // The same sources release nothing.
-    assert.deepEqual(check(third, proposed(), { ...priorHere, source: { revision: second } }).publish, []);
+    assert.deepEqual(check(third, proposed(), variant((manifest) => ({ ...manifest, source: { ...manifest.source, revision: second } }))).publish, []);
     // A prior manifest that is not a portfolio manifest, does not match its commit, or whose commit is unreadable stops the check.
     assert.throws(() => check(third, proposed(), { ...priorHere, schema: 'other' }), /P2_1_PRIOR_RELEASE_INVALID/u);
-    assert.throws(() => check(third, proposed(), { ...priorHere, contracts: { ...priorHere.contracts, schemaVersion: '4.0.0' } }), /P2_1_PRIOR_RELEASE_MISMATCH/u);
-    assert.throws(() => check(third, proposed(), { ...priorHere, source: { revision: 'f'.repeat(40) } }), /P2_1_PRIOR_RELEASE_UNAVAILABLE/u);
-    // A side holds the records (a component with its derived API), schemas, contract versions, and one digest per package.
+    assert.throws(() => check(third, proposed(), variant((manifest) => ({ ...manifest, source: { ...manifest.source, revision: first }, contracts: { ...manifest.contracts, schemaVersion: '4.0.0' } }))), /P2_1_PRIOR_RELEASE_MISMATCH/u);
+    assert.throws(() => check(third, proposed(), variant((manifest) => ({ ...manifest, source: { ...manifest.source, revision: 'f'.repeat(40) } }))), /P2_1_PRIOR_RELEASE_UNAVAILABLE/u);
+    // A side holds the records (a component with its derived API), schemas, the platform-safety contract, contract versions, and one digest per package.
     const side = readCommittedSide(second, scratch);
     assert.deepEqual(side.records.map(({ family }) => family), ['component', 'token-source', 'example', 'guide']);
     assert.deepEqual(Object.keys(side.records[0].derivedApis), ['web.react']);
     assert.deepEqual(Object.keys(side.schemas), ['component.schema.json', 'query-envelope.schema.json']);
-    assert.deepEqual(side.contracts, { schemaVersion: '3.0.0', queryApiVersion: '2.1.0', tokenContractVersion: '1.1.0' });
+    assert.deepEqual(side.platformSafetyContract, base.platformSafetyContract);
+    assert.deepEqual(side.contracts, { schemaVersion: '3.0.0', queryApiVersion: '2.1.0', querySchemaVersion: '2.1.0', tokenContractVersion: '1.1.0' });
     assert.deepEqual(Object.keys(side.implementation), packageNames);
-    assert.notEqual(readCommittedSide(first, scratch).implementation['@muxui/react'], side.implementation['@muxui/react']);
-    assert.equal(readCommittedSide(first, scratch).implementation['@muxui/tooling'], side.implementation['@muxui/tooling']);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test('a package\'s implementation digest follows what it ships and what generates it, not an unpublished entry', () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'muxui-release-effects-test-'));
+  try {
+    const { commit } = scratchRepository(scratch);
+    const digests = (options) => readCommittedSide(commit({ props: ['disabled'], ...options }), scratch).implementation;
+    const before = digests({});
+    const changed = (options) => Object.keys(before).filter((name) => digests(options)[name] !== before[name]);
+    // Tooling's workspace-only authoring entry ships in no package; a shipped source changes only tooling.
+    assert.deepEqual(changed({ authoring: 'export const edited = 1;\n' }), []);
+    assert.deepEqual(changed({ cli: 'export const edited = 1;\n' }), ['@muxui/tooling']);
+    assert.deepEqual(changed({ rendererSource: 'export const edited = 1;\n' }), ['@muxui/react']);
+    // The manifest ships, less its version: a dependency edit changes every package, and a version bump none.
+    assert.deepEqual(changed({ dependency: '2.0.0' }), packageNames);
+    // Every package's generation inputs are tracked sources, so a generator change reaches its package.
+    for (const [name, inputs] of Object.entries(GENERATION_INPUTS)) assert.ok(inputs.every((input) => input.startsWith(`packages/${name.slice('@muxui/'.length)}/`)), name);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test('a release names its prior release, or declares the first and agrees with the retained evidence', () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'muxui-release-effects-test-'));
+  try {
+    const { commit, git, write } = scratchRepository(scratch);
+    const clean = commit({ props: ['disabled'] });
+    const resolve = (environment, revision = clean) => resolvePriorRelease({ environment, revision, cwd: scratch });
+    const refusal = (environment, revision) => {
+      try {
+        resolve(environment, revision);
+      } catch (error) {
+        return error.message;
+      }
+      return assert.fail('the release was accepted');
+    };
+    // Neither, both, or a flag that is not `true` is refused; an unset variable cannot skip the check.
+    assert.match(refusal({}), /P2_1_PRIOR_RELEASE_REQUIRED: set MUXUI_PRIOR_RELEASE_MANIFEST .* or MUXUI_FIRST_PORTFOLIO_RELEASE=true/u);
+    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: '', [FIRST_RELEASE_VARIABLE]: '' }), /P2_1_PRIOR_RELEASE_REQUIRED/u);
+    assert.match(refusal({ [FIRST_RELEASE_VARIABLE]: 'yes' }), /P2_1_PRIOR_RELEASE_REQUIRED: MUXUI_FIRST_PORTFOLIO_RELEASE must be true/u);
+    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: 'x.json', [FIRST_RELEASE_VARIABLE]: 'true' }), /P2_1_PRIOR_RELEASE_AMBIGUOUS/u);
+    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: join(scratch, 'missing.json') }), /P2_1_PRIOR_RELEASE_UNAVAILABLE/u);
+    // The first release is declared, and holds while no portfolio manifest is retained under tests/evidence.
+    assert.deepEqual(resolve({ [FIRST_RELEASE_VARIABLE]: 'true' }), { first: true });
+    write('tests/evidence/p2-1/notes.json', { schema: 'something-else' });
+    git('add', '-A');
+    git('commit', '-q', '-m', 'unrelated evidence');
+    assert.deepEqual(resolve({ [FIRST_RELEASE_VARIABLE]: 'true' }, git('rev-parse', 'HEAD')), { first: true });
+    write('tests/evidence/p2-1/release.json', priorManifest);
+    git('add', '-A');
+    git('commit', '-q', '-m', 'retain a portfolio release');
+    const retained = git('rev-parse', 'HEAD');
+    assert.match(refusal({ [FIRST_RELEASE_VARIABLE]: 'true' }, retained), /P2_1_FIRST_RELEASE_CONTRADICTED: .*tests\/evidence\/p2-1\/release\.json/u);
+    // The prior manifest's path is read as given.
+    const path = join(scratch, 'tests/evidence/p2-1/release.json');
+    assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, retained), { first: false, priorManifest });
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }

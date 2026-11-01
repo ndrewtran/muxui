@@ -1,0 +1,18 @@
+{
+  "row": "A token source field with no rule (lifecycle) changes",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/records/muxui:token:default-theme/record/lifecycle",
+      "value": "stable"
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "tokenContract": "major",
+    "renderers": {
+      "@muxui/react": "patch"
+    },
+    "publish": ["@muxui/catalog", "@muxui/react"]
+  }
+}

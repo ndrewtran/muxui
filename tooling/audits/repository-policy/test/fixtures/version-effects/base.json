@@ -203,9 +203,113 @@
         "platforms": ["web.html", "web.react", "native.react-native"],
         "source": "catalog/guides/button-usage.md"
       },
-      "source": "# Button usage\n\nUse Button for an immediate action.\n"
+      "source": "# Button usage\n\n## When to use\n\nUse Button for an immediate action.\n\n## Accessibility\n\nGive it an accessible name.\n"
+    },
+    {
+      "family": "capability",
+      "record": {
+        "schemaVersion": "1.0.0",
+        "id": "muxui:capability:query-baseline",
+        "kind": "capability",
+        "name": "Query baseline",
+        "summary": "Schema-only declaration; query behavior remains unavailable.",
+        "lifecycle": "experimental",
+        "availability": "unavailable",
+        "policy": {
+          "effect": "read-only",
+          "requiresConfirmation": false
+        },
+        "availableOn": ["cli"]
+      }
     }
   ],
+  "platformSafetyContract": {
+    "schema": "muxui-platform-safety-contract-v1",
+    "contractVersion": "1.0.0",
+    "requirements": [
+      {
+        "id": "system.forced-colors",
+        "meaning": "Forced-colors mode keeps content legible.",
+        "boundary": "The component keeps its content visible in forced colors."
+      },
+      {
+        "id": "layout.direction",
+        "meaning": "Layout follows the writing direction.",
+        "boundary": "The component mirrors in a right-to-left layout."
+      }
+    ],
+    "defaults": {
+      "profiles": {
+        "web.html": [
+          {
+            "id": "system.forced-colors",
+            "disposition": "required"
+          },
+          {
+            "id": "layout.direction",
+            "disposition": "required"
+          }
+        ],
+        "web.react": [
+          {
+            "id": "system.forced-colors",
+            "disposition": "required"
+          },
+          {
+            "id": "layout.direction",
+            "disposition": "required"
+          }
+        ],
+        "ios": [
+          {
+            "id": "system.forced-colors",
+            "disposition": "required"
+          },
+          {
+            "id": "layout.direction",
+            "disposition": "required"
+          }
+        ],
+        "android": [
+          {
+            "id": "system.forced-colors",
+            "disposition": "required"
+          },
+          {
+            "id": "layout.direction",
+            "disposition": "required"
+          }
+        ],
+        "native.react-native-web": [
+          {
+            "id": "system.forced-colors",
+            "disposition": "required"
+          },
+          {
+            "id": "layout.direction",
+            "disposition": "required"
+          }
+        ]
+      },
+      "unsupported": [
+        {
+          "id": "system.forced-colors",
+          "disposition": "not-applicable",
+          "reason": "The binding is not supported."
+        },
+        {
+          "id": "layout.direction",
+          "disposition": "not-applicable",
+          "reason": "The binding is not supported."
+        }
+      ]
+    }
+  },
+  "contracts": {
+    "schemaVersion": "3.0.0",
+    "queryApiVersion": "2.1.0",
+    "querySchemaVersion": "2.1.0"
+  },
   "schemas": {
     "component.schema.json": {
       "title": "Component",
@@ -219,6 +323,23 @@
         "summary": {
           "type": "string",
           "minLength": 1
+        },
+        "blocked": {
+          "not": {
+            "$ref": "#/$defs/banned"
+          }
+        }
+      },
+      "$defs": {
+        "banned": {
+          "type": "object",
+          "required": ["x"]
+        },
+        "valueOrAlias": {
+          "type": "object",
+          "not": {
+            "required": ["alias", "value"]
+          }
         }
       }
     },
@@ -229,6 +350,9 @@
       "properties": {
         "ok": {
           "type": "boolean"
+        },
+        "apiVersion": {
+          "enum": ["2.1.0"]
         },
         "data": {
           "type": "object"

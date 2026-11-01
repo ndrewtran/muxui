@@ -1,0 +1,15 @@
+{
+  "row": "Schema: a change inside `not` (valueOrAlias.not.required) reads with normal polarity as a relaxation",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/schemas/component.schema.json/$defs/valueOrAlias/not/required",
+      "value": ["alias"]
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "schema": "major",
+    "publish": ["@muxui/schema", "@muxui/catalog"]
+  }
+}

@@ -33,7 +33,7 @@ import {
 } from './release-proof.mjs';
 import { canonicalJson } from './canonical-json.mjs';
 import { deterministicArchive, readArchive } from './release-archive.mjs';
-import { assertVersionEffects, findCandidateSetProblems } from './release-effects.mjs';
+import { assertVersionEffects, findCandidateSetProblems, resolvePriorRelease } from './release-effects.mjs';
 import { RETAINED_EVIDENCE_MILESTONES, buildPortfolioManifest, committedFileReader, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
 import {
   CANDIDATE_PUBLISH_CONFIG,
@@ -419,18 +419,19 @@ const releaseId = releaseIdFor({
   revision: sourceRevision,
   published: publishSet.packages.map(({ name }) => ({ name, version: versions.get(name) })),
 });
-// E-P2.1-04: with a prior release, the proposed versions must carry the effect of what changed since it. The workflow gives
-// that release's portfolio manifest; without one this is the first portfolio release (Decision 0032 item 9).
-const priorReleaseManifest = process.env.MUXUI_PRIOR_RELEASE_MANIFEST;
-const versionEffects = priorReleaseManifest
-  ? assertVersionEffects({
-    priorManifest: JSON.parse(readFileSync(resolve(priorReleaseManifest), 'utf8')),
+// E-P2.1-04: a release compares its versions with the prior release, so it must say which. MUXUI_PRIOR_RELEASE_MANIFEST is the
+// prior portfolio manifest's path; MUXUI_FIRST_PORTFOLIO_RELEASE=true declares the first one (Decision 0032 item 9), and is
+// refused if the tree retains a portfolio manifest. Neither is refused too, so an unset variable cannot skip the check.
+const priorRelease = resolvePriorRelease({ environment: process.env, revision: sourceRevision, cwd: repositoryRoot });
+const versionEffects = priorRelease.first
+  ? { status: 'first-portfolio-release' }
+  : assertVersionEffects({
+    priorManifest: priorRelease.priorManifest,
     revision: sourceRevision,
     cwd: repositoryRoot,
     versions,
     packageNames: publishSet.packages.map(({ name }) => name),
-  })
-  : { status: 'first-portfolio-release' };
+  });
 console.log(versionEffects.status === 'checked'
   ? `P2.1 version effects match the change since ${versionEffects.priorRelease}; publishing ${versionEffects.publish.join(', ') || 'nothing'}`
   : 'P2.1 first portfolio release: no prior release to compare versions with');

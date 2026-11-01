@@ -1,5 +1,5 @@
 {
-  "row": "Query API: add an optional response member",
+  "row": "Query API: add an optional response member, and raise the response version markers with the unit",
   "patch": [
     {
       "op": "add",
@@ -7,6 +7,21 @@
       "value": {
         "type": "array"
       }
+    },
+    {
+      "op": "replace",
+      "path": "/schemas/query-envelope.schema.json/properties/apiVersion/enum",
+      "value": ["2.2.0"]
+    },
+    {
+      "op": "replace",
+      "path": "/contracts/queryApiVersion",
+      "value": "2.2.0"
+    },
+    {
+      "op": "replace",
+      "path": "/contracts/querySchemaVersion",
+      "value": "2.2.0"
     }
   ],
   "expect": {

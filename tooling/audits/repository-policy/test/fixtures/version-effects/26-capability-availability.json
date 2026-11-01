@@ -1,0 +1,14 @@
+{
+  "row": "A capability becomes available (its semantics change)",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/records/muxui:capability:query-baseline/record/availability",
+      "value": "available"
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "publish": ["@muxui/catalog"]
+  }
+}
