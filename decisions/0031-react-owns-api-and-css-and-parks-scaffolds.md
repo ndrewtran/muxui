@@ -281,15 +281,14 @@ Part 3, React owns its public CSS contract, in two stages and one stylesheet:
 20. **Order.** The intended order was the parking pull request (moving the surface
     check first), Stage 1, the TypeScript move tranche by tranche, and Stage 2.
     All four are in `main`, with every `web.react` API block derived from
-    TypeScript source, and Stage 3 was retired (item 17). Two steps remain: the
-    platform-safety defaults (item 10, in progress in a separate pull request),
-    then the public package graph for P2.1. The order was never a gate. Stages 1
-    and 2 and the API derivation were meant to land before P2.1 accepts the
-    package graph, because that is when both contracts become a compatibility
-    promise. Each step is an ordinary protected pull request (Decision 0028),
-    except an edit to `strategy/platform-safety-contract.json`, which is an
-    authority file and carries an `Authority change record` naming this
-    decision.
+    TypeScript source, and Stage 3 was retired (item 17). The platform-safety
+    defaults (item 10) are in `main` too, and Decision 0032 accepts the public
+    package graph for P2.1. The order was never a gate. Stages 1 and 2 and the
+    API derivation were meant to land before P2.1 accepts the package graph,
+    because that is when both contracts become a compatibility promise. Each
+    step is an ordinary protected pull request (Decision 0028), except an edit
+    to `strategy/platform-safety-contract.json`, which is an authority file and
+    carries an `Authority change record` naming this decision.
 
 ## Authority effect
 

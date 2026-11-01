@@ -1,5 +1,5 @@
 ---
-scopeVersion: 22.0.0
+scopeVersion: 23.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -57,7 +57,7 @@ binding lifecycle remains `experimental` until promotion evidence passes.
 | --- | --- |
 | Foundation | Internal Gate 0 operability spine; no public product-completeness claim. |
 | React `0.1` | Package-only `@muxui/react` prereleases under `next`, with generated version-bound tarball guidance and no secondary-renderer or stable claim. |
-| Productization | Compatible public catalog/tooling, CLI-as-documentation, local authority, consumer validation, React documentation surfaces, and enabled safe operations. |
+| Productization | Compatible public schema, catalog, and tooling packages beside React, CLI-as-documentation, local authority, consumer validation, React documentation surfaces, and enabled safe operations. |
 | Secondary renderer | Separately activated framework-free web or native package/profile delivery after the React prerelease boundary. |
 | Capability release | Independently admitted Gate 3 breadth or integration; there is no global “all Gate 3 complete” state. |
 
@@ -447,18 +447,22 @@ the site.
 | Scope ID | Commitment | Package | Public responsibility | Must not own |
 | --- | --- | --- | --- | --- |
 | `SCOPE-PKG-SCHEMA` | `committed` | `@muxui/schema` | Versioned source/response schemas, generated types, platform IDs, authoring helpers, token-source `sourceCrosswalk` grammar, and bounded sectional query shapes. | Product semantics, renderer implementation, or site content. |
-| `SCOPE-PKG-TOKENS` | `committed` | `@muxui/tokens` | Canonical Mux UI-owned token data and deterministic web/native/design-tool transforms. | Component behavior, documentation rendering, or another live owner. |
+| `SCOPE-PKG-TOKENS` | `committed` | `@muxui/tokens` | Canonical Mux UI-owned token data and deterministic web/native/design-tool transforms. Private at P2.1: its data reaches consumers inside the catalog bundle, and publishing it needs a later package activation (Decision 0032). | Component behavior, documentation rendering, or another live owner. |
 | `SCOPE-PKG-FOUNDATION` | `deferred` | `@muxui/foundation` | Parked (Decision 0031): enforced semantic, pure-logic, and optional portable-interaction boundaries. The private scaffold has been removed, and the package is restored only by a W1.0 or N1.0 activation that names shared code and its two real consumers. | Selectors, React hooks, browser globals, native views, or mandatory transitions. |
 | `SCOPE-PKG-WEB` | `deferred` | `@muxui/web` | Later W1 HTML/CSS/controller implementation for `web.html` binding specs, restored only by W1.0 activation; the parking pull request has removed the private scaffold (Decision 0031). | React or native implementation; a React prerequisite, shared React runtime, or shared React CSS owner. |
 | `SCOPE-PKG-REACT` | `committed` | `@muxui/react` | Standalone React rendering, the `web.react` API as TypeScript props types, Mux UI-owned CSS and its public CSS contract, required third-party license/notice material, SSR/hydration, effects, exports, descriptors, and generated package guidance for `web.react` contracts. | The component inventory or renderer-neutral component metadata, React Aria public API, another workspace runtime/build dependency, or a second style registry. |
 | `SCOPE-PKG-REACT-NATIVE` | `deferred` | `@muxui/react-native` | Later N1 native primitive/runtime implementation and explicit platform files, restored only by N1.0 activation; the parking pull request has removed the private scaffold (Decision 0031). | React/React Aria authority, CSS parsing, DOM, Expo, or explorer hosts. |
 | `SCOPE-PKG-CATALOG` | `committed` | `@muxui/catalog` | Immutable compiled catalog, search index, pure discovery/query/planning API, canonical page-budget profiles/page selection, current-version validation, bounded token/crosswalk sections, and package-level catalog identity. | CLI parsing, MCP transport, renderer runtime, or project mutation. |
-| `SCOPE-PKG-TOOLING` | `committed` | `@muxui/tooling` | CLI, adapters, installed catalog/version selection, explicit query-version forwarding, response rendering, local validation, maintainer authoring, change-intent previews, and enabled safe operations. | A second artifact index, product/query-response decisions, page-boundary selection, or renderer implementation. |
+| `SCOPE-PKG-TOOLING` | `committed` | `@muxui/tooling` | CLI, adapters, installed catalog/version selection, explicit query-version forwarding, response rendering, local validation, maintainer authoring and change-intent previews (a workspace-only entry, not published), and enabled safe operations. | A second artifact index, product/query-response decisions, page-boundary selection, or renderer implementation. |
 
 At R1, only `@muxui/react` is publishable; schema, tokens, catalog, and
-tooling remain private build/proof authorities and are not runtime edges.
-Productization later publishes the compatible portfolio. Renderer packages do
-not depend on the catalog at runtime.
+tooling remain private build/proof authorities and are not runtime edges. At
+P2.1 the first Productization release publishes `@muxui/react`, `@muxui/schema`,
+`@muxui/catalog`, and `@muxui/tooling` together, each as a prerelease under
+`next` (Decision 0032). `@muxui/tokens` stays a private build authority.
+The catalog compiler and the tooling maintainer-authoring entry are
+workspace-only and never published. Renderer packages do not depend on the
+catalog at runtime.
 
 ## Product surfaces and command scope
 
@@ -684,7 +688,7 @@ Raw component count is never a scope objective.
 | Foundation, canonical knowledge, CLI baseline, local resolver, and maintainer authoring | G0.0–G0.5 and the Gate 0 integration exit |
 | React package/substrate baseline and React component tranches | R1.0–R1.5; reusable facts require an explicit R1.0 binding or bounded reproof |
 | React package-only prerelease publication | R1 tranche exits and R1 exit |
-| Public catalog/tooling packages, descriptors, CLI, compatibility, releases, and historical catalogs for React | P2.1 |
+| Public schema, catalog, and tooling packages beside React, descriptors, CLI, compatibility, releases, and historical catalogs for React | P2.1 |
 | React consumer installation, local authority, and bounded validation | P2.2 |
 | React site, explorer, static bootstrap, guides, and public installed-local MCP | P2.3 |
 | Private Blocks showcase over pattern records | BL1, independent of P2.1 through P2.3 and satisfying none of their evidence |
