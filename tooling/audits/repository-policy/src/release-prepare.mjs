@@ -16,19 +16,16 @@ import {
   assertSingleInstalledVersion,
   assertStylesheetAssetUrls,
   bundledModulePackage,
-  buildReleaseCorrelation,
   collectInstalledClosure,
   createUpstreamNameMatcher,
   deriveCurrentExportSurface,
   deriveExpectedPackageEntries,
   derivePreparation,
-  deriveVisualContract,
   findModuleSideEffects,
   findPinnedDuplicateVersions,
   isolatedPackageManagerEnvironment,
   nodeBundledCli,
   readGeneratedOutputNames,
-  readLockedIntegrity,
   readRetainedEvidence,
   readRetainedReviewEvidence,
   replaceVersions,
@@ -1121,48 +1118,16 @@ try {
   }
   console.log(`R1 exit npm publish dry-run passed for ${[...tuple.keys()].join(', ')} without lifecycle hooks or registry mutation`);
 
-  const readRepositoryFile = (path) => readFileSync(resolve(repositoryRoot, path));
-  const lockfileBytes = readRepositoryFile('pnpm-lock.yaml');
-  const lucideVersion = packedManifest.dependencies['lucide-react'];
-  const lucideIntegrity = readLockedIntegrity(lockfileBytes.toString('utf8'), 'lucide-react', lucideVersion);
-  const packedGenerated = expectedGeneratedEntries.map((entry) => ({
-    path: entry.slice('package/'.length),
-    bytes: readArchiveBytes(archive, entry),
-  }));
-  const retainedEvidence = readRetainedEvidence(repositoryRoot, RETAINED_EVIDENCE_MILESTONES);
-  // The catalog is the rc the candidate packs, not the source version the checkout's generated files carry.
-  const catalogFiles = readArchive(tuple.get('@muxui/catalog').archiveBytes);
-  const { evidence, ...reactCorrelation } = buildReleaseCorrelation({
-    source: { revision: sourceRevision, tree: sourceTree },
-    lockfile: { path: 'pnpm-lock.yaml', bytes: lockfileBytes },
-    generated: packedGenerated,
-    catalogPackage: JSON.parse(catalogFiles.get('package/generated/catalog-package.json')),
-    catalogBundle: JSON.parse(catalogFiles.get('package/generated/catalog.json')),
-    bindings: release.componentExports.map(({ binding }) => binding),
-    // Everything outside the publish set stays private and unpublished.
-    workspacePackages: packages.filter(({ name }) => !publishSetNames.has(name)).map(({ name, manifest: packageManifest }) => ({ name, version: packageManifest.version, private: packageManifest.private })),
-    retainedEvidence,
-    reviewEvidence: readRetainedReviewEvidence(repositoryRoot),
-    activeExceptions: release.exceptions,
-    visualContract: deriveVisualContract({
-      tokenSource: { path: 'catalog/tokens/default-theme.json', bytes: readRepositoryFile('catalog/tokens/default-theme.json') },
-      stylesheets: packedGenerated.filter(({ path }) => path.endsWith('.css')),
-      lucide: { version: lucideVersion, integrity: lucideIntegrity },
-      modules: packedGenerated.filter(({ path }) => /\.m?js$/u.test(path)),
-    }),
-  });
-  // The lockfile, token source, and evidence indexes were read from the worktree; bind them to the commit.
-  assertSourceIdentity(sourceRevision, 'after release correlation');
-  console.log(`R1 exit correlation: ${reactCorrelation.bindings.length} binding-spec revisions, ${reactCorrelation.generatedOutputs.entries.length} generated outputs, ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index, visual contract ${reactCorrelation.visualContract.digest}`);
-
-  const readEvidence = committedFileReader(sourceRevision, repositoryRoot);
+  // The retained evidence is validated as the checkout holds it (fail closed); the manifest binds it as committed.
+  readRetainedEvidence(repositoryRoot, RETAINED_EVIDENCE_MILESTONES);
+  readRetainedReviewEvidence(repositoryRoot);
+  const readCommitted = committedFileReader(sourceRevision, repositoryRoot);
+  // The manifest recomputes the React correlation from the tarballs and the committed lockfile and token source.
   const releaseManifest = buildPortfolioManifest({
     publishSet,
     artifacts: new Map([...tuple].map(([name, { archiveBytes: bytes }]) => [name, bytes])),
     source: { revision: sourceRevision, tree: sourceTree },
-    // The retained indexes are bound as committed at the release commit, the same bytes the verifier reads.
-    readEvidence,
-    react: { correlation: reactCorrelation },
+    readCommitted,
     // Which checks stand behind this candidate, and what the consumer proofs saw (Decision 0030). Not part of the digest.
     preparation: {
       ...derivePreparation(process.env, sourceRevision),
@@ -1174,6 +1139,10 @@ try {
       },
     },
   });
+  // The retained indexes and the lockfile were read from the worktree for validation; bind them to the commit.
+  assertSourceIdentity(sourceRevision, 'after release correlation');
+  const { react, evidence } = releaseManifest;
+  console.log(`R1 exit correlation: ${react.bindings.length} binding-spec revisions, ${react.generatedOutputs.entries.length} generated outputs, ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index, visual contract ${react.visualContract.digest}`);
   const outputDirectory = mkdtempSync(join(tmpdir(), 'muxui-r1-exit-output-'));
   for (const [name, { archiveBytes: bytes }] of tuple) writeFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))), bytes);
   writeFileSync(join(outputDirectory, PORTFOLIO_MANIFEST_FILE), `${canonicalJson(releaseManifest)}\n`);
@@ -1183,7 +1152,7 @@ try {
     artifacts: new Map(publishSet.packages.map(({ name }) => [name, readFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))))])),
     publishSet,
     expected: { revision: sourceRevision, tree: sourceTree },
-    readEvidence,
+    readCommitted,
   });
   for (const [name, { archiveBytes: bytes }] of tuple) {
     if (statSync(join(outputDirectory, tarballFileName(name, versions.get(name)))).size !== bytes.length) {

@@ -128,7 +128,7 @@ function audit(name, change = () => {}) {
   const versions = parseReleaseVersions(firstRelease, publishSet, sourceVersions);
   const { source, packed } = packedFrom(entry, versions);
   const entries = entriesFor(source, packed);
-  change(packed, entries);
+  change(packed, entries, source);
   return [...new Set(findPackedPackageProblems({ entry, source, packed, entries, versions, sourceRevision: revision }).map(({ code }) => code))];
 }
 
@@ -193,6 +193,24 @@ test('E-P2.1-01 negative: a dependency that installs from anywhere but the regis
   // The declared ranges, including peer ranges with spaces, pass.
   assert.deepEqual(audit('@muxui/react'), []);
   assert.deepEqual(audit('@muxui/tooling'), []);
+});
+
+test('E-P2.1-01 an allowlist, not a blacklist: only a registry range or dist-tag passes, even when the source declares the same', () => {
+  // The source and the packed manifest agree, so equality alone would pass: the specifier itself must be a registry one.
+  const declared = (spec) => audit('@muxui/tooling', (packed, _entries, source) => {
+    source.dependencies.semver = spec;
+    packed.dependencies.semver = spec;
+  });
+  for (const spec of ['git@github.com:npm/node-semver.git', 'git+ssh://git@github.com/npm/node-semver.git', 'github:user/repo', 'user/repo', 'user/repo#semver:^7',
+    'https://example.com/semver.tgz', 'file:../semver', 'link:../semver', 'npm:alias@1', 'portal:../semver', '../semver', '~/semver', '']) {
+    assert.deepEqual(declared(spec), ['P2_1_PACK_DEPENDENCY_SOURCE'], JSON.stringify(spec));
+  }
+  for (const spec of ['7.8.5', '^1.2.3-rc.1', '>=1 <2 || 3.x', 'latest', '~2.0.0', '1.2.3 - 2.3.4', '*', '1.x', '>=1.0.0-beta.1+build.5']) {
+    assert.deepEqual(declared(spec), [], spec);
+  }
+  assert.deepEqual(audit('@muxui/tooling', (packed, _entries, source) => {
+    source.dependencies.semver = 'github:user/repo';
+  }), ['P2_1_PACK_DEPENDENCY_SOURCE'], 'a registry range in the pack that the source no longer declares');
 });
 
 const sampleDescriptor = {

@@ -624,6 +624,7 @@ const evidenceInputs = [
   'tooling/audits/repository-policy/src/npm-publication.mjs',
   'tooling/audits/repository-policy/src/pattern-variants.mjs',
   'tooling/audits/repository-policy/src/policy.mjs',
+  'tooling/audits/repository-policy/src/release-contract.mjs',
   'tooling/audits/repository-policy/src/release-proof.mjs',
   'tooling/audits/repository-policy/src/workspace-packages.mjs',
   'tooling/audits/repository-policy/test/evidence-',

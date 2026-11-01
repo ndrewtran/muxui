@@ -31,6 +31,7 @@ const PLANNING_CONTROL_FILES = new Set([
   'tooling/audits/repository-policy/publish-set.json',
   'tooling/audits/repository-policy/src/release-archive.mjs',
   'tooling/audits/repository-policy/src/release-consumer/set-entries.mjs',
+  'tooling/audits/repository-policy/src/release-contract.mjs',
   'tooling/audits/repository-policy/src/release-lineage.mjs',
   'tooling/audits/repository-policy/src/release-manifest.mjs',
   'tooling/audits/repository-policy/src/release-package.mjs',

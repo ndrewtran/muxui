@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { canonicalJson } from './canonical-json.mjs';
 import { readArchive } from './release-archive.mjs';
+import { deriveCatalogIdentity, deriveVisualContract, digestFileSet, readLockedIntegrity } from './release-contract.mjs';
 import { CANDIDATE_PUBLISH_CONFIG, descriptorExports, isPackageSpecifier } from './release-package.mjs';
 import { nextCandidateVersion, tarballFileName } from './release-set.mjs';
 
@@ -122,11 +123,15 @@ export function committedFileReader(revision, cwd) {
   };
 }
 
-/** The evidence digests of a release: the retained indexes as committed (`readEvidence(path)` returns their bytes). */
-export function readEvidenceRecord(readEvidence) {
-  const code = 'P2_1_MANIFEST_EVIDENCE_MISSING';
-  if (typeof readEvidence !== 'function') fail('P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE', 'the committed evidence must be readable to build or verify a release');
-  const read = (path) => readEvidence(path) ?? fail(code, `${path} is not committed at the release commit`);
+/** A file as committed at the release commit; a missing one stops the release. */
+function requireCommitted(readCommitted, path) {
+  if (typeof readCommitted !== 'function') fail('P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE', 'the committed sources must be readable to build or verify a release');
+  return readCommitted(path) ?? fail('P2_1_MANIFEST_EVIDENCE_MISSING', `${path} is not committed at the release commit`);
+}
+
+/** The evidence digests of a release: the retained indexes as committed (`readCommitted(path)` returns their bytes). */
+export function readEvidenceRecord(readCommitted) {
+  const read = (path) => requireCommitted(readCommitted, path);
   const indexPath = (milestone) => `tests/evidence/${milestone.toLowerCase()}/index.json`;
   const review = read(RETAINED_REVIEW_INDEX);
   return {
@@ -270,6 +275,7 @@ export function readTupleFacts({ publishSet, artifacts }) {
   return {
     packages,
     catalogPackage,
+    bundle,
     contracts,
     descriptors,
     exceptionDigests: exceptions.map((exception) => sha256(canonicalJson(exception))),
@@ -277,6 +283,34 @@ export function readTupleFacts({ publishSet, artifacts }) {
   };
 }
 
+/**
+ * The React renderer's correlation with the repository, recomputed rather than trusted: the lockfile and token source as
+ * committed at the release commit, the packed generated outputs, the catalog, token and binding-spec identities of the
+ * packed catalog, and the icon visual contract (the Lucide version and its locked integrity, the packed modules that
+ * import it, and the packed stylesheets). The release's source commit and tree are the manifest's own `source`.
+ */
+function deriveReactCorrelation(facts, readCommitted) {
+  const code = 'P2_1_MANIFEST_REACT_INVALID';
+  const { files, manifest } = facts.packages.get(RENDERER_PACKAGE);
+  const release = JSON.parse(files.get('package/generated/release.json')?.toString('utf8') ?? 'null');
+  if (!Array.isArray(release?.componentExports)) fail(code, `${RENDERER_PACKAGE} has no generated/release.json with its component exports`);
+  const lockfile = requireCommitted(readCommitted, 'pnpm-lock.yaml');
+  const lucideVersion = manifest.dependencies?.['lucide-react'];
+  const generated = [...files]
+    .filter(([path]) => path.startsWith('package/generated/'))
+    .map(([path, bytes]) => ({ path: path.slice('package/'.length), bytes }));
+  return {
+    lockfile: { path: 'pnpm-lock.yaml', sha256: sha256(lockfile) },
+    generatedOutputs: digestFileSet(generated, code),
+    ...deriveCatalogIdentity({ catalogPackage: facts.catalogPackage, catalogBundle: facts.bundle, bindings: release.componentExports.map(({ binding }) => binding) }, code),
+    visualContract: deriveVisualContract({
+      tokenSource: { path: 'catalog/tokens/default-theme.json', bytes: requireCommitted(readCommitted, 'catalog/tokens/default-theme.json') },
+      stylesheets: generated.filter(({ path }) => path.endsWith('.css')),
+      lucide: { version: lucideVersion, integrity: readLockedIntegrity(lockfile.toString('utf8'), 'lucide-react', lucideVersion ?? '') },
+      modules: generated.filter(({ path }) => /\.m?js$/u.test(path)),
+    }),
+  };
+}
 
 // Every dependency edge between members of the tuple, as the tarballs declare it.
 function tupleEdges(publishSet, facts) {
@@ -331,11 +365,13 @@ function manifestDigest(manifest) {
 /**
  * The portfolio manifest. `artifacts` maps every member of the set to its tarball bytes. `reused` maps a package the
  * release does not publish to its package record in the manifest that published it; the bytes must be the ones that
- * record names, and the new record keeps its version, digests, and provenance. `readEvidence(path)` reads the
- * retained evidence indexes as committed at the release commit. `preparation` says how the checks ran and is not part
- * of the digest, so two preparations of one commit and tuple have one digest whatever the run was.
+ * record names, and the new record keeps its version, digests, and provenance. `readCommitted(path)` reads the
+ * retained evidence indexes, the lockfile and the token source as committed at the release commit. A published React
+ * package brings its `react` correlation block, derived here; a reused one keeps the record of its own release.
+ * `preparation` says how the checks ran and is not part of the digest, so two preparations of one commit and tuple have
+ * one digest whatever the run was.
  */
-export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map(), source, readEvidence, react, preparation }) {
+export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map(), source, readCommitted, preparation }) {
   const facts = readTupleFacts({ publishSet, artifacts });
   const versionOf = (name) => facts.packages.get(name).manifest.version;
   for (const [name, prior] of reused) {
@@ -373,8 +409,8 @@ export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map
     compatibility: { edges: tupleEdges(publishSet, facts) },
     descriptors: facts.descriptors.map(({ descriptor: _descriptor, ...record }) => record),
     reactCompatibility: facts.reactCompatibility,
-    react,
-    evidence: { ...readEvidenceRecord(readEvidence), activeExceptions: facts.exceptionDigests },
+    ...(reused.has(RENDERER_PACKAGE) ? {} : { react: deriveReactCorrelation(facts, readCommitted) }),
+    evidence: { ...readEvidenceRecord(readCommitted), activeExceptions: facts.exceptionDigests },
     publication: buildPublication({ published }),
     rollback: buildRollbackPlan({ published }),
   };
@@ -388,10 +424,11 @@ export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map
  * package that is not exactly the record of the earlier release it names (`priorManifests`: release id to that
  * release's manifest) or whose compatibility no longer holds. Contracts, evidence, exceptions, rollback, and
  * publication are recomputed, not trusted: from the packed catalog, schema, and renderer, from the retained
- * evidence as committed (`readEvidence`), and from the verified records. `expected` may name the commit and tree the
+ * evidence, lockfile and token source as committed (`readCommitted`), and from the verified records. The `react`
+ * correlation is recomputed for a published React package and absent for a reused one. `expected` may name the commit and tree the
  * release must come from. Returns the facts read from the tarballs.
  */
-export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expected = {}, readEvidence, priorManifests = new Map() }) {
+export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expected = {}, readCommitted, priorManifests = new Map() }) {
   if (manifest?.schema !== PORTFOLIO_SCHEMA) fail('P2_1_MANIFEST_SCHEMA_INVALID', `the manifest schema is ${manifest?.schema}`);
   if (manifest.digest !== manifestDigest(manifest)) fail('P2_1_MANIFEST_DIGEST_MISMATCH', 'the manifest digest does not match its content');
   if (!gitObject.test(manifest.source?.revision ?? '') || !gitObject.test(manifest.source?.tree ?? '')) fail('P2_1_MANIFEST_SOURCE_INVALID', 'the source revision and tree must be Git object ids');
@@ -469,12 +506,13 @@ export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expect
     compatibility: { edges },
     descriptors: facts.descriptors.map(({ descriptor: _descriptor, ...record }) => record),
     reactCompatibility: facts.reactCompatibility,
-    evidence: { ...readEvidenceRecord(readEvidence), activeExceptions: facts.exceptionDigests },
+    react: recorded.get(RENDERER_PACKAGE).role === 'published' ? deriveReactCorrelation(facts, readCommitted) : null,
+    evidence: { ...readEvidenceRecord(readCommitted), activeExceptions: facts.exceptionDigests },
     publication: buildPublication({ published }),
     rollback: buildRollbackPlan({ published }),
   };
   for (const [key, value] of Object.entries(recomputed)) {
-    if (canonicalJson(manifest[key] ?? null) !== canonicalJson(value)) fail('P2_1_MANIFEST_RECORD_MISMATCH', `the recorded ${key} is not what the tarballs and the committed evidence hold`);
+    if (canonicalJson(manifest[key] ?? null) !== canonicalJson(value)) fail('P2_1_MANIFEST_RECORD_MISMATCH', `the recorded ${key} is not what the tarballs and the committed sources hold`);
   }
   return facts;
 }

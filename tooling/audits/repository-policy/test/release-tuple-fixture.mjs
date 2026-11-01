@@ -36,6 +36,8 @@ const sidecarPaths = {
 };
 
 const tokenDigests = { 'web.react': digest('1') };
+const lucideVersion = '1.2.3';
+export const lucideIntegrity = `sha512-${'A'.repeat(86)}==`;
 const safetyDigests = { 'web.react': digest('2') };
 export const binding = 'muxui:component:button#web.react';
 
@@ -143,9 +145,12 @@ export function tupleFixture({ versions = {}, commits = {}, descriptorDigest = t
         gitHead: gitHead('@muxui/react'),
         muxUi: { rendererDescriptor: './generated/renderer-descriptor.json' },
         exports: { '.': './generated/index.mjs', './markdown': './generated/markdown.js' },
+        dependencies: { 'lucide-react': lucideVersion },
       },
+      'generated/button.js': `import { Check } from 'lucide-react/dist/esm/icons/check.mjs';\nexport const Button = () => Check;\n`,
+      'generated/styles.css': '.muxui-button{color:red}\n',
       'generated/compatibility.mjs': 'export const reactCompatibility = {"schema":"muxui-react-compatibility-v1"};\n',
-      'generated/release.json': { exceptions },
+      'generated/release.json': { exceptions, componentExports: [{ name: 'Button', binding, module: '.' }] },
       'generated/renderer-descriptor.json': {
         id: 'renderer:@muxui/react',
         package: '@muxui/react',
@@ -185,15 +190,17 @@ export function artifactsOf(fixture, { reused = new Map(), revision = commit } =
   return new Map(publishSet.packages.map(({ name }) => [name, archiveOf(fixture.files[name])]));
 }
 
-/** The retained evidence indexes as committed, and a reader for them. */
-export function evidenceStore() {
+/** The sources a release is bound to as committed: the retained evidence indexes, the lockfile, the token source, and a reader. */
+export function committedStore() {
   const store = new Map(RETAINED_EVIDENCE_MILESTONES.map((milestone) => [`tests/evidence/${milestone.toLowerCase()}/index.json`, Buffer.from(`{"milestone":"${milestone}"}\n`)]));
   store.set(RETAINED_REVIEW_INDEX, Buffer.from('{"milestones":["R1.2","R1.3","R1.4"],"records":[]}\n'));
+  store.set('pnpm-lock.yaml', Buffer.from(`lockfileVersion: '9.0'\n\npackages:\n\n  lucide-react@${lucideVersion}:\n    resolution: {integrity: ${lucideIntegrity}}\n`));
+  store.set('catalog/tokens/default-theme.json', Buffer.from('{"id":"muxui:token:default-theme"}\n'));
   return Object.assign(store, { read: (path) => store.get(path) });
 }
 
-export const readEvidence = evidenceStore().read;
+export const readCommitted = committedStore().read;
 
 export const manifestOf = (artifacts, options = {}) => buildPortfolioManifest({
-  publishSet, artifacts, source: { revision: commit, tree }, readEvidence, react: { correlation: {} }, preparation: { mode: 'full-checks' }, ...options,
+  publishSet, artifacts, source: { revision: commit, tree }, readCommitted, preparation: { mode: 'full-checks' }, ...options,
 });

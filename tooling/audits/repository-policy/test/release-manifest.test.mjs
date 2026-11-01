@@ -6,7 +6,7 @@ import { canonicalJson } from '../src/canonical-json.mjs';
 import { readArchive } from '../src/release-archive.mjs';
 import { caretAllows, readEvidenceRecord, releaseIdFor, sha256, sha512Integrity, verifyPortfolioRelease } from '../src/release-manifest.mjs';
 import {
-  archiveOf, artifactsOf, catalogFiles, catalogModuleFor, commit, digest, evidenceStore, jsonBytes, manifestOf, otherCommit, publishSet, readEvidence, sidecarFor, tree, tupleFixture,
+  archiveOf, artifactsOf, catalogFiles, catalogModuleFor, commit, digest, committedStore, jsonBytes, manifestOf, otherCommit, publishSet, readCommitted, sidecarFor, tree, tupleFixture,
 } from './release-tuple-fixture.mjs';
 
 const requireFromTooling = createRequire(resolve(import.meta.dirname, '../../../../packages/tooling/package.json'));
@@ -25,7 +25,7 @@ test('the manifest\'s caret check agrees with node-semver on the ranges a releas
 });
 
 const verify = (manifest, artifacts, options = {}) => verifyPortfolioRelease({
-  manifest, artifacts, publishSet, expected: { revision: commit, tree }, readEvidence, ...options,
+  manifest, artifacts, publishSet, expected: { revision: commit, tree }, readCommitted, ...options,
 });
 // A manifest edited after the build, with its digest recomputed, so the verifier reaches the check under test.
 const redigest = ({ digest: _digest, preparation, ...body }) => ({ ...body, digest: sha256(canonicalJson(body)), preparation });
@@ -182,7 +182,7 @@ test('E-P2.1-03 the catalog bundle is recomputed: an emptied bundle under the ol
 test('E-P2.1-03 contracts, evidence, exceptions, publication, and rollback are recomputed, not trusted', () => {
   const { artifacts, manifest } = honest();
   const forged = (key, value) => redigest({ ...manifest, [key]: value });
-  const rejects = (key, value) => assert.throws(() => verify(forged(key, value), artifacts), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded .* is not what the tarballs and the committed evidence hold/u, key);
+  const rejects = (key, value) => assert.throws(() => verify(forged(key, value), artifacts), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded .* is not what the tarballs and the committed sources hold/u, key);
   rejects('contracts', { ...manifest.contracts, schemaVersion: '9.9.9' });
   rejects('contracts', { ...manifest.contracts, tokenContractVersion: '1.0.0' });
   rejects('evidence', { ...manifest.evidence, activeExceptions: [digest('e')] });
@@ -211,18 +211,92 @@ test('E-P2.1-03 contracts, evidence, exceptions, publication, and rollback are r
 test('E-P2.1-03 the retained evidence is bound to the committed bytes, and must be committed', () => {
   const { artifacts, manifest } = honest();
   // A retained index edited after the manifest was written.
-  const edited = evidenceStore();
+  const edited = committedStore();
   edited.set('tests/evidence/r1.3/index.json', Buffer.from('{"milestone":"R1.3","edited":true}\n'));
-  assert.throws(() => verify(manifest, artifacts, { readEvidence: edited.read }), /the recorded evidence is not what/u);
-  const review = evidenceStore();
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: edited.read }), /the recorded evidence is not what/u);
+  const review = committedStore();
   review.set('tests/evidence/r1-retro-review/index.json', Buffer.from('{"milestones":["R1.2"],"records":[]}\n'));
-  assert.throws(() => verify(manifest, artifacts, { readEvidence: review.read }), /the recorded evidence is not what/u);
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: review.read }), /the recorded evidence is not what/u);
   // An index that is not committed, or no way to read them, is not a verified release.
-  const missing = evidenceStore();
+  const missing = committedStore();
   missing.delete('tests/evidence/r1.5/index.json');
-  assert.throws(() => verify(manifest, artifacts, { readEvidence: missing.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: tests\/evidence\/r1\.5\/index\.json is not committed/u);
-  assert.throws(() => verify(manifest, artifacts, { readEvidence: undefined }), /P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE/u);
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: missing.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: tests\/evidence\/r1\.5\/index\.json is not committed/u);
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: undefined }), /P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE/u);
   assert.throws(() => readEvidenceRecord(undefined), /P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE/u);
+});
+
+// ---- the React correlation is recomputed ----
+
+test('E-P2.1-03 the react correlation block is recomputed from the tarballs and the committed sources, not trusted', () => {
+  const { artifacts, manifest } = honest();
+  assert.deepEqual(Object.keys(manifest.react).sort(), ['bindings', 'catalog', 'generatedOutputs', 'lockfile', 'tokens', 'visualContract']);
+  assert.deepEqual(manifest.react.bindings.map(({ binding }) => binding), ['muxui:component:button#web.react']);
+  assert.deepEqual(manifest.react.lockfile, { path: 'pnpm-lock.yaml', sha256: sha256(readCommitted('pnpm-lock.yaml')) });
+  assert.deepEqual(manifest.react.generatedOutputs.entries.map(({ path }) => path).filter((path) => !path.endsWith('.provenance')),
+    ['generated/button.js', 'generated/compatibility.mjs', 'generated/release.json', 'generated/renderer-descriptor.json', 'generated/styles.css']);
+  assert.equal(manifest.react.visualContract.inputs.lucide.version, '1.2.3');
+  assert.deepEqual(manifest.react.visualContract.inputs.lucide.icons, { 'generated/button.js': ['check'] });
+  verify(manifest, artifacts);
+
+  const recordMismatch = /P2_1_MANIFEST_RECORD_MISMATCH: the recorded react is not what the tarballs and the committed sources hold/u;
+  // The block deleted, or recorded as nothing, is not a verified release.
+  const { react: _react, ...withoutBlock } = manifest;
+  assert.throws(() => verify(redigest(withoutBlock), artifacts), recordMismatch);
+  assert.throws(() => verify(redigest({ ...manifest, react: null }), artifacts), recordMismatch);
+  assert.throws(() => verify(redigest({ ...manifest, react: {} }), artifacts), recordMismatch);
+
+  // One forged identity, with the digest recomputed so the verifier reaches the check.
+  const forge = (change) => {
+    const react = structuredClone(manifest.react);
+    change(react);
+    return redigest({ ...manifest, react });
+  };
+  const forgeries = {
+    lockfile: (react) => { react.lockfile.sha256 = digest('f'); },
+    'generated outputs digest': (react) => { react.generatedOutputs.digest = digest('f'); },
+    'generated output entry': (react) => { react.generatedOutputs.entries[0].sha256 = digest('f'); },
+    'generated output dropped': (react) => { react.generatedOutputs.entries.pop(); },
+    'catalog digest': (react) => { react.catalog.digest = digest('f'); },
+    'catalog version': (react) => { react.catalog.version = '2.1.0-rc.9'; },
+    'catalog source revision': (react) => { react.catalog.sourceRevision = digest('f'); },
+    'token revision': (react) => { react.tokens.contentRevision = digest('f'); },
+    'token contract': (react) => { react.tokens.tokenContractVersion = '9.9.9'; },
+    'binding spec revision': (react) => { react.bindings[0].specRevision = digest('f'); },
+    'binding requirement set': (react) => { react.bindings[0].tokenRequirementSet = digest('f'); },
+    'binding added': (react) => { react.bindings.push({ ...react.bindings[0], binding: 'muxui:component:other#web.react' }); },
+    'visual contract digest': (react) => { react.visualContract.digest = digest('f'); },
+    'visual contract lucide integrity': (react) => { react.visualContract.inputs.lucide.integrity = `sha512-${'B'.repeat(86)}==`; },
+    'visual contract compared': (react) => { react.visualContract.comparison = 'matched'; },
+    'source field': (react) => { react.source = { revision: commit, tree }; },
+    'workspace packages field': (react) => { react.packages = []; },
+  };
+  for (const [name, change] of Object.entries(forgeries)) assert.throws(() => verify(forge(change), artifacts), recordMismatch, name);
+
+  // The committed sources moved after the manifest was written: another lockfile or token source, or either missing.
+  const relocked = committedStore();
+  relocked.set('pnpm-lock.yaml', Buffer.concat([relocked.get('pnpm-lock.yaml'), Buffer.from('# edited\n')]));
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: relocked.read }), recordMismatch);
+  const retokened = committedStore();
+  retokened.set('catalog/tokens/default-theme.json', Buffer.from('{"id":"muxui:token:default-theme","edited":true}\n'));
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: retokened.read }), recordMismatch);
+  const unlocked = committedStore();
+  unlocked.delete('pnpm-lock.yaml');
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: unlocked.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: pnpm-lock\.yaml is not committed/u);
+  const untokened = committedStore();
+  untokened.delete('catalog/tokens/default-theme.json');
+  assert.throws(() => manifestOf(artifacts, { readCommitted: untokened.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: catalog\/tokens\/default-theme\.json is not committed/u);
+
+  // A lockfile that does not lock the renderer's Lucide version gives the visual contract nothing to bind.
+  const unlockedLucide = committedStore();
+  unlockedLucide.set('pnpm-lock.yaml', Buffer.from("lockfileVersion: '9.0'\n"));
+  assert.throws(() => manifestOf(artifacts, { readCommitted: unlockedLucide.read }), /R1_EXIT_VISUAL_CONTRACT_INVALID: Lucide requires an exact version and lockfile integrity/u);
+
+  // A renderer that is reused keeps the block of the release that published it: this release records none, and may not forge one.
+  const reuse = reuseScenario({ reuse: ['@muxui/react'] });
+  const reused = manifestOf(reuse.artifacts, { reused: reuse.reused });
+  assert.equal('react' in reused, false);
+  verify(reused, reuse.artifacts, { priorManifests: reuse.priorManifests });
+  assert.throws(() => verify(redigest({ ...reused, react: manifest.react }), reuse.artifacts, { priorManifests: reuse.priorManifests }), recordMismatch);
 });
 
 // ---- the renderer descriptor ----

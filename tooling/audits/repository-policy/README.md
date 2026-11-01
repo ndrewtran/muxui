@@ -192,7 +192,9 @@ rc version, `private: false`, no scripts or development dependencies, the releas
 commit as `gitHead`, and sibling edges as `^<rc>` ranges. The catalog's generated
 files are compiled for its rc outside the checkout, and tooling's catalog range is
 refused unless the catalog major is the query API major. Preparation audits every
-tarball against its declared entries, files, and dependencies (`E-P2.1-01`), checks
+tarball against its declared entries, files, and dependencies (`E-P2.1-01`; a third-party
+dependency must be a registry range or dist-tag equal to the source's, so no path, link,
+Git, URL, shorthand, or alias passes), checks
 that each React descriptor binding is exported by its installed module and stamps
 the descriptor with the release id and commit (`E-P2.1-02`), installs all four
 tarballs into one isolated pnpm consumer, keeps the React pnpm, npm, and yarn matrix,
@@ -207,8 +209,10 @@ commit and versions give the same digest. `verifyPortfolioRelease` holds the man
 the tarball bytes and recomputes what it records instead of trusting it: the catalog
 bundle against its declared digest, sidecars, module, and release record, the contract
 versions, the renderer descriptor and its export identities, the exception digests, the
-evidence indexes as committed at the release commit, and the publication and rollback
-plans. It rejects repacked bytes under a version, a package missing from the tuple, a
+evidence indexes, lockfile, and token source as committed at the release commit, the
+`react` correlation block (lockfile, generated outputs, catalog, token and binding-spec
+identities, and the icon visual contract; absent when `@muxui/react` is reused), and the
+publication and rollback plans. It rejects repacked bytes under a version, a package missing from the tuple, a
 published package built from another commit, and a reused package that is not exactly the
 record of the earlier manifest that published it or whose compatibility no longer holds.
 This release publishes all four packages; reuse is modeled and tested only.

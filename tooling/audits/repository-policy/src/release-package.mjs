@@ -53,9 +53,12 @@ export function rewritePackedManifest({ packed, entry, versions, sourceRevision 
   return candidate;
 }
 
-// A specifier that installs from somewhere other than the registry: a path, a link, Git, a URL, a hosting
-// shorthand (`user/repo`), another package manager's protocol, or an npm alias.
-const nonRegistrySource = (range) => /^(?:[a-z][a-z0-9+.-]*:|\.{0,2}\/|~\/|[\w.-]+\/[\w.-]+(?:#.*)?$)/iu.test(String(range));
+/**
+ * Whether a dependency specifier can only resolve against the registry: a semver range (`7.8.5`, `^1.2.3-rc.1`,
+ * `>=1 <2 || 3.x`, a hyphen range) or a dist-tag (`latest`). Anything with a `:`, `/` or `@` is a path, link, Git
+ * (URL or SCP form), tarball URL, hosting shorthand, other protocol, or npm alias, and is refused whatever its spelling.
+ */
+export const isRegistrySpecifier = (range) => /^(?=.*\S)[\w.^~<>=*|+\s-]+$/u.test(String(range));
 
 const targetsOf = (value) => (typeof value === 'string' ? [value] : Object.values(value ?? {}).flatMap(targetsOf));
 const archivePath = (target) => `package/${posix.normalize(target)}`;
@@ -116,7 +119,7 @@ export function findPackedPackageProblems({ entry, source, packed, entries, vers
         if (!(field === 'dependencies' && entry.runtimeEdges.includes(dependency))) {
           add('P2_1_PACK_UNLISTED_DEPENDENCY', `${field} ${dependency} is not an allowed Mux UI edge`);
         }
-      } else if (nonRegistrySource(range)) {
+      } else if (!isRegistrySpecifier(range)) {
         add('P2_1_PACK_DEPENDENCY_SOURCE', `${field} ${dependency} is ${range}, not a registry range`);
       } else if (declared === undefined) {
         add('P2_1_PACK_UNLISTED_DEPENDENCY', `${field} ${dependency} is not a dependency the source declares`);

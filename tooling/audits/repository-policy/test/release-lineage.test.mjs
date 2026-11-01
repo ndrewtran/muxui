@@ -18,7 +18,7 @@ import {
 } from '../src/release-lineage.mjs';
 import { buildPortfolioManifest } from '../src/release-manifest.mjs';
 import { PORTFOLIO_MANIFEST_FILE, candidateFileNames, parseReleaseVersions, readSourceVersions, tarballFileName } from '../src/release-set.mjs';
-import { archiveOf, artifactsOf, evidenceStore, otherCommit, publishSet, readEvidence, tupleFixture } from './release-tuple-fixture.mjs';
+import { archiveOf, artifactsOf, committedStore, otherCommit, publishSet, readCommitted, tupleFixture } from './release-tuple-fixture.mjs';
 
 // Decision 0030: the dry run reuses main's green full CI run for the exact commit, and a
 // publish run promotes the dry run's candidate. These cases fail closed or fall back.
@@ -431,7 +431,7 @@ function candidate({ fixture = {}, manifest = {}, fileVersions = {}, extraFile, 
   mkdirSync(directory);
   const tuple = tupleFixture(fixture);
   const artifacts = artifactsOf(tuple);
-  const built = buildPortfolioManifest({ publishSet, artifacts, source: { revision: sha, tree }, readEvidence, react: {}, preparation });
+  const built = buildPortfolioManifest({ publishSet, artifacts, source: { revision: sha, tree }, readCommitted, preparation });
   for (const [name, bytes] of artifacts) {
     if (name !== omit) writeFileSync(join(directory, tarballFileName(name, fileVersions[name] ?? tuple.versions[name])), bytes);
   }
@@ -451,7 +451,7 @@ async function withCandidate(options, callback) {
 
 test('a promoted candidate set must match the authorized digest, the versions, the commit, and its own manifest', async () => {
   await withCandidate({}, ({ directory, integrity, built, artifacts }) => {
-    const verified = (overrides = {}) => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readEvidence, ...overrides });
+    const verified = (overrides = {}) => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readCommitted, ...overrides });
     assert.deepEqual(verified(), { versions, integrity, digest: built.digest, preparation });
     assert.throws(() => verified({ expectedSha512: '' }), /needs the tarball-sha512 input/u);
     assert.equal(verified({ expectedSha512: '', requireDigest: false }).integrity, integrity);
@@ -461,9 +461,9 @@ test('a promoted candidate set must match the authorized digest, the versions, t
     assert.throws(() => verified({ sha: 'c'.repeat(40) }), /P2_1_MANIFEST_SOURCE_MISMATCH: the manifest source revision is a+, not c+/u);
     assert.throws(() => verified({ tree: 'd'.repeat(40) }), /the manifest source tree is b+, not d+/u);
     // The retained evidence is read as committed at the commit: an index changed since the dry run fails the promotion.
-    const edited = evidenceStore();
+    const edited = committedStore();
     edited.set('tests/evidence/r1.1/index.json', Buffer.from('{"milestone":"R1.1","edited":true}\n'));
-    assert.throws(() => verified({ readEvidence: edited.read }), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded evidence is not what/u);
+    assert.throws(() => verified({ readCommitted: edited.read }), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded evidence is not what/u);
     // One tarball repacked under its recorded version.
     const other = tupleFixture();
     other.files['@muxui/tooling']['src/extra.mjs'] = 'export {};\n';
@@ -474,25 +474,25 @@ test('a promoted candidate set must match the authorized digest, the versions, t
   });
   // A published package built from another commit.
   await withCandidate({ fixture: { commits: { '@muxui/catalog': otherCommit } } }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readEvidence }), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/catalog is built from b+, not its recorded a+/u);
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readCommitted }), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/catalog is built from b+, not its recorded a+/u);
   });
   // A manifest edited after preparation no longer matches its digest.
   await withCandidate({ manifest: { source: { revision: sha, tree: 'd'.repeat(40) } } }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readEvidence }), /P2_1_MANIFEST_DIGEST_MISMATCH/u);
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readCommitted }), /P2_1_MANIFEST_DIGEST_MISMATCH/u);
   });
   await withCandidate({ manifest: { schema: 'other' } }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readEvidence }), /the manifest schema is other/u);
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readCommitted }), /the manifest schema is other/u);
   });
   // A tarball named for one version that holds another.
   await withCandidate({ fixture: { versions: { '@muxui/react': '0.1.0-rc.6' } }, fileVersions: { '@muxui/react': '0.1.0-rc.5' } }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readEvidence }), /@muxui\/react is 0\.1\.0-rc\.6, not the version input 0\.1\.0-rc\.5/u);
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readCommitted }), /@muxui\/react is 0\.1\.0-rc\.6, not the version input 0\.1\.0-rc\.5/u);
   });
   // Files beyond, or short of, the set.
   await withCandidate({ extraFile: 'notes.txt' }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readEvidence }), /Expected exactly the tarball of each package and one release manifest/u);
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readCommitted }), /Expected exactly the tarball of each package and one release manifest/u);
   });
   await withCandidate({ omit: '@muxui/schema' }, ({ directory, integrity }) => {
-    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readEvidence }), /Expected exactly the tarball of each package/u);
+    assert.throws(() => verifyCandidate({ directory, publishSet, versions, expectedSha512: integrity, sha, tree, readCommitted }), /Expected exactly the tarball of each package/u);
   });
 });
 
@@ -556,21 +556,21 @@ test('the lineage CLI reports in the lines the R1 exit capture reads, and writes
 
     await withCandidate({}, async ({ directory, integrity }) => {
       const promoted = { ...environment, DRY_RUN_ID: '555', DRY_RUN_ATTEMPT: '2', CANDIDATE_DIR: directory, MUXUI_RELEASE_VERSIONS: versionsText, EXPECTED_SHA512: integrity };
-      await main('candidate', promoted, io(null, { readTree: () => tree, readEvidence }));
+      await main('candidate', promoted, io(null, { readTree: () => tree, readCommitted }));
       assert.deepEqual(take(), [
         `Promoted candidate 0.1.0-rc.5 ${integrity} from dry run 555 attempt 2`,
         'Dry run preparation: reused main CI run 101 attempt 1',
       ]);
       assert.match(read('summary'), /### Promoted candidate\n\n- @muxui\/schema: `0\.6\.0-rc\.1`\n- @muxui\/catalog: `2\.1\.0-rc\.1`/u);
       // The dry run reads its own candidate the same way, without the authorized digest.
-      await main('prepared', { ...promoted, EXPECTED_SHA512: '' }, io(null, { readTree: () => tree, readEvidence }));
+      await main('prepared', { ...promoted, EXPECTED_SHA512: '' }, io(null, { readTree: () => tree, readCommitted }));
       assert.match(take().at(-1), /^Prepared candidate set @muxui\/schema@0\.6\.0-rc\.1, @muxui\/catalog@2\.1\.0-rc\.1, @muxui\/tooling@1\.1\.0-rc\.1, @muxui\/react@0\.1\.0-rc\.5; release manifest sha256:[0-9a-f]{64}; @muxui\/react sha512-/u);
-      await assert.rejects(main('prepared', { ...promoted, GITHUB_SHA: 'c'.repeat(40) }, io(null, { readTree: () => tree, readEvidence })), /the manifest source revision is a+, not c+/u);
-      await assert.rejects(main('candidate', { ...promoted, EXPECTED_SHA512: 'sha512-other' }, io(null, { readTree: () => tree, readEvidence })), /Promoted tarball is/u);
+      await assert.rejects(main('prepared', { ...promoted, GITHUB_SHA: 'c'.repeat(40) }, io(null, { readTree: () => tree, readCommitted })), /the manifest source revision is a+, not c+/u);
+      await assert.rejects(main('candidate', { ...promoted, EXPECTED_SHA512: 'sha512-other' }, io(null, { readTree: () => tree, readCommitted })), /Promoted tarball is/u);
       assert.deepEqual(take(), []);
       // The attempt the dry-run step verified must reach the promotion line.
-      await assert.rejects(main('candidate', { ...promoted, DRY_RUN_ATTEMPT: '' }, io(null, { readTree: () => tree, readEvidence })), /DRY_RUN_ATTEMPT is not set/u);
-      await assert.rejects(main('candidate', { ...promoted, DRY_RUN_ATTEMPT: 'unknown' }, io(null, { readTree: () => tree, readEvidence })), /DRY_RUN_ATTEMPT is unknown/u);
+      await assert.rejects(main('candidate', { ...promoted, DRY_RUN_ATTEMPT: '' }, io(null, { readTree: () => tree, readCommitted })), /DRY_RUN_ATTEMPT is not set/u);
+      await assert.rejects(main('candidate', { ...promoted, DRY_RUN_ATTEMPT: 'unknown' }, io(null, { readTree: () => tree, readCommitted })), /DRY_RUN_ATTEMPT is unknown/u);
     });
     await assert.rejects(main('unknown', environment, io(null)), /Expected main-ci, dry-run, fetch-candidate, candidate, or prepared/u);
   } finally {
