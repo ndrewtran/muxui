@@ -4024,7 +4024,7 @@ test('the React public-surface test runs for every input it reads', async () => 
   assert.equal(manifestChange.reactPackageFull, true);
   assert.ok(executionCommands(manifestChange, { packages }).some(({ args }) => args.join(' ') === '--filter @muxui/react run check'));
   const check = manifest.scripts.check;
-  assert.match(check, /node --test 'test\/!\(/u);
+  assert.match(check, /node --test 'test\/\*\.test\.mjs'/u);
   assert.doesNotMatch(check, /public-surface/u);
 
   // A change to the shared CSS scanners reruns it as a referencing test.
@@ -4043,8 +4043,8 @@ test('the public-surface check is planned for every change that can alter the pu
   const controls = 'test/public-surface-controls.test.mjs';
   const manifest = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8'));
   for (const file of [surface, controls]) assert.ok(existsSync(resolve(repositoryRoot, 'packages/react', file)), `${file} exists`);
-  // The full React check's test glob excludes only the serial files, so it runs both.
-  assert.match(manifest.scripts.check, /node --test 'test\/!\(capability-enrichment\|catalog-examples-types\|code-block\|code-block-highlight\|code-block-lifecycle\|code-block-package-boundary\)\.test\.mjs'/u);
+  // The full React check runs every top-level test file in one pool, so it runs both.
+  assert.match(manifest.scripts.check, /node --test 'test\/\*\.test\.mjs'/u);
 
   const reactCheck = (result) => executionCommands(result, { packages }).some(({ args }) => args.join(' ') === '--filter @muxui/react run check');
   const runs = (result) => {
