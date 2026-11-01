@@ -17,9 +17,17 @@ name: npm publish
 #   `pnpm release:prepare` (Decision 0030). No environment or secret, so no
 #   approval. tarball-sha512 (the @muxui/react tarball) may be empty here; when
 #   given it must match.
+#   The dry run also says which release it compares with: `prior-release` names
+#   the prior portfolio release manifest (a tracked tests/evidence path), or
+#   `first-portfolio-release` declares the first one (E-P2.1-04). Exactly one of
+#   them; the preparation rejects versions too small for the change, behind the
+#   prior release, or releasing an unchanged unit, and records the outcome in the
+#   manifest as preparation.verification.versionEffects.
 # - mode=publish (main only): `prepare` promotes the dry run named by dry-run-id
 #   (verifies it, downloads its artifact by id, and checks the candidate set
-#   against the commit and the inputs) without building anything. Then one
+#   against the commit and the inputs) without building anything, so the prior
+#   release setting is the dry run's, recorded in its manifest and never
+#   re-derived from these inputs. Then one
 #   `publish` job, behind one `npm-publish` environment approval, publishes the
 #   set to `next` in publish order. It is the only job with `id-token: write`.
 #   A package that exists on npm publishes through trusted publishing: its
@@ -75,6 +83,16 @@ on:
         required: false
         type: string
         default: ''
+      prior-release:
+        description: "Prior portfolio release manifest, a tracked path under tests/evidence/ ending .json; dry-run needs this or first-portfolio-release"
+        required: false
+        type: string
+        default: ''
+      first-portfolio-release:
+        description: "This is the first portfolio release, so no prior manifest is tracked; dry-run needs this or prior-release"
+        required: false
+        type: boolean
+        default: false
       tarball-sha512:
         description: "@muxui/react tarball integrity (sha512-...) from a dry run of this workflow; optional for dry-run"
         required: false
@@ -167,6 +185,30 @@ jobs:
       - name: Validate release versions
         run: node tooling/audits/repository-policy/src/release-set.mjs validate-versions
 
+      # E-P2.1-04: a dry run must say which release it compares with, and fails in seconds when it does not.
+      # Publish promotes the dry run's candidate, so it checks the shape only. Inputs reach the script through the environment.
+      - name: Validate prior release inputs
+        env:
+          MODE: ${{ inputs.mode }}
+          PRIOR_RELEASE: ${{ inputs.prior-release }}
+          FIRST_RELEASE: ${{ inputs.first-portfolio-release }}
+        run: |
+          set -euo pipefail
+          if [ -n "$PRIOR_RELEASE" ] && { [[ ! "$PRIOR_RELEASE" =~ ^tests/evidence/[A-Za-z0-9._/-]+\.json$ ]] || [[ "$PRIOR_RELEASE" == *..* ]]; }; then
+            echo "::error title=Prior release path::prior-release must be empty or a repository-relative path under tests/evidence/ ending .json, without '..'."
+            exit 1
+          fi
+          if [ "$MODE" = dry-run ]; then
+            if [ -n "$PRIOR_RELEASE" ] && [ "$FIRST_RELEASE" = true ]; then
+              echo "::error title=Prior release ambiguous::Set prior-release or first-portfolio-release, not both."
+              exit 1
+            fi
+            if [ -z "$PRIOR_RELEASE" ] && [ "$FIRST_RELEASE" != true ]; then
+              echo "::error title=Prior release required::Set prior-release to the prior portfolio release manifest, or first-portfolio-release for the first one."
+              exit 1
+            fi
+          fi
+
       - name: Record Node version
         id: node
         run: echo "version=$(cat .node-version)" >> "$GITHUB_OUTPUT"
@@ -208,6 +250,9 @@ jobs:
           MAIN_CI_MODE: ${{ steps.mainci.outputs.mode }}
           MUXUI_RELEASE_MAIN_CI_RUN: ${{ steps.mainci.outputs.run-id }}
           MUXUI_RELEASE_MAIN_CI_ATTEMPT: ${{ steps.mainci.outputs.attempt }}
+          # Read by release-prepare.mjs, which refuses neither or both, and a first-release claim a tracked manifest contradicts.
+          MUXUI_PRIOR_RELEASE_MANIFEST: ${{ inputs.prior-release }}
+          MUXUI_FIRST_PORTFOLIO_RELEASE: ${{ inputs.first-portfolio-release && 'true' || '' }}
         run: |
           set -euo pipefail
           if [ "$MAIN_CI_MODE" = reuse ]; then

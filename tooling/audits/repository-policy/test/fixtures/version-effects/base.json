@@ -1,0 +1,418 @@
+{
+  "records": [
+    {
+      "family": "component",
+      "record": {
+        "schemaVersion": "1.0.0",
+        "id": "muxui:component:button",
+        "kind": "component",
+        "name": "Button",
+        "summary": "Triggers an immediate action.",
+        "lifecycle": "experimental",
+        "intent": {
+          "useWhen": ["Triggering an immediate action"],
+          "avoidWhen": ["Navigating to another location"]
+        },
+        "anatomy": ["root", "label"],
+        "states": ["idle", "disabled"],
+        "accessibility": {
+          "nameRequired": true,
+          "obligations": ["Expose disabled state"]
+        },
+        "bindings": {
+          "web.html": {
+            "schemaVersion": "2.0.0",
+            "lifecycle": "experimental",
+            "strategy": "direct",
+            "api": {
+              "props": ["disabled"],
+              "events": ["activate"],
+              "parts": ["root", "label"],
+              "defaults": {
+                "disabled": false
+              }
+            },
+            "behavior": ["Activation requests one immediate action"],
+            "accessibility": ["Expose accessible name and disabled state"],
+            "tokenRecipe": {
+              "source": "muxui:token:default-theme",
+              "requirements": [
+                {
+                  "token": "semantic.action.background",
+                  "requirement": "required"
+                }
+              ]
+            },
+            "runtimeProfiles": {}
+          },
+          "web.react": {
+            "schemaVersion": "2.0.0",
+            "lifecycle": "experimental",
+            "strategy": "direct",
+            "api": {
+              "props": ["disabled"],
+              "events": ["activate"],
+              "parts": ["root", "label"],
+              "defaults": {
+                "disabled": false
+              }
+            },
+            "behavior": ["Activation requests one immediate action"],
+            "accessibility": ["Expose accessible name and disabled state"],
+            "tokenRecipe": {
+              "source": "muxui:token:default-theme",
+              "requirements": [
+                {
+                  "token": "semantic.action.background",
+                  "requirement": "required",
+                  "fallback": {
+                    "kind": "token",
+                    "profiles": ["web.react"],
+                    "evidenceIds": ["E-G1.0-03"],
+                    "token": "semantic.action.border"
+                  }
+                }
+              ]
+            },
+            "runtimeProfiles": {}
+          },
+          "native.react-native": {
+            "schemaVersion": "2.0.0",
+            "lifecycle": "experimental",
+            "strategy": "adapted",
+            "api": {
+              "props": ["disabled"],
+              "events": ["activate"],
+              "parts": ["root", "label"],
+              "defaults": {
+                "disabled": false
+              }
+            },
+            "behavior": ["Activation requests one immediate action"],
+            "accessibility": ["Expose accessible name and disabled state"],
+            "tokenRecipe": {
+              "source": "muxui:token:default-theme",
+              "requirements": [
+                {
+                  "token": "semantic.action.background",
+                  "requirement": "required"
+                }
+              ]
+            },
+            "runtimeProfiles": {
+              "ios": {
+                "strategy": "adapted",
+                "lifecycle": "experimental",
+                "validationProfile": "native.ios"
+              },
+              "android": {
+                "strategy": "adapted",
+                "lifecycle": "experimental",
+                "validationProfile": "native.android"
+              },
+              "native.react-native-web": {
+                "strategy": "unsupported",
+                "reason": "No responsible implementation in the first proof artifact."
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "family": "token-source",
+      "record": {
+        "schemaVersion": "2.1.0",
+        "id": "muxui:token:default-theme",
+        "kind": "token",
+        "name": "Synthetic tokens",
+        "summary": "The minimum token source used by the G0.1 proof artifact.",
+        "lifecycle": "experimental",
+        "tokenContractVersion": "1.1.0",
+        "theme": {
+          "name": "default",
+          "modeAxes": {
+            "colorScheme": ["light", "dark"],
+            "contrast": ["standard", "more"],
+            "motion": ["full", "reduced"],
+            "density": ["comfortable", "compact"],
+            "direction": ["ltr", "rtl"]
+          },
+          "defaultModes": {
+            "colorScheme": "light",
+            "contrast": "standard",
+            "motion": "full",
+            "density": "comfortable",
+            "direction": "ltr"
+          },
+          "runtimeSwitching": "unavailable"
+        },
+        "tokens": {
+          "reference.color.black": {
+            "layer": "reference",
+            "type": "color",
+            "unit": "hex",
+            "meaning": "Black reference value.",
+            "overridePolicy": "fixed",
+            "value": "#000000"
+          },
+          "semantic.action.background": {
+            "layer": "semantic",
+            "type": "color",
+            "unit": "hex",
+            "meaning": "Immediate action background.",
+            "overridePolicy": "theme",
+            "alias": "reference.color.black"
+          },
+          "semantic.action.border": {
+            "layer": "semantic",
+            "type": "color",
+            "unit": "hex",
+            "meaning": "Edge of an immediate action.",
+            "overridePolicy": "theme",
+            "alias": "reference.color.black"
+          },
+          "semantic.action.foreground": {
+            "layer": "semantic",
+            "type": "color",
+            "unit": "hex",
+            "meaning": "Text on an immediate action.",
+            "overridePolicy": "theme",
+            "alias": "reference.color.black"
+          }
+        }
+      }
+    },
+    {
+      "family": "example",
+      "record": {
+        "schemaVersion": "1.0.0",
+        "id": "muxui:example:button-basic-react",
+        "kind": "example",
+        "name": "Basic React Button",
+        "summary": "The minimum React Button example.",
+        "lifecycle": "experimental",
+        "binding": {
+          "ref": "muxui:component:button#web.react",
+          "guidanceImpact": "normative",
+          "purposes": ["generation"],
+          "preference": 0
+        },
+        "complexity": "minimal",
+        "prerequisites": [],
+        "source": "catalog/components/button/examples/react/basic.tsx"
+      },
+      "source": "export const Basic = () => <Button>Save</Button>;\n"
+    },
+    {
+      "family": "guide",
+      "record": {
+        "schemaVersion": "1.0.0",
+        "id": "muxui:guide:button-usage",
+        "kind": "guide",
+        "name": "Button usage",
+        "summary": "Portable usage guidance for Button.",
+        "lifecycle": "experimental",
+        "keywords": ["action", "button"],
+        "platforms": ["web.html", "web.react", "native.react-native"],
+        "source": "catalog/guides/button-usage.md"
+      },
+      "source": "# Button usage\n\n## When to use\n\nUse Button for an immediate action.\n\n## Accessibility\n\nGive it an accessible name.\n"
+    },
+    {
+      "family": "capability",
+      "record": {
+        "schemaVersion": "1.0.0",
+        "id": "muxui:capability:query-baseline",
+        "kind": "capability",
+        "name": "Query baseline",
+        "summary": "Schema-only declaration; query behavior remains unavailable.",
+        "lifecycle": "experimental",
+        "availability": "unavailable",
+        "policy": {
+          "effect": "read-only",
+          "requiresConfirmation": false
+        },
+        "availableOn": ["cli"]
+      }
+    }
+  ],
+  "platformSafetyContract": {
+    "schema": "muxui-platform-safety-contract-v1",
+    "contractVersion": "1.0.0",
+    "requirements": [
+      {
+        "id": "system.forced-colors",
+        "meaning": "Forced-colors mode keeps content legible.",
+        "boundary": "The component keeps its content visible in forced colors."
+      },
+      {
+        "id": "layout.direction",
+        "meaning": "Layout follows the writing direction.",
+        "boundary": "The component mirrors in a right-to-left layout."
+      }
+    ],
+    "defaults": {
+      "profiles": {
+        "web.html": [
+          {
+            "id": "system.forced-colors",
+            "disposition": "required"
+          },
+          {
+            "id": "layout.direction",
+            "disposition": "required"
+          }
+        ],
+        "web.react": [
+          {
+            "id": "system.forced-colors",
+            "disposition": "required"
+          },
+          {
+            "id": "layout.direction",
+            "disposition": "required"
+          }
+        ],
+        "ios": [
+          {
+            "id": "system.forced-colors",
+            "disposition": "required"
+          },
+          {
+            "id": "layout.direction",
+            "disposition": "required"
+          }
+        ],
+        "android": [
+          {
+            "id": "system.forced-colors",
+            "disposition": "required"
+          },
+          {
+            "id": "layout.direction",
+            "disposition": "required"
+          }
+        ],
+        "native.react-native-web": [
+          {
+            "id": "system.forced-colors",
+            "disposition": "required"
+          },
+          {
+            "id": "layout.direction",
+            "disposition": "required"
+          }
+        ]
+      },
+      "unsupported": [
+        {
+          "id": "system.forced-colors",
+          "disposition": "not-applicable",
+          "reason": "The binding is not supported."
+        },
+        {
+          "id": "layout.direction",
+          "disposition": "not-applicable",
+          "reason": "The binding is not supported."
+        }
+      ]
+    }
+  },
+  "contracts": {
+    "schemaVersion": "3.0.0",
+    "queryApiVersion": "2.1.0",
+    "querySchemaVersion": "2.1.0"
+  },
+  "schemas": {
+    "component.schema.json": {
+      "title": "Component",
+      "description": "A component record.",
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocked": {
+          "not": {
+            "$ref": "#/$defs/banned"
+          }
+        }
+      },
+      "patternProperties": {
+        "^x-": {
+          "type": "string"
+        }
+      },
+      "$defs": {
+        "banned": {
+          "type": "object",
+          "required": ["x"]
+        },
+        "valueOrAlias": {
+          "type": "object",
+          "not": {
+            "required": ["alias", "value"]
+          }
+        }
+      }
+    },
+    "token-source.schema.json": {
+      "title": "Token source",
+      "type": "object",
+      "required": ["tokens"],
+      "properties": {
+        "tokens": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/token"
+          }
+        }
+      },
+      "$defs": {
+        "token": {
+          "type": "object",
+          "required": ["layer"],
+          "properties": {
+            "layer": {
+              "type": "string"
+            },
+            "meaning": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "query-envelope.schema.json": {
+      "title": "Query response",
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "apiVersion": {
+          "enum": ["2.1.0"]
+        },
+        "data": {
+          "type": "object"
+        },
+        "legacyNote": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "implementation": {
+    "@muxui/schema": "sha256:s1",
+    "@muxui/catalog": "sha256:c1",
+    "@muxui/tooling": "sha256:t1",
+    "@muxui/react": "sha256:r1"
+  }
+}

@@ -219,6 +219,19 @@ published package built from another commit, and a reused package that is not ex
 record of the earlier manifest that published it or whose compatibility no longer holds.
 This release publishes all four packages; reuse is modeled and tested only.
 
+Release preparation compares the proposed versions with the prior portfolio release:
+`MUXUI_PRIOR_RELEASE_MANIFEST` names it, or `MUXUI_FIRST_PORTFOLIO_RELEASE=true` declares
+the first one, which holds only while no tracked file is a portfolio release manifest.
+`src/release-effects.mjs` classifies the change by Architecture "Version units and
+compatibility" and rejects versions that are too small, go backwards, or release an
+unchanged unit. Classification is conservative: a change without a precise rule is
+major. A unit with no stable release admits any change in its first base's rc series.
+The `E-P2.1-04` corpus is in `test/fixtures/version-effects/`. The workflow's dry run
+takes them as the `prior-release` (a tracked `tests/evidence/` path ending `.json`) and
+`first-portfolio-release` inputs, exactly one, and the outcome is recorded in the
+manifest as `preparation.verification.versionEffects`. Publish mode promotes that dry
+run and does not derive it again.
+
 `.github/workflows/npm-publish.yml` builds a candidate once (Decision 0030).
 `src/release-lineage.mjs` is the part of that workflow that reads GitHub runs and
 checks the candidate set. A dry run asks `main-ci` for the push run of `ci.yml` on

@@ -1,0 +1,23 @@
+{
+  "row": "Schema: add a required field",
+  "patch": [
+    {
+      "op": "add",
+      "path": "/schemas/component.schema.json/properties/owner",
+      "value": {
+        "type": "string"
+      }
+    },
+    {
+      "op": "add",
+      "path": "/schemas/component.schema.json/required/-",
+      "value": "owner"
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "schema": "major",
+    "queryApi": "major",
+    "publish": ["@muxui/schema", "@muxui/catalog", "@muxui/tooling"]
+  }
+}

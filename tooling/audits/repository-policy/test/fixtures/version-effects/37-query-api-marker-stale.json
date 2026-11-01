@@ -1,0 +1,21 @@
+{
+  "row": "A response version marker left at the prior query API version",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/contracts/queryApiVersion",
+      "value": "2.2.0"
+    },
+    {
+      "op": "replace",
+      "path": "/contracts/querySchemaVersion",
+      "value": "2.2.0"
+    }
+  ],
+  "expect": {
+    "catalog": "major",
+    "queryApi": "major",
+    "problems": 1,
+    "publish": ["@muxui/schema", "@muxui/catalog", "@muxui/tooling"]
+  }
+}

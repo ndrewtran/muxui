@@ -1,0 +1,14 @@
+{
+  "row": "A guide edit of whitespace and punctuation only",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/records/muxui:guide:button-usage/source",
+      "value": "# Button usage\n\n## When to use\n\nUse Button  for an immediate action;\n\n\n## Accessibility\n\nGive it an accessible name.\n"
+    }
+  ],
+  "expect": {
+    "catalog": "patch",
+    "publish": ["@muxui/catalog"]
+  }
+}

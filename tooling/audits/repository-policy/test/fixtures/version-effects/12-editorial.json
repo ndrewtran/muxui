@@ -1,0 +1,14 @@
+{
+  "row": "Editorial correction",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/records/muxui:component:button/record/summary",
+      "value": "Starts one immediate action."
+    }
+  ],
+  "expect": {
+    "catalog": "patch",
+    "publish": ["@muxui/catalog"]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "row": "Schema: clarify a description without changing validation",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/schemas/component.schema.json/description",
+      "value": "A component record, one per artifact."
+    }
+  ],
+  "expect": {
+    "catalog": "patch",
+    "schema": "patch",
+    "queryApi": "patch",
+    "publish": ["@muxui/schema", "@muxui/catalog", "@muxui/tooling"]
+  }
+}

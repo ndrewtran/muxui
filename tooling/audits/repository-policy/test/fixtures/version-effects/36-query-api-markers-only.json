@@ -1,0 +1,21 @@
+{
+  "row": "Raising the response version markers alone is not a change of the query API",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/schemas/query-envelope.schema.json/properties/apiVersion/enum",
+      "value": ["2.2.0"]
+    },
+    {
+      "op": "replace",
+      "path": "/contracts/queryApiVersion",
+      "value": "2.2.0"
+    },
+    {
+      "op": "replace",
+      "path": "/contracts/querySchemaVersion",
+      "value": "2.2.0"
+    }
+  ],
+  "expect": {}
+}

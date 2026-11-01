@@ -33,6 +33,7 @@ import {
 } from './release-proof.mjs';
 import { canonicalJson } from './canonical-json.mjs';
 import { deterministicArchive, readArchive } from './release-archive.mjs';
+import { assertVersionEffects, findCandidateSetProblems, resolvePriorRelease } from './release-effects.mjs';
 import { RETAINED_EVIDENCE_MILESTONES, buildPortfolioManifest, committedFileReader, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
 import {
   CANDIDATE_PUBLISH_CONFIG,
@@ -418,6 +419,22 @@ const releaseId = releaseIdFor({
   revision: sourceRevision,
   published: publishSet.packages.map(({ name }) => ({ name, version: versions.get(name) })),
 });
+// E-P2.1-04: a release compares its versions with the prior release, so it must say which. MUXUI_PRIOR_RELEASE_MANIFEST is the
+// prior portfolio manifest's path; MUXUI_FIRST_PORTFOLIO_RELEASE=true declares the first one (Decision 0032 item 9), and is
+// refused if the tree retains a portfolio manifest. Neither is refused too, so an unset variable cannot skip the check.
+const priorRelease = resolvePriorRelease({ environment: process.env, revision: sourceRevision, cwd: repositoryRoot });
+const versionEffects = priorRelease.first
+  ? { status: 'first-portfolio-release' }
+  : assertVersionEffects({
+    priorManifest: priorRelease.priorManifest,
+    revision: sourceRevision,
+    cwd: repositoryRoot,
+    versions,
+    publishSet,
+  });
+console.log(versionEffects.status === 'checked'
+  ? `P2.1 version effects match the change since ${versionEffects.priorRelease}; publishing ${versionEffects.publish.join(', ') || 'nothing'}`
+  : 'P2.1 first portfolio release: no prior release to compare versions with');
 
 // The catalog's generated files embed its package version (`catalogVersion`, ids, digest, release record), so the
 // candidate takes them from a compile for the rc, written outside the checkout.
@@ -1082,6 +1099,17 @@ try {
   });
   if (setInstall.status !== 0) fail('P2_1_SET_CONSUMER_INSTALL_FAILED', childOutput(setInstall));
   for (const [name, { candidateRoot }] of tuple) assertInstalledCandidate(setConsumer, name, candidateRoot);
+  // E-P2.1-04: tooling's catalog dependency resolves to the candidate catalog and not a registry copy, the new packages are
+  // prereleases, and the catalog's package version is its catalogVersion.
+  const installedManifest = (name) => JSON.parse(readFileSync(join(setConsumer, 'node_modules', name, 'package.json'), 'utf8'));
+  assertInstalledCandidate(realpathSync(join(setConsumer, 'node_modules/@muxui/tooling')), '@muxui/catalog', tuple.get('@muxui/catalog').candidateRoot);
+  const candidateSetProblems = findCandidateSetProblems({
+    versions,
+    installed: new Map(publishSet.packages.map(({ name }) => [name, installedManifest(name).version])),
+    toolingCatalogRange: installedManifest('@muxui/tooling').dependencies['@muxui/catalog'],
+    catalogVersion: JSON.parse(readFileSync(join(setConsumer, 'node_modules/@muxui/catalog/generated/catalog-package.json'), 'utf8')).catalogVersion,
+  });
+  if (candidateSetProblems.length > 0) fail('P2_1_CANDIDATE_SET_INVALID', candidateSetProblems.join('; '));
   copyConsumerTool(setConsumer, 'set-entries.mjs');
   const setEntries = runChild('publish-set entry imports', process.execPath, ['set-entries.mjs', JSON.stringify(publishSet.packages.map(({ name }) => name))], { cwd: setConsumer });
   if (setEntries.status !== 0) fail('P2_1_SET_CONSUMER_IMPORT_FAILED', childOutput(setEntries));
@@ -1135,6 +1163,7 @@ try {
       verification: {
         reactOnlineMatrix: matrixResults,
         publishSetConsumer: { packageManager: 'pnpm', entriesImported: Object.keys(exportNames).length, entriesResolved: resolvedEntries.length },
+        versionEffects,
         warnings: { duplicateDependencyVersions: duplicateVersionWarnings },
       },
     },

@@ -1,0 +1,14 @@
+{
+  "row": "Editorial correction to a capability summary",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/records/muxui:capability:query-baseline/record/summary",
+      "value": "Declares the query baseline; behavior stays unavailable."
+    }
+  ],
+  "expect": {
+    "catalog": "patch",
+    "publish": ["@muxui/catalog"]
+  }
+}

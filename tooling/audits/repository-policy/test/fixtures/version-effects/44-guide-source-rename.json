@@ -1,0 +1,14 @@
+{
+  "row": "A guide record names a new content path and the content is identical",
+  "patch": [
+    {
+      "op": "replace",
+      "path": "/records/muxui:guide:button-usage/record/source",
+      "value": "catalog/guides/button-usage-guide.md"
+    }
+  ],
+  "expect": {
+    "catalog": "patch",
+    "publish": ["@muxui/catalog"]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "row": "Search metadata correction",
+  "patch": [
+    {
+      "op": "add",
+      "path": "/records/muxui:guide:button-usage/record/keywords/-",
+      "value": "press"
+    }
+  ],
+  "expect": {
+    "catalog": "patch",
+    "publish": ["@muxui/catalog"]
+  }
+}
