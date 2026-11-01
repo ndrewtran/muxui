@@ -1385,6 +1385,7 @@ flowchart TD
   authoring -.->|entry kept out of| tooling
   schema -.->|build input| react
   tokens -.->|build input| react
+  compiler -.->|"build input, derives the descriptor"| react
 ```
 
 Solid edges are the only edges between Mux UI packages that a packed manifest

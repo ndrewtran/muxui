@@ -76,8 +76,10 @@ Part 1, the publish set and its edges:
 4. **Build-time edges stay in the workspace.** Tokens read the schema. The
    catalog compiler reads the schema and tokens and emits the bundle. The
    catalog's pattern imports read React. Tooling's authoring entry reads the
-   catalog compiler and the schema. React's build reads the schema and tokens.
-   No published manifest carries any of them.
+   catalog compiler and the schema. React's build reads the schema, the tokens,
+   and the catalog compiler, which derives its renderer descriptor. No published
+   manifest carries any of them, and React still depends on no Mux UI package at
+   runtime.
 5. **Public entries only, and compile entries stay out.** Each package exposes
    these entries, and its tarball holds no other:
    - `@muxui/schema`: `.`, `./schemas/*`, and `./types`.
@@ -240,8 +242,9 @@ rejected alternatives below, needs a successor decision and its own activation.
 
 ## Drafting choices for Andrew
 
-These calls follow from Andrew's answers and add no commitment. The pull
-request review is where Andrew confirms or changes them.
+These calls follow from Andrew's answers. Andrew confirmed choices 5 and 10
+explicitly on 1 November 2026 (see Acceptance). The pull request review is where
+he confirms or changes the rest.
 
 1. The first rc of the schema and tooling is a prerelease of the version their
    source manifests carry at the release commit (item 6).
@@ -289,6 +292,7 @@ Andrew's choices, in his words, each given as the recommended option of its ques
 
 - "The P2.1 package-graph draft needs seven decisions (package shape, the tokens scope effect, versions, release shape, unpublished compiler, the tooling-to-catalog range, trusted-publisher timing). How do you want to settle them?" answered "Take all seven (Recommended)", whose option text was: "Publish schema, catalog and tooling beside react; tokens private (Product Scope 23.0.0); rc.N on next; one release for all four; compiler unpublished; ranged dependency; publishers at first publish. I draft the decision PR for your review. Nothing publishes."
 - A second question, also on 1 November 2026: "Product Scope says Productization is complete only when "release rollback restores the prior verifiable tuple", but the P2.1 draft recovers a bad release by deprecating it and publishing a fix (as React does under Decision 0023). How should the decision reconcile them?" answered "Defer restore to P2 exit (Recommended)", whose option text was: "P2.1 deprecates only the bad version and fixes forward, like React. Its evidence also proves the prior set stays installable and verifiable by exact version. The restore proof stays owed by P2 exit. No Product Scope commitment changes."
+- A third question, also on 1 November 2026: "PR #410 (package-graph decision): Astra and I both recommend two small wording fixes first: drop the "add no commitment" claim, and record that React's build reads the catalog compiler. Then merge after #411. Choices 5 (all four packages ship only in the first release) and 10 (maintainer authoring stays unpublished) would count as confirmed. What should I do?" answered "Fix, then merge after #411 (Recommended)", whose option text was: "I make the two wording fixes on the branch, re-run its checks, and squash-merge it once #411 is in. Choices 5 and 10 count as confirmed by you."
 
 The first answer's seven, and where this record states each:
 
@@ -308,7 +312,7 @@ The first answer's seven, and where this record states each:
    publish (item 10).
 
 The second answer is stated in item 9, and in the Non-goals and preserved
-stops.
+stops. The third answer confirms drafting choices 5 and 10.
 
 The alternatives the draft weighed and this record does not adopt: publishing
 tokens as a fifth package, vendoring the schema into the catalog so that three
