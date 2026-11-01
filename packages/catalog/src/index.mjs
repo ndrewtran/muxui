@@ -10,6 +10,7 @@ import {
   QUERY_SELECTORS,
   canonicalDigest,
   canonicalJson,
+  isQueryApiVersion,
   negotiateQueryApiVersion,
   parseJsonStrict,
   patternCategoryRegistry,
@@ -80,13 +81,13 @@ function assertBundle(bundle) {
     bundle.artifacts.map(({ record }) => record),
     { patternCategories },
   );
-  // Versions this build does not read are valid in a catalog's list: the resolver negotiates, and a catalog with no
-  // shared version answers every query with MUXUI_QUERY_API_VERSION_UNSUPPORTED.
+  // Well-formed versions this build does not read are valid in a catalog's list: the resolver negotiates, and a catalog
+  // with no shared version answers every query with MUXUI_QUERY_API_VERSION_UNSUPPORTED. A malformed one is an integrity failure.
   if (
-    typeof bundle.apiVersion !== 'string'
+    !isQueryApiVersion(bundle.apiVersion)
     || !Array.isArray(bundle.supportedQueryApiVersions)
     || bundle.supportedQueryApiVersions.length === 0
-    || bundle.supportedQueryApiVersions.some((version) => typeof version !== 'string')
+    || !bundle.supportedQueryApiVersions.every(isQueryApiVersion)
     || new Set(bundle.supportedQueryApiVersions).size !== bundle.supportedQueryApiVersions.length
     || !bundle.supportedQueryApiVersions.includes(bundle.apiVersion)
   ) {

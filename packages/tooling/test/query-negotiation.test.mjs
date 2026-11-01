@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import test from 'node:test';
-import { compare, satisfies } from 'semver';
+import { satisfies } from 'semver';
 import {
   API_VERSION,
   QUERY_API_VERSIONS,
@@ -11,6 +11,7 @@ import {
   SCHEMA_VERSION,
   canonicalDigest,
   canonicalJson,
+  isQueryApiVersion,
   negotiateQueryApiVersion,
   parseJsonStrict,
   validateFamily,
@@ -44,6 +45,9 @@ async function resolveDirect({ catalog = {}, release = {}, request = {}, version
   return resolve(value, graph);
 }
 
+const [schemaMajor, schemaMinor] = SCHEMA_VERSION.split('.').map(Number);
+const laterPatch = `${schemaMajor}.${schemaMinor}.1`;
+const laterMinor = `${schemaMajor}.${schemaMinor + 1}.0`;
 const unreadMajor = {
   catalog: { queryApiVersion: '3.0.0', supportedQueryApiVersions: ['3.0.0'] },
   release: { queryApiVersion: '3.0.0' },
@@ -61,13 +65,28 @@ function assertIncompatible(result, dimension, label) {
   validateFamily('query-envelope', result);
 }
 
-test('E-P2.1-05 negotiation picks the highest shared query API version and ignores the rest', () => {
-  assert.ok(QUERY_API_VERSIONS.every((version, index) => index === 0 || compare(QUERY_API_VERSIONS[index - 1], version) < 0));
+test('E-P2.1-05 negotiation picks the highest shared query API version by SemVer precedence and ignores the rest', () => {
   assert.ok(satisfies(SCHEMA_VERSION, SCHEMA_READ_RANGE));
-  assert.equal(negotiateQueryApiVersion(['1.1.0', '1.2.0', API_VERSION, '3.0.0', 'not-a-version']), API_VERSION);
+  assert.ok(satisfies(laterPatch, SCHEMA_READ_RANGE));
+  assert.ok(!satisfies(laterMinor, SCHEMA_READ_RANGE));
+  assert.equal(negotiateQueryApiVersion(['1.1.0', '1.2.0', API_VERSION, '3.0.0']), API_VERSION);
   assert.equal(negotiateQueryApiVersion(['1.1.0', '1.2.0', '3.0.0']), undefined);
   assert.equal(negotiateQueryApiVersion(['2.2.0', '2.1.0', '1.2.0'], ['2.1.0', '2.2.0']), '2.2.0');
   assert.equal(negotiateQueryApiVersion(['2.1.0', '3.0.0'], ['2.1.0', '2.2.0']), '2.1.0');
+  // Precedence, not list order or text order: rc.10 follows rc.2, and a release follows its prereleases.
+  for (const readable of [['2.1.0-rc.2', '2.1.0-rc.10'], ['2.1.0-rc.10', '2.1.0-rc.2']]) {
+    assert.equal(negotiateQueryApiVersion(readable, readable), '2.1.0-rc.10');
+  }
+  const chain = [
+    '1.0.0-alpha', '1.0.0-alpha.1', '1.0.0-alpha.beta', '1.0.0-beta', '1.0.0-beta.2', '1.0.0-beta.11', '1.0.0-rc.1', '1.0.0',
+  ];
+  chain.slice(1).forEach((version, index) => {
+    for (const pair of [[chain[index], version], [version, chain[index]]]) {
+      assert.equal(negotiateQueryApiVersion(pair, pair), version, pair.join(' vs '));
+    }
+  });
+  assert.ok(['2.1.0', '2.2.0-rc.1', '0.1.0'].every(isQueryApiVersion));
+  assert.ok(['not-a-version', '2.1', '02.1.0', '2.1.0+build', 'v2.1.0', '', 2.1, null].every((value) => !isQueryApiVersion(value)));
 });
 
 test('E-P2.1-05 the current contract is read', async () => {
@@ -98,7 +117,9 @@ test('E-P2.1-05 supported older and newer tuples are read', async () => {
       catalog: { queryApiVersion: '2.2.0', supportedQueryApiVersions: ['2.1.0', '2.2.0'] },
       release: { queryApiVersion: '2.2.0' },
     }],
-    ['a schema minor above the base', { release: { schemaVersion: '3.1.0' } }],
+    ['a valid but unknown prerelease in the list', { catalog: { supportedQueryApiVersions: ['2.1.0', '2.2.0-rc.1'] } }],
+    ['the current schema', { release: { schemaVersion: SCHEMA_VERSION } }],
+    ['a later patch of the current schema', { release: { schemaVersion: laterPatch } }],
   ];
   for (const [label, change] of cases) {
     const result = await resolveDirect(change);
@@ -114,7 +135,8 @@ test('E-P2.1-05 a schema-incompatible catalog and an unsupported query API major
       catalog: { queryApiVersion: '1.2.0', supportedQueryApiVersions: ['1.1.0', '1.2.0'] },
       release: { queryApiVersion: '1.2.0' },
     }, 'query-api'],
-    ['a schema above the readable range', { release: { schemaVersion: '4.0.0' } }, 'schema'],
+    ['a schema minor tooling does not implement', { release: { schemaVersion: laterMinor } }, 'schema'],
+    ['a schema above the readable range', { release: { schemaVersion: `${schemaMajor + 1}.0.0` } }, 'schema'],
     ['a catalog that needs a newer reader', { catalog: { schemaRange: '^3.1.0' } }, 'schema'],
     ['a superseded schema major', { catalog: { schemaRange: '^2.0.0' }, release: { schemaVersion: '2.0.0' } }, 'schema'],
   ];
@@ -137,8 +159,20 @@ test('E-P2.1-05 an explicit query API version is rejected only when tooling cann
     assert.deepEqual(result.error.details.compatibilityFailures.map(({ dimension }) => dimension), ['query-api'], label);
     validateFamily('query-envelope', result);
   }
-  // Without a request, a catalog with nothing in common is incompatible, not an unsupported request.
+  // Tooling can serve the version, or negotiates one, but the catalog has nothing in common: incompatible, not unsupported.
   assertIncompatible(await resolveDirect(unreadMajor), 'query-api', 'no request');
+  assertIncompatible(await resolveDirect({ ...unreadMajor, request: { queryApiVersion: API_VERSION } }), 'query-api', 'explicit current');
+});
+
+test('E-P2.1-05 a malformed query API version is invalid input, a well-formed unknown one is not', async () => {
+  const malformed = [
+    ['a malformed current version', { catalog: { queryApiVersion: 'not-a-version', supportedQueryApiVersions: ['not-a-version'] } }],
+    ['a malformed entry beside a readable one', { catalog: { supportedQueryApiVersions: ['not-a-version', API_VERSION] } }],
+    ['a malformed request', { request: { queryApiVersion: 'not-a-version' } }],
+  ];
+  for (const [label, change] of malformed) {
+    await assert.rejects(resolveDirect(change), /MUXUI_RESOLVER_INPUT_INVALID/u, label);
+  }
 });
 
 test('E-P2.1-05 the CLI has no reader for a retired query API version', () => {
@@ -157,7 +191,7 @@ test('E-P2.1-05 prerelease catalogs with different base versions resolve by decl
     assert.equal(read.resolution.targetPackages['@muxui/catalog'], version);
     // The catalog's own declaration decides both ways: a prerelease inside the range is still rejected when incompatible.
     assertIncompatible(await resolveDirect({ version, ...unreadMajor }), 'query-api', version);
-    assertIncompatible(await resolveDirect({ version, release: { schemaVersion: '4.0.0' } }), 'schema', version);
+    assertIncompatible(await resolveDirect({ version, release: { schemaVersion: laterMinor } }), 'schema', version);
   }
 });
 
@@ -168,7 +202,7 @@ const generatedCatalog = new URL('../../catalog/generated/', import.meta.url);
  * tuple (the bundle is rebuilt and re-digested, so it stays internally consistent). `identity` stays mutable: change it
  * and `write()` it back.
  */
-async function installCatalogProject(fixtureRoot, { version, apiVersion, supported, schemaVersion }) {
+async function installCatalogProject(fixtureRoot, { version, apiVersion, supported, schemaVersion, shape }) {
   const bundle = parseJsonStrict(await readFile(new URL('catalog.json', generatedCatalog), 'utf8'));
   const identity = parseJsonStrict(await readFile(new URL('catalog-package.json', generatedCatalog), 'utf8'));
   const { catalogDigest: _previous, ...preimage } = bundle;
@@ -179,6 +213,7 @@ async function installCatalogProject(fixtureRoot, { version, apiVersion, support
     supportedQueryApiVersions: supported,
     schemaVersion,
   };
+  shape?.(derived);
   const catalogDigest = canonicalDigest(derived);
   const catalogRoot = join(fixtureRoot, 'catalog');
   const generated = join(catalogRoot, 'generated');
@@ -250,7 +285,7 @@ test('E-P2.1-05 an installed prerelease catalog from a newer query line is read 
     version: '2.2.0-rc.1',
     apiVersion: '2.2.0',
     supported: ['1.2.0', '2.1.0', '2.2.0'],
-    schemaVersion: '3.1.0',
+    schemaVersion: SCHEMA_VERSION,
   }, async (project) => {
     const { exitCode, stdout } = runCli(['manifest', '--project', project.path, '--detail', 'brief', '--json']);
     assert.equal(exitCode, 0);
@@ -279,10 +314,44 @@ test('E-P2.1-05 an installed catalog with an unsupported query API major returns
     supported: ['3.0.0'],
     schemaVersion: SCHEMA_VERSION,
   }, (project) => {
-    const resolved = resolvePnpmProjectCatalog({ project: project.path });
-    assertIncompatible(resolved, 'query-api', 'adapter');
+    assertIncompatible(resolvePnpmProjectCatalog({ project: project.path }), 'query-api', 'adapter');
+    // Naming the version tooling serves does not turn the catalog's missing support into an unsupported request.
+    for (const args of [[], ['--query-api-version', API_VERSION]]) {
+      const { exitCode, stdout } = runCli(['get', 'muxui:component:button', '--project', project.path, ...args, '--json']);
+      assert.equal(exitCode, 16, args.join(' '));
+      assert.equal(JSON.parse(stdout).error.code, 'MUXUI_CATALOG_INCOMPATIBLE', args.join(' '));
+    }
+  });
+});
+
+test('E-P2.1-05 an installed catalog on a newer schema minor is incompatible, not an integrity mismatch', async () => {
+  await withCatalogProject({
+    version: '2.1.0-rc.2',
+    apiVersion: API_VERSION,
+    supported: [API_VERSION],
+    schemaVersion: laterMinor,
+    // The minor's new optional field, which this build's closed record schemas reject.
+    shape: (bundle) => { bundle.artifacts.find(({ kind }) => kind === 'component').record.laterOptionalField = true; },
+  }, (project) => {
+    assertIncompatible(resolvePnpmProjectCatalog({ project: project.path }), 'schema', 'adapter');
     const { exitCode, stdout } = runCli(['manifest', '--project', project.path, '--json']);
     assert.equal(exitCode, 16);
     assert.equal(JSON.parse(stdout).error.code, 'MUXUI_CATALOG_INCOMPATIBLE');
+  });
+});
+
+test('E-P2.1-05 an installed catalog that lists a malformed query API version fails integrity', async () => {
+  await withCatalogProject({
+    version: '2.1.0-rc.2',
+    apiVersion: API_VERSION,
+    supported: ['not-a-version', API_VERSION],
+    schemaVersion: SCHEMA_VERSION,
+  }, (project) => {
+    const { error } = resolvePnpmProjectCatalog({ project: project.path });
+    assert.equal(error.code, 'MUXUI_CATALOG_INTEGRITY_MISMATCH');
+    // Both the package identity and the bundle itself refuse the entry.
+    const { rejectionReasons } = error.details.candidates[0];
+    assert.ok(rejectionReasons.includes('catalog-package-schema-mismatch'));
+    assert.ok(rejectionReasons.includes('catalog-bundle-invalid'));
   });
 });

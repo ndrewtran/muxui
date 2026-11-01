@@ -4,11 +4,13 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { createCatalogApi, createCatalogDiagnostic } from '@muxui/catalog';
 import {
+  SCHEMA_READ_RANGE,
   canonicalDigest,
   canonicalJson,
+  isQueryApiVersion,
   parseJsonStrict,
 } from '@muxui/schema';
-import { valid, validRange } from 'semver';
+import { satisfies, valid, validRange } from 'semver';
 import { resolveCatalogGraph } from './local-resolver.mjs';
 
 const CATALOG_PACKAGE = '@muxui/catalog';
@@ -184,7 +186,7 @@ function loadCatalogCandidate(packageRoot) {
         && !Array.isArray(identity.platformSafetyRequirementSets)
         && Array.isArray(identity.supportedQueryApiVersions)
         && identity.supportedQueryApiVersions.length > 0
-        && identity.supportedQueryApiVersions.every((value) => typeof value === 'string')
+        && identity.supportedQueryApiVersions.every(isQueryApiVersion)
         && new Set(identity.supportedQueryApiVersions).size === identity.supportedQueryApiVersions.length
         && identity.supportedQueryApiVersions.includes(identity.queryApiVersion)
         && [
@@ -243,10 +245,14 @@ function loadCatalogCandidate(packageRoot) {
       || canonicalJson(identity.supportedQueryApiVersions ?? [])
         !== canonicalJson(bundle.supportedQueryApiVersions ?? [])
     ) failures.push('query-api-mismatch');
-    try {
-      createCatalogApi(bundle);
-    } catch {
-      failures.push('catalog-bundle-invalid');
+    // A bundle outside the readable schema range is the resolver's `schema` incompatibility. Its records may use a grammar
+    // the current schemas reject, so they are validated only for a schema this build reads.
+    if (satisfies(String(bundle.schemaVersion), SCHEMA_READ_RANGE)) {
+      try {
+        createCatalogApi(bundle);
+      } catch {
+        failures.push('catalog-bundle-invalid');
+      }
     }
     const release = identity.releaseManifest;
     const releaseFields = [
@@ -287,6 +293,7 @@ function loadCatalogCandidate(packageRoot) {
       || release?.catalog?.version !== identity.version
       || release?.catalog?.digest !== identity.catalogDigest
       || release?.queryApiVersion !== identity.queryApiVersion
+      || release?.schemaVersion !== bundle.schemaVersion
       || !Array.isArray(release?.bindings)
     ) failures.push('release-manifest-mismatch');
     if (releaseValid) releaseManifest = release;
@@ -437,8 +444,8 @@ export function resolvePnpmProjectCatalog({
     || (artifact !== null && typeof artifact !== 'string')
     || (platform !== null && typeof platform !== 'string')
     || typeof filterBindings !== 'boolean'
-    // Any exact version passes: the resolver answers MUXUI_QUERY_API_VERSION_UNSUPPORTED for one tooling cannot serve.
-    || (queryApiVersion !== null && !(typeof queryApiVersion === 'string' && /^\d+\.\d+\.\d+$/u.test(queryApiVersion)))
+    // Any SemVer version passes: the resolver answers MUXUI_QUERY_API_VERSION_UNSUPPORTED for one tooling cannot serve.
+    || (queryApiVersion !== null && !isQueryApiVersion(queryApiVersion))
     || (project !== null && !isSafeRelative(project))
   ) return projectFailure('pnpm@0.0.0');
   const selectedPath = resolve(process.cwd(), project ?? '.');

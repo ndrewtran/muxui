@@ -4,6 +4,7 @@ import {
   SCHEMA_READ_RANGE,
   SCHEMA_VERSION,
   canonicalJson,
+  isQueryApiVersion,
   negotiateQueryApiVersion,
 } from '@muxui/schema';
 import { satisfies, valid, validRange } from 'semver';
@@ -20,7 +21,6 @@ export const RESOLVER_ERROR_PRECEDENCE = Object.freeze([
 ]);
 
 const TOOLING_SCHEMA_VERSION = SCHEMA_VERSION;
-const EXACT_VERSION = /^\d+\.\d+\.\d+$/u;
 const TOOLING_VERSION = '1.0.0';
 
 function compareText(left, right) {
@@ -141,9 +141,10 @@ function validateNormalizedInput(input) {
     ], `catalog ${catalog.id ?? '<unknown>'}`);
     assertClosed(catalog.provenance, ['kind', 'value'], `${catalog.id}.provenance`);
     assertArray(catalog.supportedQueryApiVersions, `${catalog.id}.supportedQueryApiVersions`);
-    // Versions tooling does not read are valid here: `compatibilityFor` negotiates the list, it does not police it.
+    // Well-formed versions tooling does not read are valid here: `compatibilityFor` negotiates the list. A malformed one is
+    // invalid input, like any other malformed normalized catalog identity.
     if (
-      catalog.supportedQueryApiVersions.some((version) => typeof version !== 'string')
+      !catalog.supportedQueryApiVersions.every(isQueryApiVersion)
       || new Set(catalog.supportedQueryApiVersions).size !== catalog.supportedQueryApiVersions.length
       || !catalog.supportedQueryApiVersions.includes(catalog.queryApiVersion)
     ) inputError(`${catalog.id}.supportedQueryApiVersions is inconsistent`);
@@ -235,8 +236,8 @@ function validateNormalizedInput(input) {
   }
   if (
     graph.request.queryApiVersion != null
-    && !(typeof graph.request.queryApiVersion === 'string' && EXACT_VERSION.test(graph.request.queryApiVersion))
-  ) inputError('resolver request queryApiVersion must be an exact version');
+    && !isQueryApiVersion(graph.request.queryApiVersion)
+  ) inputError('resolver request queryApiVersion must be a SemVer version');
 }
 
 function rangeAllows(range, version) {
@@ -318,18 +319,16 @@ function compatibilityFor({
   let failingPackage = '@muxui/catalog';
   const supported = catalog.supportedQueryApiVersions;
   let requestUnsupported = false;
-  if (requestedQueryApiVersion != null) {
-    // An explicit request must be a version tooling reads that the catalog also supports.
-    requestUnsupported = !QUERY_API_VERSIONS.includes(requestedQueryApiVersion)
-      || !supported.includes(requestedQueryApiVersion);
-    if (requestUnsupported) {
-      failures.push({
-        dimension: 'query-api',
-        required: canonicalJson(QUERY_API_VERSIONS),
-        actual: requestedQueryApiVersion,
-      });
-    }
-  } else if (negotiateQueryApiVersion(supported) === undefined) {
+  if (requestedQueryApiVersion != null && !QUERY_API_VERSIONS.includes(requestedQueryApiVersion)) {
+    // Only a version tooling cannot serve is an unsupported request.
+    requestUnsupported = true;
+    failures.push({
+      dimension: 'query-api',
+      required: canonicalJson(QUERY_API_VERSIONS),
+      actual: requestedQueryApiVersion,
+    });
+  } else if (!supported.includes(requestedQueryApiVersion ?? negotiateQueryApiVersion(supported))) {
+    // Tooling can serve the version (the request, or the negotiated one), but the catalog does not support it.
     failures.push({
       dimension: 'query-api',
       required: canonicalJson(QUERY_API_VERSIONS),
