@@ -115,8 +115,8 @@ binding or bounded reproof.
   or required-proof rule without it.
 - Shared code is added only after a real slice demonstrates the repeated
   semantic, logic, or interaction shape, and lives in the renderer that uses it
-  until a second renderer shares it. `@muxui/foundation` is parked: once the
-  parking pull request removes it, it returns only with an activation that names
+  until a second renderer shares it. `@muxui/foundation` is parked: the parking
+  pull request removed it, and it returns only with an activation that names
   that shared code and its two real consumers (Architecture, "Deferred renderer
   tracks").
 - Experimental React breadth proceeds under the standing development rule
@@ -381,10 +381,10 @@ claims milestone completion, support, publication or G3 activation.
 
 The Decision 0031 work is the same kind of delivery: moving `@muxui/react` to
 TypeScript source with its derived API block, and adopting the public CSS
-contract in three stages (`SCOPE-API-REACT-CSS`). Each step is an ordinary
-protected pull request, proved by the Architecture spec-conformance layer. It
-adds no milestone or evidence ID, and none claims completion, support, or
-publication.
+contract in two stages and one `styles.css` (`SCOPE-API-REACT-CSS`). Each step
+is an ordinary protected pull request, proved by the Architecture
+spec-conformance layer. It adds no milestone or evidence ID, and none claims
+completion, support, or publication.
 
 ### Post-R1.6 Figma token export addition
 

@@ -172,7 +172,7 @@ Part 2, the unused renderer scaffolds are parked:
     example-topology test into `@muxui/react` tests, adapted to the React
     binding, in the same change, so the check never lapses.
 
-Part 3, React owns its public CSS contract, in three stages:
+Part 3, React owns its public CSS contract, in two stages and one stylesheet:
 
 14. **The contract.** Architecture's `@muxui/react` section enumerates it:
     cascade layers, root and part classes in one scheme, a closed documented set
@@ -192,22 +192,56 @@ Part 3, React owns its public CSS contract, in three stages:
     cannot meet, and otherwise its token changes to the `theme` policy. The
     stage applies the rule to both Button hooks, under the token contract proof.
 16. **Stage 2, one scheme and Mux-owned state.** One class naming scheme covers
-    every family, fixed and supplemental. The public classes are the root class
-    and the part classes the concept record's `anatomy` names, so the list is
-    derived from the catalog, and every other class is internal. The state
-    attributes are a closed set documented in one Mux-owned list, rooted in
-    `data-muxui-`, and set by a thin adapter over React Aria render props. No
-    stylesheet selector or example uses a substrate attribute afterwards, so a
-    substrate swap changes the adapter, not the stylesheet. The stage names the
-    spelling (`data-muxui-state-<name>` is the default, because
-    `compile-surface` already encodes it) and the separators of the class
-    scheme.
-17. **Stage 3, split entries.** The stylesheet splits into at least a core
-    entry, a supplemental entry, and an editor entry that holds the rich-text
-    editor and Markdown styles, so an ordinary consumer loads none of them. Each
-    family sits in exactly one entry, derived from the supplemental mapping and
-    not listed in prose. The theme stylesheet stays separate, and splitting its
-    60 presets is not part of this decision.
+    every family, fixed and supplemental, as shipped on `main` at `6037b01a`.
+    - **Classes.** The concept record's `anatomy` decides which parts need a
+      disposition. The React part map
+      (`packages/react/test/support/styling-parts.ts`) holds one row for each of
+      the 448 anatomy entries of the 84 families, and `styling-tokens.test.mjs`
+      fails on a missing, duplicate, or unknown row. A row gives the part its
+      selector, marks it as an internal class several families share (10 parts),
+      or gives the reason Mux has no element to class (19 parts): a provider, a
+      state, the children, or an element React Aria or the caller renders. The
+      public classes are the root class `muxui-<slug>`, the part classes
+      `muxui-<slug>__<part>`, and the four shared field classes
+      `muxui-field-label`, `muxui-field-input`, `muxui-field-description`, and
+      `muxui-field-error` (`publicSharedClasses` in the part map), which are
+      documented only under a scope such as the family root. Modifiers
+      (`muxui-<slug>--<modifier>`), the other classes several families share, and
+      every class the part map does not list are internal. The part map is
+      authored beside the React tests and checked against the catalog's
+      anatomy, not generated from it. The docs Styling section, Storybook's
+      Anatomy story, and the Figma anatomy specs read it.
+    - **State attributes.** They are the closed list in
+      `packages/react/src/styling-contract.ts`, rooted in `data-muxui-state-`:
+      29 presence states, selected as `[data-muxui-state-disabled]` and never by
+      value, and 5 enumerated states that carry a value
+      (`data-muxui-state-orientation="vertical"`; also placement, layout,
+      sort-direction, and type). A thin adapter over React Aria's render props
+      (`packages/react/src/substrate.ts`) writes them. A status or reflected
+      prop a Mux family writes for itself (`data-muxui-placement`,
+      `data-muxui-loaded`) is a `data-muxui-<name>` attribute outside the list.
+      Outside the adapter, no stylesheet selector or source names a React Aria
+      state attribute, so a substrate swap changes the adapter, not the
+      stylesheet. Two React Aria attributes remain in the markup:
+      `data-placeholder` on date segments, which React Aria reads, and
+      `data-disabled` on the hidden date picker input, which Mux UI cannot wrap.
+      The package README discloses both.
+    - **Spelling.** `data-muxui-state-<name>` for states, `__` for a part, and
+      `--` for a modifier.
+17. **Stage 3, one stylesheet.** Stage 3 no longer splits the stylesheet. The
+    component stylesheet is one entry, `@muxui/react/styles.css`, and holds every
+    family, including the supplemental families, Markdown, and TextEditor.
+    `themes.css` stays a separate optional entry, and splitting it is not part of
+    this decision. Within a major, `styles.css` stays complete, so any finer
+    entry can be added later only additively. The split was retired on 1
+    November 2026 (see Acceptance), for two reasons. The editor and Markdown styles measure about
+    29 KB (25.7 KB for TextEditor, 3.5 KB for Markdown) of a 675 KB
+    `styles.css`, about 4 percent, and about 3 KB of its 76 KB gzipped, so a
+    separate entry saves little. And "supplemental" is an internal provenance
+    label for the families added after the fixed registry (31 of the 84, among
+    them Text, Card, and Sidebar), which the docs and the catalog's component
+    records do not show: a mandatory supplemental entry would leave everyday
+    families unstyled for a consumer who did not know to load it.
 18. **Announcing renames.** Pre-release renames and removals land outright under
     Decision 0016, with no alias, codemod, notice window, or retained old
     spelling. The pull request that makes them is the announcement of record: its
@@ -217,22 +251,44 @@ Part 3, React owns its public CSS contract, in three stages:
     guidance documents the current contract only. The rc sequence is the version
     signal, and a `next` consumer already accepts breaking changes between rcs
     with no support claim.
-19. **Proof.** A test in `@muxui/react` renders the exported components and
-    checks the published surface. Every declared public class and state
-    attribute is emitted in its applicable fixtures and has CSS coverage, every
-    public custom property is read and changes computed style in a browser, the
-    layers and style entries exist, and canonical examples rely on no internal
-    hook. Internal classes and substrate attributes may be emitted; they are
-    simply not part of the contract. The test adapts `compile-surface` and the
-    example-topology test and replaces them.
-20. **Order.** The intended order is the parking pull request (moving the surface
-    check first), Stage 1, the TypeScript move tranche by tranche, Stages 2 and
-    3, then the public package graph for P2.1. It is not a gate. Stages 1 and 2
-    and the API derivation are meant to land before P2.1 accepts the package
-    graph, because that is when both contracts become a compatibility promise.
-    Each step is an ordinary protected pull request (Decision 0028), except an
-    edit to `strategy/platform-safety-contract.json`, which is an authority file
-    and carries an `Authority change record` naming this decision.
+19. **Proof.** `@muxui/react` tests under `packages/react/test/` prove the
+    published surface. Internal classes and substrate attributes may be emitted;
+    they are simply not part of the contract.
+    - `styling-tokens.test.mjs` holds the part map to one row for each anatomy
+      entry and every documented hook to an authored rule or a recorded
+      hook-only reason. It holds every Mux class in authored CSS and source to
+      the closed vocabulary, and the stylesheets to the closed state list in its
+      one spelling. It renders families on the server and in a DOM to show that
+      no React Aria state attribute reaches the markup and that each state a
+      family is put in is written, and it checks that canonical examples rely on
+      no internal hook.
+    - `styling-emission.test.mjs` finds every part-map row that has an element in
+      the markup of its own family, from the canonical examples or from a
+      fixture for the states they do not show.
+    - `browser/hook-only-reach.test.mjs` shows in a browser that a consumer's rule
+      reaches the elements of each of the 12 hooks no stylesheet selects.
+    - `public-surface.test.mjs` checks that the style entries are exactly
+      `styles.css` and `themes.css`, that each starts with the layer order and
+      holds every rule in a layer, and that a token with the `instance` policy is
+      read through `var()`. No token has that policy, so there is no public
+      custom property yet, and the browser test that setting one changes
+      computed style is written with the first.
+    The Button-only surface compiler
+    (`packages/react/test/support/compile-surface.mjs`) and the Button tests in
+    `public-surface.test.mjs` that depend on it are now redundant. Retiring them
+    is remaining code work; the layer, style-entry, and `instance` checks stay.
+20. **Order.** The intended order was the parking pull request (moving the surface
+    check first), Stage 1, the TypeScript move tranche by tranche, and Stage 2.
+    All four are in `main`, with every `web.react` API block derived from
+    TypeScript source, and Stage 3 was retired (item 17). Two steps remain: the
+    platform-safety defaults (item 10, in progress in a separate pull request),
+    then the public package graph for P2.1. The order was never a gate. Stages 1
+    and 2 and the API derivation were meant to land before P2.1 accepts the
+    package graph, because that is when both contracts become a compatibility
+    promise. Each step is an ordinary protected pull request (Decision 0028),
+    except an edit to `strategy/platform-safety-contract.json`, which is an
+    authority file and carries an `Authority change record` naming this
+    decision.
 
 ## Authority effect
 
@@ -278,6 +334,18 @@ Part 3, React owns its public CSS contract, in three stages:
   - Release additions and removals: none. Nothing was published, so no release
     scope loses a package. Evidence effect: none. Open tracker work: one issue
     per step in item 20, which this change does not create.
+  - The 1 November 2026 amendment redefines the style entry points of
+    `SCOPE-API-REACT-CSS`, from "core, supplemental, and editor at least" to one
+    `styles.css` with the optional `themes.css`, and ends the third stage. That
+    redefines a committed public surface, so Product Scope takes a further major
+    version, `22.0.0`, under the same rule. The same pull request rewrites the
+    `SCOPE-PKG-FOUNDATION`, `SCOPE-PKG-WEB`, and `SCOPE-PKG-REACT-NATIVE` rows,
+    one Roadmap sentence, and one Architecture paragraph in the past tense,
+    because the parking pull request has removed the scaffolds. That is wording
+    only, with no transition. No other Scope ID changes.
+    Release additions and removals: none, because no split entry was ever
+    exported or published. Evidence effect: none. Open tracker work: none, as no
+    open repository issue names Stage 3 or the split entries.
 - **`AGENTS.md` route maps.** The root `AGENTS.md` names no parked package and
   is unchanged. `packages/react/AGENTS.md` names `@muxui/web` only to say React
   does not import it, which stays true. It is not edited here, because a change
@@ -308,24 +376,30 @@ candidate, or final-merge stop. It activates neither W1 nor N1 and writes no
 Figma file. It does not change the `foundation` artifact kind, the schema's
 platform vocabulary, token values, the `@muxui/react` dependency rules, React
 Aria's role as an internal replaceable substrate, or the split of `themes.css`.
-It implements nothing: parking, the build, the extraction, and the three CSS
-stages are separate pull requests, and none of them is a stop beyond the ones
+It implements nothing: parking, the build, the extraction, and the CSS stages
+are separate pull requests, and none of them is a stop beyond the ones
 Decision 0028 already names.
 
 ## Reversal
 
 A successor decision may restore any part, and each part reverses on its own.
-Parked packages return from git history by an accepted activation. The derived
-API block is a full serialization of the authored one, so an authored block can
-be written back for a component without loss. The CSS contract can return to
-`web.html` by the W1.0 activation. Retained evidence is unaffected: a capture
+Parked packages return from git history by an accepted activation. A derived
+API block does not copy back without loss: it carries the typed fields
+`propDetails`, `eventDetails`, `types`, and `partApis`, and the schema rejects
+them in an authored block ("is derived only and cannot be authored",
+`authoredApiIssues` in `packages/schema/src/derived-api.mjs`). Writing a
+component's block back therefore keeps `props`, `events`, `parts`, and
+`defaults`, and loses the types, enum members, required flags, descriptions,
+and part APIs. Keeping them needs a successor decision that changes the schema
+to accept them as authored and names who owns each. The CSS contract can return
+to `web.html` by the W1.0 activation. Retained evidence is unaffected: a capture
 made before this decision verifies against the binding it was made with.
 
 ## Acceptance
 
 - Owner: Andrew / `ndrewtran`
 - Outcome: Accepted user direction; repository adoption through a protected pull request
-- Acceptance date: 11 October 2026
+- Acceptance date: 11 October 2026; amended 1 November 2026
 
 Andrew's choices, in his words, each given as the recommended option of its
 question:
@@ -352,6 +426,19 @@ answers, and replied "Confirmed.":
    `muxui.utilities`, in that order (item 15).
 6. The implementation order before P2.1 is a target, not a gate (item 20).
 
-This record does not claim that any check passed, that a pull request was opened
-or merged, that the repository has adopted the decision, that any implementation
-step was done, or that any package, release candidate, or dist-tag changed.
+On 1 November 2026 Andrew answered two questions about the work that shipped,
+each given as the recommended option of its question:
+
+- "Decision 0031 Stage 3 currently requires three stylesheets (core, supplemental, editor). Both reviewers say drop the supplemental split. What should the stylesheet entries be?" answered "One styles.css (Recommended)"
+- "Decision 0031 items 16 and 19 shipped slightly differently from their wording (4 shared field classes are public, and parts with no element are documented). Should the decision be amended to match what shipped, along with the stale-text fixes?" answered "Amend to match (Recommended)"
+
+The options he did not choose: for the stylesheet entries, "styles.css + editor.css"
+(moving the TextEditor and Markdown CSS into an opt-in `editor.css`) and "Three
+entries as written"; for items 16 and 19, "Rename to match the text" and "Leave
+it for now".
+
+This record does not claim that any check passed, or that any package, release
+candidate, or dist-tag changed. Where items 16, 17, 19, and 20 describe shipped
+work, they describe the code on `main` at `6037b01a` and name the tests that
+guard it. Naming a test is not a result for it, and nothing here is a stable,
+support, or release claim.
