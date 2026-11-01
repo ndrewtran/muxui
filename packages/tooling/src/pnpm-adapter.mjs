@@ -21,7 +21,7 @@ function sha256(value) {
 function isSafeRelative(value) {
   return typeof value === 'string'
     && value.length > 0
-    && /^[A-Za-z0-9._/-]+$/u.test(value)
+    && /^[A-Za-z0-9._/@+-]+$/u.test(value)
     && !isAbsolute(value)
     && !value.split('/').includes('..');
 }

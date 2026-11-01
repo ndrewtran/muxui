@@ -33,7 +33,7 @@ function uniqueSorted(values) {
 function isRelativePath(value) {
   return typeof value === 'string'
     && value.length > 0
-    && /^[A-Za-z0-9._/-]+$/u.test(value)
+    && /^[A-Za-z0-9._/@+-]+$/u.test(value)
     && !value.startsWith('/')
     && !/^[A-Za-z]:[\\/]/u.test(value)
     && !value.split('/').includes('..');
