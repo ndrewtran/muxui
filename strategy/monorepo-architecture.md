@@ -1008,7 +1008,7 @@ was and its authored `api` block stays canonical.
 
 `@muxui/react` does not consume `@muxui/web` at runtime. Canonical tokens,
 component records, binding specs, compatibility data, descriptors, and package
-guidance may be deterministically compiled into its tarball by private build
+guidance may be deterministically compiled into its tarball by workspace build
 authorities without becoming runtime workspace dependencies or duplicate
 owners.
 
@@ -1301,7 +1301,7 @@ demonstrate the repeated shape.
 
 ```mermaid
 flowchart TD
-  canonical["private canonical/build authorities\nschema, tokens, catalog, tooling"]
+  canonical["workspace canonical/build authorities\nschema, tokens, catalog, tooling"]
   react["@muxui/react@0.1.0-alpha.N\nfirst public component package"]
   aria["react-aria-components\nexact internal runtime dependency"]
   temporal["@internationalized/date\ninternal temporal adapter dependency"]
@@ -1339,22 +1339,70 @@ dependencies serve the purposes listed above. The packed tarball must contain
 no unresolved `workspace:` dependency, repository-only or source-tree import,
 undeclared file dependency, or `@muxui/web` import.
 
-| Package | Responsibility | Must not own |
-| --- | --- | --- |
-| `@muxui/schema` | Versioned source and response schemas, generated types, platform IDs, and authoring helpers. A later admitted capability may add a `ChangeIntentEnvelope` grammar. | Product semantics, components, renderers, or site code. |
-| `@muxui/tokens` | Canonical tokens and deterministic web/native/design-tool transforms. | Component behavior or docs rendering. |
-| `@muxui/react` | React rendering, the `web.react` API (TypeScript props types), the public CSS contract, SSR/hydration, effects, host refinements, package guidance, and exports. | The component inventory or renderer-neutral component metadata, React Aria public API, or another renderer's contract. |
-| `@muxui/catalog` | Compiled catalog assets and pure discovery/query/planning API. | CLI parsing, MCP transport, project mutation. |
-| `@muxui/tooling` | Self-describing CLI, MCP adapters, local validation, maintainer scaffolds, semantic diffs, and (when separately admitted) safe project operations. | A second artifact index, product decisions, or renderer implementation. |
+| Package | Responsibility | Must not own | Published at |
+| --- | --- | --- | --- |
+| `@muxui/schema` | Versioned source and response schemas, generated types, platform IDs, and authoring helpers. A later admitted capability may add a `ChangeIntentEnvelope` grammar. | Product semantics, components, renderers, or site code. | P2.1, as `-rc.N` on `next`. |
+| `@muxui/tokens` | Canonical tokens and deterministic web/native/design-tool transforms. | Component behavior or docs rendering. | Not published at P2.1; a private build authority. |
+| `@muxui/react` | React rendering, the `web.react` API (TypeScript props types), the public CSS contract, SSR/hydration, effects, host refinements, package guidance, and exports. | The component inventory or renderer-neutral component metadata, React Aria public API, or another renderer's contract. | R1 exit, as `0.1.0-rc.N` on `next`. |
+| `@muxui/catalog` | Compiled catalog assets and pure discovery/query/planning API. | CLI parsing, MCP transport, project mutation. | P2.1, as `-rc.N` on `next`. |
+| `@muxui/tooling` | Self-describing CLI, MCP adapters, local validation, maintainer scaffolds and semantic diffs (a workspace-only entry), and (when separately admitted) safe project operations. | A second artifact index, product decisions, or renderer implementation. | P2.1, as `-rc.N` on `next`. |
 
-At the React package-only boundary, schema, tokens, catalog, and tooling remain
-private authoring/build/proof authorities, and the parked renderer packages
-stay outside the public graph and return only through activation
-("Deferred renderer tracks"). Productization later
-publishes the compatible catalog/tooling portfolio and CLI-as-documentation.
-Their versions may move independently from renderer packages, but every
-enabled response and release manifest correlates all relevant versions and the
-catalog digest.
+At the React package-only boundary, `@muxui/react` is the only published
+package; schema, tokens, catalog, and tooling are private authoring, build, and
+proof authorities. The parked renderer packages stay outside the public graph
+and return only through activation ("Deferred renderer tracks"). Productization
+publishes the portfolio below and CLI-as-documentation. Package versions may
+move independently, but every enabled response and release manifest correlates
+all relevant versions and the catalog digest.
+
+### Productization portfolio
+
+P2.1 publishes exactly `@muxui/react`, `@muxui/schema`, `@muxui/catalog`, and
+`@muxui/tooling` (Decision 0032). Nothing else in the workspace is published.
+
+```mermaid
+flowchart TD
+  subgraph published["Published at P2.1: one commit, one release manifest"]
+    schema["@muxui/schema"]
+    catalog["@muxui/catalog\nquery, search, bundle"]
+    tooling["@muxui/tooling\nmuxui CLI, resolver, registry, types"]
+    react["@muxui/react\nno Mux UI runtime dependency"]
+  end
+  subgraph workspace["Workspace only, never published"]
+    tokens["@muxui/tokens\ntoken data and transforms"]
+    compiler["Catalog compiler\nand pattern imports"]
+    authoring["Tooling authoring entry\nscaffolds, diff, change intent"]
+  end
+
+  catalog -->|runtime| schema
+  tooling -->|runtime| schema
+  tooling -->|"runtime, version range"| catalog
+  tokens -.->|build| schema
+  compiler -.->|build| tokens
+  compiler -.->|build| schema
+  compiler -.->|emits the bundle| catalog
+  authoring -.->|build| compiler
+  authoring -.->|entry kept out of| tooling
+  schema -.->|build input| react
+  tokens -.->|build input| react
+```
+
+Solid edges are the only edges between Mux UI packages that a packed manifest
+may declare. Dotted edges are build-time workspace edges that no published
+manifest carries. The rules:
+
+- Every dependency in a packed manifest is a registry package or a member of the
+  publish set. None is a `workspace:` specifier, `@muxui/tokens`, or a parked
+  renderer package.
+- A published package exposes its public entries only, and its tarball holds no
+  other. The catalog compiler and pattern-import entries and the tooling
+  maintainer-authoring entry stay in the workspace for generators, tests, and
+  maintainers.
+- Token data reaches consumers inside the catalog bundle's token sections.
+  Token transforms for a consumer build or a design tool stay unpublished until
+  a later activation publishes `@muxui/tokens`.
+- The set releases together, in order: schema, catalog, tooling, then React
+  ("Version units and compatibility").
 
 ### Catalog distribution and resolution
 
@@ -1367,6 +1415,18 @@ application consume its query API. Official installation profiles add
 compatible renderer packages plus project-local `@muxui/tooling` and
 `@muxui/catalog`, so discovery remains offline, deterministic, and
 project-correct.
+
+At runtime the catalog depends only on `@muxui/schema`. The catalog compiler,
+which also reads the token source, and the pattern-import entries are
+workspace-only, and the token data a consumer needs is already in the bundle, so
+no consumer installs `@muxui/tokens`. `@muxui/tooling` depends on
+`@muxui/schema` and on `@muxui/catalog`. It builds the query API with its own
+catalog dependency over the bundle of the catalog the project declares. That
+dependency is a version range bound to the query API major the tooling reads,
+not an exact pin, so a newer CLI reads an older installed catalog whose
+supported query API versions include one it reads, and gets
+`MUXUI_CATALOG_INCOMPATIBLE` otherwise. Tooling's maintainer-authoring entry is
+workspace-only and is not in the published package.
 
 The published package version equals `catalogVersion`, and its manifest records
 the catalog digest, query API version, schema range, and source revision. A
@@ -1977,6 +2037,22 @@ SemVer-versioning every component:
   version range, derived during release from package metadata.
 - The CLI/tooling declares the schema ranges it can read and reports the exact
   catalog and package tuple in every response.
+
+A package version names a tarball, and a version unit names a contract; they
+move independently. The catalog is the one package whose version is a version
+unit: its package version is `catalogVersion`. Negotiation compares version
+units and the renderer package ranges that bindings declare. A dependency range
+between published Mux UI packages is a package-manager request, not
+negotiation, and tooling's range on `@muxui/catalog` admits exactly the catalog
+releases whose supported query API versions the tooling reads.
+
+Before a package's stable release it publishes only `-rc.N` prereleases under
+`next`, with its own numbers, and nothing claims `latest` (Decision 0023). A
+catalog `-rc.N` package version makes `catalogVersion` a prerelease SemVer too,
+so a bare `X.Y.Z` never names an rc. A range that must admit a prerelease names
+one, because a plain range excludes them. A portfolio release publishes its
+packages from one commit under one release manifest, so the descriptor and the
+catalog it pairs with come from the same source.
 
 Every implementation query resolves under an explicit compatibility context:
 
