@@ -585,18 +585,16 @@ test('npm-publish.yml promotes in publish mode, prepares only in dry-run mode, a
   const prepare = job('prepare');
   const publish = job('publish');
   const step = (title) => prepare.split(/^      - /mu).find((entry) => entry.startsWith(`name: ${title}\n`));
-  // The set's versions reach every step through one job variable, from one input per member.
+  // The set's versions reach every job through one workflow variable, from one input per member.
   for (const [name, input] of [['schema', 'schema-version'], ['catalog', 'catalog-version'], ['tooling', 'tooling-version'], ['react', 'version']]) {
-    assert.match(prepare, new RegExp(`@muxui/${name}=\\$\\{\\{ inputs\\.${input} \\}\\}`, 'u'), name);
+    assert.match(workflow, new RegExp(`^env:\\n  MUXUI_RELEASE_VERSIONS: .*@muxui/${name}=\\$\\{\\{ inputs\\.${input} \\}\\}`, 'mu'), name);
   }
   assert.match(step('Validate release versions'), /release-set\.mjs validate-versions/u);
   assert.match(step('Check candidate against inputs'), /release-lineage\.mjs prepared/u);
-  // Publishing a package set is refused before anything is read, fetched, or approved, until the ordered publish job lands.
-  const refusal = step('Refuse publishing a package set');
-  assert.match(refusal, /if: inputs\.mode == 'publish'/u);
-  assert.match(refusal, /exit 1/u);
+  // The ordered publish job replaced the refusal: publish mode promotes and then publishes, behind one approval.
+  assert.equal(step('Refuse publishing a package set'), undefined);
   const stepNames = [...prepare.matchAll(/^      - (?:name|uses): (.+)$/gmu)].map(([, title]) => title);
-  assert.deepEqual(stepNames.slice(0, 2), ['Require main for publish mode', 'Refuse publishing a package set']);
+  assert.equal(stepNames[0], 'Require main for publish mode');
   assert.match(step('Find main CI proof'), /if: inputs\.mode == 'dry-run'/u);
   assert.match(step('Prepare release candidate'), /if: inputs\.mode == 'dry-run'/u);
   for (const title of ['Verify dry run', 'Fetch dry-run candidate', 'Verify promoted candidate']) {
@@ -616,4 +614,36 @@ test('npm-publish.yml promotes in publish mode, prepares only in dry-run mode, a
   // The job that holds the OIDC identity never reads Actions and never builds.
   assert.match(publish, /id-token: write/u);
   assert.doesNotMatch(publish, /actions: read|release:prepare|release-prepare|release-lineage/u);
+});
+
+// The ordered publish job (E-P2.1-06): one approval and one OIDC identity for the set, every input through the environment.
+test('npm-publish.yml publishes the set in one approved job and keeps every input out of shell text', () => {
+  const workflow = readFileSync(resolve(import.meta.dirname, '../../../../.github/workflows/npm-publish.yml'), 'utf8');
+  const job = (name) => new RegExp(`^  ${name}:\\n([\\s\\S]*?)(?=^  [a-z-]+:\\n|(?![\\s\\S]))`, 'mu').exec(workflow)[1];
+  const publish = job('publish');
+  assert.match(publish, /if: inputs\.mode == 'publish' && github\.ref == 'refs\/heads\/main'\n    needs: prepare\n/u);
+  // One environment approval covers every package, and only this job holds the OIDC identity.
+  assert.equal(publish.match(/^    environment: npm-publish$/gmu)?.length, 1);
+  assert.equal(workflow.match(/^ +id-token: write$/gmu)?.length, 1);
+  assert.doesNotMatch(job('prepare') + job('registry-preflight'), /environment:|id-token/u);
+  assert.match(publish, /concurrency:\n      group: npm-publish\n      cancel-in-progress: false/u);
+  // The checkout holds only the publication script, the set reader it imports, and the set it reads.
+  assert.match(publish, /sparse-checkout: \|\n            tooling\/audits\/repository-policy\/publish-set\.json\n            tooling\/audits\/repository-policy\/src\/npm-publication\.mjs\n            tooling\/audits\/repository-policy\/src\/release-set\.mjs\n          sparse-checkout-cone-mode: false/u);
+  // Verify, then publish each package in order with its own preflight, recheck, provenance, and read-back (all in the script).
+  const commands = [...publish.matchAll(/npm-publication\.mjs (\S+)$/gmu)].map(([, command]) => command);
+  assert.deepEqual(commands, ['check-npm', 'verify-candidate', 'publish-set']);
+  assert.deepEqual([...publish.matchAll(/^      - name: (.+)$/gmu)].map(([, title]) => title), ['Require trusted-publishing npm', 'Re-verify candidate', 'Publish the set in order']);
+  assert.doesNotMatch(publish.replace(/^\s*#.*$/gmu, ''), /npm publish|release-lineage|release:prepare|actions: read/u);
+  assert.match(publish, /EXPECTED_SHA512: \$\{\{ inputs\.tarball-sha512 \}\}/u);
+  // The temporary first-publish token reaches the publish script's step and no other step or job.
+  assert.equal(workflow.match(/secrets\.NPM_TOKEN/gu)?.length, 1);
+  const publishStep = publish.split(/^      - /mu).find((entry) => entry.startsWith('name: Publish the set in order\n'));
+  assert.match(publishStep, /env:\n[\s\S]*\n          NPM_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}\n        run: /u);
+  // The read-only preflight mode reads every package and holds no credential.
+  assert.match(job('registry-preflight'), /npm-publication\.mjs preflight-set\n/u);
+  // Inputs reach scripts through `env:`; no step interpolates a workflow expression into `run:`.
+  for (const step of ['registry-preflight', 'prepare', 'publish'].flatMap((name) => job(name).split(/^ {6}- /mu).slice(1))) {
+    const run = step.indexOf('\n        run:');
+    if (run >= 0) assert.doesNotMatch(step.slice(run), /\$\{\{/u, step.split('\n')[0]);
+  }
 });
