@@ -322,7 +322,7 @@ adapters, and `test/evidence-integrity.test.mjs` rebuilds the committed rc.1 to 
 routes byte for byte. For a portfolio run the candidate is `@muxui/react`, so the
 `E-R1-EXIT` records keep their shape; the dry run's portfolio manifest (schema,
 digest, source commit and tree, and every tarball's recorded bytes) and each
-package's preflight, publish, and workflow read-back ride along under `portfolio`. The capture accepts a publish log only in the workflow's own shape: one block per package, in publish order, each package's read-back finished before the next package's publish starts, and each read-back's dist-tags what that package's preflight allows (`next` the new version, `latest` unchanged or registry-set on a first publish, no other tag).
+package's preflight, publish, and workflow read-back ride along under `portfolio`. A package the publish attempted without a confirmed read-back is recorded `published: 'unverified'`, never `false`, which is only for a package never attempted. The capture accepts a publish log only in the workflow's own shape: one block per package, in publish order, each package's read-back finished before the next package's publish starts, and each read-back's dist-tags what that package's preflight allows (`next` the new version, `latest` unchanged or registry-set on a first publish, no other tag).
 `test/evidence-integrity.test.mjs` also captures a hosted portfolio release
 built by `test/evidence-portfolio-fixture.mjs`, whose publish job log is what
 `npm-publication.mjs` prints against the registry fake.

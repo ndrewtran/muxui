@@ -3262,13 +3262,24 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     const refused = await failed({ refuse: [tooling] });
     assert.throws(() => r1Exit.bindPublish(refused), code('R1_EXIT_TUPLE_MISMATCH'), 'a stopped run is not the publish of the set');
     const prior = r1Exit.bindPriorPublish(refused);
-    assert.equal(prior.observed.published, false);
-    assert.deepEqual(prior.portfolio.packages.map(({ name, state }) => [name, state]), [[schema, 'verified'], [catalog, 'verified'], [tooling, 'publish-failed'], [react, 'not-attempted']]);
+    assert.equal(prior.observed.published, false, '@muxui/react was never attempted');
+    assert.deepEqual(prior.portfolio.packages.map(({ name, state, published }) => [name, state, published]), [
+      [schema, 'verified', true], [catalog, 'verified', true], [tooling, 'publish-failed', 'unverified'], [react, 'not-attempted', false],
+    ]);
     assert.equal(prior.portfolio.manifestDigest, fixture.manifest.digest);
     assert.match(prior.excerpt.text, /Recovery plan \(a plan only; nothing was deprecated, unpublished, or re-tagged\)/u);
     assert.deepEqual(r1Exit.dryRunBindingProblems({ dryRun: r1Exit.bindDryRun(fixture.dryRunInput()), priorPublish: prior }), {});
 
     // A read-back that failed on other bytes is recorded as such for the package, and still publishes no React.
+    // A publish that errored after npm may have accepted it (the registry shows it later) is unknown, not "published nothing":
+    // for the final React package and for a middle one, the capture keeps it unverified and never records published: false.
+    const lateReact = r1Exit.bindPriorPublish(await failed({ landThenFail: [react] }));
+    assert.equal(lateReact.observed.published, 'unverified');
+    assert.deepEqual(lateReact.portfolio.packages.map(({ state, published }) => [state, published]), [['verified', true], ['verified', true], ['verified', true], ['publish-failed', 'unverified']]);
+    assert.match(lateReact.excerpt.text, new RegExp(`${react}@0\\.1\\.0-rc\\.5: unverified; the publish may have landed`, 'u'));
+    const lateMiddle = r1Exit.bindPriorPublish(await failed({ landThenFail: [catalog] }));
+    assert.equal(lateMiddle.observed.published, false, '@muxui/react itself was never attempted');
+    assert.deepEqual(lateMiddle.portfolio.packages.map(({ state, published }) => [state, published]), [['verified', true], ['publish-failed', 'unverified'], ['not-attempted', false], ['not-attempted', false]]);
     const corrupted = r1Exit.bindPriorPublish(await failed({ corrupt: [catalog] }));
     assert.deepEqual(corrupted.portfolio.packages.map(({ state }) => state), ['verified', 'read-back-failed', 'not-attempted', 'not-attempted']);
     assert.match(corrupted.excerpt.text, /catalog@2\.1\.0-rc\.1: bad-bytes; published bad bytes; deprecate 2\.1\.0-rc\.1/u);

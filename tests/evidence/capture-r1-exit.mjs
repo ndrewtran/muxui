@@ -784,8 +784,10 @@ const portfolioPublishSteps = [
 /**
  * Reads what the publish step printed for each package of `set` (`{ name, version, integrity, shasum }` in publish order):
  * 'verified' (published and read back), 'read-back-failed' (the publish landed), 'publish-failed' (it did not), or
- * 'not-attempted' (the set stopped before it). A package that was attempted but never preflighted is a malformed log.
- * The blocks must be the workflow's own: once each, in publish order, each package's read-back completed before the next
+ * 'not-attempted' (the set stopped before it). `published` says what that proves: true only after a confirmed read-back, false
+ * only for a package never attempted, and 'unverified' for any attempted package without one, because npm may have accepted
+ * a publish whose command errored and show it later (the recovery plan reads it the same way). A package that was
+ * attempted but never preflighted is a malformed log. The blocks must be the workflow's own: once each, in publish order, each package's read-back completed before the next
  * package's publish starts (so nothing starts after a package that did not complete), and a read-back's dist-tags are what
  * the package's preflight allows.
  */
@@ -835,6 +837,7 @@ function observePublishSet(stepLines, set) {
       name,
       version,
       state,
+      published: done ? true : start < 0 ? false : 'unverified',
       ...(start < 0 ? {} : { authentication }),
       preflight: { version: preflightVersion, kind: first ? 'first' : 'later', ...(first ? {} : { latest, next }) },
       ...(start < 0 ? {} : {
@@ -924,7 +927,8 @@ function bindPortfolioPublish({ dryRun, run, jobs, prepareLog, publishLog, appro
       excerpt: stepExcerpt(lines, portfolioPublishSteps),
       observed: {
         ...reactObserved(attempt),
-        published: false,
+        // false only if @muxui/react was never attempted; an errored publish may still have landed.
+        published: reactRow.published,
         failedStep: { name: publishStep?.name ?? 'Publish the set in order', completedAt: publishStep?.completed_at ?? null, errorCode: lines.map((line) => content(line).match(/^npm error code (\S+)$/u)?.[1]).find(Boolean) ?? null },
       },
       portfolio: { manifestDigest: dryRun.portfolio.digest, published: dryRun.portfolio.published, packages: rows },
