@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -30,19 +30,28 @@ function run(command, args, cwd, stdio = 'inherit') {
   return result.stdout ?? '';
 }
 
-function generate(cleanRoot) {
-  const result = spawnSync(
-    process.execPath,
-    [
-      resolve(cleanRoot, 'tooling/audits/repository-policy/src/run-workspace-task.mjs'),
-      'generate',
-    ],
-    { cwd: cleanRoot, stdio: 'inherit' },
-  );
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(`GENERATION_COMMAND_FAILED: exit ${result.status ?? 1}`);
-  }
+/** Runs a command with each output line prefixed by `label`, so concurrent roots stay readable. */
+function runLabelled(label, command, args, cwd, failureCode = `${command.toUpperCase()}_FAILED`) {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn(command, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+    for (const [stream, sink] of [[child.stdout, process.stdout], [child.stderr, process.stderr]]) {
+      let pending = '';
+      stream.setEncoding('utf8');
+      stream.on('data', (chunk) => {
+        const lines = (pending + chunk).split('\n');
+        pending = lines.pop();
+        for (const line of lines) sink.write(`[${label}] ${line}\n`);
+      });
+      stream.on('end', () => {
+        if (pending) sink.write(`[${label}] ${pending}\n`);
+      });
+    }
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolvePromise();
+      else reject(new Error(`${failureCode}: exit ${code ?? 1}`));
+    });
+  });
 }
 
 function status(cleanRoot) {
@@ -57,29 +66,36 @@ function status(cleanRoot) {
 const sourceRevision = run('git', ['rev-parse', 'HEAD'], repositoryRoot, 'pipe').trim();
 const policy = await loadPolicy(repositoryRoot);
 const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-generation-proof-'));
-const cleanRoots = ['first', 'second'].map((name) => join(temporaryRoot, name));
-const runs = [];
+const cleanRoots = ['first', 'second'].map((name) => ({ name, path: join(temporaryRoot, name) }));
+
+/** One clean root: install, snapshot, generate, audit, snapshot again. */
+async function generateRoot({ name, path }) {
+  await runLabelled(name, 'pnpm', ['install', '--offline', '--frozen-lockfile', '--ignore-scripts'], path);
+  const beforeFiles = await snapshot(path);
+  await runLabelled(
+    name,
+    process.execPath,
+    [resolve(path, 'tooling/audits/repository-policy/src/run-workspace-task.mjs'), 'generate'],
+    path,
+    'GENERATION_COMMAND_FAILED',
+  );
+  const audit = await auditRepository(path);
+  if (audit.generatedFiles === 0) {
+    throw new Error('GENERATION_NO_PROJECTIONS: clean generation produced no audited projections');
+  }
+  return { beforeFiles, files: await snapshot(path), status: status(path) };
+}
 
 try {
-  for (const cleanRoot of cleanRoots) {
-    run('git', ['worktree', 'add', '--quiet', '--detach', cleanRoot, sourceRevision], repositoryRoot);
-    run(
-      'pnpm',
-      ['install', '--offline', '--frozen-lockfile', '--ignore-scripts'],
-      cleanRoot,
-    );
-    const beforeFiles = await snapshot(cleanRoot);
-    generate(cleanRoot);
-    const audit = await auditRepository(cleanRoot);
-    if (audit.generatedFiles === 0) {
-      throw new Error('GENERATION_NO_PROJECTIONS: clean generation produced no audited projections');
-    }
-    runs.push({
-      beforeFiles,
-      files: await snapshot(cleanRoot),
-      status: status(cleanRoot),
-    });
+  // Worktrees are added one at a time, since git locks the shared repository metadata; the roots then generate concurrently.
+  for (const { path } of cleanRoots) {
+    run('git', ['worktree', 'add', '--quiet', '--detach', path, sourceRevision], repositoryRoot);
   }
+  // Wait for both roots even when one fails, so cleanup never removes a worktree a generation is still using.
+  const settled = await Promise.allSettled(cleanRoots.map(generateRoot));
+  const failure = settled.find(({ status: outcome }) => outcome === 'rejected');
+  if (failure) throw failure.reason;
+  const runs = settled.map(({ value }) => value);
 
   const projectionPaths = new Set();
   for (const runResult of runs) {
@@ -113,8 +129,8 @@ try {
   console.error(error.message);
   process.exitCode = 1;
 } finally {
-  for (const cleanRoot of cleanRoots) {
-    spawnSync('git', ['worktree', 'remove', '--force', cleanRoot], {
+  for (const { path } of cleanRoots) {
+    spawnSync('git', ['worktree', 'remove', '--force', path], {
       cwd: repositoryRoot,
       stdio: 'ignore',
     });
