@@ -21,7 +21,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { crc32, inflateRawSync } from 'node:zlib';
-import { verifyPortfolioRelease } from './release-manifest.mjs';
+import { committedFileReader, verifyPortfolioRelease } from './release-manifest.mjs';
 import { candidateFileNames, parseReleaseVersions, readPublishSet, readSourceVersions } from './release-set.mjs';
 
 export const CI_WORKFLOW = '.github/workflows/ci.yml';
@@ -325,11 +325,14 @@ export async function fetchCandidate({ repository, sha, dryRunId, currentRunId, 
 /**
  * Verifies the extracted candidate set's bytes: exactly the tarballs and the portfolio manifest that `versions`
  * name, and the manifest holds to them (`verifyPortfolioRelease`): every package's recorded integrity and tuple
- * position, every published package built from this commit (`sha`), the commit's tree, and the compatibility of the
- * tuple. The versions are the inputs. `expectedSha512` is the React tarball's integrity: required when
+ * position, every published package built from this commit (`sha`), the commit's tree, the compatibility of the
+ * tuple, and the retained evidence as committed at `sha`. A reused package needs the earlier manifest that
+ * published it in `priorManifests`. The versions are the inputs. `expectedSha512` is the React tarball's integrity: required when
  * `requireDigest`, as promotion does, and checked whenever given. Returns what the workflow reports.
  */
-export function verifyCandidate({ directory, publishSet, versions, expectedSha512, requireDigest = true, sha, tree }) {
+export function verifyCandidate({
+  directory, publishSet, versions, expectedSha512, requireDigest = true, sha, tree, readEvidence = committedFileReader(sha, repositoryRoot), priorManifests = new Map(),
+}) {
   if (requireDigest && !expectedSha512) stop('Digest required', 'mode=publish needs the tarball-sha512 input.');
   const expectedNames = candidateFileNames(publishSet, versions);
   const files = readdirSync(directory).sort();
@@ -340,7 +343,7 @@ export function verifyCandidate({ directory, publishSet, versions, expectedSha51
   const artifacts = new Map(publishSet.packages.map(({ name }, index) => [name, readFileSync(join(directory, expectedNames[index]))]));
   const manifest = JSON.parse(readFileSync(join(directory, manifestName), 'utf8'));
   try {
-    verifyPortfolioRelease({ manifest, artifacts, publishSet, expected: { revision: sha, tree } });
+    verifyPortfolioRelease({ manifest, artifacts, publishSet, expected: { revision: sha, tree }, readEvidence, priorManifests });
   } catch (error) {
     stop('Candidate mismatch', `${error.message}.`);
   }
@@ -453,7 +456,7 @@ export async function main(command, environment = process.env, io = {}) {
       if (!/^[1-9]\d*$/u.test(attempt)) stop('Environment invalid', `DRY_RUN_ATTEMPT is ${attempt}.`);
       const { publishSet, versions } = releaseTuple(environment);
       const candidate = verifyCandidate({
-        directory: environment.CANDIDATE_DIR, publishSet, versions, expectedSha512: environment.EXPECTED_SHA512, sha, tree: (io.readTree ?? readTree)(sha),
+        directory: environment.CANDIDATE_DIR, publishSet, versions, expectedSha512: environment.EXPECTED_SHA512, sha, tree: (io.readTree ?? readTree)(sha), readEvidence: io.readEvidence,
       });
       log(`Promoted candidate ${candidate.versions.get('@muxui/react')} ${candidate.integrity} from dry run ${environment.DRY_RUN_ID} attempt ${attempt}`);
       log(`Dry run preparation: ${describePreparation(candidate.preparation)}`);
@@ -474,7 +477,7 @@ export async function main(command, environment = process.env, io = {}) {
       const { publishSet, versions } = releaseTuple(environment);
       const candidate = verifyCandidate({
         directory: environment.CANDIDATE_DIR, publishSet, versions, expectedSha512: environment.EXPECTED_SHA512, requireDigest: false,
-        sha: environment.GITHUB_SHA, tree: (io.readTree ?? readTree)(environment.GITHUB_SHA),
+        sha: environment.GITHUB_SHA, tree: (io.readTree ?? readTree)(environment.GITHUB_SHA), readEvidence: io.readEvidence,
       });
       log(`Prepared candidate set ${[...candidate.versions].map(([name, version]) => `${name}@${version}`).join(', ')}; release manifest ${candidate.digest}; @muxui/react ${candidate.integrity}`);
       return;

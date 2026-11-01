@@ -204,10 +204,14 @@ correlates the tuple: source commit and tree, each package with its role
 versions, descriptor and compatibility profile digests, evidence and exception
 digests, and the rollback plan. Its digest excludes how the checks ran, so the same
 commit and versions give the same digest. `verifyPortfolioRelease` holds the manifest to
-the tarball bytes and rejects repacked bytes under a version, a package missing from
-the tuple, a published package built from another commit, and a reused package whose
-recorded digest or compatibility no longer holds. This release publishes all four
-packages; reuse is modeled and tested only.
+the tarball bytes and recomputes what it records instead of trusting it: the catalog
+bundle against its declared digest, sidecars, module, and release record, the contract
+versions, the renderer descriptor and its export identities, the exception digests, the
+evidence indexes as committed at the release commit, and the publication and rollback
+plans. It rejects repacked bytes under a version, a package missing from the tuple, a
+published package built from another commit, and a reused package that is not exactly the
+record of the earlier manifest that published it or whose compatibility no longer holds.
+This release publishes all four packages; reuse is modeled and tested only.
 
 `.github/workflows/npm-publish.yml` builds a candidate once (Decision 0030).
 `src/release-lineage.mjs` is the part of that workflow that reads GitHub runs and

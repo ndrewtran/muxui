@@ -1,12 +1,13 @@
-// A small publish-set tuple for the release manifest and lineage tests: four tarballs with just the files the
-// manifest reads, built with the same deterministic archive writer a release uses.
+// A small publish-set tuple for the release manifest and lineage tests: four tarballs with the files the manifest
+// reads (a consistent catalog bundle, its records and sidecars, the schema declarations, the renderer descriptor), built
+// with the same deterministic archive writer a release uses, and the retained evidence the manifest binds.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { after } from 'node:test';
 import { canonicalJson } from '../src/canonical-json.mjs';
 import { deterministicArchive } from '../src/release-archive.mjs';
-import { buildPortfolioManifest, releaseIdFor } from '../src/release-manifest.mjs';
+import { RETAINED_EVIDENCE_MILESTONES, RETAINED_REVIEW_INDEX, buildPortfolioManifest, releaseIdFor, sha256 } from '../src/release-manifest.mjs';
 import { readPublishSet } from '../src/release-set.mjs';
 
 export const publishSet = readPublishSet(resolve(import.meta.dirname, '../../../..'));
@@ -18,35 +19,116 @@ export const otherCommit = 'b'.repeat(40);
 export const tree = 'c'.repeat(40);
 export const digest = (character) => `sha256:${character.repeat(64)}`;
 
+/** The bytes the generators write for a JSON file. */
+export const jsonBytes = (value) => `${canonicalJson(value)}\n`;
+
+/** A generated file's `.provenance` sidecar, as the generators write it, for `bytes` at the source path `path`. */
+export function sidecarFor(path, bytes) {
+  const body = `${canonicalJson({ path, sha256: sha256(bytes) })}\n`;
+  return `// @generated-from: x\n// @generated-content-sha256: ${sha256(body)}\n${body}`;
+}
+
+// The files whose sidecars `archiveOf` writes when a fixture leaves them out, with the source path they record.
+const sidecarPaths = {
+  'generated/catalog.json': 'packages/catalog/generated/catalog.json',
+  'generated/catalog-package.json': 'packages/catalog/generated/catalog-package.json',
+  'generated/renderer-descriptor.json': 'packages/react/generated/renderer-descriptor.json',
+};
+
 const tokenDigests = { 'web.react': digest('1') };
 const safetyDigests = { 'web.react': digest('2') };
-const binding = 'muxui:component:button#web.react';
+export const binding = 'muxui:component:button#web.react';
 
-export function tupleFixture({ versions = {}, commits = {}, catalogDigest = digest('d'), descriptorDigest = tokenDigests, catalogRange = '^2.1.0-rc.1', reactRange = '^0.1.0-0', extra = {} } = {}) {
+/** The `./bundle` module the catalog generator writes for a bundle's bytes. */
+export function catalogModuleFor(bundleBytes) {
+  const body = `export const catalogJson = ${JSON.stringify(bundleBytes.slice(0, -1))};\n`;
+  return `// @generated-from: x\n// @generated-content-sha256: ${sha256(body)}\n${body}`;
+}
+
+/** The generated files of a catalog package for `version`: a bundle, its package and release records, the module, and sidecars. */
+export function catalogFiles({ version, reactRange = '^0.1.0-0', sourceRevision = digest('5'), tokenDigest = tokenDigests['web.react'] }) {
+  const component = {
+    id: 'muxui:component:button',
+    kind: 'component',
+    name: 'Button',
+    platforms: ['web.react'],
+    bindingSpecRevisions: { 'web.react': digest('3') },
+    tokenRequirementSets: { 'web.react:web.react': { digest: tokenDigest } },
+    platformSafetyRequirementSets: { 'web.react:web.react': { digest: safetyDigests['web.react'] } },
+  };
+  const token = { id: 'muxui:token:default-theme', kind: 'token', record: { tokenContractVersion: '2.0.0' } };
+  const preimage = {
+    formatVersion: '1.0.0',
+    apiVersion: '2.1.0',
+    supportedQueryApiVersions: ['2.1.0'],
+    schemaVersion: '3.0.0',
+    catalogVersion: version,
+    sourceRevision,
+    platformSafetyContract: { contractVersion: '1.0.0' },
+    platformSafetyContractDigest: digest('7'),
+    artifacts: [component, token],
+  };
+  const catalogDigest = sha256(canonicalJson(preimage));
+  const bundle = { ...preimage, catalogDigest };
+  const bundleBytes = jsonBytes(bundle);
+  const catalogPackage = {
+    schema: 'muxui-catalog-package-v2',
+    name: '@muxui/catalog',
+    version,
+    catalogVersion: version,
+    catalogDigest,
+    queryApiVersion: '2.1.0',
+    supportedQueryApiVersions: ['2.1.0'],
+    schemaRange: '^3.0.0',
+    sourceRevision,
+    tokenRequirementSets: { [`${component.id}#web.react:web.react`]: tokenDigest },
+    platformSafetyContract: { version: '1.0.0', digest: digest('7') },
+    platformSafetyRequirementSets: { [`${component.id}#web.react:web.react`]: safetyDigests['web.react'] },
+    provenance: { kind: 'source-revision', value: sourceRevision },
+    releaseManifest: {
+      id: `muxui-release:${version}:${sourceRevision}`,
+      releaseVersion: version,
+      schemaVersion: '3.0.0',
+      queryApiVersion: '2.1.0',
+      tokenContractVersion: '2.0.0',
+      sourceRevision,
+      catalog: { id: `@muxui/catalog@${version}:${catalogDigest}`, version, digest: catalogDigest },
+      bindings: [{
+        descriptor: 'renderer:@muxui/react',
+        binding,
+        package: '@muxui/react',
+        versionRange: reactRange,
+        exportName: 'Button',
+        specRevision: digest('3'),
+        tokenRequirementSetDigests: { 'web.react': tokenDigest },
+        platformSafetyRequirementSetDigests: safetyDigests,
+      }],
+    },
+    bundle: './catalog.json',
+  };
+  return {
+    'generated/catalog.json': bundleBytes,
+    'generated/catalog-package.json': jsonBytes(catalogPackage),
+    'generated/catalog.mjs': catalogModuleFor(bundleBytes),
+  };
+}
+
+/**
+ * Four tarballs' files. `versions` and `commits` (by package name) change what the tuple is, `catalogRange` and
+ * `reactRange` the ranges it declares, `descriptorDigest` and `catalogTokenDigest` the token requirement digests the
+ * descriptor and the catalog carry, and `exceptions` the React package's active exceptions.
+ */
+export function tupleFixture({ versions = {}, commits = {}, descriptorDigest = tokenDigests, catalogTokenDigest, catalogRange = '^2.1.0-rc.1', reactRange = '^0.1.0-0', exceptions = [], extra = {} } = {}) {
   const at = { '@muxui/schema': '0.6.0-rc.1', '@muxui/catalog': '2.1.0-rc.1', '@muxui/tooling': '1.1.0-rc.1', '@muxui/react': '0.1.0-rc.5', ...versions };
   const gitHead = (name) => commits[name] ?? commit;
   const files = {
-    '@muxui/schema': { 'package.json': { name: '@muxui/schema', version: at['@muxui/schema'], gitHead: gitHead('@muxui/schema') } },
+    '@muxui/schema': {
+      'package.json': { name: '@muxui/schema', version: at['@muxui/schema'], gitHead: gitHead('@muxui/schema') },
+      'src/index.mjs': "export const SCHEMA_VERSION = '3.0.0';\nexport const API_VERSION = '2.1.0';\n",
+    },
     '@muxui/catalog': {
       'package.json': { name: '@muxui/catalog', version: at['@muxui/catalog'], gitHead: gitHead('@muxui/catalog'), dependencies: { '@muxui/schema': `^${at['@muxui/schema']}` } },
-      'generated/catalog-package.json': {
-        name: '@muxui/catalog',
-        version: at['@muxui/catalog'],
-        catalogVersion: at['@muxui/catalog'],
-        catalogDigest,
-        queryApiVersion: '2.1.0',
-        supportedQueryApiVersions: ['2.1.0'],
-        platformSafetyContract: { version: '1.0.0' },
-        releaseManifest: {
-          schemaVersion: '3.0.0',
-          tokenContractVersion: '2.0.0',
-          catalog: { id: `@muxui/catalog@${at['@muxui/catalog']}:${catalogDigest}`, version: at['@muxui/catalog'], digest: catalogDigest },
-          bindings: [{
-            binding, package: '@muxui/react', versionRange: reactRange, exportName: 'Button', specRevision: digest('3'),
-            tokenRequirementSetDigests: tokenDigests, platformSafetyRequirementSetDigests: safetyDigests,
-          }],
-        },
-      },
+      ...catalogFiles({ version: at['@muxui/catalog'], reactRange, tokenDigest: catalogTokenDigest }),
     },
     '@muxui/tooling': {
       'package.json': {
@@ -55,8 +137,15 @@ export function tupleFixture({ versions = {}, commits = {}, catalogDigest = dige
       },
     },
     '@muxui/react': {
-      'package.json': { name: '@muxui/react', version: at['@muxui/react'], gitHead: gitHead('@muxui/react'), muxUi: { rendererDescriptor: './generated/renderer-descriptor.json' } },
+      'package.json': {
+        name: '@muxui/react',
+        version: at['@muxui/react'],
+        gitHead: gitHead('@muxui/react'),
+        muxUi: { rendererDescriptor: './generated/renderer-descriptor.json' },
+        exports: { '.': './generated/index.mjs', './markdown': './generated/markdown.js' },
+      },
       'generated/compatibility.mjs': 'export const reactCompatibility = {"schema":"muxui-react-compatibility-v1"};\n',
+      'generated/release.json': { exceptions },
       'generated/renderer-descriptor.json': {
         id: 'renderer:@muxui/react',
         package: '@muxui/react',
@@ -73,25 +162,38 @@ export function tupleFixture({ versions = {}, commits = {}, catalogDigest = dige
 }
 
 let sequence = 0;
+/** The tarball of a package's files: objects are written as the generators write JSON, and missing sidecars are written. */
 export function archiveOf(files) {
   const root = join(scratch, `package-${sequence += 1}`);
-  for (const [path, content] of Object.entries(files)) {
+  const written = Object.fromEntries(Object.entries(files).map(([path, content]) => [path, typeof content === 'string' ? content : jsonBytes(content)]));
+  for (const [path, source] of Object.entries(sidecarPaths)) {
+    if (path in written && !(`${path}.provenance` in written)) written[`${path}.provenance`] = sidecarFor(source, written[path]);
+  }
+  for (const [path, content] of Object.entries(written)) {
     mkdirSync(dirname(join(root, 'package', path)), { recursive: true });
-    writeFileSync(join(root, 'package', path), typeof content === 'string' ? content : `${canonicalJson(content)}\n`);
+    writeFileSync(join(root, 'package', path), content);
   }
   return deterministicArchive(join(root, 'package'));
 }
 
 /** Tarballs for the fixture; a published React descriptor records the release id the manifest will carry. */
-export function artifactsOf(fixture, reused = new Map()) {
+export function artifactsOf(fixture, { reused = new Map(), revision = commit } = {}) {
   const published = publishSet.packages.filter(({ name }) => !reused.has(name)).map(({ name }) => ({ name, version: fixture.versions[name] }));
-  const id = releaseIdFor({ revision: commit, published });
+  const id = releaseIdFor({ revision, published });
   const react = fixture.files['@muxui/react']['generated/renderer-descriptor.json'];
   if (!reused.has('@muxui/react')) react.provenance.releaseId = id;
   return new Map(publishSet.packages.map(({ name }) => [name, archiveOf(fixture.files[name])]));
 }
 
-export const evidence = { capturedCiEvidence: [], retainedReviewEvidence: [], activeExceptions: [] };
+/** The retained evidence indexes as committed, and a reader for them. */
+export function evidenceStore() {
+  const store = new Map(RETAINED_EVIDENCE_MILESTONES.map((milestone) => [`tests/evidence/${milestone.toLowerCase()}/index.json`, Buffer.from(`{"milestone":"${milestone}"}\n`)]));
+  store.set(RETAINED_REVIEW_INDEX, Buffer.from('{"milestones":["R1.2","R1.3","R1.4"],"records":[]}\n'));
+  return Object.assign(store, { read: (path) => store.get(path) });
+}
+
+export const readEvidence = evidenceStore().read;
+
 export const manifestOf = (artifacts, options = {}) => buildPortfolioManifest({
-  publishSet, artifacts, source: { revision: commit, tree }, evidence, react: { correlation: {} }, preparation: { mode: 'full-checks' }, ...options,
+  publishSet, artifacts, source: { revision: commit, tree }, readEvidence, react: { correlation: {} }, preparation: { mode: 'full-checks' }, ...options,
 });

@@ -4,8 +4,10 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { canonicalJson } from '../src/canonical-json.mjs';
 import { readArchive } from '../src/release-archive.mjs';
-import { buildPortfolioManifest, caretAllows, releaseIdFor, sha256, verifyPortfolioRelease } from '../src/release-manifest.mjs';
-import { archiveOf, artifactsOf, commit, digest, evidence, manifestOf, otherCommit, publishSet, tree, tupleFixture } from './release-tuple-fixture.mjs';
+import { caretAllows, readEvidenceRecord, releaseIdFor, sha256, sha512Integrity, verifyPortfolioRelease } from '../src/release-manifest.mjs';
+import {
+  archiveOf, artifactsOf, catalogFiles, catalogModuleFor, commit, digest, evidenceStore, jsonBytes, manifestOf, otherCommit, publishSet, readEvidence, sidecarFor, tree, tupleFixture,
+} from './release-tuple-fixture.mjs';
 
 const requireFromTooling = createRequire(resolve(import.meta.dirname, '../../../../packages/tooling/package.json'));
 const semver = requireFromTooling('semver');
@@ -22,13 +24,23 @@ test('the manifest\'s caret check agrees with node-semver on the ranges a releas
   assert.throws(() => caretAllows('>=2.1.0', '2.1.0'), /P2_1_RANGE_UNSUPPORTED/u);
 });
 
-const verify = (manifest, artifacts, expected = { revision: commit, tree }) => verifyPortfolioRelease({ manifest, artifacts, publishSet, expected });
+const verify = (manifest, artifacts, options = {}) => verifyPortfolioRelease({
+  manifest, artifacts, publishSet, expected: { revision: commit, tree }, readEvidence, ...options,
+});
 // A manifest edited after the build, with its digest recomputed, so the verifier reaches the check under test.
 const redigest = ({ digest: _digest, preparation, ...body }) => ({ ...body, digest: sha256(canonicalJson(body)), preparation });
+const honest = () => {
+  const artifacts = artifactsOf(tupleFixture());
+  return { artifacts, manifest: manifestOf(artifacts) };
+};
+const catalogOf = (change) => {
+  const fixture = tupleFixture();
+  change(fixture.files['@muxui/catalog']);
+  return fixture;
+};
 
 test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts, descriptors, profile, evidence, rollback', () => {
-  const artifacts = artifactsOf(tupleFixture());
-  const manifest = manifestOf(artifacts);
+  const { artifacts, manifest } = honest();
   assert.equal(manifest.schema, 'muxui-portfolio-release-v1');
   assert.deepEqual(Object.keys(manifest).sort(), ['catalog', 'compatibility', 'contracts', 'descriptors', 'digest', 'evidence', 'id', 'packages', 'preparation', 'publication', 'react', 'reactCompatibility', 'rollback', 'schema', 'source']);
   assert.deepEqual(manifest.source, { revision: commit, tree });
@@ -40,13 +52,19 @@ test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts,
     assert.match(record.integrity, /^sha512-/u);
     assert.deepEqual(record.provenance, { kind: 'release-commit', releaseId: manifest.id, sourceCommit: commit });
   }
-  assert.deepEqual(manifest.catalog, { id: `@muxui/catalog@2.1.0-rc.1:${digest('d')}`, version: '2.1.0-rc.1', digest: digest('d') });
-  assert.deepEqual([manifest.contracts.schemaVersion, manifest.contracts.queryApiVersion, manifest.contracts.tokenContractVersion], ['3.0.0', '2.1.0', '2.0.0']);
+  const catalogPackage = JSON.parse(readArchive(artifacts.get('@muxui/catalog')).get('package/generated/catalog-package.json'));
+  assert.deepEqual(manifest.catalog, { id: `@muxui/catalog@2.1.0-rc.1:${catalogPackage.catalogDigest}`, version: '2.1.0-rc.1', digest: catalogPackage.catalogDigest });
+  assert.deepEqual(manifest.contracts, {
+    schemaVersion: '3.0.0', queryApiVersion: '2.1.0', supportedQueryApiVersions: ['2.1.0'], tokenContractVersion: '2.0.0', platformSafetyContractVersion: '1.0.0',
+  });
   assert.deepEqual(manifest.descriptors.map(({ id, version, bindings }) => [id, version, bindings]), [['renderer:@muxui/react', '0.1.0-rc.5', 1]]);
   assert.deepEqual(manifest.compatibility.edges.map(({ from, to, range }) => `${from}>${to}@${range}`), [
     '@muxui/catalog>@muxui/schema@^0.6.0-rc.1', '@muxui/tooling>@muxui/catalog@^2.1.0-rc.1', '@muxui/tooling>@muxui/schema@^0.6.0-rc.1',
   ]);
   assert.equal(manifest.reactCompatibility.schema, 'muxui-react-compatibility-v1');
+  assert.deepEqual(manifest.evidence.capturedCiEvidence.map(({ milestone }) => milestone), ['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']);
+  assert.deepEqual(manifest.evidence.retainedReviewEvidence[0].milestones, ['R1.2', 'R1.3', 'R1.4']);
+  assert.deepEqual(manifest.evidence.activeExceptions, []);
   assert.deepEqual(manifest.rollback.packages.map(({ name, fixForward }) => [name, fixForward]), [
     ['@muxui/schema', '0.6.0-rc.2'], ['@muxui/catalog', '2.1.0-rc.2'], ['@muxui/tooling', '1.1.0-rc.2'], ['@muxui/react', '0.1.0-rc.6'],
   ]);
@@ -65,14 +83,11 @@ test('E-P2.1-03 two preparations of one commit and tuple give one manifest diges
   const repacked = tupleFixture();
   repacked.files['@muxui/schema']['extra.txt'] = 'x';
   assert.notEqual(manifestOf(artifactsOf(repacked)).digest, first.digest);
-  assert.notEqual(buildPortfolioManifest({
-    publishSet, artifacts: artifactsOf(tupleFixture()), source: { revision: otherCommit, tree }, evidence, react: {}, preparation: {},
-  }).digest, first.digest);
+  assert.notEqual(manifestOf(artifactsOf(tupleFixture()), { source: { revision: otherCommit, tree } }).digest, first.digest);
 });
 
 test('E-P2.1-03 the verifier rejects repacked bytes under the same version', () => {
-  const artifacts = artifactsOf(tupleFixture());
-  const manifest = manifestOf(artifacts);
+  const { artifacts, manifest } = honest();
   const repacked = tupleFixture();
   repacked.files['@muxui/tooling']['src/extra.mjs'] = 'export {};\n';
   const swapped = new Map(artifacts).set('@muxui/tooling', archiveOf(repacked.files['@muxui/tooling']));
@@ -82,8 +97,7 @@ test('E-P2.1-03 the verifier rejects repacked bytes under the same version', () 
 });
 
 test('E-P2.1-03 the verifier rejects a package missing from the tuple', () => {
-  const artifacts = artifactsOf(tupleFixture());
-  const manifest = manifestOf(artifacts);
+  const { artifacts, manifest } = honest();
   const withoutTooling = new Map(artifacts);
   withoutTooling.delete('@muxui/tooling');
   assert.throws(() => verify(manifest, withoutTooling), /P2_1_MANIFEST_PACKAGE_MISSING: the tuple has no @muxui\/tooling/u);
@@ -95,77 +109,214 @@ test('E-P2.1-03 the verifier rejects a package missing from the tuple', () => {
 
 test('E-P2.1-03 the verifier rejects a published package built from another commit', () => {
   // The tarball was built elsewhere: its gitHead is not the release commit its record claims.
-  const foreign = tupleFixture({ commits: { '@muxui/catalog': otherCommit } });
-  const artifacts = artifactsOf(foreign);
-  assert.throws(() => verify(manifestOf(artifacts), artifacts), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/catalog is built from b+, not its recorded a+/u);
+  const foreign = artifactsOf(tupleFixture({ commits: { '@muxui/catalog': otherCommit } }));
+  assert.throws(() => verify(manifestOf(foreign), foreign), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/catalog is built from b+, not its recorded a+/u);
   // The record owns up to it, as a published package: still not the release commit.
-  const good = artifactsOf(tupleFixture());
-  const manifest = manifestOf(good);
+  const { artifacts, manifest } = honest();
   const records = manifest.packages.map((record) => (record.name === '@muxui/schema' ? { ...record, provenance: { ...record.provenance, sourceCommit: otherCommit } } : record));
-  assert.throws(() => verify(redigest({ ...manifest, packages: records }), good), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/schema is built from a+, not its recorded b+/u);
-  const owned = tupleFixture({ commits: { '@muxui/schema': otherCommit } });
-  const ownedArtifacts = artifactsOf(owned);
-  const ownedManifest = manifestOf(ownedArtifacts);
+  assert.throws(() => verify(redigest({ ...manifest, packages: records }), artifacts), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/schema is built from a+, not its recorded b+/u);
+  const owned = artifactsOf(tupleFixture({ commits: { '@muxui/schema': otherCommit } }));
+  const ownedManifest = manifestOf(owned);
   const ownedRecords = ownedManifest.packages.map((record) => (record.name === '@muxui/schema' ? { ...record, provenance: { ...record.provenance, sourceCommit: otherCommit } } : record));
-  assert.throws(() => verify(redigest({ ...ownedManifest, packages: ownedRecords }), ownedArtifacts), /@muxui\/schema is published from b+, not the release commit a+/u);
+  assert.throws(() => verify(redigest({ ...ownedManifest, packages: ownedRecords }), owned), /@muxui\/schema is published from b+, not the release commit a+/u);
   // The release itself must be the one asked for.
-  assert.throws(() => verify(manifest, good, { revision: otherCommit }), /P2_1_MANIFEST_SOURCE_MISMATCH/u);
+  assert.throws(() => verify(manifest, artifacts, { expected: { revision: otherCommit } }), /P2_1_MANIFEST_SOURCE_MISMATCH/u);
 });
 
-test('E-P2.1-03 a reused package keeps its recorded version, digest, and provenance, and must still be compatible', () => {
-  // The earlier release published schema 0.6.0-rc.1 from another commit; this release reuses it.
-  const earlier = { kind: 'release-commit', releaseId: 'muxui-portfolio:earlier', sourceCommit: otherCommit };
-  const reused = new Map([['@muxui/schema', earlier]]);
-  const fixture = tupleFixture({ commits: { '@muxui/schema': otherCommit } });
-  const artifacts = artifactsOf(fixture, reused);
+// ---- the catalog is verified, not copied ----
+
+test('E-P2.1-03 the catalog bundle is recomputed: an emptied bundle under the old declared digest is rejected', () => {
+  const rejects = (change, pattern) => {
+    const artifacts = artifactsOf(catalogOf(change));
+    assert.throws(() => manifestOf(artifacts), pattern);
+    // The verifier reads the same bytes, so a manifest recorded from the honest tuple fails on the tampered tarball.
+    const { manifest } = honest();
+    assert.throws(() => verify(manifest, new Map(artifactsOf(tupleFixture())).set('@muxui/catalog', artifacts.get('@muxui/catalog'))), pattern);
+  };
+  // catalog.json = {} with the digest the package record still declares (its sidecar and module follow the new bytes).
+  rejects((files) => {
+    files['generated/catalog.json'] = '{}\n';
+    files['generated/catalog.mjs'] = catalogModuleFor('{}\n');
+  }, /P2_1_MANIFEST_CATALOG_INVALID: the bundle digest undefined is not its content's sha256:/u);
+  // A changed artifact under the old digest.
+  rejects((files) => {
+    const bundle = JSON.parse(files['generated/catalog.json']);
+    bundle.artifacts[0].name = 'Other';
+    files['generated/catalog.json'] = jsonBytes(bundle);
+    files['generated/catalog.mjs'] = catalogModuleFor(jsonBytes(bundle));
+  }, /the bundle digest sha256:[0-9a-f]{64} is not its content's/u);
+  // A bundle whose own digest is honest but that the package record does not declare.
+  rejects((files) => {
+    const bundle = JSON.parse(files['generated/catalog.json']);
+    const { catalogDigest: _digest, ...preimage } = bundle;
+    preimage.artifacts[0].name = 'Other';
+    const tampered = jsonBytes({ ...preimage, catalogDigest: sha256(canonicalJson(preimage)) });
+    files['generated/catalog.json'] = tampered;
+    files['generated/catalog.mjs'] = catalogModuleFor(tampered);
+  }, /the package and release records declare another catalog digest/u);
+  // Both sidecars and the module must hold: a stale sidecar, a missing file, and a module with another bundle.
+  rejects((files) => { files['generated/catalog.json.provenance'] = sidecarFor('packages/catalog/generated/catalog.json', Buffer.from('old')); }, /generated\/catalog\.json: its provenance sidecar does not record/u);
+  rejects((files) => { files['generated/catalog-package.json.provenance'] = 'junk'; }, /generated\/catalog-package\.json: its provenance sidecar is missing or malformed/u);
+  rejects((files) => { delete files['generated/catalog.mjs']; }, /@muxui\/catalog has no generated\/catalog\.mjs/u);
+  rejects((files) => { files['generated/catalog.mjs'] = catalogFiles({ version: '2.1.0-rc.1', sourceRevision: digest('6') })['generated/catalog.mjs']; }, /generated\/catalog\.mjs does not hold the bundle/u);
+  // The release record must say what the bundle says: its binding digests, its versions.
+  rejects((files) => {
+    const record = JSON.parse(files['generated/catalog-package.json']);
+    record.releaseManifest.bindings[0].tokenRequirementSetDigests = { 'web.react': digest('9') };
+    files['generated/catalog-package.json'] = jsonBytes(record);
+  }, /muxui:component:button#web\.react in the release record is not what the bundle holds/u);
+  rejects((files) => {
+    const record = JSON.parse(files['generated/catalog-package.json']);
+    record.releaseManifest.tokenContractVersion = '9.0.0';
+    files['generated/catalog-package.json'] = jsonBytes(record);
+  }, /the release record names another token contract version/u);
+  rejects((files) => {
+    const record = JSON.parse(files['generated/catalog-package.json']);
+    record.tokenRequirementSets = { 'muxui:component:button#web.react:web.react': digest('9') };
+    files['generated/catalog-package.json'] = jsonBytes(record);
+  }, /the package record's token requirement sets differ from the bundle's/u);
+});
+
+// ---- contracts, evidence, exceptions, rollback are recomputed ----
+
+test('E-P2.1-03 contracts, evidence, exceptions, publication, and rollback are recomputed, not trusted', () => {
+  const { artifacts, manifest } = honest();
+  const forged = (key, value) => redigest({ ...manifest, [key]: value });
+  const rejects = (key, value) => assert.throws(() => verify(forged(key, value), artifacts), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded .* is not what the tarballs and the committed evidence hold/u, key);
+  rejects('contracts', { ...manifest.contracts, schemaVersion: '9.9.9' });
+  rejects('contracts', { ...manifest.contracts, tokenContractVersion: '1.0.0' });
+  rejects('evidence', { ...manifest.evidence, activeExceptions: [digest('e')] });
+  rejects('evidence', { ...manifest.evidence, capturedCiEvidence: [] });
+  rejects('evidence', { ...manifest.evidence, retainedReviewEvidence: [] });
+  rejects('evidence', { capturedCiEvidence: [], retainedReviewEvidence: [], activeExceptions: [] });
+  rejects('rollback', {});
+  rejects('rollback', { ...manifest.rollback, forbidden: [] });
+  rejects('publication', { ...manifest.publication, mutationPerformed: true });
+  rejects('publication', undefined);
+
+  // An exception the React package declares is bound by digest; one it does not declare cannot be recorded.
+  const exception = { id: 'EX-1', reason: 'documented' };
+  const excepted = artifactsOf(tupleFixture({ exceptions: [exception] }));
+  const exceptedManifest = manifestOf(excepted);
+  assert.deepEqual(exceptedManifest.evidence.activeExceptions, [sha256(canonicalJson(exception))]);
+  verify(exceptedManifest, excepted);
+  assert.throws(() => verify(redigest({ ...exceptedManifest, evidence: { ...exceptedManifest.evidence, activeExceptions: [] } }), excepted), /the recorded evidence is not what/u);
+
+  // The schema package must declare the contract versions the catalog bundle implements.
+  const schema = tupleFixture();
+  schema.files['@muxui/schema']['src/index.mjs'] = "export const SCHEMA_VERSION = '3.1.0';\nexport const API_VERSION = '2.1.0';\n";
+  assert.throws(() => manifestOf(artifactsOf(schema)), /P2_1_MANIFEST_CONTRACT_MISMATCH: @muxui\/schema declares schema 3\.1\.0 and query API 2\.1\.0/u);
+});
+
+test('E-P2.1-03 the retained evidence is bound to the committed bytes, and must be committed', () => {
+  const { artifacts, manifest } = honest();
+  // A retained index edited after the manifest was written.
+  const edited = evidenceStore();
+  edited.set('tests/evidence/r1.3/index.json', Buffer.from('{"milestone":"R1.3","edited":true}\n'));
+  assert.throws(() => verify(manifest, artifacts, { readEvidence: edited.read }), /the recorded evidence is not what/u);
+  const review = evidenceStore();
+  review.set('tests/evidence/r1-retro-review/index.json', Buffer.from('{"milestones":["R1.2"],"records":[]}\n'));
+  assert.throws(() => verify(manifest, artifacts, { readEvidence: review.read }), /the recorded evidence is not what/u);
+  // An index that is not committed, or no way to read them, is not a verified release.
+  const missing = evidenceStore();
+  missing.delete('tests/evidence/r1.5/index.json');
+  assert.throws(() => verify(manifest, artifacts, { readEvidence: missing.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: tests\/evidence\/r1\.5\/index\.json is not committed/u);
+  assert.throws(() => verify(manifest, artifacts, { readEvidence: undefined }), /P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE/u);
+  assert.throws(() => readEvidenceRecord(undefined), /P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE/u);
+});
+
+// ---- the renderer descriptor ----
+
+test('E-P2.1-02 the verifier requires the catalog\'s renderer descriptor at its pointer, with its id and sidecar, and one-member export identities', () => {
+  const rejectsBuild = (change, pattern) => {
+    const fixture = tupleFixture();
+    change(fixture.files['@muxui/react']);
+    assert.throws(() => manifestOf(artifactsOf(fixture)), pattern);
+  };
+  rejectsBuild((files) => { delete files['package.json'].muxUi; }, /P2_1_MANIFEST_PACKAGE_INVALID: @muxui\/react points at undefined/u);
+  rejectsBuild((files) => { files['package.json'].muxUi.rendererDescriptor = './generated/other.json'; }, /points at "\.\/generated\/other\.json"/u);
+  rejectsBuild((files) => { files['generated/renderer-descriptor.json'].id = 'renderer:@muxui/other'; }, /descriptor is renderer:@muxui\/other for @muxui\/react, not renderer:@muxui\/react/u);
+  rejectsBuild((files) => { files['generated/renderer-descriptor.json.provenance'] = sidecarFor('packages/react/generated/renderer-descriptor.json', Buffer.from('old')); }, /its provenance sidecar does not record/u);
+
+  // Export identities that the installed resolver rejects are incompatible on the bytes too.
+  const identity = (value) => {
+    const fixture = tupleFixture();
+    fixture.files['@muxui/react']['generated/renderer-descriptor.json'].bindings[binding].export = value;
+    const artifacts = artifactsOf(fixture);
+    return () => verify(manifestOf(artifacts), artifacts);
+  };
+  const binding = 'muxui:component:button#web.react';
+  for (const bad of ['@muxui/react#Button#junk', '@muxui/react/button#Button', '@muxui/react/markdown#Other', '@muxui/other#Button', '@muxui/react', '@muxui/react#']) {
+    assert.throws(identity(bad), /P2_1_MANIFEST_COMPATIBILITY_BROKEN: @muxui\/react: .*(?:is not a public @muxui\/react module and one member|export is not Button)/u, bad);
+  }
+  identity('@muxui/react#Button')();
+});
+
+// ---- reuse ----
+
+// An earlier release at another commit, and a new release that reuses `names` from it.
+function reuseScenario({ reuse, release = {}, earlier = {} }) {
+  const allEarlier = Object.fromEntries(publishSet.packages.map(({ name }) => [name, otherCommit]));
+  const earlierArtifacts = artifactsOf(tupleFixture({ commits: allEarlier, ...earlier }), { revision: otherCommit });
+  const earlierManifest = manifestOf(earlierArtifacts, { source: { revision: otherCommit, tree } });
+  const reused = new Map(reuse.map((name) => [name, earlierManifest.packages.find((record) => record.name === name)]));
+  const artifacts = artifactsOf(tupleFixture({ commits: Object.fromEntries(reuse.map((name) => [name, otherCommit])), ...release }), { reused });
+  for (const name of reuse) artifacts.set(name, earlierArtifacts.get(name));
+  return { earlierArtifacts, earlierManifest, reused, artifacts, priorManifests: new Map([[earlierManifest.id, earlierManifest]]) };
+}
+
+test('E-P2.1-03 a reused package is the record of the release that published it, field for field and byte for byte', () => {
+  const { earlierManifest, reused, artifacts, priorManifests } = reuseScenario({ reuse: ['@muxui/schema'] });
   const manifest = manifestOf(artifacts, { reused });
   assert.deepEqual(manifest.packages.map(({ name, role }) => [name, role]), [['@muxui/schema', 'reused'], ['@muxui/catalog', 'published'], ['@muxui/tooling', 'published'], ['@muxui/react', 'published']]);
-  assert.deepEqual(manifest.packages[0].provenance, earlier);
+  assert.deepEqual(manifest.packages[0], { ...earlierManifest.packages[0], role: 'reused' });
   assert.equal(manifest.id, releaseIdFor({ revision: commit, published: manifest.packages.slice(1).map(({ name, version }) => ({ name, version })) }));
-  verify(manifest, artifacts);
+  verify(manifest, artifacts, { priorManifests });
 
-  // Its recorded digest does not hold: other bytes under the recorded version.
-  const rebuilt = tupleFixture({ commits: { '@muxui/schema': otherCommit } });
-  rebuilt.files['@muxui/schema']['changed.txt'] = 'x';
-  assert.throws(() => verify(manifest, new Map(artifacts).set('@muxui/schema', archiveOf(rebuilt.files['@muxui/schema']))), /P2_1_MANIFEST_PACKAGE_REPACKED: @muxui\/schema@0\.6\.0-rc\.1/u);
-  // Its recorded provenance does not hold: the bytes name another commit.
-  const claimed = new Map([['@muxui/schema', { ...earlier, sourceCommit: 'e'.repeat(40) }]]);
-  assert.throws(() => verify(manifestOf(artifacts, { reused: claimed }), artifacts), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/schema is built from b+, not its recorded e+/u);
-  // It cannot record this release as its own origin.
-  const self = redigest({ ...manifest, packages: manifest.packages.map((record) => (record.role === 'reused' ? { ...record, provenance: { ...earlier, releaseId: manifest.id } } : record)) });
-  assert.throws(() => verify(self, artifacts), /P2_1_MANIFEST_PACKAGE_INVALID: @muxui\/schema is reused and records this release as its origin/u);
+  // Repacked bytes under the same version and original provenance cannot be recorded...
+  const repacked = tupleFixture({ commits: { '@muxui/schema': otherCommit } });
+  repacked.files['@muxui/schema']['extra.txt'] = 'x';
+  const repackedArtifacts = new Map(artifacts).set('@muxui/schema', archiveOf(repacked.files['@muxui/schema']));
+  assert.throws(() => manifestOf(repackedArtifacts, { reused }), /P2_1_MANIFEST_REUSE_MISMATCH: @muxui\/schema is not the package its earlier release recorded/u);
+  // ...and a forged record for them does not match the earlier release's.
+  const newBytes = repackedArtifacts.get('@muxui/schema');
+  const forged = redigest({ ...manifest, packages: manifest.packages.map((record) => (record.name === '@muxui/schema'
+    ? { ...record, integrity: sha512Integrity(newBytes), sha256: sha256(newBytes) }
+    : record)) });
+  assert.throws(() => verify(forged, repackedArtifacts, { priorManifests }), /P2_1_MANIFEST_REUSE_MISMATCH: @muxui\/schema@0\.6\.0-rc\.1 is not the record muxui-portfolio:[0-9a-f]+ published/u);
+  // Any other field of the record is held to it too.
+  const relabelled = redigest({ ...manifest, packages: manifest.packages.map((record) => (record.name === '@muxui/schema' ? { ...record, provenance: { ...record.provenance, sourceCommit: commit } } : record)) });
+  assert.throws(() => verify(relabelled, artifacts, { priorManifests }), /P2_1_MANIFEST_COMMIT_MISMATCH/u);
 
-  // Its compatibility does not hold: a reused tooling asks for a catalog line the tuple does not carry.
-  const toolingReused = new Map([['@muxui/tooling', earlier]]);
-  const incompatible = tupleFixture({ commits: { '@muxui/tooling': otherCommit }, catalogRange: '^2.0.0' });
-  incompatible.files['@muxui/catalog']['package.json'].version = '3.0.0-rc.1';
-  incompatible.files['@muxui/catalog']['generated/catalog-package.json'] = {
-    ...incompatible.files['@muxui/catalog']['generated/catalog-package.json'], version: '3.0.0-rc.1', catalogVersion: '3.0.0-rc.1',
-    releaseManifest: { ...incompatible.files['@muxui/catalog']['generated/catalog-package.json'].releaseManifest, catalog: { id: 'x', version: '3.0.0-rc.1', digest: digest('d') } },
-  };
-  incompatible.versions['@muxui/catalog'] = '3.0.0-rc.1';
-  const incompatibleArtifacts = artifactsOf(incompatible, toolingReused);
-  assert.throws(() => verify(manifestOf(incompatibleArtifacts, { reused: toolingReused }), incompatibleArtifacts), /P2_1_MANIFEST_COMPATIBILITY_BROKEN: @muxui\/tooling requires @muxui\/catalog@\^2\.0\.0, and the tuple has 3\.0\.0-rc\.1/u);
+  // A reuse needs the earlier manifest, verified: none, another release, or one that no longer matches its digest.
+  assert.throws(() => verify(manifest, artifacts), /P2_1_MANIFEST_REUSE_UNVERIFIED: @muxui\/schema is reused from muxui-portfolio:[0-9a-f]+, which has no verified earlier manifest/u);
+  assert.throws(() => verify(manifest, artifacts, { priorManifests: new Map([['muxui-portfolio:other', earlierManifest]]) }), /P2_1_MANIFEST_REUSE_UNVERIFIED/u);
+  const tampered = { ...earlierManifest, source: { ...earlierManifest.source, tree: 'd'.repeat(40) } };
+  assert.throws(() => verify(manifest, artifacts, { priorManifests: new Map([[earlierManifest.id, tampered]]) }), /P2_1_MANIFEST_REUSE_UNVERIFIED/u);
+  // It cannot name this release as its own origin.
+  const self = redigest({ ...manifest, packages: manifest.packages.map((record) => (record.role === 'reused' ? { ...record, provenance: { ...record.provenance, releaseId: manifest.id } } : record)) });
+  assert.throws(() => verify(self, artifacts, { priorManifests }), /P2_1_MANIFEST_PACKAGE_INVALID: @muxui\/schema is reused and records this release as its origin/u);
 });
 
-test('E-P2.1-03 a reused renderer must still match the new catalog\'s binding revisions, digests, and range', () => {
-  const earlier = { kind: 'release-commit', releaseId: 'muxui-portfolio:earlier', sourceCommit: otherCommit };
-  const reused = new Map([['@muxui/react', earlier]]);
-  const compatible = tupleFixture({ commits: { '@muxui/react': otherCommit } });
-  compatible.files['@muxui/react']['generated/renderer-descriptor.json'].provenance = { releaseId: earlier.releaseId, sourceCommit: otherCommit };
-  const artifacts = artifactsOf(compatible, reused);
-  verify(manifestOf(artifacts, { reused }), artifacts);
+test('E-P2.1-03 a reused package must still be compatible with the new tuple', () => {
+  // Tooling asked for a catalog line the new tuple does not carry.
+  const incompatible = reuseScenario({ reuse: ['@muxui/tooling'], release: { versions: { '@muxui/catalog': '3.0.0-rc.1' } } });
+  const manifest = manifestOf(incompatible.artifacts, { reused: incompatible.reused });
+  assert.throws(() => verify(manifest, incompatible.artifacts, { priorManifests: incompatible.priorManifests }), /P2_1_MANIFEST_COMPATIBILITY_BROKEN: @muxui\/tooling requires @muxui\/catalog@\^2\.1\.0-rc\.1, and the tuple has 3\.0\.0-rc\.1/u);
 
-  // The catalog changed a requirement digest the reused descriptor still carries.
-  const drifted = tupleFixture({ commits: { '@muxui/react': otherCommit }, descriptorDigest: { 'web.react': digest('9') } });
-  drifted.files['@muxui/react']['generated/renderer-descriptor.json'].provenance = { releaseId: earlier.releaseId, sourceCommit: otherCommit };
-  const driftedArtifacts = artifactsOf(drifted, reused);
-  assert.throws(() => verify(manifestOf(driftedArtifacts, { reused }), driftedArtifacts), /P2_1_MANIFEST_COMPATIBILITY_BROKEN: @muxui\/react: muxui:component:button#web\.react token requirement digests differ/u);
+  // The renderer still carries the requirement digests the catalog has since changed.
+  const drifted = reuseScenario({ reuse: ['@muxui/react'], release: { catalogTokenDigest: digest('9') } });
+  const driftedManifest = manifestOf(drifted.artifacts, { reused: drifted.reused });
+  assert.throws(() => verify(driftedManifest, drifted.artifacts, { priorManifests: drifted.priorManifests }), /P2_1_MANIFEST_COMPATIBILITY_BROKEN: @muxui\/react: muxui:component:button#web\.react token requirement digests differ/u);
+
   // The catalog's range for the renderer no longer admits the reused version.
-  const outside = tupleFixture({ commits: { '@muxui/react': otherCommit }, reactRange: '^0.2.0-0' });
-  outside.files['@muxui/react']['generated/renderer-descriptor.json'].provenance = { releaseId: earlier.releaseId, sourceCommit: otherCommit };
-  const outsideArtifacts = artifactsOf(outside, reused);
-  assert.throws(() => verify(manifestOf(outsideArtifacts, { reused }), outsideArtifacts), /range \^0\.2\.0-0 does not admit 0\.1\.0-rc\.5/u);
+  const outside = reuseScenario({ reuse: ['@muxui/react'], release: { reactRange: '^0.2.0-0' } });
+  const outsideManifest = manifestOf(outside.artifacts, { reused: outside.reused });
+  assert.throws(() => verify(outsideManifest, outside.artifacts, { priorManifests: outside.priorManifests }), /range \^0\.2\.0-0 does not admit 0\.1\.0-rc\.5/u);
+
+  // A compatible reuse verifies.
+  const compatible = reuseScenario({ reuse: ['@muxui/react'] });
+  verify(manifestOf(compatible.artifacts, { reused: compatible.reused }), compatible.artifacts, { priorManifests: compatible.priorManifests });
 });
 
 test('the deterministic archive reads back the files it was built from, in name order', () => {

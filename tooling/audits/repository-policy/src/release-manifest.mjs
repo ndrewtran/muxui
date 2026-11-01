@@ -2,15 +2,22 @@
 // publish set, and the verifier that holds it to the tarball bytes. Both read the same facts from the tarballs, so
 // the builder cannot record something the verifier would read differently. Builtins only: the lineage check runs in
 // a job that installs nothing.
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { canonicalJson } from './canonical-json.mjs';
 import { readArchive } from './release-archive.mjs';
-import { CANDIDATE_PUBLISH_CONFIG, descriptorExports } from './release-package.mjs';
+import { CANDIDATE_PUBLISH_CONFIG, descriptorExports, isPackageSpecifier } from './release-package.mjs';
 import { nextCandidateVersion, tarballFileName } from './release-set.mjs';
 
 export const PORTFOLIO_SCHEMA = 'muxui-portfolio-release-v1';
 export const REACT_COMPATIBILITY_SCHEMA = 'muxui-react-compatibility-v1';
 const RENDERER_PACKAGE = '@muxui/react';
+const RENDERER_BINDING = 'web.react';
+const SCHEMA_PACKAGE = '@muxui/schema';
+const CATALOG_PACKAGE = '@muxui/catalog';
+/** The retained evidence a release is bound to: the CI evidence of these milestones and the retroactive review index. */
+export const RETAINED_EVIDENCE_MILESTONES = Object.freeze(['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']);
+export const RETAINED_REVIEW_INDEX = 'tests/evidence/r1-retro-review/index.json';
 const gitObject = /^[0-9a-f]{40}$/u;
 
 export const sha256 = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
@@ -70,16 +77,25 @@ export function releaseIdFor({ revision, published }) {
   return `muxui-portfolio:${sha256(identity).slice('sha256:'.length, 'sha256:'.length + 32)}`;
 }
 
-const catalogPackagePath = 'package/generated/catalog-package.json';
 
-/** Problems in a renderer descriptor against the catalog's release record for it (what the resolver would reject). */
-export function findReactCompatibilityProblems({ descriptor, catalogPackage, version }) {
+/**
+ * Problems in a renderer descriptor against the catalog's release record for it and the package's own export map
+ * (what the installed resolver would reject). A binding's export identity is `<package>[/<subpath>]#<Member>`, with
+ * one `#`, and its module is the package or a public subpath of its export map.
+ */
+export function findReactCompatibilityProblems({ descriptor, catalogPackage, version, packageExports }) {
   const problems = [];
   const record = catalogPackage.releaseManifest;
   if (descriptor.package !== RENDERER_PACKAGE || descriptor.version !== version) problems.push(`descriptor is ${descriptor.package}@${descriptor.version}, not ${RENDERER_PACKAGE}@${version}`);
   if (!caretAllows(descriptor.bindingSchemaRange, record.schemaVersion)) problems.push(`schema range ${descriptor.bindingSchemaRange} does not admit ${record.schemaVersion}`);
   if (!caretAllows(descriptor.tokenContractRange, record.tokenContractVersion)) problems.push(`token range ${descriptor.tokenContractRange} does not admit ${record.tokenContractVersion}`);
-  const exports = new Map(descriptorExports(descriptor).map((entry) => [entry.binding, entry]));
+  const publicModules = new Set(Object.keys(packageExports ?? {}).filter((key) => !key.includes('*')).map((key) => (key === '.' ? RENDERER_PACKAGE : `${RENDERER_PACKAGE}/${key.slice(2)}`)));
+  const identities = new Map(descriptorExports(descriptor).map((entry) => [entry.binding, entry]));
+  for (const { binding, identity, specifier, valid } of identities.values()) {
+    if (!valid || !isPackageSpecifier(specifier, RENDERER_PACKAGE) || !publicModules.has(specifier)) {
+      problems.push(`${binding} export ${identity} is not a public ${RENDERER_PACKAGE} module and one member`);
+    }
+  }
   for (const binding of record.bindings.filter(({ package: owner }) => owner === RENDERER_PACKAGE)) {
     const declared = descriptor.bindings?.[binding.binding];
     if (declared === undefined) {
@@ -89,10 +105,115 @@ export function findReactCompatibilityProblems({ descriptor, catalogPackage, ver
     if (declared.specRevision !== binding.specRevision) problems.push(`${binding.binding} spec revision differs`);
     if (canonicalJson(declared.tokenRequirementSetDigests) !== canonicalJson(binding.tokenRequirementSetDigests)) problems.push(`${binding.binding} token requirement digests differ`);
     if (canonicalJson(declared.platformSafetyRequirementSetDigests) !== canonicalJson(binding.platformSafetyRequirementSetDigests)) problems.push(`${binding.binding} platform-safety digests differ`);
-    if (exports.get(binding.binding)?.member !== binding.exportName) problems.push(`${binding.binding} export is not ${binding.exportName}`);
+    if (identities.get(binding.binding)?.member !== binding.exportName) problems.push(`${binding.binding} export is not ${binding.exportName}`);
     if (!caretAllows(binding.versionRange, version)) problems.push(`${binding.binding} range ${binding.versionRange} does not admit ${version}`);
   }
   return problems;
+}
+
+/** Reads a file as committed at `revision`, or undefined when that commit has no such file. */
+export function committedFileReader(revision, cwd) {
+  return (path) => {
+    try {
+      return execFileSync('git', ['show', `${revision}:${path}`], { cwd, maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch {
+      return undefined;
+    }
+  };
+}
+
+/** The evidence digests of a release: the retained indexes as committed (`readEvidence(path)` returns their bytes). */
+export function readEvidenceRecord(readEvidence) {
+  const code = 'P2_1_MANIFEST_EVIDENCE_MISSING';
+  if (typeof readEvidence !== 'function') fail('P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE', 'the committed evidence must be readable to build or verify a release');
+  const read = (path) => readEvidence(path) ?? fail(code, `${path} is not committed at the release commit`);
+  const indexPath = (milestone) => `tests/evidence/${milestone.toLowerCase()}/index.json`;
+  const review = read(RETAINED_REVIEW_INDEX);
+  return {
+    capturedCiEvidence: RETAINED_EVIDENCE_MILESTONES.map((milestone) => ({ milestone, path: indexPath(milestone), sha256: sha256(read(indexPath(milestone))) })),
+    retainedReviewEvidence: [{ milestones: JSON.parse(review.toString('utf8')).milestones, path: RETAINED_REVIEW_INDEX, sha256: sha256(review) }],
+  };
+}
+
+// A generated file's `.provenance` sidecar: a header with the sha256 of its body, and a record of the file's path and sha256.
+function sidecarProblem(sidecar, expectedPath, fileBytes) {
+  const match = /^\/\/ @generated-from: ([^\n]+)\n\/\/ @generated-content-sha256: (sha256:[a-f0-9]{64})\n([\s\S]+)$/u.exec(sidecar?.toString('utf8') ?? '');
+  if (!match || sha256(match[3]) !== match[2]) return 'its provenance sidecar is missing or malformed';
+  let record;
+  try {
+    record = JSON.parse(match[3]);
+  } catch {
+    return 'its provenance sidecar is not JSON';
+  }
+  return record.path === expectedPath && record.sha256 === sha256(fileBytes) ? null : `its provenance sidecar does not record ${expectedPath} at these bytes`;
+}
+
+const profileDigests = (sets, reference) => Object.fromEntries(Object.entries(sets)
+  .filter(([key]) => key.startsWith(`${reference}:`))
+  .map(([key, digest]) => [key.slice(reference.length + 1), digest]));
+
+/**
+ * The catalog the tarball really holds: the bundle recomputes to the digest the package record and its release record
+ * declare, both sidecars and the `./bundle` module match their files, and the package and release records agree with the
+ * bundle on versions, contracts, requirement sets, and each renderer binding. Returns the parsed package record and bundle.
+ */
+function readCatalog(files, version) {
+  const code = 'P2_1_MANIFEST_CATALOG_INVALID';
+  const need = (path) => files.get(`package/generated/${path}`) ?? fail(code, `${CATALOG_PACKAGE} has no generated/${path}`);
+  const packageBytes = need('catalog-package.json');
+  const bundleBytes = need('catalog.json');
+  const moduleText = need('catalog.mjs').toString('utf8');
+  for (const [name, bytes] of [['catalog-package.json', packageBytes], ['catalog.json', bundleBytes]]) {
+    const problem = sidecarProblem(need(`${name}.provenance`), `packages/catalog/generated/${name}`, bytes);
+    if (problem) fail(code, `generated/${name}: ${problem}`);
+  }
+  const catalogPackage = JSON.parse(packageBytes.toString('utf8'));
+  const bundle = JSON.parse(bundleBytes.toString('utf8'));
+  const release = catalogPackage.releaseManifest ?? fail(code, 'the catalog package record has no release record');
+  const { catalogDigest, ...preimage } = bundle;
+  const digest = sha256(canonicalJson(preimage));
+  if (catalogDigest !== digest) fail(code, `the bundle digest ${catalogDigest} is not its content's ${digest}`);
+  if (!Array.isArray(bundle.artifacts)) fail(code, 'the bundle has no artifacts');
+  const wrapped = /^\/\/ @generated-from: [^\n]+\n\/\/ @generated-content-sha256: (sha256:[a-f0-9]{64})\n(export const catalogJson = (".*");\n)$/su.exec(moduleText);
+  const token = bundle.artifacts.find(({ kind }) => kind === 'token');
+  const agreements = [
+    [wrapped !== null && sha256(wrapped[2]) === wrapped[1] && JSON.parse(wrapped[3]) === bundleBytes.toString('utf8').replace(/\n$/u, ''), 'generated/catalog.mjs does not hold the bundle in generated/catalog.json'],
+    [catalogPackage.catalogDigest === digest && release.catalog?.digest === digest, 'the package and release records declare another catalog digest'],
+    [catalogPackage.name === CATALOG_PACKAGE && catalogPackage.version === version && catalogPackage.catalogVersion === version && bundle.catalogVersion === version && release.catalog.version === version && release.releaseVersion === version,
+      `the catalog is not ${version} in the package record, the release record, and the bundle`],
+    [release.catalog.id === `${CATALOG_PACKAGE}@${version}:${digest}`, 'the release record names another catalog id'],
+    [bundle.sourceRevision === catalogPackage.sourceRevision && release.sourceRevision === bundle.sourceRevision && catalogPackage.provenance?.value === bundle.sourceRevision && release.id === `muxui-release:${version}:${bundle.sourceRevision}`,
+      'the source revision or release id differs between the bundle and its records'],
+    [catalogPackage.queryApiVersion === bundle.apiVersion && release.queryApiVersion === bundle.apiVersion && canonicalJson(catalogPackage.supportedQueryApiVersions) === canonicalJson(bundle.supportedQueryApiVersions),
+      'the query API versions differ between the bundle and its records'],
+    [release.schemaVersion === bundle.schemaVersion, 'the release record names another schema version'],
+    [token !== undefined && release.tokenContractVersion === token.record.tokenContractVersion, 'the release record names another token contract version'],
+    [catalogPackage.platformSafetyContract?.version === bundle.platformSafetyContract?.contractVersion && catalogPackage.platformSafetyContract?.digest === bundle.platformSafetyContractDigest,
+      'the platform-safety contract differs between the bundle and the package record'],
+  ];
+  const problems = agreements.filter(([ok]) => !ok).map(([, text]) => text);
+
+  // The requirement-set maps and renderer bindings are derived from the bundle's component artifacts.
+  const components = bundle.artifacts.filter(({ kind }) => kind === 'component');
+  const sets = (field) => Object.fromEntries(components.flatMap((artifact) => Object.entries(artifact[field]).map(([key, set]) => [`${artifact.id}#${key}`, set.digest])));
+  const tokenSets = sets('tokenRequirementSets');
+  const safetySets = sets('platformSafetyRequirementSets');
+  if (canonicalJson(catalogPackage.tokenRequirementSets) !== canonicalJson(tokenSets)) problems.push('the package record\'s token requirement sets differ from the bundle\'s');
+  if (canonicalJson(catalogPackage.platformSafetyRequirementSets) !== canonicalJson(safetySets)) problems.push('the package record\'s platform-safety requirement sets differ from the bundle\'s');
+  const rendered = components.filter(({ platforms }) => platforms.includes(RENDERER_BINDING)).map(({ id }) => `${id}#${RENDERER_BINDING}`).sort();
+  if (canonicalJson(release.bindings.map(({ binding }) => binding).sort()) !== canonicalJson(rendered)) problems.push(`the release record does not list exactly the ${RENDERER_BINDING} bindings of the bundle`);
+  for (const binding of release.bindings) {
+    const artifact = components.find(({ id }) => id === binding.binding.slice(0, binding.binding.indexOf('#')));
+    const matches = artifact !== undefined
+      && binding.specRevision === artifact.bindingSpecRevisions[RENDERER_BINDING]
+      && binding.exportName === artifact.name
+      && binding.descriptor === `renderer:${binding.package}`
+      && canonicalJson(binding.tokenRequirementSetDigests) === canonicalJson(profileDigests(tokenSets, binding.binding))
+      && canonicalJson(binding.platformSafetyRequirementSetDigests) === canonicalJson(profileDigests(safetySets, binding.binding));
+    if (!matches) problems.push(`${binding.binding} in the release record is not what the bundle holds`);
+  }
+  if (problems.length > 0) fail(code, problems.join('; '));
+  return { catalogPackage, bundle };
 }
 
 /** The facts the manifest records, read from the tarballs of the tuple (`artifacts`: package name to bytes). */
@@ -106,26 +227,56 @@ export function readTupleFacts({ publishSet, artifacts }) {
     if (manifestBytes === undefined) fail('P2_1_MANIFEST_PACKAGE_INVALID', `${name} has no package/package.json`);
     packages.set(name, { bytes, files, manifest: JSON.parse(manifestBytes.toString('utf8')) });
   }
-  const catalog = packages.get('@muxui/catalog');
-  const catalogBytes = catalog?.files.get(catalogPackagePath);
-  if (catalogBytes === undefined) fail('P2_1_MANIFEST_PACKAGE_INVALID', `@muxui/catalog has no ${catalogPackagePath}`);
-  const catalogPackage = JSON.parse(catalogBytes.toString('utf8'));
-  const descriptors = [];
-  for (const { name } of publishSet.packages) {
-    const { files, manifest } = packages.get(name);
-    const pointer = manifest.muxUi?.rendererDescriptor;
-    if (pointer === undefined) continue;
-    const path = `package/${pointer.replace(/^\.\//u, '')}`;
-    const bytes = files.get(path) ?? fail('P2_1_MANIFEST_PACKAGE_INVALID', `${name} has no ${path}`);
-    const descriptor = JSON.parse(bytes.toString('utf8'));
-    descriptors.push({ id: descriptor.id, package: name, version: manifest.version, path: path.slice('package/'.length), digest: sha256(bytes), bindings: Object.keys(descriptor.bindings ?? {}).length, descriptor });
+  const catalog = packages.get(CATALOG_PACKAGE);
+  const { catalogPackage, bundle } = readCatalog(catalog.files, catalog.manifest.version);
+
+  // The contract versions come from the bundle, and the packed schema package must declare the ones it implements.
+  const schemaSource = packages.get(SCHEMA_PACKAGE).files.get('package/src/index.mjs')?.toString('utf8') ?? '';
+  const declared = (name) => new RegExp(`export const ${name} = '([^']+)';`, 'u').exec(schemaSource)?.[1];
+  if (declared('SCHEMA_VERSION') !== bundle.schemaVersion || declared('API_VERSION') !== bundle.apiVersion) {
+    fail('P2_1_MANIFEST_CONTRACT_MISMATCH', `${SCHEMA_PACKAGE} declares schema ${declared('SCHEMA_VERSION')} and query API ${declared('API_VERSION')}; the catalog bundle is ${bundle.schemaVersion} and ${bundle.apiVersion}`);
   }
-  const profileBytes = packages.get(RENDERER_PACKAGE)?.files.get('package/generated/compatibility.mjs');
+  const contracts = {
+    schemaVersion: bundle.schemaVersion,
+    queryApiVersion: bundle.apiVersion,
+    supportedQueryApiVersions: bundle.supportedQueryApiVersions,
+    tokenContractVersion: catalogPackage.releaseManifest.tokenContractVersion,
+    platformSafetyContractVersion: bundle.platformSafetyContract.contractVersion,
+  };
+
+  // Every renderer the catalog's release record names has a descriptor at the pointer its package declares.
+  const descriptors = [];
+  for (const [descriptorId, packageName] of new Map(catalogPackage.releaseManifest.bindings.map(({ descriptor, package: owner }) => [descriptor, owner]))) {
+    const entry = publishSet.packages.find(({ name }) => name === packageName) ?? fail('P2_1_MANIFEST_PACKAGE_INVALID', `the catalog's renderer ${packageName} is not in the publish set`);
+    const { files, manifest } = packages.get(packageName);
+    const pointer = manifest.muxUi?.rendererDescriptor;
+    if (pointer !== './generated/renderer-descriptor.json') fail('P2_1_MANIFEST_PACKAGE_INVALID', `${packageName} points at ${JSON.stringify(pointer)}, not ./generated/renderer-descriptor.json`);
+    const path = `package/${pointer.slice(2)}`;
+    const bytes = files.get(path) ?? fail('P2_1_MANIFEST_PACKAGE_INVALID', `${packageName} has no ${path}`);
+    const problem = sidecarProblem(files.get(`${path}.provenance`), `${entry.path}/${pointer.slice(2)}`, bytes);
+    if (problem) fail('P2_1_MANIFEST_PACKAGE_INVALID', `${packageName} ${pointer}: ${problem}`);
+    const descriptor = JSON.parse(bytes.toString('utf8'));
+    if (descriptor.id !== descriptorId || descriptor.package !== packageName) fail('P2_1_MANIFEST_PACKAGE_INVALID', `${packageName} descriptor is ${descriptor.id} for ${descriptor.package}, not ${descriptorId} for ${packageName}`);
+    descriptors.push({ id: descriptor.id, package: packageName, version: manifest.version, path: path.slice('package/'.length), digest: sha256(bytes), bindings: Object.keys(descriptor.bindings ?? {}).length, descriptor });
+  }
+
+  const renderer = packages.get(RENDERER_PACKAGE);
+  const profileBytes = renderer.files.get('package/generated/compatibility.mjs');
   if (profileBytes === undefined || !profileBytes.toString('utf8').includes(`"schema":"${REACT_COMPATIBILITY_SCHEMA}"`)) {
     fail('P2_1_MANIFEST_PACKAGE_INVALID', `${RENDERER_PACKAGE} has no ${REACT_COMPATIBILITY_SCHEMA} compatibility profile`);
   }
-  return { packages, catalogPackage, descriptors, reactCompatibility: { schema: REACT_COMPATIBILITY_SCHEMA, path: 'generated/compatibility.mjs', digest: sha256(profileBytes) } };
+  const exceptions = JSON.parse(renderer.files.get('package/generated/release.json')?.toString('utf8') ?? 'null')?.exceptions;
+  if (!Array.isArray(exceptions)) fail('P2_1_MANIFEST_PACKAGE_INVALID', `${RENDERER_PACKAGE} has no generated/release.json with its exceptions`);
+  return {
+    packages,
+    catalogPackage,
+    contracts,
+    descriptors,
+    exceptionDigests: exceptions.map((exception) => sha256(canonicalJson(exception))),
+    reactCompatibility: { schema: REACT_COMPATIBILITY_SCHEMA, path: 'generated/compatibility.mjs', digest: sha256(profileBytes) },
+  };
 }
+
 
 // Every dependency edge between members of the tuple, as the tarballs declare it.
 function tupleEdges(publishSet, facts) {
@@ -161,14 +312,39 @@ export function buildRollbackPlan({ published }) {
   };
 }
 
+const buildPublication = ({ published }) => ({
+  status: 'prepared',
+  registry: CANDIDATE_PUBLISH_CONFIG.registry,
+  distTag: CANDIDATE_PUBLISH_CONFIG.tag,
+  order: published.map(({ name }) => name),
+  authorization: 'required-external-human-authorization',
+  provenance: 'required-at-publication',
+  mutationPerformed: false,
+});
+
+// A manifest's digest covers everything except the digest itself and how the checks ran.
+function manifestDigest(manifest) {
+  const { digest: _digest, preparation: _preparation, ...body } = manifest;
+  return sha256(canonicalJson(body));
+}
+
 /**
- * The portfolio manifest. `artifacts` maps every member of the set to its tarball bytes; `reused` maps a package the
- * release does not publish to the provenance recorded when it was published. `preparation` says how the checks ran
- * and is not part of the digest, so two preparations of one commit and tuple have one digest whatever the run was.
+ * The portfolio manifest. `artifacts` maps every member of the set to its tarball bytes. `reused` maps a package the
+ * release does not publish to its package record in the manifest that published it; the bytes must be the ones that
+ * record names, and the new record keeps its version, digests, and provenance. `readEvidence(path)` reads the
+ * retained evidence indexes as committed at the release commit. `preparation` says how the checks ran and is not part
+ * of the digest, so two preparations of one commit and tuple have one digest whatever the run was.
  */
-export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map(), source, evidence, react, preparation }) {
+export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map(), source, readEvidence, react, preparation }) {
   const facts = readTupleFacts({ publishSet, artifacts });
   const versionOf = (name) => facts.packages.get(name).manifest.version;
+  for (const [name, prior] of reused) {
+    const { bytes, manifest } = facts.packages.get(name);
+    if (prior.name !== name || prior.version !== manifest.version || prior.file !== tarballFileName(name, manifest.version)
+      || prior.integrity !== sha512Integrity(bytes) || prior.sha256 !== sha256(bytes) || manifest.gitHead !== prior.provenance?.sourceCommit) {
+      fail('P2_1_MANIFEST_REUSE_MISMATCH', `${name} is not the package its earlier release recorded (${prior.version}, ${prior.integrity})`);
+    }
+  }
   const published = publishSet.packages.filter(({ name }) => !reused.has(name)).map(({ name }) => ({ name, version: versionOf(name) }));
   const id = releaseIdFor({ revision: source.revision, published });
   const body = {
@@ -177,14 +353,15 @@ export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map
     source: { revision: source.revision, tree: source.tree },
     packages: publishSet.packages.map(({ name }) => {
       const { bytes, manifest } = facts.packages.get(name);
+      if (reused.has(name)) return { ...reused.get(name), role: 'reused' };
       return {
         name,
         version: manifest.version,
-        role: reused.has(name) ? 'reused' : 'published',
+        role: 'published',
         file: tarballFileName(name, manifest.version),
         integrity: sha512Integrity(bytes),
         sha256: sha256(bytes),
-        provenance: reused.get(name) ?? { kind: 'release-commit', releaseId: id, sourceCommit: source.revision },
+        provenance: { kind: 'release-commit', releaseId: id, sourceCommit: source.revision },
       };
     }),
     catalog: {
@@ -192,27 +369,13 @@ export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map
       version: facts.catalogPackage.catalogVersion,
       digest: facts.catalogPackage.catalogDigest,
     },
-    contracts: {
-      schemaVersion: facts.catalogPackage.releaseManifest.schemaVersion,
-      queryApiVersion: facts.catalogPackage.queryApiVersion,
-      supportedQueryApiVersions: facts.catalogPackage.supportedQueryApiVersions,
-      tokenContractVersion: facts.catalogPackage.releaseManifest.tokenContractVersion,
-      platformSafetyContractVersion: facts.catalogPackage.platformSafetyContract.version,
-    },
+    contracts: facts.contracts,
     compatibility: { edges: tupleEdges(publishSet, facts) },
     descriptors: facts.descriptors.map(({ descriptor: _descriptor, ...record }) => record),
     reactCompatibility: facts.reactCompatibility,
     react,
-    evidence,
-    publication: {
-      status: 'prepared',
-      registry: CANDIDATE_PUBLISH_CONFIG.registry,
-      distTag: CANDIDATE_PUBLISH_CONFIG.tag,
-      order: published.map(({ name }) => name),
-      authorization: 'required-external-human-authorization',
-      provenance: 'required-at-publication',
-      mutationPerformed: false,
-    },
+    evidence: { ...readEvidenceRecord(readEvidence), activeExceptions: facts.exceptionDigests },
+    publication: buildPublication({ published }),
     rollback: buildRollbackPlan({ published }),
   };
   return { ...body, digest: sha256(canonicalJson(body)), preparation };
@@ -222,13 +385,15 @@ export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map
  * Verifies a portfolio manifest against the tarballs of its tuple (`artifacts`: package name to bytes, the
  * published ones from the candidate and a reused one from where it was first published). It rejects repacked bytes
  * under one version, a package missing from the tuple, a published package built from another commit, and a reused
- * package whose recorded digest or compatibility does not hold. `expected` may name the commit and tree the release
- * must come from. Returns the facts read from the tarballs.
+ * package that is not exactly the record of the earlier release it names (`priorManifests`: release id to that
+ * release's manifest) or whose compatibility no longer holds. Contracts, evidence, exceptions, rollback, and
+ * publication are recomputed, not trusted: from the packed catalog, schema, and renderer, from the retained
+ * evidence as committed (`readEvidence`), and from the verified records. `expected` may name the commit and tree the
+ * release must come from. Returns the facts read from the tarballs.
  */
-export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expected = {} }) {
+export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expected = {}, readEvidence, priorManifests = new Map() }) {
   if (manifest?.schema !== PORTFOLIO_SCHEMA) fail('P2_1_MANIFEST_SCHEMA_INVALID', `the manifest schema is ${manifest?.schema}`);
-  const { digest, preparation: _preparation, ...body } = manifest;
-  if (digest !== sha256(canonicalJson(body))) fail('P2_1_MANIFEST_DIGEST_MISMATCH', 'the manifest digest does not match its content');
+  if (manifest.digest !== manifestDigest(manifest)) fail('P2_1_MANIFEST_DIGEST_MISMATCH', 'the manifest digest does not match its content');
   if (!gitObject.test(manifest.source?.revision ?? '') || !gitObject.test(manifest.source?.tree ?? '')) fail('P2_1_MANIFEST_SOURCE_INVALID', 'the source revision and tree must be Git object ids');
   for (const key of ['revision', 'tree']) {
     if (expected[key] !== undefined && manifest.source[key] !== expected[key]) fail('P2_1_MANIFEST_SOURCE_MISMATCH', `the manifest source ${key} is ${manifest.source[key]}, not ${expected[key]}`);
@@ -265,22 +430,30 @@ export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expect
   for (const { name } of publishSet.packages) {
     const record = recorded.get(name);
     if (record.role === 'published' && record.provenance.releaseId !== manifest.id) fail('P2_1_MANIFEST_COMMIT_MISMATCH', `${name} records release ${record.provenance.releaseId}, not ${manifest.id}`);
-    if (record.role === 'reused' && record.provenance.releaseId === manifest.id) fail('P2_1_MANIFEST_PACKAGE_INVALID', `${name} is reused and records this release as its origin`);
+    if (record.role !== 'reused') continue;
+    if (record.provenance.releaseId === manifest.id) fail('P2_1_MANIFEST_PACKAGE_INVALID', `${name} is reused and records this release as its origin`);
+    // A reused package is the record of the release that published it, byte for byte and field for field.
+    const origin = priorManifests.get(record.provenance.releaseId);
+    if (origin === undefined || origin.schema !== PORTFOLIO_SCHEMA || origin.id !== record.provenance.releaseId || origin.digest !== manifestDigest(origin)) {
+      fail('P2_1_MANIFEST_REUSE_UNVERIFIED', `${name} is reused from ${record.provenance.releaseId}, which has no verified earlier manifest`);
+    }
+    const earlier = (origin.packages ?? []).find((candidate) => candidate.name === name && candidate.role === 'published');
+    if (earlier === undefined || canonicalJson({ ...record, role: 'published' }) !== canonicalJson(earlier)) {
+      fail('P2_1_MANIFEST_REUSE_MISMATCH', `${name}@${record.version} is not the record ${origin.id} published (${earlier?.version}, ${earlier?.integrity})`);
+    }
   }
 
-  // Compatibility: every sibling edge admits the tuple's version, the catalog is the recorded one, and the
-  // renderer descriptor matches the catalog's release record.
+  // Compatibility: every sibling edge admits the tuple's version, and the renderer descriptor matches the catalog's
+  // release record and its own package's export map.
   const edges = tupleEdges(publishSet, facts);
   for (const edge of edges) {
     if (!caretAllows(edge.range, edge.version)) fail('P2_1_MANIFEST_COMPATIBILITY_BROKEN', `${edge.from} requires ${edge.to}@${edge.range}, and the tuple has ${edge.version}`);
   }
-  const catalogVersion = facts.packages.get('@muxui/catalog').manifest.version;
   const { catalogPackage } = facts;
-  if (catalogPackage.version !== catalogVersion || catalogPackage.catalogVersion !== catalogVersion || catalogPackage.releaseManifest.catalog.version !== catalogVersion) {
-    fail('P2_1_MANIFEST_COMPATIBILITY_BROKEN', `the catalog package is ${catalogVersion} and its catalog record is ${catalogPackage.catalogVersion}`);
-  }
   for (const descriptor of facts.descriptors) {
-    const problems = findReactCompatibilityProblems({ descriptor: descriptor.descriptor, catalogPackage, version: descriptor.version });
+    const problems = findReactCompatibilityProblems({
+      descriptor: descriptor.descriptor, catalogPackage, version: descriptor.version, packageExports: facts.packages.get(descriptor.package).manifest.exports,
+    });
     if (problems.length > 0) fail('P2_1_MANIFEST_COMPATIBILITY_BROKEN', `${descriptor.package}: ${problems.join('; ')}`);
     const provenance = descriptor.descriptor.provenance;
     const owner = recorded.get(descriptor.package).provenance;
@@ -289,18 +462,19 @@ export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expect
     }
   }
 
-  // Everything else the manifest records is recomputed from the same bytes.
+  // Everything else the manifest records is recomputed from the same bytes, the committed evidence, and the records above.
   const recomputed = {
     catalog: { id: catalogPackage.releaseManifest.catalog.id, version: catalogPackage.catalogVersion, digest: catalogPackage.catalogDigest },
+    contracts: facts.contracts,
     compatibility: { edges },
     descriptors: facts.descriptors.map(({ descriptor: _descriptor, ...record }) => record),
     reactCompatibility: facts.reactCompatibility,
+    evidence: { ...readEvidenceRecord(readEvidence), activeExceptions: facts.exceptionDigests },
+    publication: buildPublication({ published }),
+    rollback: buildRollbackPlan({ published }),
   };
   for (const [key, value] of Object.entries(recomputed)) {
-    if (canonicalJson(manifest[key]) !== canonicalJson(value)) fail('P2_1_MANIFEST_RECORD_MISMATCH', `the recorded ${key} is not what the tarballs hold`);
-  }
-  for (const key of ['evidence', 'rollback']) {
-    if (manifest[key] === undefined || manifest[key] === null) fail('P2_1_MANIFEST_RECORD_MISMATCH', `the manifest has no ${key}`);
+    if (canonicalJson(manifest[key] ?? null) !== canonicalJson(value)) fail('P2_1_MANIFEST_RECORD_MISMATCH', `the recorded ${key} is not what the tarballs and the committed evidence hold`);
   }
   return facts;
 }

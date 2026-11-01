@@ -53,6 +53,10 @@ export function rewritePackedManifest({ packed, entry, versions, sourceRevision 
   return candidate;
 }
 
+// A specifier that installs from somewhere other than the registry: a path, a link, Git, a URL, a hosting
+// shorthand (`user/repo`), another package manager's protocol, or an npm alias.
+const nonRegistrySource = (range) => /^(?:[a-z][a-z0-9+.-]*:|\.{0,2}\/|~\/|[\w.-]+\/[\w.-]+(?:#.*)?$)/iu.test(String(range));
+
 const targetsOf = (value) => (typeof value === 'string' ? [value] : Object.values(value ?? {}).flatMap(targetsOf));
 const archivePath = (target) => `package/${posix.normalize(target)}`;
 const unconditional = new Set(['package/package.json', 'package/README.md', 'package/LICENSE', 'package/NOTICE']);
@@ -102,14 +106,22 @@ export function findPackedPackageProblems({ entry, source, packed, entries, vers
     : !entries.includes(target)));
   if (missing.length > 0) add('P2_1_PACK_ENTRY_MISSING', `public entries are not packed: ${missing.join(', ')}`);
 
-  // Dependencies: registry packages the source declares, and only the declared Mux UI edges.
-  const declaredThirdParty = new Set(['dependencies', 'optionalDependencies', 'peerDependencies'].flatMap((field) => Object.keys(source[field] ?? {})));
+  // Dependencies: registry packages at the range the source declares, and only the declared Mux UI edges.
   for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
     for (const [dependency, range] of Object.entries(packed[field] ?? {})) {
+      const declared = source[field]?.[dependency];
       if (String(range).startsWith('workspace:')) add('P2_1_PACK_WORKSPACE_SPECIFIER', `${field} ${dependency} keeps its workspace specifier`);
       else if (dependency === '@muxui/tokens') add('P2_1_PACK_TOKENS_DEPENDENCY', `${field} ${dependency}: tokens stay a private build authority`);
-      else if (dependency.startsWith('@muxui/') ? !(field === 'dependencies' && entry.runtimeEdges.includes(dependency)) : !declaredThirdParty.has(dependency)) {
-        add('P2_1_PACK_UNLISTED_DEPENDENCY', `${field} ${dependency} is neither a registry dependency of the source nor an allowed Mux UI edge`);
+      else if (dependency.startsWith('@muxui/')) {
+        if (!(field === 'dependencies' && entry.runtimeEdges.includes(dependency))) {
+          add('P2_1_PACK_UNLISTED_DEPENDENCY', `${field} ${dependency} is not an allowed Mux UI edge`);
+        }
+      } else if (nonRegistrySource(range)) {
+        add('P2_1_PACK_DEPENDENCY_SOURCE', `${field} ${dependency} is ${range}, not a registry range`);
+      } else if (declared === undefined) {
+        add('P2_1_PACK_UNLISTED_DEPENDENCY', `${field} ${dependency} is not a dependency the source declares`);
+      } else if (range !== declared) {
+        add('P2_1_PACK_DEPENDENCY_SOURCE', `${field} ${dependency} is ${range}, not the source's ${declared}`);
       }
     }
   }
@@ -141,21 +153,33 @@ export function stampDescriptorProvenance(text, provenance) {
   return `${canonicalJson({ ...descriptor, provenance })}\n`;
 }
 
-/** Each descriptor binding's export identity (`<package>[/<subpath>]#<Name>`) as the module to load and the member. */
+const memberName = /^[A-Za-z_$][\w$]*$/u;
+
+/**
+ * Each descriptor binding's export identity, `<package>[/<subpath>]#<Member>`: exactly one `#`, then a plain
+ * identifier. `valid` is false for anything else, the way the installed resolver rejects it.
+ */
 export function descriptorExports(descriptor) {
   return Object.entries(descriptor.bindings ?? {}).map(([binding, { export: identity }]) => {
-    const [specifier, member] = String(identity).split('#');
-    return { binding, specifier, member };
+    const parts = String(identity).split('#');
+    const [specifier, member] = parts;
+    return { binding, identity: String(identity), specifier, member, valid: parts.length === 2 && specifier.length > 0 && memberName.test(member) };
   });
 }
 
+/** Whether `specifier` is the package or a subpath of it (`<package>/<subpath>`). */
+export const isPackageSpecifier = (specifier, packageName) => specifier === packageName || specifier.startsWith(`${packageName}/`);
+
 /**
  * Problems in a descriptor against the exports its installed package really has (`E-P2.1-02`). `exportNames` maps a
- * module specifier to the names that module exports. A member a different module exports does not count:
- * `@muxui/react/markdown#Button` fails when only the package root exports `Button`.
+ * module specifier to the names that module exports, and each binding must name `packageName` or one of its modules.
+ * A member a different module exports does not count: `@muxui/react/markdown#Button` fails when only the package
+ * root exports `Button`.
  */
-export function findDescriptorExportProblems(descriptor, exportNames) {
-  return descriptorExports(descriptor).flatMap(({ binding, specifier, member }) => {
+export function findDescriptorExportProblems(descriptor, exportNames, { packageName }) {
+  return descriptorExports(descriptor).flatMap(({ binding, identity, specifier, member, valid }) => {
+    if (!valid) return [`${binding}: ${identity} is not <specifier>#<Member>`];
+    if (!isPackageSpecifier(specifier, packageName)) return [`${binding}: ${specifier} is not ${packageName} or one of its modules`];
     const names = exportNames.get(specifier);
     if (names === undefined) return [`${binding}: ${specifier} is not an importable module of the package`];
     return names.includes(member) ? [] : [`${binding}: ${specifier} does not export ${member}`];

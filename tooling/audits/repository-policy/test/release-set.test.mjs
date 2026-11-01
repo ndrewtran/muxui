@@ -177,6 +177,24 @@ test('E-P2.1-01 negative: a workspace specifier, an unlisted dependency, and a t
   assert.deepEqual(audit('@muxui/schema', (packed) => { packed.gitHead = 'b'.repeat(40); }), ['P2_1_PACK_MANIFEST_DRIFT']);
 });
 
+test('E-P2.1-01 negative: a dependency that installs from anywhere but the registry, or at another range than the source declares, fails', () => {
+  // The source declares `semver` at an exact registry version; the packed manifest must say the same.
+  for (const spec of ['file:../private-semver', 'link:../semver', 'git+https://example.com/semver.git', 'git://example.com/semver.git', 'https://example.com/semver.tgz',
+    'github:someone/semver', 'someone/semver', 'someone/semver#main', 'npm:other-package@1.0.0', 'workspace:*', '../semver', 'portal:../semver']) {
+    const codes = audit('@muxui/tooling', (packed) => { packed.dependencies.semver = spec; });
+    assert.ok(codes.some((code) => ['P2_1_PACK_DEPENDENCY_SOURCE', 'P2_1_PACK_WORKSPACE_SPECIFIER'].includes(code)), `${spec}: ${codes}`);
+  }
+  for (const field of ['optionalDependencies', 'peerDependencies']) {
+    assert.ok(audit('@muxui/tooling', (packed) => { packed[field] = { semver: 'file:../private-semver' }; }).includes('P2_1_PACK_DEPENDENCY_SOURCE'), field);
+  }
+  // A registry range that is not the one the source declares is a different dependency.
+  assert.deepEqual(audit('@muxui/tooling', (packed) => { packed.dependencies.semver = '^7.0.0'; }), ['P2_1_PACK_DEPENDENCY_SOURCE']);
+  assert.deepEqual(audit('@muxui/react', (packed) => { packed.peerDependencies.react = '*'; }), ['P2_1_PACK_MANIFEST_DRIFT', 'P2_1_PACK_DEPENDENCY_SOURCE']);
+  // The declared ranges, including peer ranges with spaces, pass.
+  assert.deepEqual(audit('@muxui/react'), []);
+  assert.deepEqual(audit('@muxui/tooling'), []);
+});
+
 const sampleDescriptor = {
   id: 'renderer:@muxui/react',
   bindings: {
@@ -187,15 +205,31 @@ const sampleDescriptor = {
 
 test('E-P2.1-02 the pack-time descriptor audit finds every binding\'s member in its module, and only there', () => {
   const exportNames = new Map([['@muxui/react', ['Button', 'Card']], ['@muxui/react/markdown', ['Markdown']]]);
-  assert.deepEqual(findDescriptorExportProblems(sampleDescriptor, exportNames), []);
+  const audited = (descriptor) => findDescriptorExportProblems(descriptor, exportNames, { packageName: '@muxui/react' });
+  assert.deepEqual(audited(sampleDescriptor), []);
   // The right member under the wrong subpath is not an export of that module.
   const crossed = structuredClone(sampleDescriptor);
   crossed.bindings['muxui:component:button#web.react'].export = '@muxui/react/markdown#Button';
-  assert.deepEqual(findDescriptorExportProblems(crossed, exportNames), ['muxui:component:button#web.react: @muxui/react/markdown does not export Button']);
+  assert.deepEqual(audited(crossed), ['muxui:component:button#web.react: @muxui/react/markdown does not export Button']);
   const absent = structuredClone(sampleDescriptor);
   absent.bindings['muxui:component:button#web.react'].export = '@muxui/react/button#Button';
-  assert.deepEqual(findDescriptorExportProblems(absent, exportNames), ['muxui:component:button#web.react: @muxui/react/button is not an importable module of the package']);
+  assert.deepEqual(audited(absent), ['muxui:component:button#web.react: @muxui/react/button is not an importable module of the package']);
   assert.deepEqual(descriptorExports(sampleDescriptor).map(({ specifier, member }) => `${specifier}#${member}`), ['@muxui/react#Button', '@muxui/react/markdown#Markdown']);
+});
+
+test('E-P2.1-02 negative: an export identity needs exactly one #, a plain member, and a module of the package', () => {
+  // The installed resolver rejects each of these; the audit may not read past the second segment.
+  const exportNames = new Map([['@muxui/react', ['Button']], ['@muxui/schema', ['Button']]]);
+  const audited = (identity) => findDescriptorExportProblems({ bindings: { b: { export: identity } } }, exportNames, { packageName: '@muxui/react' });
+  assert.deepEqual(audited('@muxui/react#Button'), []);
+  assert.deepEqual(audited('@muxui/react#Button#junk'), ['b: @muxui/react#Button#junk is not <specifier>#<Member>']);
+  for (const identity of ['@muxui/react', '@muxui/react#', '@muxui/react#Bu tton', '@muxui/react#1Button', '#Button', '@muxui/react#Button#']) {
+    assert.equal(audited(identity).length, 1, identity);
+    assert.match(audited(identity)[0], /is not <specifier>#<Member>/u, identity);
+  }
+  // Another package's module does not count, even when it exports the member.
+  assert.deepEqual(audited('@muxui/schema#Button'), ['b: @muxui/schema is not @muxui/react or one of its modules']);
+  assert.deepEqual(audited('@muxui/reactor#Button'), ['b: @muxui/reactor is not @muxui/react or one of its modules']);
 });
 
 test('pack-time provenance is stamped into the generator\'s canonical descriptor and nowhere else', () => {

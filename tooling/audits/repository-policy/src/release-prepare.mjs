@@ -36,7 +36,7 @@ import {
 } from './release-proof.mjs';
 import { canonicalJson } from './canonical-json.mjs';
 import { deterministicArchive, readArchive } from './release-archive.mjs';
-import { buildPortfolioManifest, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
+import { RETAINED_EVIDENCE_MILESTONES, buildPortfolioManifest, committedFileReader, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
 import {
   CANDIDATE_PUBLISH_CONFIG,
   assertCatalogRangeBound,
@@ -89,8 +89,6 @@ const expectedPeerDependencies = {
 // Only stylesheets have import-time effects, so bundlers may drop unused JS modules.
 const expectedSideEffects = ['*.css'];
 const expectedCandidatePublishConfig = CANDIDATE_PUBLISH_CONFIG;
-// Decision 0022: R1.1-R1.5 logged evidence must be retained before the R1 exit.
-const retainedEvidenceMilestones = Object.freeze(['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']);
 const fixedPackageEntries = Object.freeze([
   'package/LICENSE',
   'package/NOTICE',
@@ -1095,7 +1093,7 @@ try {
   const installedReact = join(setConsumer, 'node_modules/@muxui/react');
   const installedDescriptor = JSON.parse(readFileSync(join(installedReact, packedManifest.muxUi.rendererDescriptor), 'utf8'));
   const moduleExports = new Map(Object.entries(exportNames));
-  const descriptorProblems = findDescriptorExportProblems(installedDescriptor, moduleExports);
+  const descriptorProblems = findDescriptorExportProblems(installedDescriptor, moduleExports, { packageName: '@muxui/react' });
   if (descriptorProblems.length !== 0) fail('P2_1_DESCRIPTOR_EXPORT_MISSING', descriptorProblems.join('; '));
   if (installedDescriptor.provenance?.releaseId !== releaseId || installedDescriptor.provenance?.sourceCommit !== sourceRevision) {
     fail('P2_1_DESCRIPTOR_PROVENANCE_INVALID', 'the packed descriptor does not record this release and commit');
@@ -1103,7 +1101,7 @@ try {
   // The audit must stay able to fail: the right member under another subpath is not an export.
   const crossed = structuredClone(installedDescriptor);
   crossed.bindings['muxui:component:button#web.react'].export = '@muxui/react/markdown#Button';
-  if (findDescriptorExportProblems(crossed, moduleExports).length !== 1) fail('P2_1_DESCRIPTOR_AUDIT_INERT', '@muxui/react/markdown#Button was accepted');
+  if (findDescriptorExportProblems(crossed, moduleExports, { packageName: '@muxui/react' }).length !== 1) fail('P2_1_DESCRIPTOR_AUDIT_INERT', '@muxui/react/markdown#Button was accepted');
   console.log(`P2.1 set consumer: ${tuple.size} tarballs installed together, ${Object.keys(exportNames).length} entries imported and ${resolvedEntries.length} resolved, ${Object.keys(installedDescriptor.bindings).length} descriptor bindings export their members`);
 
   // Rehearse the publish of every tarball in order; npm reports the exact tuple without lifecycle hooks or a registry write.
@@ -1131,7 +1129,7 @@ try {
     path: entry.slice('package/'.length),
     bytes: readArchiveBytes(archive, entry),
   }));
-  const retainedEvidence = readRetainedEvidence(repositoryRoot, retainedEvidenceMilestones);
+  const retainedEvidence = readRetainedEvidence(repositoryRoot, RETAINED_EVIDENCE_MILESTONES);
   // The catalog is the rc the candidate packs, not the source version the checkout's generated files carry.
   const catalogFiles = readArchive(tuple.get('@muxui/catalog').archiveBytes);
   const { evidence, ...reactCorrelation } = buildReleaseCorrelation({
@@ -1157,11 +1155,13 @@ try {
   assertSourceIdentity(sourceRevision, 'after release correlation');
   console.log(`R1 exit correlation: ${reactCorrelation.bindings.length} binding-spec revisions, ${reactCorrelation.generatedOutputs.entries.length} generated outputs, ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index, visual contract ${reactCorrelation.visualContract.digest}`);
 
+  const readEvidence = committedFileReader(sourceRevision, repositoryRoot);
   const releaseManifest = buildPortfolioManifest({
     publishSet,
     artifacts: new Map([...tuple].map(([name, { archiveBytes: bytes }]) => [name, bytes])),
     source: { revision: sourceRevision, tree: sourceTree },
-    evidence,
+    // The retained indexes are bound as committed at the release commit, the same bytes the verifier reads.
+    readEvidence,
     react: { correlation: reactCorrelation },
     // Which checks stand behind this candidate, and what the consumer proofs saw (Decision 0030). Not part of the digest.
     preparation: {
@@ -1183,6 +1183,7 @@ try {
     artifacts: new Map(publishSet.packages.map(({ name }) => [name, readFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))))])),
     publishSet,
     expected: { revision: sourceRevision, tree: sourceTree },
+    readEvidence,
   });
   for (const [name, { archiveBytes: bytes }] of tuple) {
     if (statSync(join(outputDirectory, tarballFileName(name, versions.get(name)))).size !== bytes.length) {
