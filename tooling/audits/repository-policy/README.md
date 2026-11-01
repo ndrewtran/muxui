@@ -293,11 +293,14 @@ of it. It reads the registry for each package the run attempted, because a faile
 `npm publish` can still have landed: a version with the candidate's bytes and
 provenance is `healthy` and stays published and is not deprecated; only one the
 registry holds other bytes for (`bad-bytes`) is deprecated, with Andrew's separate
-explicit authorization, and fixed forward to its next rc; one that never published
-or was never attempted needs nothing; a version that is unreadable or still
-propagating, or that has the candidate's bytes without provenance, stops for a
-decision. The plan ends with verifying the tuple again against a new release
-manifest, and no record is rewritten. The workflow publishes the set a candidate
+explicit authorization, and fixed forward to its next rc; a package never attempted
+needs nothing. An attempted package the registry does not show is never "nothing to
+do": npm may have accepted the publish and show it later, so it is `unverified`, and
+so is one that is unreadable. Those, and a version with the candidate's bytes but no
+provenance, stop for a decision: re-check the registry later, do not republish the
+same version, and deprecate nothing until its state is known. The plan ends with
+verifying the tuple again against a new release manifest, and no record is rewritten.
+The workflow publishes the set a candidate
 declares, so a fix forward is a new dispatch at versions the registry does not hold
 yet for the packages that did publish.
 
@@ -319,7 +322,7 @@ adapters, and `test/evidence-integrity.test.mjs` rebuilds the committed rc.1 to 
 routes byte for byte. For a portfolio run the candidate is `@muxui/react`, so the
 `E-R1-EXIT` records keep their shape; the dry run's portfolio manifest (schema,
 digest, source commit and tree, and every tarball's recorded bytes) and each
-package's preflight, publish, and workflow read-back ride along under `portfolio`.
+package's preflight, publish, and workflow read-back ride along under `portfolio`. The capture accepts a publish log only in the workflow's own shape: one block per package, in publish order, each package's read-back finished before the next package's publish starts, and each read-back's dist-tags what that package's preflight allows (`next` the new version, `latest` unchanged or registry-set on a first publish, no other tag).
 `test/evidence-integrity.test.mjs` also captures a hosted portfolio release
 built by `test/evidence-portfolio-fixture.mjs`, whose publish job log is what
 `npm-publication.mjs` prints against the registry fake.

@@ -342,9 +342,8 @@ export function readCandidateSet({ directory, publishSet, versions, revision, ex
  * package cannot publish through trusted publishing, and nothing falls back. Then for each package: the drift
  * recheck, `publish(package, { token })` (the injected `npm publish`; `token` is given to a first publish only, an
  * existing package publishes through OIDC), and the registry read-back of its integrity, provenance, and dist-tags. A failure rethrows with
- * `error.progress` = { attempted, verified, failed }: the packages whose publish was attempted (and whether the
- * command succeeded, `landed`), those whose read-back passed, and the one that failed with the phase it failed in.
- * Nothing later is attempted.
+ * `error.progress` = { attempted, verified, failed }: the packages whose publish was attempted, those whose
+ * read-back passed, and the one that failed with the phase it failed in. Nothing later is attempted.
  */
 export async function publishSet({ packages, publish, token, ...io }) {
   const log = io.log ?? console.log;
@@ -380,13 +379,11 @@ export async function publishSet({ packages, publish, token, ...io }) {
       assertNoDrift(recorded.get(name), await preflight(version, io, name));
       log(`No drift since the preflight: ${name} ${describe(recorded.get(name))}`);
       phase = 'publish';
-      const attempt = { name, version, integrity, landed: false };
-      progress.attempted.push(attempt);
+      progress.attempted.push({ name, version, integrity });
       // Only a package that does not exist yet gets the token; an existing one publishes through OIDC.
       const first = recorded.get(name).kind === 'first';
       log(`Authentication for ${name}: ${first ? 'temporary npm token (first publish)' : 'trusted publishing (OIDC)'}`);
       await publish(pkg, { token: first ? token : undefined });
-      attempt.landed = true;
       phase = 'read-back';
       log(`Read back ${name}@${version}`);
       const result = await readBack({ name, version, expectedIntegrity: integrity, recorded: recorded.get(name) }, io);
@@ -407,16 +404,15 @@ export async function publishSet({ packages, publish, token, ...io }) {
 
 /**
  * Reads, from the registry, what each attempted package actually is, because a failed publish command can still
- * have landed: 'absent' (never published), 'healthy' (the candidate's bytes, with provenance), 'bad-bytes' (another
- * integrity), 'unattested' (the candidate's bytes without provenance), or 'unverified' (unreadable or not yet
- * visible). Read-only.
+ * have landed: 'healthy' (the candidate's bytes, with provenance), 'bad-bytes' (another integrity), 'unattested'
+ * (the candidate's bytes without provenance), or 'unverified' (unreadable, or not visible). A 404 after an attempt is
+ * never 'absent': npm may have accepted the PUT with the version visible only later, whether or not the command
+ * reported an error, so it stays unverified until read again. Read-only.
  */
 export async function assessAttempted(attempted, io = {}) {
-  return Promise.all(attempted.map(async ({ name, version, integrity, landed }) => {
+  return Promise.all(attempted.map(async ({ name, version, integrity }) => {
     try {
       const { status, body } = await readRegistry(packageUrl(name, version), io);
-      // A publish command that succeeded and is not yet readable is a propagation lag, not an absent version.
-      if (status === 404) return { name, version, state: landed ? 'unverified' : 'absent' };
       if (status !== 200) return { name, version, state: 'unverified' };
       try {
         judgeVersionDocument({ name, version, expectedIntegrity: integrity, document: body });
@@ -434,8 +430,9 @@ export async function assessAttempted(attempted, io = {}) {
  * The recovery plan after a failed publication, as Decision 0023 amendment 01 and Decision 0032 item 9 set it. It
  * is a plan and nothing here runs it. `set` is the publish set in order and `assessed` the result of
  * `assessAttempted`. Only a version that published bad bytes is deprecated, with Andrew's separate authorization, and
- * fixed forward; a package that never published, or never was attempted, needs nothing; a healthy version stays
- * published and is not deprecated; no record is rewritten.
+ * fixed forward; a package that was never attempted needs nothing; a healthy version stays published and is not
+ * deprecated; an attempted package the registry does not show stops for a decision, never as "nothing to do" and never
+ * as a republish of the same version; no record is rewritten.
  */
 export function planRecovery({ set, assessed }) {
   const byName = new Map(assessed.map((entry) => [entry.name, entry]));
@@ -445,11 +442,10 @@ export function planRecovery({ set, assessed }) {
     const next = fixForwardVersion(version, name);
     const action = {
       'not-attempted': { deprecate: false, text: 'never attempted; nothing to do' },
-      absent: { deprecate: false, text: 'never published; nothing to deprecate' },
       healthy: { deprecate: false, text: 'published and verified; stays published and is not deprecated' },
       'bad-bytes': { deprecate: true, fixForward: next, text: `published bad bytes; deprecate ${version} (separate explicit authorization) and fix forward to ${next}` },
       unattested: { deprecate: false, text: 'published the candidate bytes without provenance; stop for a decision, and deprecate nothing automatically' },
-      unverified: { deprecate: false, text: 'registry state unknown; read it again before deciding, and deprecate nothing until it is known' },
+      unverified: { deprecate: false, text: 'the publish may have landed and is not visible yet; stop for a decision, re-check the registry later, do not republish this version, and deprecate nothing until it is known' },
     }[state];
     return { name, version, state, ...action };
   });

@@ -11,8 +11,9 @@ const slsa = { predicateType: 'https://slsa.dev/provenance/v1' };
 /**
  * `seed` maps a package name to { versions: { [version]: integrity }, tags } already on the registry. `faults`
  * names the package each failure hits: `refuse` (npm rejects the publish and writes nothing), `corrupt` (the
- * registry ends up with other bytes), `unattested` (no provenance attestation), and `invisible` (the publish lands
- * and never becomes readable, as a registry that does not propagate).
+ * registry ends up with other bytes), `unattested` (no provenance attestation), `invisible` (the publish lands
+ * and never becomes readable, as a registry that does not propagate), and `landThenFail` (the publish lands, the
+ * command errors, and reads return 404 until `reveal(name)`, as a timeout after npm accepted the PUT).
  */
 export function createRegistry({ seed = {}, faults: initialFaults = {} } = {}) {
   const faults = { ...initialFaults };
@@ -62,8 +63,9 @@ export function createRegistry({ seed = {}, faults: initialFaults = {} } = {}) {
     // `--tag next` moves next; the registry itself sets latest on a package's first version.
     packument['dist-tags'].next = version;
     if (first) packument['dist-tags'].latest = version;
-    if (faults.invisible?.includes(name)) hidden.add(name);
+    if (faults.invisible?.includes(name) || faults.landThenFail?.includes(name)) hidden.add(name);
     writes.push({ op: 'publish', name, version, tag: 'next', auth: token ? 'token' : 'oidc' });
+    if (faults.landThenFail?.includes(name)) throw new Error(`npm error code ETIMEDOUT\nnpm error network request to ${REGISTRY}/${name} timed out after the registry accepted it`);
   }
 
   /** npm-publication.mjs's injectable IO with no real waiting and short polling. */
@@ -79,6 +81,8 @@ export function createRegistry({ seed = {}, faults: initialFaults = {} } = {}) {
     faults,
     requests,
     writes,
+    /** Ends a package's propagation delay: its reads show what landed. */
+    reveal: (name) => hidden.delete(name),
     /** The recorded state of one package, as the registry holds it now. */
     packument: (name) => packuments.get(name) ?? null,
   };

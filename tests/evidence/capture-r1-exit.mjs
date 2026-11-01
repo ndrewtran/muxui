@@ -56,7 +56,7 @@ import {
   findPinnedDuplicateVersions,
   isolatedPackageManagerEnvironment,
 } from '../../tooling/audits/repository-policy/src/release-proof.mjs';
-import { parseCandidateVersion } from '../../tooling/audits/repository-policy/src/npm-publication.mjs';
+import { judgeDistTags, parseCandidateVersion } from '../../tooling/audits/repository-policy/src/npm-publication.mjs';
 import { DEFERRED_R1_EVIDENCE } from '../../packages/react/src/r1-deferred-evidence.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../..');
@@ -785,10 +785,14 @@ const portfolioPublishSteps = [
  * Reads what the publish step printed for each package of `set` (`{ name, version, integrity, shasum }` in publish order):
  * 'verified' (published and read back), 'read-back-failed' (the publish landed), 'publish-failed' (it did not), or
  * 'not-attempted' (the set stopped before it). A package that was attempted but never preflighted is a malformed log.
+ * The blocks must be the workflow's own: once each, in publish order, each package's read-back completed before the next
+ * package's publish starts (so nothing starts after a package that did not complete), and a read-back's dist-tags are what
+ * the package's preflight allows.
  */
 function observePublishSet(stepLines, set) {
   const text = stepLines.map(content);
-  return set.map(({ name, version, integrity, shasum }, index) => {
+  const marks = [];
+  const rows = set.map(({ name, version, integrity, shasum }, index) => {
     const label = `${name}@${version}`;
     const position = `(${index + 1} of ${set.length})`;
     const preflightVersion = text.includes(`${label}: 404 (no collision)`) ? '404 (no collision)' : null;
@@ -796,6 +800,10 @@ function observePublishSet(stepLines, set) {
     const [, latest = '', next = ''] = text.find((line) => line.startsWith(`${name} dist-tags latest=`))?.match(/latest=(\S+) next=(\S+)$/u) ?? [];
     if (!preflightVersion || (!first && !latest)) fail('R1_EXIT_RUN_INVALID', `the registry preflight printed no version or dist-tag state for ${label}`);
     const start = text.indexOf(`Publishing ${label} ${position}`);
+    marks.push({ label, start, done: text.indexOf(`Published ${label} ${position}`) });
+    if ([`Publishing ${label} ${position}`, `Published ${label} ${position}`].some((line) => text.filter((entry) => entry === line).length > 1)) {
+      fail('R1_EXIT_RUN_INVALID', `the publish step prints the block of ${label} more than once`);
+    }
     const end = start < 0 ? -1 : text.findIndex((line, at) => at > start && line.startsWith('Publishing '));
     const segment = start < 0 ? [] : text.slice(start, end < 0 ? text.length : end);
     const notice = segment.find((line) => line.startsWith('npm notice integrity: '))?.slice('npm notice integrity: '.length);
@@ -806,6 +814,18 @@ function observePublishSet(stepLines, set) {
     const done = segment.includes(`Published ${label} ${position}`);
     const state = done ? 'verified' : landed ? 'read-back-failed' : start >= 0 ? 'publish-failed' : 'not-attempted';
     // A package that does not exist yet first-publishes with the temporary token; an existing one only through OIDC.
+    const distTags = done ? jsonAfter(readLines, 'dist-tags: ') ?? null : null;
+    if (done) {
+      // next is the new version; latest is unchanged, or set by the registry on a first publish; no other tag exists.
+      const recorded = first ? { kind: 'first', latest: '', next: '' } : { kind: 'later', latest, next };
+      let judged;
+      try {
+        judged = judgeDistTags({ name, version, recorded, packument: { 'dist-tags': distTags } });
+      } catch (error) {
+        fail('R1_EXIT_DIST_TAGS_UNEXPECTED', `${label} read back ${JSON.stringify(distTags)}: ${error.message}`);
+      }
+      if (judged !== 'done') fail('R1_EXIT_DIST_TAGS_UNEXPECTED', `${label} read back ${JSON.stringify(distTags)}, still the pre-publish state`);
+    }
     const authentication = segment.find((line) => line.startsWith(`Authentication for ${name}: `))?.slice(`Authentication for ${name}: `.length);
     const expectedAuthentication = first ? 'temporary npm token (first publish)' : 'trusted publishing (OIDC)';
     if (start >= 0 && authentication !== expectedAuthentication) {
@@ -827,11 +847,18 @@ function observePublishSet(stepLines, set) {
         readBack: {
           integrity: readLines.find((line) => line.startsWith('dist.integrity: '))?.slice('dist.integrity: '.length) ?? null,
           provenancePredicateType: readLines.find((line) => line.startsWith('provenance: '))?.slice('provenance: '.length) ?? null,
-          distTags: jsonAfter(readLines, 'dist-tags: ') ?? null,
+          distTags,
         },
       } : {}),
     };
   });
+  // One package at a time, in publish order: a package starts only after every one before it started and completed.
+  marks.forEach(({ label, start }, index) => {
+    if (start < 0) return;
+    const earlier = marks.slice(0, index).find((mark) => mark.start < 0 || mark.done < 0 || mark.start > mark.done || mark.done > start);
+    if (earlier) fail('R1_EXIT_RUN_INVALID', `${label} started before ${earlier.label} had been published and read back, or out of publish order`);
+  });
+  return rows;
 }
 
 // The publish run of the portfolio workflow, bound to the captured dry run: same commit and candidate set, the authorized

@@ -18,6 +18,8 @@ const [schema, catalog, tooling, react] = names;
 // The first portfolio release: the three new packages' rc.1 and @muxui/react's next number.
 const first = { schema: '0.6.0-rc.1', catalog: '2.1.0-rc.1', tooling: '1.1.0-rc.1', react: '0.1.0-rc.5' };
 const versionOf = { [schema]: first.schema, [catalog]: first.catalog, [tooling]: first.tooling, [react]: first.react };
+// What the recovery plan says of an attempted package the registry does not show.
+const unverifiedPlan = 'the publish may have landed and is not visible yet; stop for a decision, re-check the registry later, do not republish this version, and deprecate nothing until it is known';
 const draftIntegrity = (character) => `sha512-${character.repeat(86)}==`;
 
 // The temporary first-publish token of these runs; no test log may ever hold it.
@@ -260,21 +262,22 @@ test('E-P2.1-06 rehearsal: a refused publish after earlier packages published st
   assert.deepEqual(registry.packument(react)['dist-tags'], { latest: '0.1.0-rc.1', next: '0.1.0-rc.4' }, '@muxui/react is untouched');
   assert.ok(!lines.some((line) => line.startsWith(`Publishing ${react}`)));
 
-  // The plan: healthy versions stay published, a package that never published needs no deprecation, no one is deprecated.
+  // The plan: healthy versions stay published, a package never attempted needs nothing, and the refused one is a decision
+  // (npm may have accepted the PUT), not "never published"; no one is deprecated.
   const plan = lines.filter((line) => /^- |^\d+\. |^Recovery plan/u.test(line));
   assert.deepEqual(plan.slice(0, 5), [
     'Recovery plan (a plan only; nothing was deprecated, unpublished, or re-tagged):',
     `- ${schema}@${first.schema}: healthy; published and verified; stays published and is not deprecated`,
     `- ${catalog}@${first.catalog}: healthy; published and verified; stays published and is not deprecated`,
-    `- ${tooling}@${first.tooling}: absent; never published; nothing to deprecate`,
+    `- ${tooling}@${first.tooling}: unverified; ${unverifiedPlan}`,
     `- ${react}@${first.react}: not-attempted; never attempted; nothing to do`,
   ]);
   assert.ok(plan.some((line) => /verify the tuple again against a new release manifest; no record is rewritten/u.test(line)));
-  assert.ok(!plan.some((line) => /deprecate \S+@|deprecate \d/u.test(line.replace(/nothing to deprecate|is not deprecated/gu, ''))));
+  assert.ok(!plan.some((line) => /deprecate \S+@|deprecate \d/u.test(line.replace(/deprecate nothing until|is not deprecated/gu, ''))));
   assert.ok(registry.writes.every(({ op }) => op === 'publish'), 'the fake registry saw publishes only');
 
-  // Fix forward in a new dispatch: tooling and react never published and keep their versions; the packages that did publish
-  // move to their next rc. The tuple is verified again against a new manifest, and the first release's record is untouched.
+  // Fix forward in a new dispatch, once a later look at the registry settled tooling as never published: it and react keep
+  // their versions; the packages that did publish move to their next rc. The tuple is verified again against a new manifest, and the first release's record is untouched.
   const before = readFileSync(join(candidate.directory, PORTFOLIO_MANIFEST_FILE), 'utf8');
   const fixed = candidateOf({ versions: { [schema]: '0.6.0-rc.2', [catalog]: '2.1.0-rc.2' } });
   const verified = verifyCandidate({ directory: fixed.directory, publishSet, versions: fixed.versions, expectedSha512: fixed.integrity, sha: commit, tree, readCommitted });
@@ -309,11 +312,31 @@ test('E-P2.1-06 rehearsal: a failed read-back deprecates only the version that p
 test('E-P2.1-06 rehearsal: a read-back that cannot see the version, or sees it unattested, is a decision and not a deprecation', async () => {
   const lagging = await failedRun({ faults: { invisible: [tooling] } });
   assert.equal(lagging.error.title, 'Registry propagation timeout');
-  assert.ok(lagging.lines.includes(`- ${tooling}@${first.tooling}: unverified; registry state unknown; read it again before deciding, and deprecate nothing until it is known`));
+  assert.ok(lagging.lines.includes(`- ${tooling}@${first.tooling}: unverified; ${unverifiedPlan}`));
   const unattested = await failedRun({ faults: { unattested: [catalog] } });
   assert.equal(unattested.error.title, 'Provenance missing');
   assert.ok(unattested.lines.includes(`- ${catalog}@${first.catalog}: unattested; published the candidate bytes without provenance; stop for a decision, and deprecate nothing automatically`));
   for (const { registry } of [lagging, unattested]) assert.ok(registry.writes.every(({ op }) => op === 'publish'));
+});
+
+test('E-P2.1-06 rehearsal: a publish that errored after npm accepted it is unverified, never absent, and never republished', async () => {
+  const { registry, error, lines } = await failedRun({ faults: { landThenFail: [catalog] } });
+  assert.deepEqual(error.progress.failed, { name: catalog, version: first.catalog, phase: 'publish' });
+  assert.deepEqual(registry.writes.map(({ name }) => name), [schema, catalog], 'the publish landed, and nothing later was attempted');
+  const plan = lines.filter((line) => /^- |^\d+\. |^Recovery plan/u.test(line));
+  assert.deepEqual(plan.slice(1, 5), [
+    `- ${schema}@${first.schema}: healthy; published and verified; stays published and is not deprecated`,
+    `- ${catalog}@${first.catalog}: unverified; ${unverifiedPlan}`,
+    `- ${tooling}@${first.tooling}: not-attempted; never attempted; nothing to do`,
+    `- ${react}@${first.react}: not-attempted; never attempted; nothing to do`,
+  ]);
+  assert.ok(!plan.some((line) => line.includes('never published')), 'a 404 after an attempt is not "never published"');
+  assert.ok(!plan.some((line) => /: published bad bytes; deprecate/u.test(line)));
+  // Later the version is visible: it was published, so publishing it again would be a collision.
+  registry.reveal(catalog);
+  const later = await npm.assessAttempted(error.progress.attempted, registry.io());
+  assert.deepEqual(later.map(({ name, state }) => [name, state]), [[schema, 'healthy'], [catalog, 'healthy']]);
+  await assert.rejects(npm.preflight(first.catalog, registry.io(), catalog), /@muxui\/catalog@2\.1\.0-rc\.1 is already on the registry/u);
 });
 
 test('a recovery plan deprecates a version only when the registry holds other bytes for it', () => {
@@ -323,7 +346,7 @@ test('a recovery plan deprecates a version only when the registry holds other by
   assert.deepEqual(plan([{ name: schema, state: 'healthy' }, { name: catalog, state: 'bad-bytes' }]), [
     { state: 'healthy', deprecate: false, fixForward: undefined }, { state: 'bad-bytes', deprecate: true, fixForward: '2.1.0-rc.2' },
   ]);
-  for (const state of ['absent', 'healthy', 'unattested', 'unverified']) {
+  for (const state of ['healthy', 'unattested', 'unverified']) {
     assert.ok(plan([{ name: schema, state }, { name: catalog, state }]).every(({ deprecate }) => deprecate === false), state);
   }
   assert.ok(npm.planRecovery({ set, assessed: [] }).steps.includes('verify the tuple again against a new release manifest; no record is rewritten'));

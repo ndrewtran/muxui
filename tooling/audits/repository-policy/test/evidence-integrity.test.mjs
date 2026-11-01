@@ -3388,4 +3388,62 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.deepEqual(records['E-R1-EXIT-04'].rollback.publishOrder, names);
     assert.deepEqual(r1Exit.candidateFacts(dryRun).source, { revision: fixture.head, tree: fixture.tree, preparationTool: fixture.manifest.preparation.tool });
   });
+  // The publish step as blocks, one per package, so a test can reorder what the workflow printed.
+  const blocksOf = (log) => {
+    const lines = log.split('\n');
+    const starts = lines.flatMap((line, index) => (/ Publishing @muxui\/\S+ \(\d of 4\)$/u.test(line) ? [index] : []));
+    const end = lines.findIndex((line) => line.endsWith(' Post job cleanup.'));
+    return { head: lines.slice(0, starts[0]), blocks: starts.map((start, at) => lines.slice(start, starts[at + 1] ?? end)), tail: lines.slice(end) };
+  };
+  const rebuild = ({ head, blocks, tail }) => [...head, ...blocks.flat(), ...tail].join('\n');
+
+  test('a portfolio publish run must read back dist-tags its preflight allows, for every package', async () => {
+    const fixture = portfolioFixture();
+    const { input } = await boundRuns(fixture);
+    const log = await fixture.publishLog();
+    const rejects = async (bindInput, expected = 'R1_EXIT_DIST_TAGS_UNEXPECTED', bind = r1Exit.bindPublish) => assert.throws(() => bind(bindInput), code(expected));
+    const reactTags = `dist-tags: {"latest":"0.1.0-rc.1","next":"${fixture.reactVersion}"}`;
+    const schemaTags = `dist-tags: {"next":"${fixture.versionOf(schema)}","latest":"${fixture.versionOf(schema)}"}`;
+    assert.ok(log.includes(reactTags) && log.includes(schemaTags));
+    const withLog = async (publishLog) => input({ publishLog });
+    // latest moved on an existing package, an extra tag, a missing next, and a first publish whose latest is not the new version.
+    await rejects(await withLog(log.replace(reactTags, `dist-tags: {"latest":"0.1.0-rc.2","next":"${fixture.reactVersion}"}`)));
+    await rejects(await withLog(log.replace(reactTags, `dist-tags: {"latest":"0.1.0-rc.1","next":"${fixture.reactVersion}","beta":"${fixture.reactVersion}"}`)));
+    await rejects(await withLog(log.replace(reactTags, 'dist-tags: {"latest":"0.1.0-rc.1"}')));
+    await rejects(await withLog(log.replace(schemaTags, `dist-tags: {"next":"${fixture.versionOf(schema)}","latest":"0.5.0"}`)));
+    await rejects(await withLog(log.replace(schemaTags, `dist-tags: {"next":"${fixture.versionOf(schema)}","latest":"${fixture.versionOf(schema)}","beta":"x"}`)));
+    // A package that verified in a stopped run is held to the same rule when it is captured as a prior attempt.
+    const failed = await input({ run: fixture.run(3, { conclusion: 'failure' }), jobs: fixture.publishRunJobs({ publishOutcome: 'failure', base: 30 }) });
+    const stopped = await fixture.publishLog({ faults: { refuse: [tooling] } });
+    assert.ok(stopped.includes(schemaTags));
+    assert.equal(r1Exit.bindPriorPublish({ ...failed, publishLog: stopped }).portfolio.packages[0].state, 'verified');
+    await rejects({ ...failed, publishLog: stopped.replace(schemaTags, `dist-tags: {"next":"${fixture.versionOf(schema)}","latest":"0.5.0"}`) }, 'R1_EXIT_DIST_TAGS_UNEXPECTED', r1Exit.bindPriorPublish);
+  });
+
+  test('a portfolio publish run must show one block per package, in publish order, each finished before the next starts', async () => {
+    const fixture = portfolioFixture();
+    const { input } = await boundRuns(fixture);
+    const log = await fixture.publishLog();
+    const succeeded = await input();
+    const failed = await input({ run: fixture.run(3, { conclusion: 'failure' }), jobs: fixture.publishRunJobs({ publishOutcome: 'failure', base: 30 }) });
+    const rejects = (publishLog, run = { bind: r1Exit.bindPublish, ...succeeded }) => assert.throws(() => run.bind({ ...run, publishLog }), code('R1_EXIT_RUN_INVALID'));
+    const rejectsPrior = (publishLog) => rejects(publishLog, { bind: r1Exit.bindPriorPublish, ...failed });
+    const parts = blocksOf(log);
+    assert.equal(parts.blocks.length, 4);
+    assert.equal(r1Exit.bindPublish({ ...succeeded, publishLog: rebuild(parts) }).portfolio.packages.length, 4, 'the split and rebuild is lossless');
+    // Two packages swapped: each block is whole, but the second package is printed first.
+    await rejects(rebuild({ ...parts, blocks: [parts.blocks[1], parts.blocks[0], ...parts.blocks.slice(2)] }));
+    await rejects(rebuild({ ...parts, blocks: [...parts.blocks.slice(0, 2), parts.blocks[3], parts.blocks[2]] }));
+    // Interleaved: the second package starts before the first has been read back.
+    const [first, second, ...rest] = parts.blocks;
+    await rejects(rebuild({ ...parts, blocks: [[first[0]], second, first.slice(1), ...rest] }));
+    // A block printed twice.
+    await rejects(rebuild({ ...parts, blocks: [first, first, second, ...rest] }));
+    // A later package that starts although an earlier one never completed: a stopped run cannot have printed it.
+    const stopped = blocksOf(await fixture.publishLog({ faults: { refuse: [tooling] } }));
+    assert.equal(stopped.blocks.length, 3, 'the stopped run printed no block for @muxui/react');
+    assert.equal(r1Exit.bindPriorPublish({ ...failed, publishLog: rebuild(stopped) }).portfolio.packages.length, 4);
+    rejectsPrior(rebuild({ ...stopped, blocks: [...stopped.blocks, parts.blocks[3]] }));
+    rejectsPrior(rebuild({ ...stopped, blocks: [stopped.blocks[1], stopped.blocks[0], stopped.blocks[2]] }));
+  });
 }
