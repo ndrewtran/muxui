@@ -73,9 +73,10 @@ of a decision file in the PR checkout (`decisions/NNNN-name.md`, which may be
 added by the same PR). The list is short: the strategy documents, the platform
 safety contract, the validator with its test, the planning-policy workflow,
 `CODEOWNERS`, and the publishing workflow with the files it runs to prepare,
-prove, and guard a release (`npm-publication.mjs`, `release-prepare.mjs`,
-`release-lineage.mjs`, `release-proof.mjs`, and the React package's
-`publish-guard.mjs`). The root `release:prepare` script and `package.json` are
+prove, and guard a release (`publish-set.json`, `npm-publication.mjs`, and the
+`release-*.mjs` modules in `tooling/audits/repository-policy/src`, and the
+React package's `publish-guard.mjs`). The validator's list is exact; read it
+there. The root `release:prepare` script and `package.json` are
 reviewed like any other change.
 
 A Product Scope change also states `Scope version effect` on its own line; an

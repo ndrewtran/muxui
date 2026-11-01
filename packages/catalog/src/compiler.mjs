@@ -277,12 +277,14 @@ async function readDerivedApis(repositoryRoot, manifest, record) {
 /**
  * Compiles the catalog under `repositoryRoot`. The record inventory is the file at
  * `sourceManifestPath`, or, when the caller has already derived it, the parsed
- * `sourceManifest` (see `synchronizedSourceManifest`).
+ * `sourceManifest` (see `synchronizedSourceManifest`). `catalogVersion` overrides the
+ * package manifest's version, which release preparation uses to compile the rc it packs.
  */
 export async function compileCatalog({
   repositoryRoot,
   sourceManifestPath = 'packages/catalog/catalog-sources.json',
   sourceManifest,
+  catalogVersion: versionOverride,
 } = {}) {
   if (!repositoryRoot) {
     throw new Error('MUXUI_CATALOG_SOURCE_INVALID: repositoryRoot is required');
@@ -291,7 +293,7 @@ export async function compileCatalog({
     resolve(repositoryRoot, 'packages/catalog/package.json'),
     'utf8',
   ));
-  const catalogVersion = packageManifest.version;
+  const catalogVersion = versionOverride ?? packageManifest.version;
   const manifest = validateSourceManifest(sourceManifest ?? parseJsonStrict(
     await readFile(resolve(repositoryRoot, sourceManifestPath), 'utf8'),
   ));

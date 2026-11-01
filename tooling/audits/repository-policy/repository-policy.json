@@ -195,6 +195,7 @@
       "tooling/audits/repository-policy/src/npm-publication.mjs",
       "tooling/audits/repository-policy/src/pattern-variants.mjs",
       "tooling/audits/repository-policy/src/policy.mjs",
+      "tooling/audits/repository-policy/src/release-contract.mjs",
       "tooling/audits/repository-policy/src/release-proof.mjs",
       "tooling/audits/repository-policy/src/workspace-packages.mjs",
       "tooling/audits/repository-policy/test/evidence-"
@@ -221,6 +222,9 @@
       "packages/catalog/token-section-page-budget-profile.json",
       "packages/tooling/command-registry.json",
       "strategy/platform-safety-contract.json"
+    ],
+    "publishSetInputs": [
+      "tooling/audits/repository-policy/publish-set.json"
     ],
     "packedReactResolverInputs": [
       "packages/react/src/generate.mjs",

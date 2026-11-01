@@ -390,6 +390,25 @@ test('binding compatibility requires the descriptor export to be the binding com
   }
 });
 
+test('a descriptor\'s pack-time provenance is accepted and never compared', async () => {
+  const plain = await corpus();
+  const baseline = resolve(plain, directGraph(plain));
+  assert.equal(baseline.type, 'success');
+  // Whatever release and commit the renderer was packed for, the resolution is the same as without them.
+  for (const provenance of [
+    { releaseId: 'muxui-portfolio:a', sourceCommit: 'a'.repeat(40) },
+    { releaseId: 'muxui-portfolio:b', sourceCommit: 'b'.repeat(40) },
+  ]) {
+    const value = await corpus();
+    reactDescriptor(value).provenance = provenance;
+    assert.deepEqual(resolve(value, directGraph(value)), baseline);
+  }
+  // The shape stays closed: provenance names the release and the commit and nothing else.
+  const value = await corpus();
+  reactDescriptor(value).provenance = { releaseId: 'muxui-portfolio:a', sourceCommit: 'a'.repeat(40), catalogDigest: 'x' };
+  assert.throws(() => resolve(value, directGraph(value)), /MUXUI_RESOLVER_INPUT_INVALID: .*provenance has unknown field catalogDigest/u);
+});
+
 test('binding compatibility reports a descriptor field the renderer left out as incompatible', async () => {
   for (const [field, dimension] of [
     ['specRevision', 'binding-spec'],

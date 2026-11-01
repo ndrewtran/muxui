@@ -1,0 +1,10 @@
+{
+  "schema": "muxui-publish-set-v1",
+  "authority": "muxui:decision:0032",
+  "packages": [
+    { "name": "@muxui/schema", "path": "packages/schema", "runtimeEdges": [] },
+    { "name": "@muxui/catalog", "path": "packages/catalog", "runtimeEdges": ["@muxui/schema"] },
+    { "name": "@muxui/tooling", "path": "packages/tooling", "runtimeEdges": ["@muxui/catalog", "@muxui/schema"] },
+    { "name": "@muxui/react", "path": "packages/react", "runtimeEdges": [] }
+  ]
+}
