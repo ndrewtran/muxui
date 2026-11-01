@@ -325,14 +325,6 @@ test('E-G0.1-01 negative: unknown, duplicate, invalid-relation, and unowned fiel
     schemaVersion: '2.0.0',
     strategy: 'unsupported',
     reason: 'No responsible implementation exists.',
-    platformSafety: component().bindings['web.react'].platformSafety.map((declaration) => ({
-      ...declaration,
-      requirements: declaration.requirements.map(({ id }) => ({
-        id,
-        disposition: 'not-applicable',
-        reason: 'The binding is unsupported in G1.0.',
-      })),
-    })),
   };
   assert.deepEqual(validateFamily('binding', unsupportedBinding), unsupportedBinding);
   const componentWithUnsupportedBinding = component();
@@ -454,7 +446,6 @@ test('E-G0.5-01: discriminated binding branches retain exact required-field diag
     '$/behavior',
     '$/accessibility',
     '$/tokenRecipe',
-    '$/platformSafety',
     '$/runtimeProfiles',
   ];
   for (const strategy of ['direct', 'adapted', 'native-alternative']) {
@@ -463,6 +454,8 @@ test('E-G0.5-01: discriminated binding branches retain exact required-field diag
       assert.ok(issues.some((issue) => issue.path === path), `${strategy}: ${path}`);
     }
     assert.equal(issues.some((issue) => issue.path === '$/reason'), false, strategy);
+    // A binding takes the registry's platform-safety defaults unless it overrides them.
+    assert.equal(issues.some((issue) => issue.path === '$/platformSafety'), false, strategy);
     assert.equal(
       issues.some((issue) => issue.message.includes('must equal "unsupported"')),
       false,
@@ -475,7 +468,7 @@ test('E-G0.5-01: discriminated binding branches retain exact required-field diag
     strategy: 'unsupported',
   });
   assert.ok(unsupportedIssues.some((issue) => issue.path === '$/reason'));
-  assert.ok(unsupportedIssues.some((issue) => issue.path === '$/platformSafety'));
+  assert.equal(unsupportedIssues.some((issue) => issue.path === '$/platformSafety'), false);
   assert.equal(unsupportedIssues.some((issue) => issue.path === '$/api'), false);
 
   for (const strategy of ['direct', 'adapted', 'native-alternative']) {

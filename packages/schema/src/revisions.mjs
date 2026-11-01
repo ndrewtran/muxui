@@ -79,6 +79,9 @@ export function bindingSpecRevisionPreimage({
       contractDigest,
     }))
     .sort((left, right) => left.profile.localeCompare(right.profile));
+  // Overrides of the registry default, absent when the binding takes the defaults. The resolved
+  // dispositions enter through `platformSafetyRequirements`.
+  const platformSafetyOverrides = binding.platformSafety === undefined ? {} : { platformSafety: binding.platformSafety };
   return {
     component: {
       id: component.id,
@@ -93,7 +96,7 @@ export function bindingSpecRevisionPreimage({
         strategy: binding.strategy,
         reason: binding.reason,
         ...(binding.alternative === undefined ? {} : { alternative: binding.alternative }),
-        platformSafety: binding.platformSafety,
+        ...platformSafetyOverrides,
       }
       : {
         lifecycle: binding.lifecycle,
@@ -103,7 +106,7 @@ export function bindingSpecRevisionPreimage({
         accessibility: binding.accessibility,
         runtimeProfiles: binding.runtimeProfiles,
         tokenRecipe: binding.tokenRecipe,
-        platformSafety: binding.platformSafety,
+        ...platformSafetyOverrides,
       },
     normativeExamples,
     ...(tokenRequirements === undefined ? {} : { tokenRequirements }),

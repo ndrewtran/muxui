@@ -7,7 +7,7 @@
   "allOf": [{
     "oneOf": [
       {
-      "required": ["schemaVersion", "lifecycle", "strategy", "behavior", "accessibility", "tokenRecipe", "platformSafety", "runtimeProfiles"],
+      "required": ["schemaVersion", "lifecycle", "strategy", "behavior", "accessibility", "tokenRecipe", "runtimeProfiles"],
       "properties": { "strategy": {
         "enum": ["direct", "adapted", "native-alternative"],
         "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content", "binding-spec"] }
@@ -20,7 +20,7 @@
       }
       },
       {
-      "required": ["schemaVersion", "strategy", "reason", "platformSafety"],
+      "required": ["schemaVersion", "strategy", "reason"],
       "properties": { "strategy": {
         "const": "unsupported",
         "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content", "binding-spec"] }
@@ -174,10 +174,11 @@
       }
     },
     "platformSafety": {
+      "description": "Overrides of the platform-safety registry default, one declaration per profile. Omit it to take the defaults; a declaration names only a requirement whose disposition differs from the default, with a reason (Decision 0031).",
       "type": "array",
       "minItems": 1,
       "x-muxui-authoring": {
-        "effects": { "add": "compatible", "remove": "incompatible", "replace": "incompatible" },
+        "effects": { "add": "incompatible", "remove": "incompatible", "replace": "incompatible" },
         "revisionAxes": ["binding-content", "binding-spec"]
       },
       "items": { "$ref": "#/$defs/platformSafetyDeclaration" }
@@ -262,17 +263,17 @@
           "type": "array",
           "minItems": 1,
           "x-muxui-authoring": {
-            "effects": { "add": "compatible", "remove": "incompatible", "replace": "incompatible" },
+            "effects": { "add": "incompatible", "remove": "incompatible", "replace": "incompatible" },
             "revisionAxes": ["binding-content", "binding-spec"]
           },
-          "items": { "$ref": "#/$defs/platformSafetyDisposition" }
+          "items": { "$ref": "#/$defs/platformSafetyOverride" }
         }
       }
     },
-    "platformSafetyDisposition": {
+    "platformSafetyOverride": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "disposition"],
+      "required": ["id", "disposition", "reason"],
       "properties": {
         "id": {
           "type": "string",

@@ -22,7 +22,6 @@ import {
   patternRecords,
   specifiedPattern,
   variantExample,
-  webPlatformSafety,
 } from './fixtures.mjs';
 
 const patternId = 'muxui:pattern:poster-grid';
@@ -207,7 +206,6 @@ test('E-BL1-01 negative: the artifact graph names the pattern field that owns ea
           schemaVersion: '2.0.0',
           strategy: 'unsupported',
           reason: 'Not implemented for React.',
-          platformSafety: webPlatformSafety('web.react'),
         };
         return patternRecords().map((item) => (item.id === unsupported.id ? unsupported : item));
       },

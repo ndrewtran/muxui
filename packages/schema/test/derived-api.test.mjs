@@ -99,7 +99,7 @@ test('every implemented binding takes exactly one of an authored or a derived ap
   rejects(() => mergeDerivedApis(component(), { 'web.react': derived() }), /remove the authored api/u);
   rejects(() => mergeDerivedApis(authored()), /needs an authored api or a derived API source/u);
   const unsupported = authored();
-  unsupported.bindings['web.react'] = { schemaVersion: '2.0.0', strategy: 'unsupported', reason: 'Not yet.', platformSafety: unsupported.bindings['web.react'].platformSafety };
+  unsupported.bindings['web.react'] = { schemaVersion: '2.0.0', strategy: 'unsupported', reason: 'Not yet.' };
   rejects(() => mergeDerivedApis(unsupported, { 'web.react': derived() }), /unsupported binding takes no derived API/u);
   rejects(() => mergeDerivedApis(authored(), { 'web.react': derived(), 'web.vue': derived() }), /has a derived API but no binding/u);
   const elsewhere = derived();

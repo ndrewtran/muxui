@@ -85,39 +85,6 @@
           }
         ]
       },
-      "platformSafety": [
-        {
-          "profile": "web.react",
-          "requirements": [
-            {
-              "id": "system.forced-colors",
-              "disposition": "required"
-            },
-            {
-              "id": "system.high-contrast",
-              "disposition": "required"
-            },
-            {
-              "id": "native.dynamic-color",
-              "disposition": "not-applicable",
-              "reason": "Native dynamic colors do not apply to the React web binding."
-            },
-            {
-              "id": "native.font-metrics",
-              "disposition": "not-applicable",
-              "reason": "Native font metrics do not apply to the React web binding."
-            },
-            {
-              "id": "layout.direction",
-              "disposition": "required"
-            },
-            {
-              "id": "platform.accessibility-mapping",
-              "disposition": "required"
-            }
-          ]
-        }
-      ],
       "runtimeProfiles": {}
     }
   }

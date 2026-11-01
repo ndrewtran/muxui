@@ -104,6 +104,16 @@ function finalProperty(pointer) {
 
 test('E-G0.5-02: every declared revision axis matches its digest preimage membership', () => {
   const concept = component();
+  // A binding carries `platformSafety` only to override a registry default, so the preimage lists the
+  // field only for a binding that does.
+  concept.bindings['web.react'].platformSafety = [{
+    profile: 'web.react',
+    requirements: [{
+      id: 'native.dynamic-color',
+      disposition: 'required',
+      reason: 'Hosted in a native webview.',
+    }],
+  }];
   const preimage = bindingSpecRevisionPreimage({
     component: concept,
     bindingId: 'web.react',

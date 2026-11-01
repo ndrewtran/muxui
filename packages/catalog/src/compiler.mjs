@@ -434,6 +434,7 @@ export async function compileCatalog({
           contract: platformSafetyContract,
           bindingId,
           binding,
+          owner: record.id,
         })).map(([profile, requirementSet]) => [
           `${bindingId}:${profile}`,
           requirementSet,
