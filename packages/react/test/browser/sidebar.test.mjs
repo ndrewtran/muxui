@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof for the folding Sidebar rail, in light and dark: Toggle folds
@@ -248,8 +248,9 @@ for (const engine of browserEngines()) {
         const errors = [];
         tab.on('pageerror', (error) => errors.push(error.message));
         tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-        await tab.goto(`${url}/sidebar.html${query}`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/sidebar.html${query}`, { waitUntil: 'load' });
         await tab.locator(query.includes('layout=rwd') ? '.rwd' : 'aside').first().waitFor({ timeout: 15_000 });
+        await awaitFontsAndFrames(tab);
         return { tab, context, errors };
       };
       const read = (tab) => tab.evaluate(readSidebar);
@@ -858,8 +859,9 @@ for (const engine of browserEngines()) {
         const errors = [];
         tab.on('pageerror', (error) => errors.push(error.message));
         tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-        await tab.goto(`${url}/sidebar-nested.html${query}`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/sidebar-nested.html${query}`, { waitUntil: 'load' });
         await tab.locator('aside').waitFor({ timeout: 15_000 });
+        await awaitFontsAndFrames(tab);
         return { tab, context, errors };
       };
       const visible = async (tab, selector) => (await tab.evaluate(nestedBoxOf, selector)) !== null;
@@ -1065,8 +1067,9 @@ for (const engine of browserEngines()) {
         const errors = [];
         tab.on('pageerror', (error) => errors.push(error.message));
         tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-        await tab.goto(`${url}/sidebar-groups.html${query}`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/sidebar-groups.html${query}`, { waitUntil: 'load' });
         await tab.locator('aside').waitFor({ timeout: 15_000 });
+        await awaitFontsAndFrames(tab);
         return { tab, context, errors };
       };
       const { tab, context, errors } = await open();
@@ -1105,8 +1108,9 @@ for (const engine of browserEngines()) {
       const errors = [];
       tab.on('pageerror', (error) => errors.push(error.message));
       tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-      await tab.goto(`${url}/sidebar-groups.html`, { waitUntil: 'networkidle' });
+      await tab.goto(`${url}/sidebar-groups.html`, { waitUntil: 'load' });
       await tab.locator('aside').waitFor({ timeout: 15_000 });
+      await awaitFontsAndFrames(tab);
       try {
         const focused = () => tab.evaluate(() => {
           const node = document.activeElement;
@@ -1182,8 +1186,9 @@ for (const engine of browserEngines()) {
           const tab = await context.newPage();
           const errors = [];
           tab.on('pageerror', (error) => errors.push(error.message));
-          await tab.goto(`${url}/sidebar-groups.html?dir=${dir}`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/sidebar-groups.html?dir=${dir}`, { waitUntil: 'load' });
           await tab.locator('a[href="#avatar"]').waitFor();
+          await awaitFontsAndFrames(tab);
           assert.equal(await tab.evaluate(() => getComputedStyle(document.querySelector('.muxui-sidebar__nav-children')).direction), dir, `${engine}: the page runs ${dir}`);
           assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
           return await tab.evaluate(edges);
@@ -1309,8 +1314,9 @@ for (const engine of browserEngines()) {
         const tab = await context.newPage();
         const errors = [];
         tab.on('pageerror', (error) => errors.push(error.message));
-        await tab.goto(`${url}/sidebar-density.html`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/sidebar-density.html`, { waitUntil: 'load' });
         await tab.locator('aside[aria-label="compact"] a[href="#primary-compact"]').waitFor();
+        await awaitFontsAndFrames(tab);
         const [implicit, explicit, compact] = await Promise.all(['implicit', 'default', 'compact'].map((name) => tab.evaluate(densityMetrics, name)));
 
         assert.equal(implicit.density, null, `${engine}: a Root without density has no data-muxui-sidebar-density`);
@@ -1429,8 +1435,9 @@ for (const engine of browserEngines()) {
         const context = await browser.newContext({ viewport: { width: 1000, height: 900 }, deviceScaleFactor: 2, locale: 'en-US' });
         try {
           const tab = await context.newPage();
-          await tab.goto(`${url}/sidebar-density.html?scheme=${scheme}`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/sidebar-density.html?scheme=${scheme}`, { waitUntil: 'load' });
           await tab.locator('aside[aria-label="compact"] a[href="#primary-compact"]').waitFor();
+          await awaitFontsAndFrames(tab);
           // The page really is in the scheme asked for, painting its light or dark background, before any pixel is read.
           const painted = await tab.evaluate(densityScheme);
           assert.equal(painted.attribute, scheme, `${engine}: the page declares the ${scheme} Mux scheme`);
@@ -1485,8 +1492,9 @@ for (const engine of browserEngines()) {
           const errors = [];
           tab.on('pageerror', (error) => errors.push(error.message));
           tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-          await tab.goto(`${url}/sidebar.html?layout=account&scheme=${scheme}`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/sidebar.html?layout=account&scheme=${scheme}`, { waitUntil: 'load' });
           await tab.locator('aside').waitFor({ timeout: 15_000 });
+          await awaitFontsAndFrames(tab);
           const button = tab.getByRole('button', { name: 'Account options' });
           const menu = tab.getByRole('menu');
           // Focus returns once the menu has finished leaving, so wait for it instead of reading it at once.
@@ -1556,8 +1564,9 @@ for (const engine of browserEngines()) {
           assert.equal(await tab.locator('aside[data-muxui-collapsed]').count(), 1, label('the chord folded the sidebar'));
           await pollUntil(tab, () => document.activeElement === document.querySelector('.muxui-sidebar__toggle'), null, { message: label('focus moves to Toggle, not the page body'), report: () => document.activeElement?.outerHTML.slice(0, 120) });
           // A card whose children are not an AccountMenu has no button to see or tab to, and nothing to open.
-          await tab.goto(`${url}/sidebar.html?layout=account&menu=none&scheme=${scheme}`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/sidebar.html?layout=account&menu=none&scheme=${scheme}`, { waitUntil: 'load' });
           await tab.locator('aside').waitFor({ timeout: 15_000 });
+          await awaitFontsAndFrames(tab);
           assert.equal(await tab.getByRole('button', { name: 'Account options' }).count(), 0, label('a card without an AccountMenu has no button in the accessibility tree'));
           assert.equal(await tab.evaluate(() => document.querySelector('.muxui-sidebar__account-trigger').getClientRects().length), 0, label('its hidden button takes no space'));
           assert.deepEqual(errors, [], label('the page logged no errors'));
@@ -1600,8 +1609,9 @@ for (const engine of browserEngines()) {
           ['radios', { Tab: '#ra1', 'Shift+Tab': '#rb0' }],
         ];
         for (const [scenario, expected] of scenarios) {
-          await tab.goto(`${url}/sidebar.html?layout=account&around=${scenario}`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/sidebar.html?layout=account&around=${scenario}`, { waitUntil: 'load' });
           await tab.locator('aside').waitFor({ timeout: 15_000 });
+          await awaitFontsAndFrames(tab);
           for (const key of ['Tab', 'Shift+Tab']) {
             await tab.locator('.muxui-sidebar__account-trigger').focus();
             await tab.keyboard.press('ArrowDown');
@@ -1612,8 +1622,9 @@ for (const engine of browserEngines()) {
             assert.equal(await holding('.muxui-sidebar__account-trigger'), false, `${engine} ${scenario}: ${key} does not leave focus on the button`);
           }
         }
-        await tab.goto(`${url}/sidebar.html?layout=account`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/sidebar.html?layout=account`, { waitUntil: 'load' });
         await tab.locator('aside').waitFor({ timeout: 15_000 });
+        await awaitFontsAndFrames(tab);
         // Tab on the closed button moves on as usual, and the menu still closes with Escape afterwards.
         await tab.locator('.muxui-sidebar__account-trigger').focus();
         await tab.keyboard.press('Tab');

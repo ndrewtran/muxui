@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { patternVariantExamples } from '../../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { pollUntil, settleMotion } from './grid-list-probes.mjs';
-import { packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
 
 // Shared by the block browser tests (E-BL1-04, E-BL1-06): load a variant from its
 // canonical catalog source through the public `@muxui/react` entry, then probe it.
@@ -75,8 +75,9 @@ export async function openBlock(browser, url, { width = 1280, height = 900, sche
   const errors = [];
   tab.on('pageerror', (error) => errors.push(error.message));
   tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-  await tab.goto(`${url}/block.html?scheme=${scheme}${copies > 1 ? `&copies=${copies}` : ''}`, { waitUntil: 'networkidle' });
+  await tab.goto(`${url}/block.html?scheme=${scheme}${copies > 1 ? `&copies=${copies}` : ''}`, { waitUntil: 'load' });
   await tab.locator('#root > *').first().waitFor({ timeout: 15_000 });
+  await awaitFontsAndFrames(tab);
   return { context, tab, errors };
 }
 

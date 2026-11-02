@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 import { measureFocusRing, measureForcedSelection, measureSelectedContrast, measureSelectedPaint, pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof for <Virtualizer layout="grid"> around a GridList of
@@ -253,9 +253,10 @@ for (const engine of browserEngines()) {
           async open(config = {}, { scheme = 'light', responsive = false } = {}) {
             api.mode = config.mode ?? 'bounded';
             await tab.setViewportSize(size);
-            await tab.goto(`${url}/virtualizer-grid.html?dir=${dir}&scheme=${scheme}&responsive=${responsive ? 1 : ''}&config=${encodeURIComponent(JSON.stringify(config))}`, { waitUntil: 'networkidle' });
+            await tab.goto(`${url}/virtualizer-grid.html?dir=${dir}&scheme=${scheme}&responsive=${responsive ? 1 : ''}&config=${encodeURIComponent(JSON.stringify(config))}`, { waitUntil: 'load' });
             await tab.locator('[role="grid"] [role="row"]').first().waitFor({ timeout: 15_000 }).catch((error) => assert.fail(`no card rendered: ${error.message.split('\n')[0]}; page errors ${JSON.stringify(errors)}`));
             await tab.locator('[data-muxui-grid-list-motion-ready]').waitFor();
+            await awaitFontsAndFrames(tab);
             // A pointer left over from an earlier case would hover a card after reflow. Firefox
             // does hover it before this move, so the hover layer is fading out when the grid settles.
             await tab.mouse.move(0, 0);
