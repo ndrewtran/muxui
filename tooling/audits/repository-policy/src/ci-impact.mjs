@@ -2114,12 +2114,32 @@ const browserShardCap = {
   suite: { crossEngine: 2, chromiumOnly: 2 },
 };
 
+// A cost is a positive whole number of seconds. Anything else (a string, zero, a
+// fraction) would corrupt the packing's arithmetic and silently drop files from
+// their shard, so planning fails instead of narrowing the proof.
+function assertBrowserTestCost(key, value) {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`MUXUI_CI_IMPACT_BROWSER_TEST_COST_INVALID: ${key} is ${JSON.stringify(value)}; a browser test cost is a positive whole number of seconds (browser-test-costs.json)`);
+  }
+  return value;
+}
+
+// Checks the whole cost table: a positive whole `defaultSeconds` and `seconds` for each listed file.
+export function validateBrowserTestCosts(table) {
+  assertBrowserTestCost('defaultSeconds', table?.defaultSeconds);
+  if (typeof table.seconds !== 'object' || table.seconds === null || Array.isArray(table.seconds)) {
+    throw new Error(`MUXUI_CI_IMPACT_BROWSER_TEST_COST_INVALID: seconds is ${JSON.stringify(table.seconds)}; it maps each test/browser path to its cost (browser-test-costs.json)`);
+  }
+  for (const [file, seconds] of Object.entries(table.seconds)) assertBrowserTestCost(file, seconds);
+  return table;
+}
+
 // Advisory seconds per browser test file, measured in one engine from CI logs
 // (see browser-test-costs.json and the README); a file with no entry costs
 // `defaultSeconds`. Only the packing below reads it.
-const browserTestCosts = parseJson(
+const browserTestCosts = validateBrowserTestCosts(parseJson(
   readFileSync(resolve(import.meta.dirname, '../browser-test-costs.json'), 'utf8'), 'browser-test-costs.json',
-);
+));
 const browserTestCost = (file) => browserTestCosts.seconds[file] ?? browserTestCosts.defaultSeconds;
 
 // Spreads a browser list over `count` shards by cost, longest-processing-time first:
@@ -2127,15 +2147,17 @@ const browserTestCost = (file) => browserTestCosts.seconds[file] ?? browserTestC
 // far (ties to the lowest index). Returns a Map from file to shard index. The result
 // is deterministic for a list and a cost table, but adding or removing a file, or
 // changing a cost, can move other files between shards, so reuse for the browser
-// groups then reruns once. Costs must be positive so that no shard is left empty.
+// groups then reruns once. Every cost must be a positive whole number, which also
+// leaves no shard empty.
 export function packBrowserShards(files, count, costOf = browserTestCost) {
+  const costs = new Map(files.map((file) => [file, assertBrowserTestCost(file, costOf(file))]));
   const loads = Array(count).fill(0);
   const assignment = new Map();
-  const byCost = [...files].sort((left, right) => costOf(right) - costOf(left) || (left < right ? -1 : 1));
+  const byCost = [...files].sort((left, right) => costs.get(right) - costs.get(left) || (left < right ? -1 : 1));
   for (const file of byCost) {
     const index = loads.indexOf(Math.min(...loads));
     assignment.set(file, index);
-    loads[index] += costOf(file);
+    loads[index] += costs.get(file);
   }
   return assignment;
 }

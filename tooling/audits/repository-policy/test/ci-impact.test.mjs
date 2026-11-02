@@ -40,6 +40,7 @@ import {
   storyShardPageBudget,
   stylingReferencePath,
   uncostedBrowserFiles,
+  validateBrowserTestCosts,
   validateScopedEntrypoints,
   workspaceDependentRoutes,
 } from '../src/ci-impact.mjs';
@@ -2327,17 +2328,43 @@ test('browser shards pack files by cost, longest first, and balance within the l
 
 test('the browser cost table names whole positive seconds and packs the real lists within their largest file', () => {
   const table = JSON.parse(readFileSync(resolve(repositoryRoot, 'tooling/audits/repository-policy/browser-test-costs.json'), 'utf8'));
-  const positive = (value) => Number.isInteger(value) && value > 0;
-  assert.ok(positive(table.defaultSeconds));
-  for (const [file, seconds] of Object.entries(table.seconds)) {
-    assert.match(file, /^test\/browser\/[^/]+\.test\.mjs$/u);
-    assert.ok(positive(seconds), file);
-  }
+  assert.doesNotThrow(() => validateBrowserTestCosts(table));
+  for (const file of Object.keys(table.seconds)) assert.match(file, /^test\/browser\/[^/]+\.test\.mjs$/u);
   const costOf = (file) => table.seconds[file] ?? table.defaultSeconds;
   for (const files of [crossEngineTests, reactBrowserTests.filter((file) => !crossEngineTests.includes(file))]) {
+    const packed = packBrowserShards(files, 2);
+    assert.deepEqual([...packed.keys()].sort(), [...files].sort(), 'no file is dropped from the packing');
     const loads = packedShards(files, 2).map((shard) => shard.reduce((sum, file) => sum + costOf(file), 0));
     assert.ok(Math.abs(loads[0] - loads[1]) <= Math.max(...files.map(costOf)), loads.join(', '));
   }
+});
+
+test('a cost that is not a positive whole number of seconds fails planning instead of dropping files', () => {
+  const valid = { defaultSeconds: 9, seconds: { 'test/browser/a.test.mjs': 12 } };
+  assert.doesNotThrow(() => validateBrowserTestCosts(valid));
+  const invalid = (change, key, shown) => assert.throws(
+    () => validateBrowserTestCosts({ ...valid, ...change }),
+    new RegExp(`^Error: MUXUI_CI_IMPACT_BROWSER_TEST_COST_INVALID: ${key.replaceAll('.', '\\.')} is ${shown}`, 'u'),
+  );
+  const listed = (seconds) => ({ seconds: { ...valid.seconds, 'test/browser/b.test.mjs': seconds } });
+  invalid(listed(0), 'test/browser/b.test.mjs', '0;');
+  invalid(listed(-3), 'test/browser/b.test.mjs', '-3;');
+  invalid(listed('77'), 'test/browser/b.test.mjs', '"77";');
+  invalid(listed(1.5), 'test/browser/b.test.mjs', '1.5;');
+  invalid(listed(null), 'test/browser/b.test.mjs', 'null;');
+  // The default needs the same shape, and the table must have a `seconds` object.
+  invalid({ defaultSeconds: undefined }, 'defaultSeconds', 'undefined;');
+  invalid({ defaultSeconds: 0 }, 'defaultSeconds', '0;');
+  invalid({ defaultSeconds: '9' }, 'defaultSeconds', '"9";');
+  invalid({ defaultSeconds: 8.5 }, 'defaultSeconds', '8.5;');
+  invalid({ seconds: [12] }, 'seconds', '\\[12\\];');
+  assert.throws(() => validateBrowserTestCosts({ defaultSeconds: 9 }), /BROWSER_TEST_COST_INVALID: seconds is undefined/u);
+  // The packing checks the costs it is given too: a string cost used to leave a file with no shard.
+  const files = ['test/browser/a.test.mjs', 'test/browser/b.test.mjs', 'test/browser/c.test.mjs'];
+  assert.throws(
+    () => packBrowserShards(files, 2, (file) => (file.endsWith('b.test.mjs') ? '77' : 5)),
+    /BROWSER_TEST_COST_INVALID: test\/browser\/b\.test\.mjs is "77"/u,
+  );
 });
 
 test('a pull request runs each selected browser test once per engine it supports, sharded when the list is long', async () => {

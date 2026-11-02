@@ -82,7 +82,10 @@ cross-engine files and its `run browser-chromium-only-1` and
 `run browser-chromium-only-2` jobs for the rest. Sum each top-level test's
 `(NNNms)` duration into the file that declares it (a subtest is already inside its
 parent's time) and round to whole seconds, at least 1. Set `defaultSeconds` to the
-new median.
+new median rounded up to whole seconds (8.5 became 9). Every cost, the default
+included, must be a positive whole number: the planner fails with
+`MUXUI_CI_IMPACT_BROWSER_TEST_COST_INVALID`, naming the entry, instead of packing with
+a value it cannot add.
 
 GitHub's Free plan runs 20 jobs at once, and a job over that queues instead of
 failing. Main plans 15 groups. A full-proof React pull request plans 19 run jobs,
