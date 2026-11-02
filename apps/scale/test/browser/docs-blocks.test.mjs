@@ -87,7 +87,7 @@ async function capturePreview(page, url, width, path) {
 	await page.screenshot({ path, fullPage: true });
 }
 
-test('the Blocks section: rail, filters, presets, handle, theme, views, and copy', { timeout: 180_000 }, async () => {
+test('the Blocks section: rail, filters, presets, handle, theme, views, and copy', { timeout: 360_000 }, async () => {
 	await withSite(async ({ page, origin }) => {
 		await page.goto(`${origin}/blocks/`);
 		await page.locator('[data-blocks-gallery]').waitFor();

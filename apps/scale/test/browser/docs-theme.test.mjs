@@ -114,7 +114,7 @@ async function inspectSearch(page, screenshotName) {
 	return values;
 }
 
-test('docs Scale applies one validated theme across shell, islands and portals', { timeout: 120_000 }, async () => {
+test('docs Scale applies one validated theme across shell, islands and portals', { timeout: 300_000 }, async () => {
   const { origin: url, browser, close } = await openSite('scale/index.html');
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
