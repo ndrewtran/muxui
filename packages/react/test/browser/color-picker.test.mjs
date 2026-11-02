@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const entry = '/packages/react/test/fixtures/color-picker-browser-entry.mjs';
 const documentHtml = () => pageShell({
@@ -18,8 +18,9 @@ test('real browser drags a hue slider off black in a hex picker, then the area e
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/color-picker.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/color-picker.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiColorPickerReady === 'true');
+    await awaitFontsAndFrames(page);
     const last = () => page.evaluate(() => globalThis.__muxuiColorPickerChanges.at(-1));
     const hue = () => page.locator('.muxui-color-slider input[type="range"]').inputValue();
 

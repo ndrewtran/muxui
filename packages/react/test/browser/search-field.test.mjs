@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Mux draws a SearchField's clear action, so the cancel button Chromium and
 // WebKit add to a search input must not paint beside it. The native button lives
@@ -37,10 +37,11 @@ for (const engine of browserEngines()) {
       const tab = await browser.newPage({ viewport: { width: 700, height: 300 }, locale: 'en-US' });
       const errors = [];
       tab.on('pageerror', (error) => errors.push(error.message));
-      await tab.goto(`${url}/search-field.html`, { waitUntil: 'networkidle' });
+      await tab.goto(`${url}/search-field.html`, { waitUntil: 'load' });
       const input = tab.getByRole('searchbox', { name: 'Search' });
       const clear = tab.getByRole('button', { name: 'Clear search' });
       await clear.waitFor();
+      await awaitFontsAndFrames(tab);
 
       // Chromium shows its cancel button only while the input is focused or hovered,
       // WebKit whenever the field has text, so read both a blurred and a focused field.

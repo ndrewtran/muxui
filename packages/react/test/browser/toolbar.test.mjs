@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // A Toolbar lays its controls out along its orientation, and the arrow keys
 // that move between them follow the same direction. A vertical Toolbar used to
@@ -49,8 +49,9 @@ for (const engine of browserEngines()) {
       tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
 
       const open = async (orientation) => {
-        await tab.goto(`${url}/toolbar.html?config=${encodeURIComponent(JSON.stringify({ orientation }))}`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/toolbar.html?config=${encodeURIComponent(JSON.stringify({ orientation }))}`, { waitUntil: 'load' });
         await tab.locator('.muxui-toolbar button').first().waitFor();
+        await awaitFontsAndFrames(tab);
       };
       const boxes = async () => Promise.all(LABELS.map((label) => tab.getByRole('button', { name: label }).boundingBox()));
       // Presses `key` from the first control, then again, and returns the labels focus visits.

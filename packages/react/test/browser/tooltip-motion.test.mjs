@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { TooltipMotionFixture } from '../fixtures/tooltip-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(TooltipMotionFixture)));
@@ -91,8 +91,9 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/tooltip-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/tooltip-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiTooltipMotionHydrated === 'true');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
     assert.equal(await page.locator('.muxui-tooltip').count(), 0, 'SSR and hydration begin closed');
 

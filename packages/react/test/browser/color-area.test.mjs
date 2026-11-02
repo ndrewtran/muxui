@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const entry = '/packages/react/test/fixtures/color-area-browser-entry.mjs';
 const documentHtml = () => pageShell({
@@ -18,8 +18,9 @@ test('real browser maps pointer x to saturation and y to brightness without losi
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/color-area.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/color-area.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiColorAreaReady === 'true');
+    await awaitFontsAndFrames(page);
     const box = await page.locator('.muxui-color-area').boundingBox();
     const inputs = page.locator('.muxui-color-area input[type="range"]');
     const last = () => page.evaluate(() => globalThis.__muxuiColorAreaChanges.at(-1));

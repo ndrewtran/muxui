@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { TextBrowserFixture } from '../fixtures/text-browser-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const typographyContracts = [
   ['display-l', '--muxui-semantic-typography-display-l-font-size', '--muxui-semantic-typography-display-color', '--muxui-semantic-typography-display-font-family'],
@@ -26,9 +26,9 @@ test('Text preserves native refs and resolves field and collection text-slot IDs
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/text.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/text.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.textReady === 'true');
-    await page.evaluate(() => document.fonts.ready);
+    await awaitFontsAndFrames(page);
 
     assert.equal(await page.locator('#native-span').evaluate((node) => node.tagName), 'SPAN');
     assert.equal(await page.locator('#native-heading').evaluate((node) => node.tagName), 'H2');

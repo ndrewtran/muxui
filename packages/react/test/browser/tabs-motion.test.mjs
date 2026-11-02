@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { TabsMotionFixture } from '../fixtures/tabs-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(TabsMotionFixture)));
@@ -44,8 +44,9 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/tabs-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/tabs-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiTabsHydrated === 'true');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
     assert.match(await page.locator('#primary-tabs').getAttribute('class'), /tabs-primary/u);
     assert.equal(await page.locator('.muxui-tabs__panels').count(), 2, 'SSR and hydration retain both tab panel trees');

@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { ColorSliderMotionFixture } from '../fixtures/color-slider-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement(ColorSliderMotionFixture));
@@ -54,8 +54,9 @@ test('ColorSlider A preserves native interaction with finite, reduced-motion-saf
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     const reset = async () => {
       await page.emulateMedia({ reducedMotion: 'no-preference', forcedColors: 'none' });
-      await page.goto(`${url}/color-slider-motion.html`, { waitUntil: 'networkidle' });
+      await page.goto(`${url}/color-slider-motion.html`, { waitUntil: 'load' });
       await page.waitForFunction(() => Boolean(window.__colorSliderProof));
+      await awaitFontsAndFrames(page);
     };
 
     await t.test('hydrates, presses and releases; click travel never delays value or direct dragging', async () => {
@@ -302,8 +303,9 @@ test('ColorSlider A preserves native interaction with finite, reduced-motion-saf
       const touchPage = await browser.newPage({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
       touchPage.on('pageerror', (error) => errors.push(error.message));
       try {
-        await touchPage.goto(`${url}/color-slider-motion.html`, { waitUntil: 'networkidle' });
+        await touchPage.goto(`${url}/color-slider-motion.html`, { waitUntil: 'load' });
         await touchPage.waitForFunction(() => Boolean(window.__colorSliderProof));
+        await awaitFontsAndFrames(touchPage);
         const cdp = await touchPage.context().newCDPSession(touchPage);
         const rect = await track(touchPage).boundingBox();
         const y = rect.y + rect.height / 2;

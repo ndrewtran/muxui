@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function indicatorPaint(locator) {
   return locator.evaluate((element) => {
@@ -111,12 +111,13 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/checkbox-focus.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/checkbox-focus.html`, { waitUntil: 'load' });
     try {
       await page.locator('[data-checkbox-focus-fixture]').waitFor();
     } catch (error) {
       throw new Error(`${error.message}\n${errors.join('\n')}`);
     }
+    await awaitFontsAndFrames(page);
     const core = page.locator('[data-testid="core"]');
     const coreIndicator = core.locator('.muxui-checkbox__indicator');
     const field = page.locator('[data-testid="field"]');
@@ -137,8 +138,9 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
     await mkdir(evidenceDir, { recursive: true });
 
     for (const mode of ['light', 'dark']) {
-      await page.reload({ waitUntil: 'networkidle' });
+      await page.reload({ waitUntil: 'load' });
       await page.locator('[data-checkbox-focus-fixture]').waitFor();
+      await awaitFontsAndFrames(page);
       await page.emulateMedia({ forcedColors: 'none', colorScheme: mode });
       await page.evaluate((scheme) => {
         document.documentElement.setAttribute('data-muxui-color-scheme', scheme);
@@ -335,8 +337,9 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/checkbox-invalid.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/checkbox-invalid.html`, { waitUntil: 'load' });
     await page.locator('[data-invalid-fixture]').waitFor();
+    await awaitFontsAndFrames(page);
     // Each part is [hovered host, painted descendant]; a null descendant paints the host's ::before.
     // The Switch root forwards its test id to the outer field wrapper.
     const parts = {
@@ -379,8 +382,9 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
 
     // null leaves the document without a scheme attribute, so unscoped rules paint.
     for (const mode of [null, 'light', 'dark']) {
-      await page.reload({ waitUntil: 'networkidle' });
+      await page.reload({ waitUntil: 'load' });
       await page.locator('[data-invalid-fixture]').waitFor();
+      await awaitFontsAndFrames(page);
       await page.emulateMedia({ forcedColors: 'none', colorScheme: mode ?? 'light' });
       await page.evaluate((scheme) => {
         if (scheme) document.documentElement.setAttribute('data-muxui-color-scheme', scheme);

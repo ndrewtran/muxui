@@ -9,7 +9,7 @@ import { renderCatalogExamples } from '../support/catalog-example-renders.mjs';
 import { cascadeCases, claimsStep } from '../support/cascade-cases.mjs';
 import { contrastRatio, requiredContrast } from '../support/contrast.mjs';
 import { readStylingFacts, stylingFor } from '../support/styling-reference.mjs';
-import { launchBrowser, packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
 
 // The generated recipe, run in Chromium: the authority for the recipe. The static cascade model that picks the steps cannot be
 // complete against an arbitrary stylesheet, so this file is what holds it to the stylesheet that ships: the sweep at the end applies
@@ -611,8 +611,9 @@ test('portals: the DatePicker and DateRangePicker popups render outside the wrap
   const context = await browser.newContext({ viewport: { width: 900, height: 900 } });
   try {
     const page = await context.newPage();
-    await page.goto(`${url}/pickers.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/pickers.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.ready === 'true');
+    await awaitFontsAndFrames(page);
     // The roles the recipe never assigns for these families: the popup's own, read by a rule on the portal.
     const role = '--muxui-component-datepicker-popover-shadow-color';
     for (const picker of ['date-picker', 'date-range-picker']) {
@@ -672,9 +673,10 @@ test('previously empty recipes: three reachable wrapper targets and four visible
       const recipe = await recipeFor(slug);
       const [step] = recipe.steps;
       assert.equal(step.scope, 'document');
-      await page.goto(`${url}/recipe.html?family=${slug}`, { waitUntil: 'networkidle' });
+      await page.goto(`${url}/recipe.html?family=${slug}`, { waitUntil: 'load' });
       if (slug === 'toast') await page.getByRole('button', { name: 'Save' }).click();
       await page.locator(step.target).waitFor();
+      await awaitFontsAndFrames(page);
       if (['preview-trigger', 'tooltip'].includes(slug)) assert.ok(['top', 'bottom', 'left', 'right'].includes(await page.locator(step.target).getAttribute('data-muxui-state-placement')), `${slug}: adapter emits the resolved placement hook after browser layout`);
       assert.equal(await page.locator(step.target).evaluate((node) => document.getElementById('scope').contains(node)), false, `${slug}: actual portal is outside the trigger wrapper`);
       for (const scheme of ['light', 'dark']) {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
-import { launchBrowser, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, startServer } from './harness.mjs';
 
 async function readGeometry(page, selector) {
   return page.locator(selector).evaluate((root) => {
@@ -68,8 +68,11 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/test/fixtures/tabs-variant-preview.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/test/fixtures/tabs-variant-preview.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiTabsHydrated === 'true');
+    await awaitFontsAndFrames(page);
+    // The first styles are read at once, so let the transitions that hydration starts finish.
+    await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
     assert.deepEqual(errors, []);
 
     const initialLabel = page.locator('#light-underline-tabs [aria-selected="true"] .muxui-tabs__tab-label');

@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { MultiSelect } from '../../src/supplemental/multi-select.ts';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function MultiSelectContractFixture() {
   const items = [{ id: 'alpha', label: 'Alpha' }, { id: 'beta', label: 'Beta' }];
@@ -41,8 +41,9 @@ async function openPage(browser, url) {
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text()); });
   page.on('response', (response) => { if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`); });
-  await page.goto(`${url}/multi-select.html`, { waitUntil: 'networkidle' });
+  await page.goto(`${url}/multi-select.html`, { waitUntil: 'load' });
   await page.waitForFunction(() => document.documentElement.dataset.ready === 'true');
+  await awaitFontsAndFrames(page);
   return { page, errors };
 }
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // The default stack Virtualizer scrolls through its whole collection: the
 // scroll extent is the row count times itemHeight plus the viewport padding, so
@@ -53,9 +53,10 @@ for (const engine of browserEngines()) {
 
       for (const { name, config, height, itemHeight } of cases) {
         await t.test(`the scroll extent is the full collection and the last row is reachable: ${name}`, async () => {
-          await tab.goto(`${url}/virtualizer.html?config=${encodeURIComponent(JSON.stringify(config))}`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/virtualizer.html?config=${encodeURIComponent(JSON.stringify(config))}`, { waitUntil: 'load' });
           const viewport = tab.locator('.muxui-virtualizer');
           await viewport.locator('[role="option"]').first().waitFor();
+          await awaitFontsAndFrames(tab);
 
           const measure = () => viewport.evaluate((node) => {
             const style = getComputedStyle(node);

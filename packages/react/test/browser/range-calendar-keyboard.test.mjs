@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function RangeKeyboardFixture() {
   const h = React.createElement;
@@ -29,7 +29,9 @@ test('real browser RangeCalendar selects a start and end date with the keyboard'
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/range-keyboard.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/range-keyboard.html`, { waitUntil: 'load' });
+    await page.locator('.muxui-range-calendar__cell[tabindex="0"]').waitFor();
+    await awaitFontsAndFrames(page);
     await page.locator('.muxui-range-calendar__cell[tabindex="0"]').focus();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');

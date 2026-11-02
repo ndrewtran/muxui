@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { SliderMotionFixture } from '../fixtures/slider-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement(SliderMotionFixture));
@@ -50,8 +50,9 @@ test('numeric Slider A keeps RAC semantics while adding finite tactile thumb mot
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     const reset = async () => {
       await page.emulateMedia({ reducedMotion: 'no-preference', forcedColors: 'none' });
-      await page.goto(`${url}/slider-motion.html`, { waitUntil: 'networkidle' });
+      await page.goto(`${url}/slider-motion.html`, { waitUntil: 'load' });
       await page.waitForFunction(() => Boolean(window.__sliderMotionProof));
+      await awaitFontsAndFrames(page);
     };
 
     await t.test('hydrates, preserves immediate value/position, and springs tactile press back', async () => {
@@ -141,8 +142,9 @@ test('numeric Slider A keeps RAC semantics while adding finite tactile thumb mot
       const touchPage = await browser.newPage({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
       touchPage.on('pageerror', (error) => errors.push(error.message));
       try {
-        await touchPage.goto(`${url}/slider-motion.html`, { waitUntil: 'networkidle' });
+        await touchPage.goto(`${url}/slider-motion.html`, { waitUntil: 'load' });
         await touchPage.waitForFunction(() => Boolean(window.__sliderMotionProof));
+        await awaitFontsAndFrames(touchPage);
         const cdp = await touchPage.context().newCDPSession(touchPage);
         const range = await track(touchPage).boundingBox();
         assert.ok(range);

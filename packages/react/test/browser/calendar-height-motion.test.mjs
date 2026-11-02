@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { fixture } from '../fixtures/calendar-height-motion-browser-entry.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function geometry(page) {
   return page.locator('.muxui-calendar__grid').evaluate((grid) => {
@@ -125,9 +125,10 @@ test('calendar month height interpolates without changing semantics or reduced m
       const errors = [];
       page.on('pageerror', (error) => errors.push(error.message));
       page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-      await page.goto(`${url}/calendar-height/${kind}`, { waitUntil: 'networkidle' });
+      await page.goto(`${url}/calendar-height/${kind}`, { waitUntil: 'load' });
       await page.waitForFunction(() => document.documentElement.dataset.muxuiCalendarHeightHydrated === 'true')
         .catch((error) => assert.fail(`${kind}: the fixture did not hydrate: ${error.message}; page errors: ${errors.join(' | ')}`));
+      await awaitFontsAndFrames(page);
       if (kind === 'range-picker') await page.evaluate(() => { document.body.style.marginTop = '600px'; });
       if (kind.includes('picker')) {
         await page.locator('.muxui-date-trigger').click();

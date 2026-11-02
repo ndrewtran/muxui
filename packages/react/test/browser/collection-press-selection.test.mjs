@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Each case logs its selection and action callbacks into data attributes so the
 // browser proof reads real pointer and keyboard outcomes.
@@ -48,8 +48,9 @@ test('real browser selects GridList, Tree, and Table rows on click and Enter fro
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/press-selection.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/press-selection.html`, { waitUntil: 'load' });
     await page.locator('#table-action [role="row"]').first().waitFor();
+    await awaitFontsAndFrames(page);
     const row = (id, label) => page.locator(`#${id} [role="row"]`).filter({ hasText: label }).last();
     const attribute = (id, name) => page.locator(`#${id}`).getAttribute(name);
 

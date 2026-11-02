@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { RangeSelectionMotionFixture } from '../fixtures/range-selection-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(RangeSelectionMotionFixture)));
@@ -203,8 +203,9 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/range-selection-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/range-selection-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiRangeSelectionHydrated === 'true');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
     assert.equal(await page.locator('.muxui-range-calendar__selection-motion').count(), 0, 'closed range popover stays absent after SSR/hydration');
 
@@ -213,8 +214,9 @@ test('DateRangePicker Motion paints RAC provisional ranges row by row without co
       capPage.on('pageerror', (error) => errors.push(error.message));
       capPage.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
       try {
-        await capPage.goto(`${url}/range-selection-motion.html`, { waitUntil: 'networkidle' });
+        await capPage.goto(`${url}/range-selection-motion.html`, { waitUntil: 'load' });
         await capPage.waitForFunction(() => document.documentElement.dataset.muxuiRangeSelectionHydrated === 'true');
+        await awaitFontsAndFrames(capPage);
         await capPage.evaluate(() => window.__muxuiRangeSetOpen(true));
         await capPage.locator('.muxui-date-popover').waitFor();
         await capPage.locator(`.muxui-range-calendar__cell[data-muxui-date="${anchor}"]`).click();

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function TokenFieldTextFixture() {
   const h = React.createElement;
@@ -40,8 +40,10 @@ test('real browser TokenField keeps typed text, reconciles controlled tokens, an
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/token-field-text.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/token-field-text.html`, { waitUntil: 'load' });
     const field = page.locator('#form [role="textbox"]');
+    await field.waitFor();
+    await awaitFontsAndFrames(page);
     const controlled = page.locator('#controlled [role="textbox"]');
     const text = (locator) => locator.evaluate((node) => node.textContent.replaceAll('​', ''));
     const formTokens = () => page.evaluate(() => new FormData(document.querySelector('#form')).getAll('tags'));

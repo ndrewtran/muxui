@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
 import { HeavyBrowserFixture } from '../fixtures/heavy-browser-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const selectAllModifier = process.platform === 'darwin' ? 'Meta' : 'Control';
 // Vite scans this entry before the first request. Without it, a cold server finds the editor's dependencies
@@ -27,8 +27,9 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/heavy-fixture.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/heavy-fixture.html`, { waitUntil: 'load' });
     await page.waitForSelector('.ProseMirror');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, [], errors.join('\n'));
     assert.equal(await page.locator('#heavy-fixture').getAttribute('data-interactive'), 'true');
     assert.equal(await page.locator('#document-editor').getAttribute('aria-label'), 'Document editor');
@@ -227,8 +228,9 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
 // whose onChange output is mirrored into the editor-document output.
 async function openDocumentEditor(browser, url) {
   const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
-  await page.goto(`${url}/heavy-fixture.html`, { waitUntil: 'networkidle' });
+  await page.goto(`${url}/heavy-fixture.html`, { waitUntil: 'load' });
   await page.waitForSelector('#document-editor.ProseMirror');
+  await awaitFontsAndFrames(page);
   const editor = page.locator('#document-editor');
   // Let ProseMirror read DOM selection and onChange output before asserting.
   const settle = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));

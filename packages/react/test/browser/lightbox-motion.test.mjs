@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { LightboxMotionFixture } from '../fixtures/lightbox-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(LightboxMotionFixture)));
@@ -71,8 +71,9 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/lightbox-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/lightbox-motion.html`, { waitUntil: 'load' });
     await waitForHydration(page);
+    await awaitFontsAndFrames(page);
     assert.equal(await page.locator('.muxui-lightbox__popup').count(), 0, 'SSR and hydration begin closed');
 
     const trigger = page.getByRole('button', { name: 'Open lightbox' });

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof for the Table sort chevron, in light and dark: the sorted
@@ -113,8 +113,9 @@ for (const engine of browserEngines()) {
         tab.on('pageerror', (error) => errors.push(error.message));
         tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
         try {
-          await tab.goto(`${url}/table-sort-indicator.html?scheme=${scheme}`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/table-sort-indicator.html?scheme=${scheme}`, { waitUntil: 'load' });
           await tab.locator('[role="columnheader"]').first().waitFor({ timeout: 15_000 });
+          await awaitFontsAndFrames(tab);
           await tab.mouse.move(0, 0);
           const label = (message) => `${engine} ${scheme}: ${message}`;
           const strong = await tab.evaluate(tokenColor, '--muxui-semantic-content-strong');
@@ -238,8 +239,9 @@ for (const engine of browserEngines()) {
         const context = await browser.newContext({ forcedColors: 'active' });
         try {
           const tab = await context.newPage();
-          await tab.goto(`${url}/table-sort-indicator.html?scheme=dark`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/table-sort-indicator.html?scheme=dark`, { waitUntil: 'load' });
           await tab.locator('[role="columnheader"]').first().waitFor({ timeout: 15_000 });
+          await awaitFontsAndFrames(tab);
           const colors = await tab.evaluate(() => {
             const header = document.querySelector('[role="columnheader"][aria-sort="ascending"]');
             return [getComputedStyle(header.querySelector('.muxui-table__sort-icon')).color, getComputedStyle(header).color];

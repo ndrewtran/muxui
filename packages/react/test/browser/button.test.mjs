@@ -6,7 +6,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { Button, ButtonGroup, IconButton, LightboxClose, Toolbar } from '../../generated/index.mjs';
 import { SubmitForms, submitControls } from './button-submit-fixture.mjs';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // A Button's icon and label share one cross-axis center and sit one size-recipe
 // gap apart, whichever side the icon is on and while pending with visible text.
@@ -78,8 +78,9 @@ async function openPage(engine, { pages, modules, path, ready }) {
   const errors = [];
   tab.on('pageerror', (error) => errors.push(error.message));
   tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-  await tab.goto(`${url}${path}`, { waitUntil: 'networkidle' });
+  await tab.goto(`${url}${path}`, { waitUntil: 'load' });
   await tab.locator(ready).first().waitFor();
+  await awaitFontsAndFrames(tab);
   return { tab, errors, close: async () => { await browser.close(); await close(); } };
 }
 
@@ -288,8 +289,9 @@ for (const engine of browserEngines()) {
       const errors = [];
       tab.on('pageerror', (error) => errors.push(error.message));
       tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-      await tab.goto(`${url}/button.html`, { waitUntil: 'networkidle' });
+      await tab.goto(`${url}/button.html`, { waitUntil: 'load' });
       await tab.locator('#lg-pending').waitFor();
+      await awaitFontsAndFrames(tab);
       for (const size of ['sm', 'md', 'lg']) {
         for (const kind of ['leading', 'trailing', 'pending']) {
           const m = await tab.locator(`#${size}-${kind}`).evaluate((button) => {

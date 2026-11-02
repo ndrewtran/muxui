@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { patternVariantExamples } from '../../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
-import { browserEngines, launchBrowser, packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
 import { measureFocusRing, measureSelectedPaint, pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof (E-BL1-04) that the shipped poster grid variants, loaded
@@ -96,9 +96,10 @@ for (const engine of browserEngines()) {
           tab.on('console', (message) => { if (message.type() === 'error') errors.push(`${variantSlug}: ${message.text()}`); });
           try {
             const open = async (scheme = 'light') => {
-              await tab.goto(`${url}/poster-grid.html?variant=${variantSlug}&scheme=${scheme}`, { waitUntil: 'networkidle' });
+              await tab.goto(`${url}/poster-grid.html?variant=${variantSlug}&scheme=${scheme}`, { waitUntil: 'load' });
               await tab.locator('[role="grid"] [role="row"]').first().waitFor({ timeout: 15_000 }).catch((error) => assert.fail(`no card rendered: ${error.message.split('\n')[0]}; page errors ${JSON.stringify(errors)}`));
               await tab.locator('[data-muxui-grid-list-motion-ready]').waitFor();
+              await awaitFontsAndFrames(tab);
               await tab.mouse.move(0, 0);
               // The virtualized variant starts at two columns and takes its tier from the measured width.
               await pollUntil(tab, () => {

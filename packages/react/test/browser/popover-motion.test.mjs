@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { PopoverMotionFixture } from '../fixtures/popover-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(PopoverMotionFixture)));
@@ -77,8 +77,9 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/popover-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/popover-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiPopoverMotionHydrated === 'true');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
     assert.equal(await page.locator('.muxui-menu__popup, .muxui-select__popup, .muxui-combo-box__popover, .muxui-autocomplete__popover').count(), 0, 'SSR and hydration begin popovers closed');
     assert.match(await page.locator('html').getAttribute('data-muxui-popover-refs'), /DIV/u);

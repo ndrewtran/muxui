@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { warmUpServer } from './grid-list-probes.mjs';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Cross-engine proof for TextEditor selection actions: placement, focus, keyboard,
 // pending and review flows, narrow layout, and in light and dark every control's
@@ -202,8 +202,9 @@ for (const engine of browserEngines()) {
         const tab = await context.newPage();
         tab.on('pageerror', (error) => errors.push(error.message));
         tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-        await tab.goto(`${url}/selection-actions.html?scheme=${scheme}&config=${encodeURIComponent(JSON.stringify(config))}`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/selection-actions.html?scheme=${scheme}&config=${encodeURIComponent(JSON.stringify(config))}`, { waitUntil: 'load' });
         await tab.locator('.ProseMirror').waitFor({ timeout: 30_000 });
+        await awaitFontsAndFrames(tab);
         const editor = tab.locator('.ProseMirror');
         const bar = tab.locator(barSelector);
         const api = {

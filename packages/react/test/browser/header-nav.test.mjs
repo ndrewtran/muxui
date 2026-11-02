@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // The HeaderNav logo link draws the same keyboard focus ring as the NavButtons, taken from the
@@ -44,10 +44,11 @@ for (const engine of browserEngines()) {
           const tab = await browser.newPage({ viewport: { width: 800, height: 600 }, locale: 'en-US' });
           const errors = [];
           tab.on('pageerror', (error) => errors.push(error.message));
-          await tab.goto(`${url}/header-nav.html?scheme=${scheme}`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/header-nav.html?scheme=${scheme}`, { waitUntil: 'load' });
           const logo = tab.locator('.muxui-header-nav__logo-link');
           const navButton = tab.locator('.muxui-header-nav__nav-button');
           await logo.waitFor();
+          await awaitFontsAndFrames(tab);
 
           const read = (locator) => locator.evaluate((node) => {
             const probe = document.createElement('span');
@@ -150,8 +151,9 @@ for (const engine of browserEngines()) {
         const tab = await context.newPage();
         const errors = [];
         tab.on('pageerror', (error) => errors.push(error.message));
-        await tab.goto(`${url}/header-nav-drawer.html?variant=${variant}`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/header-nav-drawer.html?variant=${variant}`, { waitUntil: 'load' });
         await tab.locator('.muxui-header-nav__mobile-trigger').waitFor();
+        await awaitFontsAndFrames(tab);
         const dialog = tab.getByRole('dialog', { name: 'Navigation' });
         await tab.locator('.muxui-header-nav__mobile-trigger').click();
         await dialog.waitFor();

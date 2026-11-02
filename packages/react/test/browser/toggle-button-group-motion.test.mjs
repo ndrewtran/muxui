@@ -4,7 +4,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { ToggleButtonGroupMotionFixture } from '../fixtures/toggle-button-group-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<link rel="stylesheet" href="/generated/styles.css"><style>
@@ -109,8 +109,9 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/toggle-button-group-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/toggle-button-group-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.toggleButtonGroupMotionHydrated === 'true');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
 
     const primary = '#primary-toggle';

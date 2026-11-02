@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { Dialog } from '../../src/overlays.ts';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Reduction cases slow the motion far beyond any wait below, so a dialog that settles or detaches inside a wait
 // was released by the reduction, whatever the runner's speed.
@@ -125,8 +125,9 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/dialog-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/dialog-motion.html`, { waitUntil: 'load' });
     await waitForHydration(page);
+    await awaitFontsAndFrames(page);
     assert.equal(await page.locator('.muxui-dialog').count(), 0, 'SSR and hydration begin closed');
 
     const entryRecording = await recordFrames(page, samplePanel);
@@ -244,8 +245,9 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.evaluate(() => window.__muxuiDialogSetOpen(false));
     await page.locator('.muxui-dialog').waitFor({ state: 'detached', timeout: REDUCTION_WAIT });
 
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: 'load' });
     await waitForHydration(page);
+    await awaitFontsAndFrames(page);
     await page.evaluate((duration) => document.documentElement.style.setProperty('--muxui-semantic-motion-modal-dismiss-transition-duration', duration), SLOWED);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openTriggered(page);
