@@ -1998,8 +1998,10 @@ function storyProofEnvironment(storyRun, environment) {
 export const storyShardPageBudget = 120;
 
 const sharedGroup = '*';
-// The limit on a group's checks step, per kind.
-const groupTimeoutMinutes = { checks: 30, react: 30, browser: 30, tailwind: 15, storybook: 30 };
+// The limit on a group's checks step, per kind. Since the CI trim the longest clean checks step is the
+// React suite at about 11 minutes (646 s on PR #445) and main's longest job is about the same, so 20
+// minutes keep headroom while duration creep fails the job instead of passing silently.
+const groupTimeoutMinutes = { checks: 20, react: 20, browser: 20, tailwind: 15, storybook: 20 };
 // Extra job time for a group that installs Playwright's system libraries. apt can crawl on a slow
 // runner-image mirror (22 to 23 minutes for one step in run 39806468125), so that setup must not
 // spend the checks limit. The workflow bounds the install step itself below this allowance.
