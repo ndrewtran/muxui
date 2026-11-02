@@ -4,7 +4,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { GridListMotionFixture } from '../fixtures/grid-list-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const markup = renderToString(React.createElement(GridListMotionFixture));
@@ -57,8 +57,9 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/grid-list-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/grid-list-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.gridListMotionHydrated === 'true');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
 
     const primary = '#primary-list';

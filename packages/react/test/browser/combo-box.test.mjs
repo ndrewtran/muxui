@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Each case renders one form. onSelect and submit events are logged to
 // window.events so the test can assert what the browser actually reported.
@@ -73,8 +73,9 @@ test('real browser ComboBox reports a cleared selection and submits an empty val
     };
 
     for (const mode of ['uncontrolled', 'controlled']) {
-      await page.goto(`${url}/combo-box-clear.html?case=${mode}`, { waitUntil: 'networkidle' });
+      await page.goto(`${url}/combo-box-clear.html?case=${mode}`, { waitUntil: 'load' });
       await page.waitForFunction((expected) => document.documentElement.dataset.ready === expected, mode);
+      await awaitFontsAndFrames(page);
 
       await choose();
       await untilEvents(1);

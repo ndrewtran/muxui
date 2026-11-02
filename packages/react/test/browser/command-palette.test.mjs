@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // CommandPalette.Trigger draws Button's keyboard focus ring, never for the first pointer
 // click on a fresh page, and the focused CommandPalette.Input draws the field focus
@@ -51,7 +51,7 @@ for (const engine of browserEngines()) {
       const tab = await browser.newPage({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
       const errors = [];
       tab.on('pageerror', (error) => errors.push(error.message));
-      await tab.goto(`${url}/command-palette.html`, { waitUntil: 'networkidle' });
+      await tab.goto(`${url}/command-palette.html`, { waitUntil: 'load' });
       const trigger = tab.locator('#palette-trigger');
       // A Button's ring fades in, so read it once its transitions have finished.
       const shadow = (locator) => locator.evaluate(async (node) => {
@@ -59,6 +59,7 @@ for (const engine of browserEngines()) {
         return getComputedStyle(node).boxShadow;
       });
       await trigger.waitFor();
+      await awaitFontsAndFrames(tab);
 
       await t.test('the Trigger draws the same ring as a Button, from keyboard focus only', async () => {
         await tab.locator('#before').focus();
@@ -112,9 +113,10 @@ for (const engine of browserEngines()) {
         const fresh = await browser.newPage({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
         const freshErrors = [];
         fresh.on('pageerror', (error) => freshErrors.push(error.message));
-        await fresh.goto(`${url}/command-palette.html?closed`, { waitUntil: 'networkidle' });
+        await fresh.goto(`${url}/command-palette.html?closed`, { waitUntil: 'load' });
         const freshTrigger = fresh.locator('#palette-trigger');
         await freshTrigger.waitFor();
+        await awaitFontsAndFrames(fresh);
         const box = await freshTrigger.boundingBox();
         await fresh.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await fresh.mouse.down();

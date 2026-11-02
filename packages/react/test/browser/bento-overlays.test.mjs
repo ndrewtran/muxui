@@ -4,7 +4,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { Dialog, Popover, Tooltip, PreviewTrigger } from '../../src/overlays.ts';
 import { AlertDialog } from '../../src/supplemental/alert-dialog.ts';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function StatefulPopoverContent() {
   const [count, setCount] = React.useState(0);
@@ -100,8 +100,9 @@ async function withFixture(run, direction = 'ltr') {
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/overlay-fixture.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/overlay-fixture.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.ready === 'true').catch((error) => { throw new Error(`${error.message}\n${errors.join('\n')}`); });
+    await awaitFontsAndFrames(page);
     await run(page);
     await page.evaluate(() => window.unmountFixture());
     assert.equal(await page.locator('.muxui-popover__positioner, .muxui-tooltip, .muxui-dialog__backdrop, .muxui-alert-dialog__backdrop').count(), 0);

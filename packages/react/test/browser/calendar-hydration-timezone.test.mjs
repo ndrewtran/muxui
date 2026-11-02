@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { launchBrowser, packageRoot, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, packageRoot, pageShell, startServer } from './harness.mjs';
 
 // Kiritimati is UTC+14 and Pago Pago UTC-11, so server and browser always
 // disagree about today. 12:00 UTC on 15 March 2026 is 16 and 15 March; 05:00 UTC
@@ -67,8 +67,9 @@ async function hydrateAcrossTimezones(fixedTime, { today, todayLabel, heading })
     const messages = [];
     page.on('pageerror', (error) => messages.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') messages.push(message.text()); });
-    await page.goto(`${url}/calendar-timezone.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/calendar-timezone.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => typeof window.__hydrate === 'function');
+    await awaitFontsAndFrames(page);
     const heights = () => page.evaluate(() => ['single', 'range'].map((id) => document.querySelector(`#${id} > div`).getBoundingClientRect().height));
     const before = await heights();
     await page.evaluate(() => window.__hydrate());

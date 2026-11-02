@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { SelectNativeBrowserFixture } from '../fixtures/select-native-browser-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 test('SelectNative hydrates as a native form control and preserves browser focus/reset behavior', { timeout: 90_000 }, async () => {
   const entry = `import React from 'react';
@@ -24,8 +24,9 @@ test('SelectNative hydrates as a native form control and preserves browser focus
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/select-native.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/select-native.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.ready === 'SELECT');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
 
     const select = page.locator('#panel');

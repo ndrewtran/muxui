@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
 import { ColorArea, ColorSlider, ColorSwatch, ColorWheel, Virtualizer } from '../../src/collections.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function Fixture() {
   return React.createElement('div', { id: 'proof-fixture' },
@@ -59,11 +59,12 @@ test('real browser proves read-only color controls, disabled swatch semantics, a
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/read-only-colors-virtualizer.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/read-only-colors-virtualizer.html`, { waitUntil: 'load' });
     // The server markup is already visible; the read-only proofs need the hydrated handlers.
     await page.waitForFunction(() => document.documentElement.dataset.muxuiReadOnlyColorsHydrated === 'true')
       .catch((error) => assert.fail(`the fixture did not hydrate: ${error.message}; page errors: ${errors.join(' | ')}`));
     await page.locator('.muxui-color-area').waitFor();
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, [], errors.join('\n'));
 
     const readOnlyTargets = page.locator('.muxui-color-area input[type="range"], .muxui-color-slider input[type="range"], .muxui-color-wheel input[type="range"]');

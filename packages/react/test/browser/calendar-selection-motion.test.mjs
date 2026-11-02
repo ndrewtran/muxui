@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { fixture } from '../fixtures/calendar-selection-motion-fixture.mjs';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   return pageShell({ attributes: 'data-muxui-motion="full" data-muxui-color-scheme="light"', head: `<link rel="stylesheet" href="/packages/react/generated/styles.css"><style>
@@ -96,12 +96,13 @@ test('Calendar selection circle travels within a month, resets across dates/page
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     page.on('requestfailed', (request) => errors.push(`${request.url()}: ${request.failure()?.errorText}`));
-    await page.goto(`${url}/calendar-selection-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/calendar-selection-motion.html`, { waitUntil: 'load' });
     try {
       await page.waitForFunction(() => window.__muxuiCalendarSelectionProof);
     } catch {
       assert.fail(`Calendar fixture failed to hydrate: ${JSON.stringify({ errors, html: await page.locator('#root').innerHTML() })}`);
     }
+    await awaitFontsAndFrames(page);
 
     const primary = page.locator('#primary');
     const secondary = page.locator('#secondary');

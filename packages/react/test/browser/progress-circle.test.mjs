@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { ProgressCircleConsumerFixture } from '../fixtures/progress-circle-consumer-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 test('ProgressCircle consumer fixture hydrates with native refs, states, dimensions, and motion policies', { timeout: 90_000 }, async () => {
   const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(ProgressCircleConsumerFixture))}</div>`, entry: '/packages/react/test/fixtures/progress-circle-browser-entry.mjs' });
@@ -15,8 +15,9 @@ test('ProgressCircle consumer fixture hydrates with native refs, states, dimensi
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/progress-circle.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/progress-circle.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.progressCircleReady === 'DIV:progressbar');
+    await awaitFontsAndFrames(page);
 
     const tab = page.locator('#tab-loading [role="progressbar"]');
     const session = page.locator('#session-import [role="progressbar"]');

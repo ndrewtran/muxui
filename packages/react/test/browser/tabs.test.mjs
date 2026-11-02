@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // React Aria makes a tab panel a focus stop only when it has no tabbable content.
 // That stop draws the Tabs focus ring for keyboard focus, never for pointer focus
@@ -45,9 +45,10 @@ for (const engine of browserEngines()) {
       const tab = await browser.newPage({ viewport: { width: 800, height: 600 }, locale: 'en-US' });
       const errors = [];
       tab.on('pageerror', (error) => errors.push(error.message));
-      await tab.goto(`${url}/tabs.html`, { waitUntil: 'networkidle' });
+      await tab.goto(`${url}/tabs.html`, { waitUntil: 'load' });
       const panel = tab.locator('[role="tabpanel"]');
       await panel.waitFor();
+      await awaitFontsAndFrames(tab);
 
       const readPanel = () => panel.evaluate((node) => {
         const probe = document.createElement('span');
@@ -99,9 +100,10 @@ for (const engine of browserEngines()) {
         const fresh = await browser.newPage({ viewport: { width: 800, height: 600 }, locale: 'en-US' });
         const freshErrors = [];
         fresh.on('pageerror', (error) => freshErrors.push(error.message));
-        await fresh.goto(`${url}/tabs.html`, { waitUntil: 'networkidle' });
+        await fresh.goto(`${url}/tabs.html`, { waitUntil: 'load' });
         const freshPanel = fresh.locator('[role="tabpanel"]');
         await freshPanel.waitFor();
+        await awaitFontsAndFrames(fresh);
         const read = () => freshPanel.evaluate((node) => ({ focused: node === document.activeElement, outlineStyle: getComputedStyle(node).outlineStyle }));
         const box = await freshPanel.boundingBox();
         await fresh.mouse.move(box.x + 4, box.y + 4);

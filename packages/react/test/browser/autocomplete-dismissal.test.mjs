@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Cross-engine proof for Autocomplete's dismissal focus guard. Engines differ
 // during blur: Firefox reports a focused iframe as active, Chromium and WebKit
@@ -127,8 +127,9 @@ for (const engine of browserEngines()) {
       // Each case starts on a fresh page: RAC's focus-scope history from an
       // earlier case can change whether it restores focus at all.
       const scenario = (name, run) => t.test(name, async () => {
-        await tab.goto(`${url}/autocomplete-dismissal.html`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/autocomplete-dismissal.html`, { waitUntil: 'load' });
         await input.waitFor();
+        await awaitFontsAndFrames(tab);
         assert.equal(await popover.count(), 0, 'the list starts closed');
         await run();
       });

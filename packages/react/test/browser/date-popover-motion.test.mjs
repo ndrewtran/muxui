@@ -5,7 +5,7 @@ import test from 'node:test';
 import { Button } from '../../src/button.ts';
 import { DatePicker, DateRangePicker } from '../../src/fields.ts';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Reduction and interruption cases slow the motion far beyond any wait below, so a popup that settles or detaches
 // inside a wait was released by the reduction, whatever the runner's speed.
@@ -179,12 +179,13 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     page.on('requestfailed', (request) => errors.push(`${request.url()}: ${request.failure()?.errorText ?? 'request failed'}`));
-    await page.goto(`${url}/date-popover-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/date-popover-motion.html`, { waitUntil: 'load' });
     try {
       await waitForHydration(page);
     } catch (error) {
       throw new Error(`${error.message}; page errors: ${errors.join(' | ')}`);
     }
+    await awaitFontsAndFrames(page);
     assert.equal(await page.locator('.muxui-date-popover').count(), 0, 'SSR and hydration begin closed');
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -290,8 +291,9 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
     assert.equal(await page.locator('.muxui-date-popover').count(), 0, 'unmount removes the popup and Motion cleanup leaves no node');
 
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: 'load' });
     await waitForHydration(page);
+    await awaitFontsAndFrames(page);
     await page.evaluate(() => document.querySelector('link[href*="styles.css"]')?.remove());
     await openCalendar(page);
     const missingStyles = await readEntryMotion(page);
@@ -300,8 +302,9 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     await page.evaluate(() => window.__muxuiDatePopoverSetOpen(false));
     await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
 
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: 'load' });
     await waitForHydration(page);
+    await awaitFontsAndFrames(page);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate((duration) => {
       document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', duration);
@@ -400,8 +403,9 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
       });
     }
 
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.reload({ waitUntil: 'load' });
     await waitForHydration(page);
+    await awaitFontsAndFrames(page);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openCalendar(page);
     const systemReducedImmediate = await readEntryMotion(page);
@@ -474,8 +478,9 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     const rangeErrors = [];
     rangePage.on('pageerror', (error) => rangeErrors.push(error.message));
     rangePage.on('console', (message) => { if (message.type() === 'error') rangeErrors.push(message.text()); });
-    await rangePage.goto(`${url}/date-range-popover-motion.html`, { waitUntil: 'networkidle' });
+    await rangePage.goto(`${url}/date-range-popover-motion.html`, { waitUntil: 'load' });
     await rangePage.waitForFunction(() => document.documentElement.dataset.muxuiDateRangePopoverHydrated === 'true');
+    await awaitFontsAndFrames(rangePage);
     await rangePage.locator('.muxui-date-range-picker__control .muxui-date-trigger').click();
     await rangePage.locator('.muxui-date-popover').waitFor();
     assert.equal(await rangePage.locator('.muxui-date-range-picker__popover').count(), 1, 'DateRangePicker popup carries its canonical family selector');

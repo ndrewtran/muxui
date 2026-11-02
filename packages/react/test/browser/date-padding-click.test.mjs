@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // A press in the padding of a date input hits no segment, so React Aria chooses one: the first empty segment of the
 // trailing run of empty segments, or the last segment when the last one is filled. It finds the empty ones by reading
@@ -58,8 +58,9 @@ for (const engine of browserEngines()) {
         const page = await context.newPage();
         const messages = [];
         page.on('pageerror', (error) => messages.push(error.message));
-        await page.goto(`${url}/date-padding.html`, { waitUntil: 'networkidle' });
+        await page.goto(`${url}/date-padding.html`, { waitUntil: 'load' });
         await page.waitForFunction(() => document.documentElement.dataset.ready === 'true');
+        await awaitFontsAndFrames(page);
         for (const control of controls) {
           const root = page.locator(`.muxui-${control.name}`);
           const segments = root.locator('.muxui-date-segment:not([data-muxui-state-type="literal"])');

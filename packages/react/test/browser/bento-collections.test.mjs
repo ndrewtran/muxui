@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { ListBox, Menu, Select } from '../../src/collections.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function CollectionsFixture() {
   const h = React.createElement;
@@ -94,8 +94,9 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/bento-collections.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/bento-collections.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.ready, null, { timeout: 10000 }).catch((error) => { throw new Error(`${error.message}\n${errors.join('\n')}`); });
+    await awaitFontsAndFrames(page);
     assert.equal(await page.locator('html').getAttribute('data-ready'), 'BUTTON,SPAN,SPAN,SPAN');
     assert.deepEqual(errors, []);
     const menuTrigger = page.locator('#menu-trigger');

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Each case renders one Form; submit, change, and select events are logged to
 // window.events so tests can assert what the browser actually submitted.
@@ -100,8 +100,9 @@ async function withPage(run) {
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text()); });
     const open = async (name) => {
-      await page.goto(`${url}/form-fields.html?case=${name}`, { waitUntil: 'networkidle' });
+      await page.goto(`${url}/form-fields.html?case=${name}`, { waitUntil: 'load' });
       await page.waitForFunction((expected) => document.documentElement.dataset.ready === expected, name);
+      await awaitFontsAndFrames(page);
     };
     const events = () => page.evaluate(() => window.events);
     await run({ page, open, events });

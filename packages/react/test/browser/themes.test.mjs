@@ -7,7 +7,7 @@ import { cssName, cssValue } from '@muxui/tokens/core';
 import source from '../../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { Button, Meter, TextField } from '../../generated/index.mjs';
 import { MUXUI_THEME_PRESETS, MUXUI_THEME_PRESETS_BY_ID } from '../../generated/themes.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const themeModes = [
   ['light', 'standard'],
@@ -160,7 +160,7 @@ test('Mux preset themes resolve compiler colors and live React scopes in Chrome'
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/themes-browser.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/themes-browser.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.themeReady === 'true').catch(async (error) => {
       const debug = await page.evaluate(() => ({
         url: location.href,
@@ -173,6 +173,9 @@ test('Mux preset themes resolve compiler colors and live React scopes in Chrome'
       assert.fail(`theme fixture did not render: ${JSON.stringify({ errors })}`);
     }
     await page.locator('#harbour-button').waitFor({ timeout: 10_000 });
+    await awaitFontsAndFrames(page);
+    // The first colours are read at once, so let the transitions that hydration starts finish.
+    await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))));
     assert.deepEqual(errors, [], errors.join('\n'));
     assert.equal(await page.locator('#harbour-button').getAttribute('data-muxui-variant'), 'primary');
     assert.equal(await page.locator('#harbour-field').getAttribute('aria-labelledby') !== null, true);

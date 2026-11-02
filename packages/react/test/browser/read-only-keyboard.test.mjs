@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Each read-only control sits between two buttons so Tab and Shift+Tab can
 // prove focus leaves it in both directions.
@@ -42,8 +42,9 @@ test('real browser read-only sliders, colour controls, and pickers release Tab a
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/read-only-keyboard.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/read-only-keyboard.html`, { waitUntil: 'load' });
     await page.locator('#picker-swatches .after').waitFor();
+    await awaitFontsAndFrames(page);
     const focusedClass = () => page.evaluate(() => document.activeElement?.className ?? '');
     const focusedOption = () => page.evaluate(() => document.activeElement?.getAttribute('role') === 'option' ? document.activeElement.getAttribute('data-key') : null);
     // Hidden range inputs carry slider values; listboxes report the selected option.

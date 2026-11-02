@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { ControlSizingFixture } from '../fixtures/control-sizing-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const sizes = Object.freeze({ sm: 32, md: 36, lg: 40 });
 const compactRemoveMinimum = 24;
@@ -621,11 +621,11 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/control-sizing.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/control-sizing.html`, { waitUntil: 'load' });
     await page.locator('#control-sizing-fixture .muxui-button').first().waitFor();
     await waitForFixtureHydrated(page);
     await waitForTimeFieldsMounted(page);
-    await page.evaluate(() => document.fonts.ready);
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, [], errors.join('\n'));
     assert.ok(await page.evaluate(() => Boolean(window.__muxuiControlSizingRoot)), 'fixture hydrated through hydrateRoot');
     assert.deepEqual(await page.evaluate(() => ({
@@ -720,11 +720,11 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
       popupPage.on('pageerror', (error) => errors.push(`autocomplete/${size}: ${error.message}`));
       popupPage.on('console', (message) => { if (message.type() === 'error') errors.push(`autocomplete/${size}: ${message.text()}`); });
       try {
-        await popupPage.goto(`${url}/control-sizing.html`, { waitUntil: 'networkidle' });
+        await popupPage.goto(`${url}/control-sizing.html`, { waitUntil: 'load' });
         await popupPage.locator('#control-sizing-fixture .muxui-button').first().waitFor();
         await waitForFixtureHydrated(popupPage);
         await waitForTimeFieldsMounted(popupPage);
-        await popupPage.evaluate(() => document.fonts.ready);
+        await awaitFontsAndFrames(popupPage);
         const autocompleteInput = popupPage.locator(`[data-size-row="${size}"] [data-control-id="autocomplete"] .muxui-field-input`);
         await focusAfterScroll(popupPage, autocompleteInput);
         await waitForAutocompleteOptions(popupPage, size, sizes[size]);
@@ -743,10 +743,11 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
       popupPage.on('pageerror', (error) => errors.push(`command-palette/${size}: ${error.message}`));
       popupPage.on('console', (message) => { if (message.type() === 'error') errors.push(`command-palette/${size}: ${message.text()}`); });
       try {
-        await popupPage.goto(`${url}/control-sizing.html`, { waitUntil: 'networkidle' });
+        await popupPage.goto(`${url}/control-sizing.html`, { waitUntil: 'load' });
         await popupPage.locator('#control-sizing-fixture .muxui-button').first().waitFor();
         await waitForFixtureHydrated(popupPage);
         await waitForTimeFieldsMounted(popupPage);
+        await awaitFontsAndFrames(popupPage);
         await popupPage.evaluate(() => {
           document.documentElement.setAttribute('data-muxui-density', 'compact');
           return document.fonts.ready;
@@ -781,11 +782,11 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
         popupPage.on('pageerror', (error) => errors.push(`${controlId}/${size}: ${error.message}`));
         popupPage.on('console', (message) => { if (message.type() === 'error') errors.push(`${controlId}/${size}: ${message.text()}`); });
         try {
-          await popupPage.goto(`${url}/control-sizing.html`, { waitUntil: 'networkidle' });
+          await popupPage.goto(`${url}/control-sizing.html`, { waitUntil: 'load' });
           await popupPage.locator('#control-sizing-fixture .muxui-button').first().waitFor();
           await waitForFixtureHydrated(popupPage);
           await waitForTimeFieldsMounted(popupPage);
-          await popupPage.evaluate(() => document.fonts.ready);
+          await awaitFontsAndFrames(popupPage);
           const controlCase = popupPage.locator(`[data-size-row="${size}"] [data-control-id="${controlId}"]`);
           const opener = controlCase.locator(target.opener);
           if (target.focusOnly) await focusAfterScroll(popupPage, opener);

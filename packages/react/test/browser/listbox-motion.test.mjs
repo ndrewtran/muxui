@@ -4,7 +4,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { ListBoxMotionFixture } from '../fixtures/listbox-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><style>:root { --muxui-semantic-motion-state-duration: 400ms; --muxui-semantic-motion-state-transition-duration: 400ms; }</style>', bodyAttributes: 'style="margin:32px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body: `<div id="root">${renderToString(React.createElement(ListBoxMotionFixture))}</div>`, entry: '/test/fixtures/listbox-motion-browser-entry.mjs' });
@@ -111,8 +111,9 @@ test('ListBox selection backdrop moves independently from focus and honors colle
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/listbox-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/listbox-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.listBoxMotionHydrated === 'true');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
 
     const single = '#single-list';

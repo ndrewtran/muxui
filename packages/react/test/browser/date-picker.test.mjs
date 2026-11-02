@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { launchBrowser, packageRoot, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, packageRoot, pageShell, startServer } from './harness.mjs';
 
 // The server renders in Kiritimati (UTC+14) and the browser runs in Pago Pago
 // (UTC-11), so the two always disagree about today. 12:00 UTC on 15 March 2026
@@ -57,9 +57,10 @@ async function openAtCurrentMonth(fixedTime, { todayLabel, heading, year }) {
     const messages = [];
     page.on('pageerror', (error) => messages.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') messages.push(message.text()); });
-    await page.goto(`${url}/date-picker.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/date-picker.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.hydrated === 'true');
     await page.locator('.muxui-date-picker .muxui-date-trigger').waitFor();
+    await awaitFontsAndFrames(page);
 
     // An empty field steps from the current year rather than a fixed one.
     const fieldYear = page.locator('.muxui-date-field [data-muxui-state-type="year"]');

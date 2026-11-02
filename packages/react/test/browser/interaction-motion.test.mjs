@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { InteractionMotionFixture } from '../fixtures/interaction-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(InteractionMotionFixture)));
@@ -254,8 +254,9 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
       if (message.type() === 'error' && !message.text().includes('Failed to load resource')) errors.push(message.text());
     });
 
-    await page.goto(`${url}/interaction-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/interaction-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiInteractionMotionHydrated === 'true');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, [], 'SSR hydration has no browser errors');
     assert.equal(await page.locator('.muxui-alert-dialog__popup, .muxui-command-palette__popup').count(), 0, 'modal popups begin closed after hydration');
     assert.equal(await page.locator('.muxui-toast').count(), 0, 'toast queue begins empty after hydration');
@@ -657,9 +658,10 @@ test('Toast origin reduction and late disclosure growth settle without flashes',
       if (message.type() === 'error' && !message.text().includes('Failed to load resource')) errors.push(message.text());
     });
 
-    await page.goto(`${url}/interaction-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/interaction-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiInteractionMotionHydrated === 'true');
     await page.waitForFunction(() => typeof window.__interactionToastAdd === 'function');
+    await awaitFontsAndFrames(page);
     await page.evaluate(() => {
       const root = document.documentElement;
       root.style.setProperty('--muxui-semantic-motion-content-resize-duration', '900ms');
@@ -776,8 +778,9 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
-    await page.goto(`${url}/interaction-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/interaction-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => typeof window.__interactionSetDisclosure === 'function');
+    await awaitFontsAndFrames(page);
 
     const controlledPanel = disclosurePanel('controlled-disclosure');
     const controlledTrigger = page.locator('[data-motion-id="controlled-disclosure"] .muxui-disclosure__trigger');

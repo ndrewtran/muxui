@@ -6,7 +6,7 @@ import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { RadioMotionFixture } from '../fixtures/radio-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(RadioMotionFixture)));
@@ -123,8 +123,9 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/radio-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/radio-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiRadioHydrated === 'true');
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
     assert.equal(await page.locator('[role="radiogroup"]').count(), 6);
     assert.equal(await page.locator('.muxui-radio-group__motion-dot').count(), 6);

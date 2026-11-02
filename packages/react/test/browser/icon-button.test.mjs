@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { IconButtonFixture } from '../fixtures/icon-button-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 test('IconButton hydrates, activates by keyboard, preserves pending focus/name/size, and submits forms', { timeout: 90_000 }, async () => {
   const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(IconButtonFixture))}</div>`, entry: '/packages/react/test/fixtures/icon-button-browser-entry.mjs' });
@@ -15,7 +15,9 @@ test('IconButton hydrates, activates by keyboard, preserves pending focus/name/s
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/icon-button.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/icon-button.html`, { waitUntil: 'load' });
+    await page.waitForFunction(() => document.documentElement.dataset.ready);
+    await awaitFontsAndFrames(page);
     assert.equal(await page.locator('html').getAttribute('data-ready'), 'BUTTON');
     const action = page.getByRole('button', { name: 'Close panel', exact: true });
     await action.focus();

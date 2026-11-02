@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 import { pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof that a Mux Link inside a disabled GridList item is disabled
@@ -65,9 +65,10 @@ for (const engine of browserEngines()) {
       tab.on('pageerror', (error) => errors.push(error.message));
       tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
       const open = async (layout) => {
-        await tab.goto(`${url}/link.html?config=${encodeURIComponent(JSON.stringify({ layout }))}`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/link.html?config=${encodeURIComponent(JSON.stringify({ layout }))}`, { waitUntil: 'load' });
         await tab.locator('[role="grid"] [role="row"]').first().waitFor({ timeout: 15_000 });
         await tab.locator('[data-muxui-grid-list-motion-ready]').waitFor();
+        await awaitFontsAndFrames(tab);
         await tab.mouse.move(0, 0);
       };
       const row = (id) => tab.locator(`[role="row"]:has([data-item="${id}"])`);

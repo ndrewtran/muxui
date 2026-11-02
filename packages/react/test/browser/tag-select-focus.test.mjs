@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { TagSelect } from '../../src/supplemental/tag-select.ts';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function TagSelectFocusFixture() {
   const items = [
@@ -49,8 +49,9 @@ test('TagSelect chip removal keeps ComboBox focus and popup behavior independent
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     page.on('response', (response) => { if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`); });
-    await page.goto(`${url}/tag-select-focus.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/tag-select-focus.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.ready === 'true' && window.__resetTagSelect);
+    await awaitFontsAndFrames(page);
 
     await page.getByRole('button', { name: 'Remove Beta', exact: true }).click();
     await page.getByTestId('selected').filter({ hasText: /^alpha$/u }).waitFor();
@@ -113,8 +114,9 @@ test('TagSelect hydrates server markup for plain-content, fragment, and static i
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text()); });
     page.on('response', (response) => { if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`); });
-    await page.goto(`${url}/tag-select-plain.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/tag-select-plain.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.ready === 'true');
+    await awaitFontsAndFrames(page);
     for (const [index, name] of ['Plain', 'Fragment', 'Static'].entries()) {
       await page.getByRole('combobox', { name, exact: true }).focus();
       await page.locator('[role=option]', { hasText: 'CSS' }).click();

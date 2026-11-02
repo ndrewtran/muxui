@@ -7,7 +7,7 @@ import { Button } from '../../src/button.ts';
 import { IconButton } from '../../src/supplemental/icon-button.ts';
 import { CommandPalette, useCommandPalette } from '../../src/supplemental/command-palette.ts';
 import { ColorSwatch } from '../../src/collections.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // This same fixture renders on the server and hydrates in the browser.
 function InputControlsFixture() {
@@ -171,7 +171,7 @@ ${InputControlsFixture.toString()}
 hydrateRoot(document.getElementById('root'), React.createElement(InputControlsFixture));`;
   const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(InputControlsFixture))}</div>`, entry: '/bento-input-controls-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/fields.ts', 'src/button.ts', 'src/supplemental/command-palette.ts'],
+    entries: ['src/fields.ts', 'src/button.ts', 'src/supplemental/icon-button.ts', 'src/supplemental/command-palette.ts', 'src/collections.mjs'],
     pages: { '/bento-input-controls.html': html },
     modules: { '/bento-input-controls-entry.mjs': entry },
   });
@@ -184,10 +184,11 @@ hydrateRoot(document.getElementById('root'), React.createElement(InputControlsFi
       const errors = [];
       page.on('pageerror', (error) => errors.push(error.message));
       page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-      await page.goto(`${url}/bento-input-controls.html`, { waitUntil: 'networkidle' });
+      await page.goto(`${url}/bento-input-controls.html`, { waitUntil: 'load' });
       await page.waitForFunction(() => document.documentElement.dataset.ready === 'true', null, { timeout: 10_000 }).catch((error) => {
         throw new Error(`${error.message}\n${errors.join('\n')}`);
       });
+      await awaitFontsAndFrames(page);
       return { page, errors };
     };
     await t.test('fields hydrate with distinct host refs, native events, controlled paste and cursor restoration', async () => {

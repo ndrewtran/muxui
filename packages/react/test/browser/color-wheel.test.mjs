@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const entry = '/packages/react/test/fixtures/color-wheel-browser-entry.mjs';
 const documentHtml = () => pageShell({
@@ -18,8 +18,9 @@ test('real browser drags a hex gray wheel through hues without snapping back or 
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/color-wheel.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/color-wheel.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiColorWheelReady === 'true');
+    await awaitFontsAndFrames(page);
     const gray = 'rgba(128, 128, 128, 1)';
     for (const [name, label] of [['wheel', 'Wheel'], ['picker', 'Picker wheel']]) {
       const track = page.locator(`.muxui-color-wheel:has(input[aria-label="${label}"]) .muxui-color-wheel__track`);

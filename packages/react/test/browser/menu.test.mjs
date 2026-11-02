@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { browserEngines, launchBrowser, packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Menu.Trigger draws Button's keyboard focus ring from the focus tokens, in place of the
@@ -112,8 +112,9 @@ for (const engine of browserEngines()) {
         const tab = await browser.newPage({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
         const errors = [];
         tab.on('pageerror', (error) => errors.push(error.message));
-        await tab.goto(`${url}/menu.html${query}`, { waitUntil: 'networkidle' });
+        await tab.goto(`${url}/menu.html${query}`, { waitUntil: 'load' });
         await tab.locator('#menu-trigger').waitFor();
+        await awaitFontsAndFrames(tab);
         return { tab, errors };
       };
 
@@ -184,8 +185,9 @@ for (const engine of browserEngines()) {
         const holding = (selector) => tab.evaluate((selector) => document.activeElement === document.querySelector(selector), selector);
         const stray = () => tab.evaluate(() => document.activeElement?.outerHTML.slice(0, 120));
         const visit = async (query, opener = '#menu-trigger') => {
-          await tab.goto(`${url}/menu.html${query}`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/menu.html${query}`, { waitUntil: 'load' });
           await tab.locator(opener).waitFor({ timeout: 15_000 });
+          await awaitFontsAndFrames(tab);
         };
         // Opens the menu from its trigger, or from the native button that opens an anchored menu, and waits for focus to be
         // inside it, with a submenu open too when asked.
@@ -343,8 +345,9 @@ for (const engine of browserEngines()) {
         }, selectors);
         const near = (actual, expected, label) => assert.ok(Math.abs(actual - expected) <= 1, `${engine}: ${label}: ${actual} is not within a pixel of ${expected}`);
         const visit = async (query) => {
-          await tab.goto(`${url}/menu.html${query}`, { waitUntil: 'networkidle' });
+          await tab.goto(`${url}/menu.html${query}`, { waitUntil: 'load' });
           await tab.locator('#menu-trigger').waitFor({ timeout: 15_000 });
+          await awaitFontsAndFrames(tab);
           await tab.locator('#menu-trigger').click();
           await tab.locator('.muxui-menu__popup').first().waitFor({ timeout: 5000 });
         };

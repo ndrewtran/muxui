@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function ErrorMessageFixture() {
   const h = React.createElement;
@@ -36,13 +36,17 @@ test('real browser errorMessage stays hidden for valid fields and replaces faile
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     const shown = () => page.locator('.muxui-field-error').allTextContents();
 
-    await page.goto(`${url}/field-error.html?mode=valid`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/field-error.html?mode=valid`, { waitUntil: 'load' });
+    await page.locator('#submit').waitFor();
+    await awaitFontsAndFrames(page);
     await page.locator('#submit').click();
     assert.equal(await page.locator('#submitted').textContent(), JSON.stringify([['select', 'red'], ['combo', 'red'], ['colour', '#FF0000']]));
     assert.deepEqual(await shown(), []);
     assert.equal(await page.locator('[data-muxui-state-invalid]').count(), 0);
 
-    await page.goto(`${url}/field-error.html?mode=empty`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/field-error.html?mode=empty`, { waitUntil: 'load' });
+    await page.locator('#submit').waitFor();
+    await awaitFontsAndFrames(page);
     await page.locator('#submit').click();
     assert.equal(await page.locator('#submitted').textContent(), '');
     assert.deepEqual((await shown()).sort(), ['Enter a colour', 'Pick a city', 'Pick a colour']);

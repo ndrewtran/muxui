@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { SwitchMotionFixture } from '../fixtures/switch-motion-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function indicatorState(page, selector = '#primary-switch') {
   return page.locator(`${selector} .muxui-switch__indicator`).evaluate((node) => {
@@ -54,8 +54,9 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/switch-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/switch-motion.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => document.documentElement.dataset.switchMotionReady === 'true');
+    await awaitFontsAndFrames(page);
 
     assert.equal(errors.length, 0, errors.join('\n'));
     assert.equal(await page.locator('.muxui-switch').count(), 5);

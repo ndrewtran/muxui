@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import React from 'react';
 import { FieldStatesBrowserFixture } from '../fixtures/field-states-browser-fixture.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const families = Object.freeze([
   ['text', '.muxui-field-input'],
@@ -248,8 +248,9 @@ createRoot(document.getElementById('root')).render(React.createElement(FieldStat
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/field-states.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/field-states.html`, { waitUntil: 'load' });
     await page.locator('[data-muxui-field-states-fixture]').waitFor();
+    await awaitFontsAndFrames(page);
     await page.addStyleTag({ content: `
       *,:before,:after { transition: none !important; animation: none !important; }
       @media (forced-colors: none) {

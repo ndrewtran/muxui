@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
 import { Slider } from '../../src/collections.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function fixtureDocument() {
   const body = renderToStaticMarkup(React.createElement('div', { id: 'root' }, React.createElement(Slider, {
@@ -27,10 +27,11 @@ test('real browser read-only Slider blocks keyboard and pointer changes while re
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`${url}/read-only-slider.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/read-only-slider.html`, { waitUntil: 'load' });
 
     const slider = page.locator('.muxui-slider input[type="range"]');
     await slider.waitFor();
+    await awaitFontsAndFrames(page);
     assert.deepEqual(errors, [], errors.join('\n'));
     assert.equal(await slider.inputValue(), '50');
     assert.equal(await slider.getAttribute('aria-readonly'), 'true');
