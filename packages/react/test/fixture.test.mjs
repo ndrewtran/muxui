@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -200,18 +199,13 @@ async function catalogApi(slug) {
 
 test('Button generator guard binds the canonical finite API contract', async () => {
   const api = await catalogApi('button');
+  // The package check runs `generate --check` first, so the emitted descriptor is the generator's output and only binds the contract here.
   const descriptor = JSON.parse(await readFile(resolve(import.meta.dirname, '../generated/descriptor.json'), 'utf8'));
   assert.deepEqual(descriptor.bindings.find(({ export: name }) => name === 'Button').api, api);
   // The renderer applies the catalog defaults when no props are given.
   const markup = renderToString(React.createElement(Button, null, 'Save'));
   assert.match(markup, new RegExp(`data-muxui-variant="${api.defaults.variant}"`, 'u'));
   assert.match(markup, new RegExp(`data-muxui-size="${api.defaults.size}"`, 'u'));
-  const result = spawnSync(process.execPath, ['src/generate.mjs', '--check'], {
-    cwd: resolve(import.meta.dirname, '..'),
-    encoding: 'utf8',
-    env: { ...process.env, npm_config_engine_strict: 'false' },
-  });
-  assert.equal(result.status, 0, result.stderr);
 });
 
 // How a catalog default shows in server-rendered markup. Expected values come
@@ -1173,7 +1167,9 @@ test('MuxUI styles bind states and public theme hooks', async () => {
   assert.match(css, /\.muxui-button\[data-muxui-state-pending\]::after[\s\S]*content: none;/u);
   assert.match(css, /\.muxui-progress-bar\[data-muxui-state-indeterminate\] \.muxui-progress-bar__fill[\s\S]*margin-inline-start: 30%;/u);
   assert.doesNotMatch(css, /muxui-control-spin|muxui-progress-indeterminate/u);
-  const infiniteAnimationRules = [...css.matchAll(/([^{}]+\{[^{}]*animation:[^;]*infinite[^{}]*\})/gu)].map(([rule]) => rule);
+  // Rules are split out once and each body tested alone: one pattern that looks for the animation inside a rule's match backtracks
+  // quadratically over the large generated stylesheet.
+  const infiniteAnimationRules = [...css.matchAll(/[^{}]+\{([^{}]*)\}/gu)].filter(([, body]) => /animation:[^;]*infinite/u.test(body)).map(([rule]) => rule);
   assert.ok(infiniteAnimationRules.length > 0, 'current union retains the explicit indeterminate progress behavior');
   assert.ok(infiniteAnimationRules.every((rule) => /\.muxui-(?:progress-(?:bar|circle)|button__spinner)/u.test(rule)), 'continuous animation is restricted to indeterminate progress and pending button spinners');
   assert.match(css, /\.muxui-button__spinner\s*\{[\s\S]*animation: muxui-button-spinner-rotate var\(--muxui-semantic-motion-progress-spin-duration\) var\(--muxui-semantic-motion-constant-easing\) infinite;/u);
