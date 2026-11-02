@@ -2333,8 +2333,11 @@ test('the browser cost table names whole positive seconds and packs the real lis
   const costOf = (file) => table.seconds[file] ?? table.defaultSeconds;
   for (const files of [crossEngineTests, reactBrowserTests.filter((file) => !crossEngineTests.includes(file))]) {
     const packed = packBrowserShards(files, 2);
-    assert.deepEqual([...packed.keys()].sort(), [...files].sort(), 'no file is dropped from the packing');
-    const loads = packedShards(files, 2).map((shard) => shard.reduce((sum, file) => sum + costOf(file), 0));
+    // Every file must land in a real shard: an out-of-range index would keep the key but drop the file from the emitted groups.
+    for (const [file, shard] of packed) assert.ok(Number.isInteger(shard) && shard >= 0 && shard < 2, `${file} -> shard ${shard}`);
+    const shards = packedShards(files, 2);
+    assert.deepEqual(shards.flat().sort(), [...files].sort(), 'no file is dropped from the emitted shards');
+    const loads = shards.map((shard) => shard.reduce((sum, file) => sum + costOf(file), 0));
     assert.ok(Math.abs(loads[0] - loads[1]) <= Math.max(...files.map(costOf)), loads.join(', '));
   }
 });
