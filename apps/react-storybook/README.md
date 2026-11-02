@@ -94,10 +94,13 @@ complete audit, with a printed notice, when that selection needs more than one
 CI shard (80 pages) or cannot be planned. Common scope and proof rules live in
 the root [`AGENTS.md`](../../AGENTS.md) Verification section.
 
-Direct package checks run the complete browser audits. The a11y and colour
-audits each use two isolated browser contexts by default, one per colour scheme.
-Set `MUXUI_STORYBOOK_A11Y_WORKERS=1` or `MUXUI_STORYBOOK_COLORS_WORKERS=1` to
-run an audit serially when comparing timings.
+Direct package checks run the complete browser audits. The page audits visit
+each page once at 1440x1000 and run its axe (or theme contrast) and canonical
+colour checks in that visit. The page and manager audits each use two isolated
+browser contexts by default, one per colour scheme. Set
+`MUXUI_STORYBOOK_A11Y_WORKERS=1` (page audits) or
+`MUXUI_STORYBOOK_COLORS_WORKERS=1` (manager and docs audit) to run an audit
+serially when comparing timings.
 
 The policy runner uses `pnpm --filter @muxui/react-storybook run check:scoped`
 for focused Storybook work. Set `MUXUI_STORYBOOK_AUDIT_PROOF=story` with
