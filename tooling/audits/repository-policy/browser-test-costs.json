@@ -1,5 +1,4 @@
 {
-  "defaultSeconds": 9,
   "seconds": {
     "test/browser/activity.test.mjs": 40,
     "test/browser/autocomplete-dismissal.test.mjs": 23,

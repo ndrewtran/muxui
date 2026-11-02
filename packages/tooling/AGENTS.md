@@ -21,3 +21,14 @@ placeholder before comparing or writing, so a catalog edit changes a golden only
 when the content it renders changes. When one does, refresh them with
 `MUXUI_UPDATE_GOLDENS=1 pnpm --filter @muxui/tooling test` and review the diff;
 it is content only.
+
+## Writing tests
+
+Reuse the memoized fixtures instead of compiling the catalog or packing the CLI
+again per test: `compileFixtureBundle` in `test/pattern-fixture.mjs`, the shared
+baseline in `test/authoring.test.mjs`, the `once` runs in
+`test/packed-cli.test.mjs`, and `test/support/renderer-project.mjs` for the
+local-resolver and pattern-cli tests. Share a fixture from those helpers, or
+memoize your own the same way. Repeated compiles were most of this package's CI
+time, and the `checks-tooling` group is the floor of a tooling-only pull
+request.

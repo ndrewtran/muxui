@@ -25,6 +25,17 @@ Done when: the preview exits cleanly, its planned groups match the change, and
 the one scoped check passes. Root `AGENTS.md` still asks for the full graph for
 shared workspace configuration, dependency changes, and release work.
 
+## Writing a test CI can afford
+
+CI wall clock is the longest job, not the sum of the jobs, so one slow test in a
+long group costs every pull request that plans the group. The test-writing
+rules live in the `AGENTS.md` of the package or app that owns the test:
+`packages/react`, `packages/tooling`, `apps/react-storybook`, and `apps/scale`.
+The planner fails planning with `MUXUI_CI_IMPACT_BROWSER_TEST_NETWORKIDLE` for a
+`'networkidle'` wait in a browser test, and with
+`MUXUI_CI_IMPACT_BROWSER_TEST_COST_DRIFT` when `browser-test-costs.json` and the
+React browser test files disagree; the fix is in each message.
+
 ## Classifying a CI failure
 
 CI is the `Deterministic workspace checks` workflow

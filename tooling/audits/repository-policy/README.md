@@ -65,27 +65,39 @@ one family: a change routed to any shard reruns its siblings, and a shard is
 reused only when its id and file list match.
 
 Shards are packed by cost so that none is the long pole. `browser-test-costs.json`
-lists seconds for each `test/browser/<file>.test.mjs`, measured in one engine, and
-a file without an entry costs `defaultSeconds` (9, the median of the table when it
-was built). The planner sorts a list by cost, largest first (ties by path), and
-puts each file in the shard with the least total so far (ties to the lowest
-index), so two shards differ by at most the cost of the largest file. Adding or
-removing a file, or changing a cost, can move other files between shards, and a
-shard whose file list changed reruns once instead of being reused. A plan
-preview (`--preview` or `--plan`) prints one notice listing the files in sharded
-lists that fell back to the default. The table is advisory data, not a contract:
-a stale or missing entry only skews the balance. To refresh it when a notice names
-new files or the shards drift apart, take a recent run of `main` and read the logs
+lists seconds for each `test/browser/<file>.test.mjs`, measured in one engine. The
+planner sorts a list by cost, largest first (ties by path), and puts each file in the
+shard with the least total so far (ties to the lowest index), so two shards differ by at
+most the cost of the largest file. Adding or removing a file, or changing a cost, can
+move other files between shards, and a shard whose file list changed reruns once
+instead of being reused.
+
+The table is a contract, not advice: every React browser test file is listed and every
+entry is a real file. Every plan, in every mode, checks that before it plans anything,
+and fails with `MUXUI_CI_IMPACT_BROWSER_TEST_COST_DRIFT`, naming the files with no
+entry and the entries with no file, so a slow new test cannot be packed as if it were
+short. Add each new file with whole seconds measured in one engine, or remove the
+entry of a file that is gone. To measure, take a recent run of `main` and read the logs
 (`gh api repos/<owner>/<repo>/actions/jobs/<jobId>/logs --allow-escape-sequences`)
 of its `run browser-chromium-1` and `run browser-chromium-2` jobs for the
 cross-engine files and its `run browser-chromium-only-1` and
 `run browser-chromium-only-2` jobs for the rest. Sum each top-level test's
 `(NNNms)` duration into the file that declares it (a subtest is already inside its
-parent's time) and round to whole seconds, at least 1. Set `defaultSeconds` to the
-new median rounded up to whole seconds (8.5 became 9). Every cost, the default
-included, must be a positive whole number: the planner fails with
-`MUXUI_CI_IMPACT_BROWSER_TEST_COST_INVALID`, naming the entry, instead of packing with
-a value it cannot add.
+parent's time) and round to whole seconds, at least 1. Every cost must be a positive
+whole number: the planner fails with `MUXUI_CI_IMPACT_BROWSER_TEST_COST_INVALID`,
+naming the entry, instead of packing with a value it cannot add.
+
+Browser tests open pages on `load` and then wait for the suite's own readiness
+signal, never `networkidle`, which adds a fixed 500 ms quiet window to every open and
+waits for nothing a test asserts on. React tests use `awaitFontsAndFrames` from
+`test/browser/harness.mjs`; Scale's docs tests use `previewsRendered` or `measured`
+from `test/browser/docs-site.mjs`. Every plan, in every mode, reads the `.mjs` files
+under `packages/react/test/browser`, `apps/scale/test/browser`, and
+`apps/react-storybook/test`, so a pull request that changes only a test file is
+checked too. It fails with `MUXUI_CI_IMPACT_BROWSER_TEST_NETWORKIDLE`, naming each
+file that quotes `'networkidle'`. A file that needs it for its own purpose goes in
+`networkidleAllowlist` in `src/ci-impact.mjs` with the reason; a test fails when an
+allowlisted file is gone or no longer uses it.
 
 GitHub's Free plan runs 20 jobs at once, and a job over that queues instead of
 failing. Main plans 15 groups. A full-proof React pull request plans 19 run jobs,

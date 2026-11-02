@@ -2124,23 +2124,24 @@ function assertBrowserTestCost(key, value) {
   return value;
 }
 
-// Checks the whole cost table: a positive whole `defaultSeconds` and `seconds` for each listed file.
+// Checks the cost table's shape: a `seconds` object with a positive whole cost for each listed file.
+// Which files it lists is checked against the checkout by browserTestCostDrift.
 export function validateBrowserTestCosts(table) {
-  assertBrowserTestCost('defaultSeconds', table?.defaultSeconds);
-  if (typeof table.seconds !== 'object' || table.seconds === null || Array.isArray(table.seconds)) {
-    throw new Error(`MUXUI_CI_IMPACT_BROWSER_TEST_COST_INVALID: seconds is ${JSON.stringify(table.seconds)}; it maps each test/browser path to its cost (browser-test-costs.json)`);
+  if (typeof table?.seconds !== 'object' || table.seconds === null || Array.isArray(table.seconds)) {
+    throw new Error(`MUXUI_CI_IMPACT_BROWSER_TEST_COST_INVALID: seconds is ${JSON.stringify(table?.seconds)}; it maps each test/browser path to its cost (browser-test-costs.json)`);
   }
   for (const [file, seconds] of Object.entries(table.seconds)) assertBrowserTestCost(file, seconds);
   return table;
 }
 
-// Advisory seconds per browser test file, measured in one engine from CI logs
-// (see browser-test-costs.json and the README); a file with no entry costs
-// `defaultSeconds`. Only the packing below reads it.
+// Seconds per browser test file, measured in one engine from CI logs (see
+// browser-test-costs.json and the README). The table is a contract: every React
+// browser test file has an entry and every entry has a file (browserTestCostDrift),
+// so a file the table does not list never reaches the packing below.
 const browserTestCosts = validateBrowserTestCosts(parseJson(
   readFileSync(resolve(import.meta.dirname, '../browser-test-costs.json'), 'utf8'), 'browser-test-costs.json',
 ));
-const browserTestCost = (file) => browserTestCosts.seconds[file] ?? browserTestCosts.defaultSeconds;
+const browserTestCost = (file) => browserTestCosts.seconds[file];
 
 // Spreads a browser list over `count` shards by cost, longest-processing-time first:
 // files in descending cost (ties by path) each go to the shard with the least cost so
@@ -2162,12 +2163,64 @@ export function packBrowserShards(files, count, costOf = browserTestCost) {
   return assignment;
 }
 
-// Browser test files in the plan's numbered (sharded) groups that the cost table does
-// not list: the packing gave them the default, so the table needs an entry.
-export function uncostedBrowserFiles(groups) {
-  const files = groups.filter(({ kind, id }) => kind === 'browser' && /-\d+$/u.test(id))
-    .flatMap(({ commands }) => commands.flatMap(({ args }) => args.filter((arg) => arg.startsWith('test/browser/'))));
-  return [...new Set(files)].filter((file) => !Object.hasOwn(browserTestCosts.seconds, file)).sort();
+// Where the cost table and the React browser test files disagree, both sorted: `uncosted`
+// files (`test/browser/<name>`) with no entry, and `stale` entries with no file.
+export function browserTestCostDrift(files, table) {
+  const listed = new Set(Object.keys(table.seconds));
+  const present = new Set(files);
+  return {
+    uncosted: files.filter((file) => !listed.has(file)).sort(),
+    stale: [...listed].filter((file) => !present.has(file)).sort(),
+  };
+}
+
+// Browser tests must not open a page with `networkidle`: it adds a fixed 500 ms quiet
+// window to every open and waits for nothing a test asserts on. Pages open on `load`
+// plus the suite's readiness wait, which is how the cost table's times were measured.
+const networkidleDirectories = ['packages/react/test/browser', 'apps/scale/test/browser', 'apps/react-storybook/test'];
+const networkidlePattern = /['"]networkidle['"]/u;
+// The files that still use it, each for a reason `networkidle` serves.
+export const networkidleAllowlist = [
+  // A resource-entry proof needs the quiet window.
+  'packages/react/test/browser/date-popover-motion.test.mjs',
+  // warmUpServer settles the dev server before the pages under test open.
+  'packages/react/test/browser/grid-list-probes.mjs',
+];
+
+// The sorted repo-relative paths of `{ path, text }` sources that quote 'networkidle' and
+// are not allowlisted. An unquoted mention, as in the harness comment, is fine.
+export function networkidleViolations(sources, allowlist = networkidleAllowlist) {
+  const allowed = new Set(allowlist);
+  return [...sources].filter(({ path, text }) => networkidlePattern.test(text) && !allowed.has(path)).map(({ path }) => path).sort();
+}
+
+// Every `.mjs` file under the browser test directories (a checkout without a directory has none).
+function browserTestSources() {
+  return networkidleDirectories.flatMap((directory) => {
+    let names;
+    try {
+      names = readdirSync(resolve(repositoryRoot, directory), { recursive: true }).filter((name) => name.endsWith('.mjs'));
+    } catch {
+      return [];
+    }
+    return names.map((name) => {
+      const path = `${directory}/${name.replaceAll('\\', '/')}`;
+      return { path, text: readFileSync(resolve(repositoryRoot, path), 'utf8') };
+    });
+  });
+}
+
+// The two guards on the browser test sources. Every plan runs them, so a pull request that
+// changes only a test file is checked too, before any group is planned.
+function assertBrowserTestSources() {
+  const offenders = networkidleViolations(browserTestSources());
+  if (offenders.length > 0) {
+    throw new Error(`MUXUI_CI_IMPACT_BROWSER_TEST_NETWORKIDLE: ${offenders.join(', ')}; open pages with waitUntil 'load' and the suite's readiness wait (React: awaitFontsAndFrames from test/browser/harness.mjs; Scale docs: previewsRendered or measured from test/browser/docs-site.mjs)`);
+  }
+  const { uncosted, stale } = browserTestCostDrift(reactBrowserTests(), browserTestCosts);
+  if (uncosted.length > 0 || stale.length > 0) {
+    throw new Error(`MUXUI_CI_IMPACT_BROWSER_TEST_COST_DRIFT: browser-test-costs.json does not match packages/react/test/browser (files with no entry: ${uncosted.join(', ') || 'none'}; entries with no file: ${stale.join(', ') || 'none'}); add whole seconds for each file with no entry, measured in one engine as tooling/audits/repository-policy/README.md describes, and remove each entry with no file`);
+  }
 }
 
 // True when the source calls browserEngines() imported from the harness
@@ -3011,6 +3064,7 @@ export async function runCiImpact({
   reuseRecord = null, reuseClient = null, environment = process.env,
 } = {}) {
   const mode = executionMode({ preview, planOnly, group });
+  assertBrowserTestSources();
   const context = full
     ? {
       plan: fullWorkspacePlan(`${environment.GITHUB_EVENT_NAME ?? 'local'} runs the full workspace graph`),
@@ -3024,11 +3078,6 @@ export async function runCiImpact({
   const { plan, packages, pageIndex, baseRef, mergeBase, metadataPrepared, testSources } = context;
   const options = { packages, metadataPrepared, environment, pageIndex, testSources };
   const groups = executionGroups(plan, options);
-  const uncosted = mode.run === 'none' ? uncostedBrowserFiles(groups) : [];
-  if (uncosted.length > 0) {
-    const notice = `browser shards packed these files at the default ${browserTestCosts.defaultSeconds} s, which browser-test-costs.json does not list: ${uncosted.join(', ')}`;
-    (plan.notices ??= []).push(notice);
-  }
   const report = planReport(plan, { baseRef, mergeBase, metadataPrepared, groups });
   const reuse = reuseRecord ? await writeReuse({ plan, full, groups, packages, reuseRecord, reuseClient, environment }) : [];
   const matrix = groupMatrix(groups, reuse);

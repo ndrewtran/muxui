@@ -7,6 +7,7 @@ import { dirname, join, posix, resolve } from 'node:path';
 import { parse } from 'acorn';
 import test from 'node:test';
 import {
+  browserTestCostDrift,
   buildPullRequestImpact,
   callsBrowserEngines,
   catalogExampleRendersPath,
@@ -25,6 +26,8 @@ import {
   isPolicyOnlyLockfileChange,
   isWorkspaceWideChange,
   needsStorybookGeneration,
+  networkidleAllowlist,
+  networkidleViolations,
   normalizeCommand,
   packBrowserShards,
   parseCliArguments,
@@ -39,7 +42,6 @@ import {
   storybookSelection,
   storyShardPageBudget,
   stylingReferencePath,
-  uncostedBrowserFiles,
   validateBrowserTestCosts,
   validateScopedEntrypoints,
   workspaceDependentRoutes,
@@ -904,7 +906,8 @@ test('an evidence input alone plans a policy group that runs only the evidence t
 test('adding or removing a looked-up file plans the evidence tests; editing it does not', async () => {
   const added = (path) => ({ textSnapshots: { [path]: { before: null, after: 'new\n' } } });
   const removed = (path) => ({ textSnapshots: { [path]: { before: 'old\n', after: null } } });
-  const patternTest = 'packages/react/test/browser/pattern-new-block.test.mjs';
+  // A real, costed name stands in for the new test: the planner requires a cost entry for every browser test file.
+  const patternTest = 'packages/react/test/browser/pattern-poster-grid.test.mjs';
   for (const path of ['README.md', 'pnpm-lock.yaml', 'packages/react/src/supplemental/styles.css', patternTest]) {
     for (const options of [added(path), removed(path)]) {
       const result = await plan([path], options);
@@ -915,8 +918,9 @@ test('adding or removing a looked-up file plans the evidence tests; editing it d
   // Another browser test, added or removed, is not looked up by name.
   assert.equal((await plan(['packages/react/test/browser/tree-toggle-browser.test.mjs'], added('packages/react/test/browser/tree-toggle-browser.test.mjs'))).evidence, false);
   // A pattern test added alone still plans its own browser proof and now the evidence check that pairs it with a pattern.
-  // The file has no source here to opt into other engines, so its proof runs in the Chromium-only group.
-  const groups = executionGroups(await plan([patternTest], added(patternTest)), { packages, environment: {}, pageIndex });
+  // The file's stubbed source does not opt into other engines, so its proof runs in the Chromium-only group.
+  const testSources = { [patternTest.slice('packages/react/'.length)]: 'export {};' };
+  const groups = executionGroups(await plan([patternTest], added(patternTest)), { packages, environment: {}, pageIndex, testSources });
   assert.deepEqual(groupIds(groups), ['checks-policy', 'browser-chromium-only']);
 });
 
@@ -2285,11 +2289,12 @@ test('each browser group is reused on its own routing', () => {
   assert.match(affectedReason(group('browser-chromium'), delta(['react'])), /route to react/u);
 });
 
-// Synthetic React browser tests: `cross` files opt into every engine, `only` files run in Chromium.
+// Synthetic React browser tests: `cross` files opt into every engine, `only` files run in Chromium. They borrow real file
+// names, which the cost table must list, and `testSources` stand in for their contents.
 const syntheticBrowserTests = (cross, only) => {
-  const name = (kind, index) => `test/browser/${kind}-${String(index).padStart(2, '0')}.test.mjs`;
-  const crossFiles = Array.from({ length: cross }, (_, index) => name('cross', index));
-  const onlyFiles = Array.from({ length: only }, (_, index) => name('only', index));
+  assert.ok(cross + only <= reactBrowserTests.length, 'the suite has enough real files to borrow');
+  const crossFiles = reactBrowserTests.slice(0, cross);
+  const onlyFiles = reactBrowserTests.slice(cross, cross + only);
   const optIn = "import { browserEngines } from './harness.mjs'; browserEngines();";
   return {
     files: [...crossFiles, ...onlyFiles].sort(),
@@ -2320,17 +2325,20 @@ test('browser shards pack files by cost, longest first, and balance within the l
     for (const [file, shard] of packWith(Object.keys(many), count, many)) loads[shard] += many[file];
     assert.ok(Math.max(...loads) - Math.min(...loads) <= Math.max(...Object.values(many)), `${count} shards: ${loads.join(', ')}`);
   }
-  // A file the cost table does not list costs its default, so equal files alternate by path.
-  const unlisted = ['d', 'b', 'a', 'c'].map((name) => `test/browser/unlisted-${name}.test.mjs`);
-  const [a, b, c, d] = unlisted.toSorted();
-  assert.deepEqual(Object.fromEntries(packBrowserShards(unlisted, 2)), { [a]: 0, [b]: 1, [c]: 0, [d]: 1 });
+  // Equal costs alternate by path.
+  const equal = ['d', 'b', 'a', 'c'].map((name) => `test/browser/${name}.test.mjs`);
+  const [a, b, c, d] = equal.toSorted();
+  assert.deepEqual(Object.fromEntries(packBrowserShards(equal, 2, () => 9)), { [a]: 0, [b]: 1, [c]: 0, [d]: 1 });
+  // A file the cost table does not list has no cost to pack by: planning checks the table first (browserTestCostDrift).
+  assert.throws(() => packBrowserShards(['test/browser/unlisted.test.mjs'], 2), /BROWSER_TEST_COST_INVALID: test\/browser\/unlisted\.test\.mjs is undefined/u);
 });
 
 test('the browser cost table names whole positive seconds and packs the real lists within their largest file', () => {
   const table = JSON.parse(readFileSync(resolve(repositoryRoot, 'tooling/audits/repository-policy/browser-test-costs.json'), 'utf8'));
   assert.doesNotThrow(() => validateBrowserTestCosts(table));
   for (const file of Object.keys(table.seconds)) assert.match(file, /^test\/browser\/[^/]+\.test\.mjs$/u);
-  const costOf = (file) => table.seconds[file] ?? table.defaultSeconds;
+  assert.deepEqual(browserTestCostDrift(reactBrowserTests, table), { uncosted: [], stale: [] }, 'the table lists every React browser test file and nothing else');
+  const costOf = (file) => table.seconds[file];
   for (const files of [crossEngineTests, reactBrowserTests.filter((file) => !crossEngineTests.includes(file))]) {
     const packed = packBrowserShards(files, 2);
     // Every file must land in a real shard: an out-of-range index would keep the key but drop the file from the emitted groups.
@@ -2343,7 +2351,7 @@ test('the browser cost table names whole positive seconds and packs the real lis
 });
 
 test('a cost that is not a positive whole number of seconds fails planning instead of dropping files', () => {
-  const valid = { defaultSeconds: 9, seconds: { 'test/browser/a.test.mjs': 12 } };
+  const valid = { seconds: { 'test/browser/a.test.mjs': 12 } };
   assert.doesNotThrow(() => validateBrowserTestCosts(valid));
   const invalid = (change, key, shown) => assert.throws(
     () => validateBrowserTestCosts({ ...valid, ...change }),
@@ -2355,19 +2363,77 @@ test('a cost that is not a positive whole number of seconds fails planning inste
   invalid(listed('77'), 'test/browser/b.test.mjs', '"77";');
   invalid(listed(1.5), 'test/browser/b.test.mjs', '1.5;');
   invalid(listed(null), 'test/browser/b.test.mjs', 'null;');
-  // The default needs the same shape, and the table must have a `seconds` object.
-  invalid({ defaultSeconds: undefined }, 'defaultSeconds', 'undefined;');
-  invalid({ defaultSeconds: 0 }, 'defaultSeconds', '0;');
-  invalid({ defaultSeconds: '9' }, 'defaultSeconds', '"9";');
-  invalid({ defaultSeconds: 8.5 }, 'defaultSeconds', '8.5;');
+  // The table must have a `seconds` object.
   invalid({ seconds: [12] }, 'seconds', '\\[12\\];');
-  assert.throws(() => validateBrowserTestCosts({ defaultSeconds: 9 }), /BROWSER_TEST_COST_INVALID: seconds is undefined/u);
+  assert.throws(() => validateBrowserTestCosts({}), /BROWSER_TEST_COST_INVALID: seconds is undefined/u);
   // The packing checks the costs it is given too: a string cost used to leave a file with no shard.
   const files = ['test/browser/a.test.mjs', 'test/browser/b.test.mjs', 'test/browser/c.test.mjs'];
   assert.throws(
     () => packBrowserShards(files, 2, (file) => (file.endsWith('b.test.mjs') ? '77' : 5)),
     /BROWSER_TEST_COST_INVALID: test\/browser\/b\.test\.mjs is "77"/u,
   );
+});
+
+test('browserTestCostDrift names the files with no entry and the entries with no file', () => {
+  const table = { seconds: { 'test/browser/a.test.mjs': 4, 'test/browser/gone.test.mjs': 5, 'test/browser/b.test.mjs': 6 } };
+  const files = ['test/browser/z.test.mjs', 'test/browser/a.test.mjs', 'test/browser/b.test.mjs', 'test/browser/y.test.mjs'];
+  assert.deepEqual(browserTestCostDrift(files, table), {
+    uncosted: ['test/browser/y.test.mjs', 'test/browser/z.test.mjs'],
+    stale: ['test/browser/gone.test.mjs'],
+  });
+  assert.deepEqual(browserTestCostDrift(files.slice(1, 3), { seconds: { 'test/browser/a.test.mjs': 4, 'test/browser/b.test.mjs': 6 } }), { uncosted: [], stale: [] });
+});
+
+test('networkidleViolations reports quoted uses outside the allowlist, sorted, and ignores a mention in prose', () => {
+  const sources = [
+    { path: 'b/open.test.mjs', text: "await page.goto(url, { waitUntil: 'networkidle' });" },
+    { path: 'a/wait.test.mjs', text: 'await page.waitForLoadState("networkidle");' },
+    { path: 'c/comment.mjs', text: '// `load` covers the module graph, so `networkidle` is not needed' },
+    { path: 'd/allowed.mjs', text: "waitUntil: 'networkidle'" },
+    { path: 'e/clean.test.mjs', text: "await page.goto(url, { waitUntil: 'load' });" },
+  ];
+  assert.deepEqual(networkidleViolations(sources, ['d/allowed.mjs']), ['a/wait.test.mjs', 'b/open.test.mjs']);
+  assert.deepEqual(networkidleViolations(sources, sources.map(({ path }) => path)), []);
+});
+
+test('every allowlisted networkidle file exists and still uses it, so the allowlist cannot go stale', () => {
+  for (const path of networkidleAllowlist) {
+    assert.match(readFileSync(resolve(repositoryRoot, path), 'utf8'), /['"]networkidle['"]/u, path);
+  }
+});
+
+test('planning fails before any group is planned on a quoted networkidle or a drifted cost table', () => {
+  const table = JSON.parse(readFileSync(resolve(repositoryRoot, 'tooling/audits/repository-policy/browser-test-costs.json'), 'utf8'));
+  const costed = Object.keys(table.seconds);
+  // The planner reads the checkout named by MUXUI_TASK_REPOSITORY_ROOT when it loads, so plan in a process pointed at a scratch checkout.
+  const root = mkdtempSync(join(tmpdir(), 'muxui-browser-policy-'));
+  const write = (path, text = '') => {
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    writeFileSync(join(root, path), text);
+  };
+  const script = `const { runCiImpact } = await import(${JSON.stringify(resolve(import.meta.dirname, '../src/ci-impact.mjs'))});
+    await runCiImpact({ planOnly: true, full: true });`;
+  const planned = () => spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+    cwd: root, encoding: 'utf8', env: { ...process.env, MUXUI_TASK_REPOSITORY_ROOT: root },
+  });
+  try {
+    // Every costed file exists, so only the case under test is wrong.
+    for (const file of costed) write(`packages/react/${file}`);
+    const idle = 'apps/scale/test/browser/probe.test.mjs';
+    write(idle, "await page.goto(url, { waitUntil: 'networkidle' });");
+    const quoted = planned();
+    assert.notEqual(quoted.status, 0);
+    assert.match(quoted.stderr, /MUXUI_CI_IMPACT_BROWSER_TEST_NETWORKIDLE: apps\/scale\/test\/browser\/probe\.test\.mjs; open pages with waitUntil 'load'/u);
+    // With the probe gone, the files disagree with the table in both directions.
+    unlinkSync(join(root, idle));
+    write('packages/react/test/browser/new-probe.test.mjs');
+    unlinkSync(join(root, 'packages/react', costed[0]));
+    const drifted = planned();
+    assert.notEqual(drifted.status, 0);
+    assert.match(drifted.stderr, new RegExp(`MUXUI_CI_IMPACT_BROWSER_TEST_COST_DRIFT: .*files with no entry: test/browser/new-probe\\.test\\.mjs; entries with no file: ${costed[0].replaceAll('.', '\\.')}\\)`, 'u'));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('a pull request runs each selected browser test once per engine it supports, sharded when the list is long', async () => {
@@ -2409,9 +2475,6 @@ test('a pull request runs each selected browser test once per engine it supports
   for (const [family, files] of [['browser-chromium', sharded.crossFiles], ['browser-firefox', sharded.crossFiles], ['browser-webkit', sharded.crossFiles], ['browser-chromium-only', sharded.onlyFiles]]) {
     for (const [index, expected] of packedShards(files, 2).entries()) assert.deepEqual(shardFiles(`${family}-${index + 1}`), expected, `${family}-${index + 1}`);
   }
-  // The planner names the files its cost table does not list, in numbered shards only.
-  assert.deepEqual(uncostedBrowserFiles(sharded.browser), [...sharded.crossFiles, ...sharded.onlyFiles].sort());
-  assert.deepEqual(uncostedBrowserFiles(short.browser), []);
   // Neither shard of a list is under a third of it.
   for (const family of ['browser-chromium', 'browser-chromium-only']) {
     const sizes = [1, 2].map((shard) => shardFiles(`${family}-${shard}`).length);
@@ -2420,7 +2483,7 @@ test('a pull request runs each selected browser test once per engine it supports
   assert.ok(sharded.browser.every(({ timeoutMinutes, kind }) => timeoutMinutes === 30 && kind === 'browser'));
 
   // A long Chromium-only list takes up to three shards; cross-engine lists never take more than two.
-  const wide = await planFor(30, 60);
+  const wide = await planFor(14, 40);
   assert.deepEqual(groupIds(wide.browser).filter((id) => id.startsWith('browser-chromium-only')), [
     'browser-chromium-only-1', 'browser-chromium-only-2', 'browser-chromium-only-3',
   ]);
