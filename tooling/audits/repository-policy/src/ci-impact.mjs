@@ -895,6 +895,7 @@ function storybookUnitRoute(path) {
     return exact('test/storybook-a11y.test.mjs', [
       'Storybook startup cancellation terminates its child process',
       'audit cleanup closes a browser acquired after timeout exactly once',
+      'page workers keep paint collection, axe, and the dedicated check independent',
     ]);
   }
   if (file === 'test/storybook-colors.test.mjs'

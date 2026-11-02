@@ -1490,7 +1490,9 @@ test('Storybook audit tooling runs explicit focused test names and never launche
   const cleanupCommand = executionCommands(auditCleanupEdit, { packages })
     .find(({ args }) => args.includes('test/storybook-a11y.test.mjs'));
   assert.ok(cleanupCommand);
-  assert.ok(cleanupCommand.args.some((arg) => arg.startsWith('--test-name-pattern=')));
+  const cleanupPattern = cleanupCommand.args.find((arg) => arg.startsWith('--test-name-pattern='));
+  assert.ok(cleanupPattern);
+  assert.match(cleanupPattern, /page workers keep paint collection, axe, and the dedicated check independent/u);
   assert.doesNotMatch(cleanupCommand.args.join(' '), /selected Mux UI React Storybook pages|all selected Storybook pages/u);
 });
 
@@ -4025,7 +4027,7 @@ test('every pinned Storybook unit-test title still names a test in its file', as
       }
     }
   }
-  assert.equal(pinned, 9);
+  assert.equal(pinned, 10);
 });
 
 test('a shared Storybook path covers every page, Block pages included', async () => {
