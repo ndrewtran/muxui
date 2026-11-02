@@ -865,7 +865,9 @@ test('advisory capability-enrichment files are not exported or packed', async ()
 
   const packRoot = await mkdtemp(join(tmpdir(), 'muxui-react-capability-enrichment-pack-'));
   try {
-    const packed = spawnSync('pnpm', ['pack', '--pack-destination', packRoot], {
+    // Packing skips lifecycle scripts (pnpm rejects `--ignore-scripts` on `pack`): prepack would regenerate generated/ in place, which
+    // `generate --check` in the package check has already proved current, and release preparation still packs with the scripts.
+    const packed = spawnSync('pnpm', ['pack', '--pack-destination', packRoot, '--config.ignore-scripts=true'], {
       cwd: packageRoot,
       encoding: 'utf8',
       env: { ...process.env, npm_config_engine_strict: 'false' },

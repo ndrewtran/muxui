@@ -79,15 +79,15 @@ test('packed @muxui/react declarations typecheck every current catalog example',
 
   const workspace = await mkdtemp(join(tmpdir(), 'muxui-react-packed-types-'));
   try {
-    const packResult = spawnSync('pnpm', ['pack', '--pack-destination', workspace, '--json'], {
+    // Packing skips lifecycle scripts (pnpm rejects `--ignore-scripts` on `pack`): prepack would regenerate generated/ in place, which
+    // `generate --check` in the package check has already proved current, and release preparation still packs with the scripts.
+    const packResult = spawnSync('pnpm', ['pack', '--pack-destination', workspace, '--json', '--config.ignore-scripts=true'], {
       cwd: packageRoot,
       env: process.env,
       encoding: 'utf8',
     });
     assert.equal(packResult.status, 0, `${packResult.stdout}\n${packResult.stderr}`);
-    const jsonStart = packResult.stdout.indexOf('\n{\n  "name": "@muxui/react"');
-    assert.notEqual(jsonStart, -1, packResult.stdout);
-    const packRecord = JSON.parse(packResult.stdout.slice(jsonStart + 1));
+    const packRecord = JSON.parse(packResult.stdout);
     const archive = packRecord.filename;
     const extract = spawnSync('tar', ['-xzf', archive, '-C', workspace], { encoding: 'utf8' });
     assert.equal(extract.status, 0, `${extract.stdout}\n${extract.stderr}`);

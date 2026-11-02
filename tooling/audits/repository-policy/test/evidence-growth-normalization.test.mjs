@@ -2,12 +2,11 @@ import assert from 'node:assert/strict';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import test from 'node:test';
-import { catalogAcrossCommit } from '../../../../tests/evidence/bl1/growth-scope.mjs';
-import { gitIn, growthRepository, jsonEdit } from './evidence-growth-repository.mjs';
+import { catalogAcrossCommit, gitIn, growthRepository, jsonEdit } from './evidence-growth-repository.mjs';
 
 // BL1 growth, E-BL1-08: a tree from before Decision 0028, before block categories were catalog data, before they carried labels, or before a spring
 // transition named no easing is normalized the same way on both sides of the comparison. Like `evidence-growth-catalog.test.mjs`, it compiles two full extracted trees
-// per comparison, and `node --test` runs the two files in parallel.
+// per comparison (once per tree, however many comparisons share it), and `node --test` runs the two files in parallel.
 test('trees from before the manifest key was removed or before category labels compile the way they did, and an unknown registry shape still fails', async () => {
   const repo = await growthRepository();
   const { cwd, second } = repo;

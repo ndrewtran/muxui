@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { catalogAcrossCommit as acrossCommit, catalogDigestAt, growthCommits } from '../../../../tests/evidence/bl1/growth-scope.mjs';
 
 export const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 
@@ -15,6 +16,22 @@ export const jsonEdit = (change) => (text) => `${JSON.stringify(change(JSON.pars
 
 /** An edit that changes a record's summary. */
 export const summaryEdit = jsonEdit((record) => ({ ...record, summary: `${record.summary} Edited.` }));
+
+const digests = new Map();
+
+/**
+ * `catalogDigestAt` remembered for this process, so a tree that several comparisons share compiles once. The promise is what is kept, so a tree
+ * the compiler rejects rejects the same way each time. `cwd` is a fresh directory per `growthRepository()` and revisions are commit ids, so a key
+ * never names two trees.
+ */
+const rememberedDigestAt = ({ cwd, revision, excludedDirectories }) => {
+  const key = `${cwd}\0${revision}\0${excludedDirectories.join('\n')}`;
+  if (!digests.has(key)) digests.set(key, catalogDigestAt({ cwd, revision, excludedDirectories }));
+  return digests.get(key);
+};
+
+/** `catalogAcrossCommit` over the remembered digests: the growth tests call it on the same trees many times, and each compile takes seconds. */
+export const catalogAcrossCommit = (scope) => acrossCommit({ ...scope, digestAt: rememberedDigestAt });
 
 /**
  * A throwaway repository holding this checkout's HEAD tree without `tests/evidence`, rebuilt so its last two patterns arrive in two
@@ -30,7 +47,6 @@ export const summaryEdit = jsonEdit((record) => ({ ...record, summary: `${record
  * them and `failed` lists the checks that fail.
  */
 export async function growthRepository() {
-  const { growthCommits } = await import('../../../../tests/evidence/bl1/growth-scope.mjs');
   const { auditBoundary, growthScopedChecks } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
   // Both directories are created here, and are the only ones `dispose` removes.
   const cwd = await mkdtemp(join(tmpdir(), 'muxui-bl1-growth-repo-'));
