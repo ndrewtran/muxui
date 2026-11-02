@@ -32,7 +32,8 @@ long group costs every pull request that plans the group. The test-writing
 rules live in the `AGENTS.md` of the package or app that owns the test:
 `packages/react`, `packages/tooling`, `apps/react-storybook`, and `apps/scale`.
 The planner fails planning with `MUXUI_CI_IMPACT_BROWSER_TEST_NETWORKIDLE` for a
-`'networkidle'` wait in a browser test, and with
+`networkidle` string or template literal in a browser test (comments are
+ignored), and with
 `MUXUI_CI_IMPACT_BROWSER_TEST_COST_DRIFT` when `browser-test-costs.json` and the
 React browser test files disagree; the fix is in each message.
 

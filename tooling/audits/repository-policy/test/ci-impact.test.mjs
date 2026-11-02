@@ -2384,21 +2384,26 @@ test('browserTestCostDrift names the files with no entry and the entries with no
   assert.deepEqual(browserTestCostDrift(files.slice(1, 3), { seconds: { 'test/browser/a.test.mjs': 4, 'test/browser/b.test.mjs': 6 } }), { uncosted: [], stale: [] });
 });
 
-test('networkidleViolations reports quoted uses outside the allowlist, sorted, and ignores a mention in prose', () => {
+test('networkidleViolations reports string and template literal uses outside the allowlist, sorted, and ignores comments', () => {
   const sources = [
     { path: 'b/open.test.mjs', text: "await page.goto(url, { waitUntil: 'networkidle' });" },
     { path: 'a/wait.test.mjs', text: 'await page.waitForLoadState("networkidle");' },
+    { path: 'a2/template.test.mjs', text: 'await page.waitForLoadState(`networkidle`);' },
+    { path: 'b2/broken.test.mjs', text: "await page.goto(url, { waitUntil: 'networkidle' }" },
     { path: 'c/comment.mjs', text: '// `load` covers the module graph, so `networkidle` is not needed' },
+    { path: 'c2/quoted-comment.mjs', text: "// avoid page.waitForLoadState('networkidle')\n/* or goto(url, { waitUntil: \"networkidle\" }) */\nawait page.goto(url, { waitUntil: 'load' });" },
+    { path: 'c3/interpolated.mjs', text: 'await page.waitForLoadState(`${state}`);' },
     { path: 'd/allowed.mjs', text: "waitUntil: 'networkidle'" },
     { path: 'e/clean.test.mjs', text: "await page.goto(url, { waitUntil: 'load' });" },
   ];
-  assert.deepEqual(networkidleViolations(sources, ['d/allowed.mjs']), ['a/wait.test.mjs', 'b/open.test.mjs']);
+  assert.deepEqual(networkidleViolations(sources, ['d/allowed.mjs']), ['a/wait.test.mjs', 'a2/template.test.mjs', 'b/open.test.mjs', 'b2/broken.test.mjs']);
   assert.deepEqual(networkidleViolations(sources, sources.map(({ path }) => path)), []);
 });
 
 test('every allowlisted networkidle file exists and still uses it, so the allowlist cannot go stale', () => {
   for (const path of networkidleAllowlist) {
-    assert.match(readFileSync(resolve(repositoryRoot, path), 'utf8'), /['"]networkidle['"]/u, path);
+    const text = readFileSync(resolve(repositoryRoot, path), 'utf8');
+    assert.deepEqual(networkidleViolations([{ path, text }], []), [path]);
   }
 });
 
@@ -2482,8 +2487,8 @@ test('a pull request runs each selected browser test once per engine it supports
   }
   assert.ok(sharded.browser.every(({ timeoutMinutes, kind }) => timeoutMinutes === 30 && kind === 'browser'));
 
-  // A long Chromium-only list takes up to three shards; cross-engine lists never take more than two.
-  const wide = await planFor(14, 40);
+  // Sixty Chromium-only files would need four shards, so the cap holds them at three; the 14 cross-engine files would need three and stay at two.
+  const wide = await planFor(14, 60);
   assert.deepEqual(groupIds(wide.browser).filter((id) => id.startsWith('browser-chromium-only')), [
     'browser-chromium-only-1', 'browser-chromium-only-2', 'browser-chromium-only-3',
   ]);

@@ -94,8 +94,11 @@ waits for nothing a test asserts on. React tests use `awaitFontsAndFrames` from
 from `test/browser/docs-site.mjs`. Every plan, in every mode, reads the `.mjs` files
 under `packages/react/test/browser`, `apps/scale/test/browser`, and
 `apps/react-storybook/test`, so a pull request that changes only a test file is
-checked too. It fails with `MUXUI_CI_IMPACT_BROWSER_TEST_NETWORKIDLE`, naming each
-file that quotes `'networkidle'`. A file that needs it for its own purpose goes in
+checked too. It parses each file and fails with
+`MUXUI_CI_IMPACT_BROWSER_TEST_NETWORKIDLE`, naming each file whose code has a
+`networkidle` string literal or a template literal with no substitutions; a
+mention in a comment is ignored, and a file that does not parse is matched as text
+for a quoted `networkidle` instead. A file that needs it for its own purpose goes in
 `networkidleAllowlist` in `src/ci-impact.mjs` with the reason; a test fails when an
 allowlisted file is gone or no longer uses it.
 

@@ -8,14 +8,14 @@
 // of the shared script and the previews comes last. The reserved heights of the previews are docs-styling-heights.test.mjs.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { measured, pool, previewsRendered, reservedHeights, withSite as withDocsSite } from './docs-site.mjs';
+import { measured, pool, reservedHeights, withSite as withDocsSite } from './docs-site.mjs';
 
 // One page for each risk the section has: a plain component, a shared field, a portal, a provider with no element, a textless root, the long
 // collapsed groups and the long principal group.
 const sample = ['button', 'text-field', 'date-picker', 'alert-dialog', 'separator', 'code-block', 'data-diff', 'text', 'tag-group'];
 const withSite = (run) => withDocsSite('components/button/index.html', run);
-// The deadline for previews to render, as in docs-styling-heights.test.mjs: these run beside the other docs files on a shared runner.
-const renderedWithin = 60_000;
+// The deadline for the computed table to be measured, as in docs-styling-heights.test.mjs: these run beside the other docs files on a shared runner.
+const measuredWithin = 30_000;
 
 /** The rows of the computed-change table: the declaration each prints, and the text of the cells a reader sees (a hidden cell is not one). */
 const computedRows = (page) => page.evaluate(() => [...document.querySelectorAll('#styling [data-styling-table="computed"] tbody > tr')].map((row) => ({
@@ -177,8 +177,9 @@ test('at 360 px the section does not overflow the page, and a scroller is named 
 			for (const [width, narrow] of [[360, true], [1280, false]]) {
 				const page = await newPage({ width, height: 800 });
 				await page.goto(`${origin}/components/${slug}/`);
-				// The layout is measured once the previews have rendered; a family with no previews has nothing to wait for.
-				if (Object.hasOwn(reservedHeights, slug)) await previewsRendered(page, renderedWithin);
+				// The layout is measured once the computed table holds its values (they follow the previews and their animations, and can widen the
+				// table); a family with no previews has nothing to wait for.
+				if (Object.hasOwn(reservedHeights, slug)) await measured(page, measuredWithin);
 				const layout = await page.evaluate(() => ({
 					// The section alone: a live example elsewhere on a page (the DataDiff table) can be wider than 360 px on main too.
 					overflow: Math.max(document.getElementById('styling').scrollWidth - document.getElementById('styling').clientWidth, document.getElementById('styling').getBoundingClientRect().right - document.documentElement.clientWidth, 0),

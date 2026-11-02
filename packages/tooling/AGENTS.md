@@ -26,9 +26,14 @@ it is content only.
 
 Reuse the memoized fixtures instead of compiling the catalog or packing the CLI
 again per test: `compileFixtureBundle` in `test/pattern-fixture.mjs`, the shared
-baseline in `test/authoring.test.mjs`, the `once` runs in
-`test/packed-cli.test.mjs`, and `test/support/renderer-project.mjs` for the
-local-resolver and pattern-cli tests. Share a fixture from those helpers, or
-memoize your own the same way. Repeated compiles were most of this package's CI
+authoring baseline (`setup` in `test/authoring.test.mjs`), and the `once` runs in
+`test/packed-cli.test.mjs` each compute once per process. Memoize your own
+expensive fixture the same way. Repeated compiles were most of this package's CI
 time, and the `checks-tooling` group is the floor of a tooling-only pull
 request.
+
+`createRendererProject` in `test/support/renderer-project.mjs` is a shared
+fixture builder for the local-resolver and pattern-cli tests, not a memoized one:
+every call writes a fresh project and runs `pnpm install --offline`. Build one
+project per test module and reuse it (its `install(list)` swaps the installed
+bindings without rebuilding); build another only for a case that needs its own.

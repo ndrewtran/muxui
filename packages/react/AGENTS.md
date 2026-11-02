@@ -33,10 +33,11 @@ removes a habit that made files slow.
 - Open a browser page (`test/browser/*.test.mjs`) with
   `page.goto(url, { waitUntil: 'load' })`, wait for the ready element, then
   `await awaitFontsAndFrames(page)` from `test/browser/harness.mjs`; its JSDoc
-  says why. `load` already covers the module graph, so `'networkidle'` only
+  says why. `load` already covers the module graph, so `networkidle` only
   added a fixed 500 ms per open, and the planner fails with
-  `MUXUI_CI_IMPACT_BROWSER_TEST_NETWORKIDLE` when one appears (the allowlist is
-  for a proof that needs the quiet window, such as a resource-entry check).
+  `MUXUI_CI_IMPACT_BROWSER_TEST_NETWORKIDLE` when a `networkidle` string or
+  template literal appears in code; comments are ignored (the allowlist is for a
+  proof that needs the quiet window, such as a resource-entry check).
 - Give each new or renamed `test/browser/*.test.mjs` a measured entry in
   `tooling/audits/repository-policy/browser-test-costs.json`, in whole seconds
   from one engine (recipe: the shards paragraph under Pull request CI routing in
@@ -44,9 +45,12 @@ removes a habit that made files slow.
   shape changes a lot. The planner packs browser shards by these costs so no
   shard is the long pole, and fails with `MUXUI_CI_IMPACT_BROWSER_TEST_COST_DRIFT`
   for a file without an entry or an entry for a file that is gone.
-- Compile TypeScript proofs (tests that run `tsc`, the slowest unit tests) in
-  one `tsc` run per file, as `test/generic-types-mutations.test.mjs` does. Add a
-  new compiler-proof file to `check:types` in `package.json` and to the
+- Compile TypeScript proofs (tests that run `tsc`, the slowest unit tests) as
+  a batch: put the cases of one project in one compile per compiler, not one
+  `tsc` per case. `test/generic-types-mutations.test.mjs` does this, giving each
+  mutated declaration copy a directory in one program and compiling it once
+  under TypeScript 6 and once under 7. Add a new compiler-proof file to
+  `check:types` in `package.json` and to the
   exclusion list in `check:rest`, so it runs beside the other slow files;
   `test/check-scripts.test.mjs` fails when a file runs twice or not at all.
 - Build a shared fixture once per file. The package check already runs

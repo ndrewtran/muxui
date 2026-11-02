@@ -2178,6 +2178,7 @@ export function browserTestCostDrift(files, table) {
 // window to every open and waits for nothing a test asserts on. Pages open on `load`
 // plus the suite's readiness wait, which is how the cost table's times were measured.
 const networkidleDirectories = ['packages/react/test/browser', 'apps/scale/test/browser', 'apps/react-storybook/test'];
+// Only for a source that does not parse (see usesNetworkidle).
 const networkidlePattern = /['"]networkidle['"]/u;
 // The files that still use it, each for a reason `networkidle` serves.
 export const networkidleAllowlist = [
@@ -2187,11 +2188,37 @@ export const networkidleAllowlist = [
   'packages/react/test/browser/grid-list-probes.mjs',
 ];
 
-// The sorted repo-relative paths of `{ path, text }` sources that quote 'networkidle' and
-// are not allowlisted. An unquoted mention, as in the harness comment, is fine.
+// Parses a source as an ES module, or returns undefined when it does not parse.
+function parseModule(source) {
+  try {
+    return parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
+  } catch {
+    return undefined;
+  }
+}
+
+// True when the code holds a `networkidle` string literal or a template literal with no
+// substitutions. Comments are not in the syntax tree, so a mention in one is ignored. A source
+// that does not parse is matched as text instead (quoted `networkidle` only), so a broken file
+// cannot hide a use.
+function usesNetworkidle(source) {
+  const ast = parseModule(source);
+  if (!ast) return networkidlePattern.test(source);
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return false;
+    if (Array.isArray(node)) return node.some(visit);
+    if (node.type === 'Literal' && node.value === 'networkidle') return true;
+    if (node.type === 'TemplateLiteral' && node.expressions.length === 0 && node.quasis[0].value.cooked === 'networkidle') return true;
+    return Object.values(node).some(visit);
+  };
+  return visit(ast);
+}
+
+// The sorted repo-relative paths of `{ path, text }` sources whose code uses `networkidle`
+// and are not allowlisted. A mention in a comment, as in the harness, is fine.
 export function networkidleViolations(sources, allowlist = networkidleAllowlist) {
   const allowed = new Set(allowlist);
-  return [...sources].filter(({ path, text }) => networkidlePattern.test(text) && !allowed.has(path)).map(({ path }) => path).sort();
+  return [...sources].filter(({ path, text }) => !allowed.has(path) && usesNetworkidle(text)).map(({ path }) => path).sort();
 }
 
 // Every `.mjs` file under the browser test directories (a checkout without a directory has none).
@@ -2232,12 +2259,8 @@ function assertBrowserTestSources() {
 // Chromium only. There is no scope analysis: a shadowing declaration counts as
 // the binding.
 export function callsBrowserEngines(source, label = 'the source') {
-  let ast;
-  try {
-    ast = parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
-  } catch {
-    return false;
-  }
+  const ast = parseModule(source);
+  if (!ast) return false;
   const isHarness = (node) => typeof node?.value === 'string' && /(?:^|\/)harness\.mjs$/u.test(node.value);
   // Local names bound to the harness's browserEngines, and to the whole module.
   const functions = new Set();
