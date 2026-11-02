@@ -1,3 +1,4 @@
+// Any edit to this generator plans the full React proof in CI (every family, every engine).
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { rmSync } from 'node:fs';
