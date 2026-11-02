@@ -20,6 +20,9 @@ import {
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 
+/** The sources a scaffolded button needs to compile. */
+const SCAFFOLD_SOURCES = /^catalog\/(?:capabilities\/|tokens\/|components\/button\/)/u;
+
 async function corpus() {
   return JSON.parse(await readFile(
     resolve(repositoryRoot, 'tests/fixtures/g0.5/corpus.json'),
@@ -42,9 +45,12 @@ function loadContext(sourceRevision) {
 }
 
 async function buildBaseline() {
-  const compiled = await compileCatalog({ repositoryRoot });
-  // Frozen copies, so no test can change what the others read. Tests clone a record before changing it.
-  const { sourceRevision, artifacts } = deepFreeze(structuredClone(compiled.bundle));
+  // The loader compiles the live sources and throws unless they match the declared bundle byte for byte, so the
+  // context's bundle is that compile. The expected revision is the declared one.
+  const { sourceRevision } = JSON.parse(await readFile(resolve(repositoryRoot, 'packages/catalog/generated/catalog.json'), 'utf8'));
+  const context = await loadContext(sourceRevision);
+  // The loader froze the bundle, so no test can change what the others read. Tests clone a record before changing it.
+  const { artifacts } = context.catalogBundle;
   const button = artifacts.find(({ id }) => id === 'muxui:component:button');
   // Button's web.react API is derived from its React source (Decision 0031). The bundle holds the
   // merged record; authoring reads the authored record, with each derived block in the revision context.
@@ -64,7 +70,7 @@ async function buildBaseline() {
   }
   return {
     sourceRevision,
-    context: await loadContext(sourceRevision),
+    context,
     component,
     revisionContext: deepFreeze({
       examples: exampleArtifacts.map(({ record }) => record),
@@ -77,7 +83,7 @@ async function buildBaseline() {
   };
 }
 
-// One compile and context load serves every test that only reads the catalog. Tests that detect drift or
+// One compile (inside the context load) serves every test that only reads the catalog. Tests that detect drift or
 // recompilation call the loader and compiler themselves instead of reading this.
 let baseline;
 const setup = () => (baseline ??= buildBaseline());
@@ -161,7 +167,14 @@ test('E-G0.5-01: scaffold, validation, compilation, retrieval, diagnosis, and re
   const temporaryRoot = await temporaryCatalogRepository();
   try {
     await writeFile(resolve(temporaryRoot, sourcePath), preview.writeSet[0].bytes);
-    const compiledFromScaffold = await compileCatalog({ repositoryRoot: temporaryRoot });
+    // The scaffolded component needs its capabilities, tokens and own examples, not every other record.
+    const compiledFromScaffold = await compileCatalog({
+      repositoryRoot: temporaryRoot,
+      sourceManifest: {
+        ...context.sourceManifest,
+        records: context.sourceManifest.records.filter(({ path }) => SCAFFOLD_SOURCES.test(path)),
+      },
+    });
     const retrieved = createCatalogApi(compiledFromScaffold.bundle).getArtifact({
       id: preview.record.id,
       detail: 'full',
@@ -236,9 +249,8 @@ test('E-G0.5-01: scaffold, validation, compilation, retrieval, diagnosis, and re
 });
 
 test('E-G0.5-01 negative: diagnostics require an exact manifest source and source revision', async () => {
-  const { sourceRevision, component } = await setup();
-  // The drift and revision checks load the live repository themselves, so this test's context is not the shared one.
-  const context = await loadContext(sourceRevision);
+  const { sourceRevision, component, context } = await setup();
+  // The revision and drift checks load the repository themselves: each must compile and then fail on what it compiled.
   await assert.rejects(
     loadRepositoryAuthoringContext({
       repositoryRoot,
