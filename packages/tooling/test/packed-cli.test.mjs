@@ -15,6 +15,15 @@ after(async () => {
   await tuple?.dispose();
 });
 
+// Tests that only read the install share one run of each distinct invocation. The last test edits the install, so it
+// calls `tuple.muxui` for fresh runs.
+const invocations = new Map();
+function muxui(args) {
+  const key = JSON.stringify(args);
+  if (!invocations.has(key)) invocations.set(key, tuple.muxui(args));
+  return invocations.get(key);
+}
+
 const BUTTON = 'muxui:component:button';
 // A regression ceiling for `get` with `--platform web.react --detail full` (2797 tokens today), not the registry budget (2048).
 const WEB_REACT_GET_FULL_REGRESSION_CEILING = 3072;
@@ -79,7 +88,7 @@ const NORMALIZE = `
 
 /** Runs `args` in each output mode and returns the three results by mode. */
 async function inEveryMode(args) {
-  const results = await Promise.all(Object.values(MODES).map((flags) => tuple.muxui([...args, ...flags])));
+  const results = await Promise.all(Object.values(MODES).map((flags) => muxui([...args, ...flags])));
   return Object.fromEntries(Object.keys(MODES).map((mode, index) => [mode, results[index]]));
 }
 
@@ -164,7 +173,7 @@ test('E-P2.1-02 list, search, and get discover and retrieve the installed React 
   assert.ok(ids.includes(BUTTON));
 
   // Every component binding the installed descriptor carries is listed for the platform, and no other.
-  const listed = await tuple.muxui(['list', 'component', '--platform', 'web.react', '--limit', '100', '--detail', 'brief', '--json']);
+  const listed = await muxui(['list', 'component', '--platform', 'web.react', '--limit', '100', '--detail', 'brief', '--json']);
   assert.equal(listed.status, 0);
   assert.deepEqual(JSON.parse(listed.stdout).data.items.map(({ id }) => id).sort(), ids);
 
@@ -215,7 +224,7 @@ test('E-P2.1-02 dense output stays inside every locked token budget', async () =
     ceiling: detail === 'full' ? WEB_REACT_GET_FULL_REGRESSION_CEILING : undefined,
     args: ['get', BUTTON, '--platform', 'web.react', '--detail', detail, '--dense'],
   })));
-  const outputs = await Promise.all(cases.map(({ args }) => tuple.muxui(args)));
+  const outputs = await Promise.all(cases.map(({ args }) => muxui(args)));
   outputs.forEach(({ status, stderr }, index) => assert.deepEqual({ status, stderr }, { status: 0, stderr: '' }, cases[index].args.join(' ')));
 
   const { tokens, budgetFixtures } = await normalize(cases.map(({ command, detail }, index) => (
@@ -231,7 +240,7 @@ test('E-P2.1-02 dense output stays inside every locked token budget', async () =
 });
 
 test('E-P2.1-02 the manifest reports the commands P2.1 does not enable as unavailable', async () => {
-  const { status, stdout } = await tuple.muxui(['manifest', '--json']);
+  const { status, stdout } = await muxui(['manifest', '--json']);
   assert.equal(status, 0);
   const { cli, capabilities } = JSON.parse(stdout).data;
 
@@ -245,7 +254,7 @@ test('E-P2.1-02 the manifest reports the commands P2.1 does not enable as unavai
 
   // Running one is the same typed refusal as any unknown command.
   for (const name of ['validate', 'plan', 'doctor', 'init', 'migrate']) {
-    const refused = await tuple.muxui([name, '--json']);
+    const refused = await muxui([name, '--json']);
     assert.equal(refused.status, 2, name);
     assert.equal(JSON.parse(refused.stdout).error.ruleId, 'cli.command.unknown', name);
   }
@@ -265,7 +274,7 @@ test('E-P2.1-02 invalid requests return structured errors with stable codes and 
       next: 'muxui search "muxui:component:missing" --json',
     },
   ];
-  const results = await Promise.all(invalid.map(({ args }) => tuple.muxui([...args, '--json'])));
+  const results = await Promise.all(invalid.map(({ args }) => muxui([...args, '--json'])));
   invalid.forEach(({ args, code, exitCode, ruleId, next }, index) => {
     const { status, stdout, stderr } = results[index];
     const label = args.join(' ');

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
 import test from 'node:test';
 import { createCatalogApi } from '@muxui/catalog';
 import { commandRegistry, helpByCommand } from '../generated/command-surface.mjs';
@@ -15,8 +16,11 @@ import {
   runCli,
   tokenBudgetFor,
 } from '../src/index.mjs';
+import { resolvePnpmProjectCatalog } from '../src/pnpm-adapter.mjs';
 import { buildCommandProjections } from '../src/registry.mjs';
 import { compileFixtureBundle } from './pattern-fixture.mjs';
+import { writeProjection } from './support/packed-tuple.mjs';
+import { createRendererProject } from './support/renderer-project.mjs';
 
 const patternId = 'muxui:pattern:poster-grid';
 const variantIds = ['muxui:example:poster-grid-css', 'muxui:example:poster-grid-virtualized'];
@@ -151,4 +155,69 @@ test('E-BL1-07: the real catalog lists the shipped poster grid and rejects bad -
   const { error } = JSON.parse(missing.stdout);
   assert.equal(error.code, 'MUXUI_ARTIFACT_NOT_FOUND');
   assert.match(error.nextCommand.command, /^muxui search "muxui:component:missing"/u);
+});
+
+test('E-BL1-07 an installed tuple that lacks a required participant binding hides the pattern and its variants', async () => {
+  await mkdir(join(process.cwd(), 'fixtures'), { recursive: true });
+  const fixtureRoot = await mkdtemp(join(process.cwd(), 'fixtures/.bl1-pnpm-fixture-'));
+  const [patternId, cssId, virtualizedId] = [
+    'muxui:pattern:poster-grid',
+    'muxui:example:poster-grid-css',
+    'muxui:example:poster-grid-virtualized',
+  ];
+  const bindings = ['button', 'grid-list', 'virtualizer'].map((slug) => `muxui:component:${slug}#web.react`);
+  const [button, grid] = bindings;
+  try {
+    const bundle = await compileFixtureBundle();
+    const fixture = await createRendererProject(fixtureRoot, {
+      bundle,
+      bindings,
+      installed: [button],
+      writeBundle: (generatedCatalog) => writeProjection(
+        join(generatedCatalog, 'catalog.json'),
+        'packages/catalog/generated/catalog.json',
+        bundle,
+      ),
+    });
+    // `list` and `search` filter project-wide discovery to the bindings the renderer provides.
+    const discover = () => {
+      const resolved = resolvePnpmProjectCatalog({
+        project: fixture.path, platform: 'web.react', filterBindings: true,
+      });
+      assert.equal(resolved.type, 'success');
+      const { api } = resolved;
+      return {
+        listed: api.listArtifacts({ kind: 'pattern', platform: 'web.react' }).data.items.map(({ id }) => id),
+        searched: api.searchArtifacts({ query: 'poster', platform: 'web.react', limit: 100 }).data.items.map(({ id }) => id),
+        examples: api.getArtifact({ id: patternId, section: 'examples', platform: 'web.react' }),
+        variants: [cssId, virtualizedId].map((id) => api.getArtifact({ id, platform: 'web.react' }).type),
+      };
+    };
+
+    // The renderer lacks grid-list, a required participant.
+    const lacking = discover();
+    assert.deepEqual(lacking.listed, []);
+    assert.deepEqual(lacking.searched.filter((id) => [patternId, cssId, virtualizedId].includes(id)), []);
+    assert.equal(lacking.examples.error.code, 'MUXUI_ARTIFACT_NOT_FOUND');
+    assert.deepEqual(lacking.variants, ['error', 'error']);
+    assert.deepEqual(
+      JSON.parse(runCli(['list', 'pattern', '--project', fixture.path, '--platform', 'web.react', '--json']).stdout).data.items,
+      [],
+    );
+
+    // With grid-list installed the pattern and both variants appear; optional virtualizer is not needed.
+    await fixture.install([button, grid]);
+    const installed = discover();
+    assert.deepEqual(installed.listed, [patternId]);
+    assert.ok(installed.searched.includes(patternId));
+    assert.deepEqual(installed.examples.data.value.map(({ id }) => id), [cssId, virtualizedId]);
+    assert.deepEqual(installed.variants, ['artifact.detail', 'artifact.detail']);
+    assert.deepEqual(
+      JSON.parse(runCli(['list', 'pattern', '--project', fixture.path, '--platform', 'web.react', '--json']).stdout)
+        .data.items.map(({ id }) => id),
+      [patternId],
+    );
+  } finally {
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
 });
