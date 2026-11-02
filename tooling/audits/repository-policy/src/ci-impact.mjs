@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
-import { appendFile, readFile, readdir, writeFile } from 'node:fs/promises';
+import { appendFile, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parse } from 'acorn';
 import { pathToFileURL } from 'node:url';
@@ -1992,8 +1992,10 @@ function storyProofEnvironment(storyRun, environment) {
 
 // CI shards large Storybook page selections by family so one job stays inside
 // the scoped audit timeouts in apps/react-storybook/test.
-// 80 pages keeps the scoped formula (120 s + 6 s/page) near its 600 s cap.
-export const storyShardPageBudget = 80;
+// 120 pages assumes the audit collects the colour paints during the axe visit, which
+// costs a third less per page than the 6 s/page its timeout formula (120 s + 6 s/page,
+// capped at 600 s) allows, so a full shard lands near that cap.
+export const storyShardPageBudget = 120;
 
 const sharedGroup = '*';
 // The limit on a group's checks step, per kind.
@@ -2076,27 +2078,39 @@ export function shardStoryRun(storyRun, pageIndex = [], budget = storyShardPageB
 const crossEngineEnvironment = { MUXUI_BROWSER_ENGINES: 'chromium,firefox,webkit' };
 
 // Browser suites run as parallel CI groups: one per engine for the React tests
-// that call browserEngines() plus, in the Chromium group, Scale. The React tests
-// that are not engine-aware only exist in Chromium, so they get their own group
-// to keep the Chromium job from being the long pole. A long list splits further
-// into numbered shards (browser-chromium-only-1, ...).
+// that call browserEngines(), one for the React tests that are not engine-aware
+// (they only exist in Chromium), and one for Scale's browser checks. A long list
+// splits further into numbered shards (browser-chromium-only-1, ...).
 const browserGroup = (engine) => `browser-${engine}`;
 const chromiumGroup = browserGroup('chromium');
 const chromiumOnlyGroup = 'browser-chromium-only';
+// Scale's browser checks (the second one builds the docs site and runs ~10 minutes)
+// have a fixed group of their own in every plan. The id never depends on the plan's
+// browser layout, so reuse routes a docs or Scale change to the same group
+// whichever plan planned the earlier run, and the slowest check overlaps the rest.
+const scaleBrowserGroup = 'browser-scale';
 
 // A browser list runs as ceil(files / limit) shards, at most the plan's cap. A
-// cross-engine file takes about 35 s per engine and a Chromium-only file about
-// 13 s, so a full shard of 6 or 18 files runs about 4 minutes. A pull request
-// that selects test files splits a long cross-engine list in two. A plan that
-// runs the whole browser suite (main, the weekly run, and a pull request that
-// needs the full React proof) keeps those lists whole: main's matrix stays near
-// 14 jobs so that a main push and a pull request fit in the 20 concurrent jobs
-// of GitHub's Free plan, and the Chromium-only list is its long pole, so that
-// list takes the shards.
+// cross-engine file takes about 30 s per engine and a Chromium-only file about
+// 15 s, so the whole cross-engine list (about 30 files) is about 16 minutes in one
+// job and the Chromium-only list (about 60 files) about as long. A pull request that
+// selects test files caps cross-engine lists at two shards and Chromium-only
+// lists at three. A plan that runs the whole browser suite (main, the weekly run,
+// and a pull request that needs the full React proof) caps both at two, which
+// puts every shard near 8 minutes beside the React job and Scale's group.
+//
+// Job budget: GitHub Free runs 20 jobs at once, and a job over the ceiling queues
+// rather than fails. Main plans 15 groups. A full-proof React pull request plans 19
+// run jobs (21 when a theme change adds the two Storybook theme groups): the 3 check
+// groups and the React job, 6 cross-engine shards, 2 Chromium-only shards, Scale's
+// group, and the Storybook groups (5 component shards of up to storyShardPageBudget
+// pages, and the story group). The Storybook groups come last in
+// the matrix and are short, so they are the ones that wait. The Tailwind fixture rides
+// in checks-tooling instead of a job of its own, to keep those counts down.
 const browserShardLimit = { crossEngine: 6, chromiumOnly: 18 };
 const browserShardCap = {
   selected: { crossEngine: 2, chromiumOnly: 3 },
-  suite: { crossEngine: 1, chromiumOnly: 3 },
+  suite: { crossEngine: 2, chromiumOnly: 2 },
 };
 
 // The shard a test file belongs to: a hash of its path, so a file keeps its
@@ -2253,14 +2267,6 @@ function browserLayout(runs, testSources, caps) {
   };
 }
 
-// The group for Scale's browser checks, one of which builds the docs site (~95 s).
-// Pull requests keep them in the browser-chromium family, whatever else the plan
-// runs: reuse routes a docs or Scale change to that family, so an earlier and a
-// later plan must host them in the same one. Main never reuses, so the full plan
-// puts them in the last Chromium-only shard, which has the slack and keeps the
-// cross-engine groups, its long pole, clear of them.
-const scaleHost = (layout, full) => (full ? layout.chromiumOnly.at(-1)?.id : undefined) ?? layout.chromium[0]?.id ?? chromiumGroup;
-
 function addBrowserLayout(add, layout) {
   for (const { id, runs, env } of [...layout.chromium, ...layout.chromiumOnly, ...layout.firefox, ...layout.webkit]) {
     const addTests = (args) => add(id, ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', ...args], { env });
@@ -2279,8 +2285,17 @@ function storybookTestFiles() {
 
 // Scale's `check:browser:docs` builds `apps/docs/dist` and then serves it, so a
 // failed docs build fails only this command, never later checks.
-function addScaleDocsBrowserCommand(add, group) {
-  add(group, ['--filter', '@muxui/scale', 'run', 'check:browser:docs']);
+function addScaleDocsBrowserCommand(add) {
+  add(scaleBrowserGroup, ['--filter', '@muxui/scale', 'run', 'check:browser:docs']);
+}
+
+// The Tailwind consumer fixture installs its own dependencies, then checks (about a minute in
+// all). Taking a runner slot of its own is not worth that, so a plan that has the tooling check
+// runs it at the end of that group, after the tooling tests; a plan without one keeps `tailwind`.
+function addTailwindCommands(add, { withTooling }) {
+  const group = withTooling ? toolingChecksGroup : 'tailwind';
+  add(group, ['--dir', tailwindFixture, 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
+  add(group, ['--dir', tailwindFixture, 'run', 'check']);
 }
 
 function fullPlannedCommands(environment, testSources, packages) {
@@ -2315,8 +2330,8 @@ function fullPlannedCommands(environment, testSources, packages) {
   add('react', ['--filter', '@muxui/react', 'run', 'check']);
   const browser = browserLayout(reactBrowserSuiteRuns(packages), testSources, browserShardCap.suite);
   addBrowserLayout(add, browser);
-  add(scaleHost(browser, true), ['--filter', '@muxui/scale', 'run', 'check:browser']);
-  addScaleDocsBrowserCommand(add, scaleHost(browser, true));
+  add(scaleBrowserGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
+  addScaleDocsBrowserCommand(add);
   add('storybook-a11y', [...nodeTest, a11yFile], { env: storybookEnv, unsetEnv: storybookSelectionKeys });
   add('storybook', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
   // Storybook's own-interface colour proofs are not release proof (Decision 0030): a main push skips
@@ -2325,8 +2340,7 @@ function fullPlannedCommands(environment, testSources, packages) {
     env: { ...storybookEnv, ...(environment.GITHUB_EVENT_NAME === 'push' ? { MUXUI_STORYBOOK_UI_PROOF: 'skip' } : {}) },
     unsetEnv: storybookSelectionKeys,
   });
-  add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
-  add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
+  addTailwindCommands(add, { withTooling: longSuites.includes(toolingPackage) });
   return planned;
 }
 
@@ -2343,6 +2357,9 @@ function pullRequestBrowserRuns(plan, packages) {
   (plan.reactTestFiles ?? []).filter(isBrowserTestFile).forEach((file) => addRun(file));
   return [...runs.values()].sort((left, right) => (left.file < right.file ? -1 : 1));
 }
+
+// A test file the React package check runs: its `test/*.test.mjs` glob plus the serial list.
+const topLevelReactTest = /^test\/[^/]+\.test\.mjs$/u;
 
 function plannedCommands(plan, {
   packages = [], metadataPrepared = false, environment = process.env, pageIndex = [], testSources = {},
@@ -2362,7 +2379,6 @@ function plannedCommands(plan, {
   const browser = browserLayout(
     pullRequestBrowserRuns(plan, packages), testSources, plan.reactPackageFull ? browserShardCap.suite : browserShardCap.selected,
   );
-  const scaleGroup = scaleHost(browser, false);
 
   // Every group repeats this generation in its own fresh runner. Only skip
   // what metadata preparation already generated earlier in this same process:
@@ -2389,11 +2405,14 @@ function plannedCommands(plan, {
   if (plan.docs) add(checksGroup, ['--filter', '@muxui/docs', 'run', 'check']);
   if (plan.scale) {
     add(checksGroup, ['--filter', '@muxui/scale', 'run', 'check']);
-    add(scaleGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
+    add(scaleBrowserGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
   }
   if (plan.reactTheme) {
     add('react', ['--filter', '@muxui/react', 'run', 'generate:check']);
-    add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', 'test/style-scopes.test.mjs', 'test/styling-tokens.test.mjs']);
+    // The full package check runs these two files as well.
+    if (!plan.reactPackageFull) {
+      add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', 'test/style-scopes.test.mjs', 'test/styling-tokens.test.mjs']);
+    }
   }
   if (plan.reactProjectionCheck && !plan.reactPackageFull && !plan.reactTheme) {
     add('react', ['--filter', '@muxui/react', 'run', 'generate:check']);
@@ -2417,10 +2436,14 @@ function plannedCommands(plan, {
       unsetEnv: ['MUXUI_COMPONENT_BROWSER_PROOF_FAMILIES'],
     });
   }
-  if (plan.docs || plan.scale) addScaleDocsBrowserCommand(add, scaleGroup);
+  if (plan.docs || plan.scale) addScaleDocsBrowserCommand(add);
   for (const testFile of plan.reactTestFiles.filter((file) => !isBrowserTestFile(file))) {
+    const everyEngine = runsInEveryEngine(testFile, testSources);
+    // The full package check already runs each top-level test file, once and in the default
+    // engine, so a separate command only adds a test it runs differently or does not run.
+    if (plan.reactPackageFull && !everyEngine && topLevelReactTest.test(testFile)) continue;
     add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', testFile], {
-      env: runsInEveryEngine(testFile, testSources) ? crossEngineEnvironment : {},
+      env: everyEngine ? crossEngineEnvironment : {},
     });
   }
   addBrowserLayout(add, browser);
@@ -2449,10 +2472,7 @@ function plannedCommands(plan, {
       planned.at(-1).storyRun = { proof: shard.proof, families: shard.families };
     });
   }
-  if (plan.tailwind) {
-    add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
-    add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
-  }
+  if (plan.tailwind) addTailwindCommands(add, { withTooling: plan.packageChecks.includes(toolingPackage) });
   return planned;
 }
 
@@ -2573,11 +2593,34 @@ function storybookGenerationCommand() {
   return pnpmCommand(['--filter', '@muxui/react-storybook', 'run', 'generate']);
 }
 
+// The ignored projections that metadata preparation writes (see .gitignore). The CI plan job
+// uploads them, one artifact for the whole run, and its groups restore them in place of
+// regenerating.
+export const generatedMetadataDirectories = [
+  'apps/react-storybook/.storybook/generated',
+  'packages/catalog/generated',
+  'packages/react/generated',
+  'packages/schema/generated',
+  'packages/tooling/generated',
+];
+// Set by the workflow in a group job after it restored that artifact; never export it by hand.
+const metadataReadyVariable = 'MUXUI_CI_METADATA_READY';
+
+const removeGeneratedMetadata = () => Promise.all(
+  generatedMetadataDirectories.map((directory) => rm(resolve(repositoryRoot, directory), { recursive: true, force: true })),
+);
+
+// Makes the React contract and the Storybook page index available. Returns true when this
+// process prepared them (generated them or took the plan job's restored copy), which also
+// covers the generation of the closure of @muxui/react-storybook, and false when they were
+// already there, as in a local checkout.
 export async function prepareStorybookMetadata({
   needsMetadata,
   preview = false,
+  environment = process.env,
   readCurrentText = currentText,
   commandRunner = executeCommand,
+  removeGenerated = removeGeneratedMetadata,
   log = console.log,
 } = {}) {
   if (!needsMetadata) return false;
@@ -2585,9 +2628,19 @@ export async function prepareStorybookMetadata({
     readCurrentText(reactContractPath),
     readCurrentText(storybookManifestPath),
   ]);
-  if (contractSource && manifestSource) return false;
+  const restored = environment[metadataReadyVariable] === '1';
+  if (contractSource && manifestSource) {
+    if (!restored) return false;
+    log('[ci-impact] metadata preparation: using the metadata the plan job generated');
+    return true;
+  }
   if (preview) {
     throw new Error('MUXUI_CI_IMPACT_METADATA_MISSING: run the scoped React/Storybook generation prerequisite before dry-run planning');
+  }
+  if (restored) {
+    // A restore that lacks either file is not trusted: nothing of it is kept.
+    log('[ci-impact] metadata preparation: the restored plan metadata is incomplete; discarding it');
+    await removeGenerated();
   }
   log('[ci-impact] metadata preparation: generate the React contract and Storybook page index required by this owner scope');
   const status = commandRunner(storybookGenerationCommand());
@@ -2670,7 +2723,7 @@ export function groupMatrix(groups, decisions = []) {
 
 // Plans the owner-scoped checks for `changedPaths` between `base` and the
 // current worktree; the pull-request plan and the reuse delta plan share it.
-async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
+async function planAgainstBase({ base: mergeBase, changedPaths, preview, environment }) {
   const config = (await loadPolicy(repositoryRoot)).pullRequestImpact;
   if (!config || config.schemaVersion !== 1) throw new Error('MUXUI_CI_IMPACT_POLICY_MISSING: pullRequestImpact schemaVersion 1 is required');
   const packages = await discoverWorkspacePackages(repositoryRoot);
@@ -2700,7 +2753,7 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
     reactPackagePagesAffected: reactPackageImpact.pagesAffected,
     patternManifestChanged,
   });
-  const metadataPrepared = await prepareStorybookMetadata({ needsMetadata, preview });
+  const metadataPrepared = await prepareStorybookMetadata({ needsMetadata, preview, environment });
 
   const records = needsMetadata ? await generatedReactRecords() : [];
   const pageIndex = needsMetadata ? await generatedStoryIndex() : [];
@@ -2748,7 +2801,7 @@ async function pullRequestPlan({ preview, includeWorktree, environment }) {
   const baseRef = baseRefFor(environment);
   const mergeBase = resolveMergeBase(baseRef);
   const changedPaths = collectPullRequestPaths({ baseRef: mergeBase, includeWorktree });
-  return { ...(await planAgainstBase({ base: mergeBase, changedPaths, preview })), baseRef, mergeBase };
+  return { ...(await planAgainstBase({ base: mergeBase, changedPaths, preview, environment })), baseRef, mergeBase };
 }
 
 // The Storybook commands CI would plan for exactly `changedPaths`, compared

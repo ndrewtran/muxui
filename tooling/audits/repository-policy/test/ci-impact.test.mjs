@@ -19,6 +19,7 @@ import {
   executionGroups,
   executionMode,
   fullWorkspacePlan,
+  generatedMetadataDirectories,
   groupBrowserEngines,
   groupMatrix,
   groupPackageDirectories,
@@ -468,7 +469,7 @@ test('foundation guide changes validate the catalog, tooling dense goldens, and 
   assert.deepEqual(result.storyRuns, []);
   assert.equal(result.reasons[0], `${path} is a canonical guide; validate the catalog, its dense goldens, and the docs that render it`);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks-tooling', 'checks', 'browser-scale']);
   // A catalog change reaches policy through tooling, so the evidence tests run too.
   assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/repository-policy', 'run', 'check'],
@@ -892,7 +893,7 @@ test('an evidence input alone plans a policy group that runs only the evidence t
   assert.equal(result.policy, false);
   assert.equal(result.evidence, true);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-chromium']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-scale']);
   assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [evidenceCommand]);
   // The group generates what policy's closure needs, like any policy group.
   const generation = groups[0].commands[0].args.filter((_, index, args) => args[index - 1] === '--filter');
@@ -941,8 +942,9 @@ test('Scale and docs changes run the Scale docs browser test as one ordinary che
   assert.match(scripts['check:browser:docs'], /^pnpm --filter @muxui\/docs build && /u);
   for (const path of ['apps/scale/src/App.jsx', 'apps/scale/test/browser/docs-theme.test.mjs', 'apps/docs/src/pages/scale.astro']) {
     const groups = executionGroups(await plan([path]), { packages, environment: {}, pageIndex });
-    const browser = groups.find(({ id }) => id === 'browser-chromium');
+    const browser = groups.find(({ id }) => id === 'browser-scale');
     assert.ok(browser, path);
+    assert.equal(browser.kind, 'browser', path);
     const command = browser.commands.find(({ args }) => args.includes('check:browser:docs'));
     assert.deepEqual(command?.args, ['--filter', '@muxui/scale', 'run', 'check:browser:docs'], path);
     assert.notEqual(command.prerequisite, true, path);
@@ -1120,6 +1122,7 @@ test('clean Storybook metadata bootstrap executes a normalized generation comman
 
   const prepared = await prepareStorybookMetadata({
     needsMetadata: true,
+    environment: {},
     readCurrentText: async () => null,
     commandRunner,
     log: () => {},
@@ -1146,6 +1149,117 @@ test('clean Storybook metadata bootstrap executes a normalized generation comman
   });
   assert.equal(result, 0);
   assert.equal(spawnCalls[1][2].env.MUXUI_BOOTSTRAP_TEST_ENV, 'defaulted');
+});
+
+// A group job that restored the plan job's metadata sets MUXUI_CI_METADATA_READY; the planner trusts it only when
+// both files it reads are there, and answers true like a run that generated them, so the group skips that closure's generation.
+test('a group takes the plan job\'s restored metadata without regenerating it, and discards a partial restore', async () => {
+  const run = async ({ environment = {}, files = ['contract', 'manifest'], preview = false, needsMetadata = true } = {}) => {
+    const calls = [];
+    const present = new Set(files.map((name) => ({ contract: 'packages/react/generated/r1-6-contract.json', manifest: 'apps/react-storybook/.storybook/generated/manifest.mjs' })[name]));
+    const options = {
+      needsMetadata, preview, environment,
+      readCurrentText: async (path) => (present.has(path) ? 'present' : null),
+      commandRunner: (command) => { calls.push(['generate', command.args.join(' ')]); return 0; },
+      removeGenerated: async () => { calls.push(['remove']); },
+      log: () => {},
+    };
+    return { result: await prepareStorybookMetadata(options).catch((error) => error), calls };
+  };
+  const ready = { MUXUI_CI_METADATA_READY: '1' };
+  const generate = ['generate', '--filter @muxui/react-storybook run generate'];
+
+  // Restored and complete: prepared, with no generation.
+  assert.deepEqual(await run({ environment: ready }), { result: true, calls: [] });
+  // Present without a restore (a local checkout): not prepared by this process, as before.
+  assert.deepEqual(await run(), { result: false, calls: [] });
+  assert.deepEqual(await run({ environment: { MUXUI_CI_METADATA_READY: '' } }), { result: false, calls: [] });
+  // A restore missing either file is dropped whole before the normal generation.
+  for (const files of [['contract'], ['manifest'], []]) {
+    assert.deepEqual(await run({ environment: ready, files }), { result: true, calls: [['remove'], generate] }, files.join());
+  }
+  // Without a restore nothing is removed.
+  assert.deepEqual(await run({ files: [] }), { result: true, calls: [generate] });
+  // Dry-run planning never deletes or generates.
+  const dry = await run({ environment: ready, files: ['contract'], preview: true });
+  assert.match(dry.result.message, /MUXUI_CI_IMPACT_METADATA_MISSING/u);
+  assert.deepEqual(dry.calls, []);
+  // An owner scope without metadata needs none of this.
+  assert.deepEqual(await run({ environment: ready, files: [], needsMetadata: false }), { result: false, calls: [] });
+});
+
+test('the plan job hands its generated metadata to the pull request groups through one short-lived artifact', (t) => {
+  const workflow = readFileSync(resolve(repositoryRoot, '.github/workflows/ci.yml'), 'utf8');
+  const [planJob, runJob] = workflow.split(/\n {2}run:\n/u);
+  const steps = (job) => job.split('\n      - ');
+  const step = (job, name) => {
+    const block = steps(job).find((candidate) => candidate.startsWith(`name: ${name}\n`));
+    assert.ok(block, `missing workflow step: ${name}`);
+    return block;
+  };
+  const position = (job, name) => steps(job).findIndex((candidate) => candidate.startsWith(`name: ${name}\n`));
+
+  // Upload: after planning, pull requests only, best effort, one day, and the hidden Storybook directory included.
+  const upload = step(planJob, 'Upload plan metadata');
+  assert.ok(position(planJob, 'Plan check groups') < position(planJob, 'Upload plan metadata'));
+  assert.match(upload, /\n {8}id: metadata\n/u);
+  // It also waits for the clean-tree check below: a group that generated locally ran on regenerated tracked files.
+  assert.match(upload, /\n {8}if: github\.event_name == 'pull_request' && steps\.clean\.outputs\.clean == '1'\n/u);
+  const clean = step(planJob, 'Check that generation left the tracked tree clean');
+  assert.ok(position(planJob, 'Plan check groups') < position(planJob, 'Check that generation left the tracked tree clean'));
+  assert.ok(position(planJob, 'Check that generation left the tracked tree clean') < position(planJob, 'Upload plan metadata'));
+  assert.match(clean, /\n {8}id: clean\n/u);
+  assert.match(clean, /\n {8}if: github\.event_name == 'pull_request'\n/u);
+  // Run its shell in a scratch repository: only a clean tracked tree (ignored output aside) sets the output, and drift is a notice, not a failure.
+  const shell = clean.match(/\n {8}run: \|\n((?: {10}[^\n]*\n)+)/u)?.[1].replace(/^ {10}/gmu, '');
+  assert.ok(shell, 'execute the actual clean-tree shell');
+  const scratch = mkdtempSync(join(tmpdir(), 'muxui-clean-tree-'));
+  t.after(() => rmSync(scratch, { recursive: true, force: true }));
+  const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { cwd: scratch, stdio: 'ignore' });
+  git('init', '-q');
+  writeFileSync(join(scratch, '.gitignore'), '/generated/\n');
+  writeFileSync(join(scratch, 'tracked.txt'), 'a\n');
+  git('add', '.');
+  git('commit', '-qm', 'init');
+  mkdirSync(join(scratch, 'generated'));
+  writeFileSync(join(scratch, 'generated/out.json'), '{}\n');
+  const runClean = () => {
+    const output = join(scratch, 'github-output');
+    rmSync(output, { force: true });
+    const result = spawnSync('bash', ['-e', '-c', shell], { cwd: scratch, env: { ...process.env, GITHUB_OUTPUT: output }, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return { stdout: result.stdout, outputs: existsSync(output) ? readFileSync(output, 'utf8') : '' };
+  };
+  assert.deepEqual(runClean(), { stdout: '', outputs: 'clean=1\n' });
+  writeFileSync(join(scratch, 'tracked.txt'), 'b\n');
+  const drifted = runClean();
+  assert.equal(drifted.outputs, '');
+  assert.match(drifted.stdout, /^::notice title=Metadata handoff skipped::.*tracked\.txt/u);
+  assert.doesNotMatch(drifted.stdout, /generated/u);
+  // The groups restore only what was uploaded: a plan without metadata leaves no artifact to fail to find.
+  assert.match(planJob, /\n {6}metadata: \$\{\{ steps\.metadata\.outputs\.artifact-id \}\}\n/u);
+  assert.match(upload, /\n {8}continue-on-error: true\n/u);
+  assert.match(upload, /\n {8}uses: actions\/upload-artifact@v4\n/u);
+  for (const setting of ['name: ci-plan-metadata', 'if-no-files-found: ignore', 'include-hidden-files: true', 'retention-days: 1', 'overwrite: true']) {
+    assert.match(upload, new RegExp(`\\n {10}${setting}\\n`, 'u'), setting);
+  }
+  // The artifact paths are the planner's directories, which are exactly the ignored projections: nothing tracked travels.
+  const uploaded = upload.match(/\n {10}path: \|\n((?: {12}\S+\n)+)/u)?.[1].trim().split(/\s+/u);
+  assert.deepEqual(uploaded, generatedMetadataDirectories);
+  const ignored = new Set(readFileSync(resolve(repositoryRoot, '.gitignore'), 'utf8').split('\n'));
+  for (const directory of generatedMetadataDirectories) assert.ok(ignored.has(`/${directory}/`), `${directory} is gitignored`);
+
+  // Restore: a group that runs, on pull requests, before its checks; its success alone sets the planner's variable.
+  const restore = step(runJob, 'Restore plan metadata');
+  assert.ok(position(runJob, 'Restore plan metadata') < position(runJob, 'Run ${{ matrix.group.id }} checks'));
+  assert.match(restore, /\n {8}id: metadata\n/u);
+  assert.match(restore, /\n {8}if: github\.event_name == 'pull_request' && matrix\.group\.reusedFrom == '' && needs\.plan\.outputs\.metadata != ''\n/u);
+  assert.match(restore, /\n {8}continue-on-error: true\n/u);
+  assert.match(restore, /\n {8}uses: actions\/download-artifact@v4\n/u);
+  assert.match(restore, /\n {10}name: ci-plan-metadata\n/u);
+  assert.match(step(runJob, 'Run ${{ matrix.group.id }} checks'), /\n {10}MUXUI_CI_METADATA_READY: \$\{\{ steps\.metadata\.outcome == 'success' && '1' \|\| '' \}\}\n/u);
+  // Main, scheduled, and manual runs neither upload nor restore.
+  assert.doesNotMatch(workflow, /MUXUI_CI_METADATA_READY: 1/u);
 });
 
 function runFixture(statuses, prerequisites = []) {
@@ -1753,7 +1867,7 @@ test('scoped plans split into independent groups that each repeat the generation
   // run whole (with the browser checks) while React and Storybook keep the Tree
   // family scope. The family's browser test runs in the browser group, not the component check.
   // The catalog compiles React's derived APIs (Decision 0031), so it runs its own check.
-  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-chromium', 'react', 'browser-chromium-only', 'storybook-component']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-scale', 'react', 'browser-chromium-only', 'storybook-component']);
   const generation = executionCommands(result, { packages })[0];
   assert.equal(generation.prerequisite, true);
   for (const group of groups) assert.deepEqual(group.commands[0], generation, `${group.id} starts with generation`);
@@ -1778,13 +1892,26 @@ test('scoped plans split into independent groups that each repeat the generation
   assert.deepEqual(groups[4].commands.slice(1).map(({ args }) => args.slice(-1)), [['test/browser/tree-toggle-browser.test.mjs']]);
   assert.equal(groups[5].commands.at(-1).env.MUXUI_STORYBOOK_FAMILIES, 'Tree');
   assert.deepEqual(groupMatrix(groups).map(({ id, kind }) => [id, kind]), [
-    ['checks-policy', 'checks'], ['checks', 'checks'], ['browser-chromium', 'browser'], ['react', 'react'], ['browser-chromium-only', 'browser'], ['storybook-component', 'storybook'],
+    ['checks-policy', 'checks'], ['checks', 'checks'], ['browser-scale', 'browser'], ['react', 'react'], ['browser-chromium-only', 'browser'], ['storybook-component', 'storybook'],
   ]);
 
   // Tokens reach policy through tooling and the workspace links, so its evidence tests run as well.
   const tokens = executionGroups(await plan(['catalog/tokens/default-theme.json']), { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(tokens), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium', 'react', 'storybook-theme', 'storybook-chrome', 'tailwind']);
-  assert.deepEqual(tokens.at(-1).commands.slice(1).map(({ prerequisite }) => prerequisite === true), [true, false]);
+  assert.deepEqual(groupIds(tokens), ['checks-policy', 'checks-tooling', 'checks', 'browser-scale', 'react', 'storybook-theme', 'storybook-chrome']);
+  // The Tailwind fixture's install (a prerequisite) and check end the checks-tooling group, after the tooling tests.
+  assert.deepEqual(tokens[1].commands.slice(1).map(({ args, prerequisite }) => [args.join(' '), prerequisite === true]), [
+    ['--filter @muxui/tooling run check', false],
+    ['--dir tests/fixtures/tailwind-consumer install --ignore-workspace --frozen-lockfile', true],
+    ['--dir tests/fixtures/tailwind-consumer run check', false],
+  ]);
+});
+
+test('the Tailwind fixture keeps a group of its own in a plan without the tooling check', async () => {
+  const groups = executionGroups(await plan(['tests/fixtures/tailwind-consumer/check.mjs']), { packages, environment: {}, pageIndex });
+  assert.ok(!groupIds(groups).includes('checks-tooling'));
+  const tailwind = groups.find(({ id }) => id === 'tailwind');
+  assert.deepEqual([tailwind.kind, tailwind.timeoutMinutes], ['tailwind', 15]);
+  assert.deepEqual(tailwind.commands.slice(1).map(({ prerequisite }) => prerequisite === true), [true, false]);
 });
 
 test('only groups that run a cross-engine browser test request Firefox and WebKit', async () => {
@@ -1793,7 +1920,7 @@ test('only groups that run a cross-engine browser test request Firefox and WebKi
 
   const full = groupMatrix(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} }));
   assert.deepEqual(full.filter(({ browserEngines }) => browserEngines).map(({ id, browserEngines }) => [id, browserEngines]), [
-    ['browser-firefox', 'firefox'], ['browser-webkit', 'webkit'],
+    ['browser-firefox-1', 'firefox'], ['browser-firefox-2', 'firefox'], ['browser-webkit-1', 'webkit'], ['browser-webkit-2', 'webkit'],
   ]);
 
   const tree = executionGroups(await plan([collectionsPath], treeRuntimeChange), { packages, environment: {}, pageIndex });
@@ -1813,9 +1940,9 @@ test('groups that install browser system libraries get a setup allowance outside
   const limits = (groups) => groupMatrix(groups).map(({ id, timeoutMinutes, jobTimeoutMinutes }) => [id, timeoutMinutes, jobTimeoutMinutes]);
   assert.deepEqual(limits(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} })), [
     ['checks-policy', 30, 30], ['checks-tooling', 30, 30], ['checks', 30, 30], ['react', 30, 30],
-    ['browser-chromium', 30, 30], ['browser-chromium-only-1', 30, 30], ['browser-chromium-only-2', 30, 30], ['browser-chromium-only-3', 30, 30],
-    ['browser-firefox', 30, 60], ['browser-webkit', 30, 60],
-    ['storybook-a11y', 30, 30], ['storybook', 30, 30], ['tailwind', 15, 15],
+    ['browser-chromium-1', 30, 30], ['browser-chromium-2', 30, 30], ['browser-chromium-only-1', 30, 30], ['browser-chromium-only-2', 30, 30],
+    ['browser-firefox-1', 30, 60], ['browser-firefox-2', 30, 60], ['browser-webkit-1', 30, 60], ['browser-webkit-2', 30, 60],
+    ['browser-scale', 30, 30], ['storybook-a11y', 30, 30], ['storybook', 30, 30],
   ]);
 
   const dismissal = await plan(['packages/react/test/browser/autocomplete-dismissal.test.mjs']);
@@ -1832,7 +1959,7 @@ test('the workflow limits the job, the browser install and the checks separately
   // The checks keep the group's own limit as a step limit.
   assert.match(step('Run ${{ matrix.group.id }} checks'), /\n {8}timeout-minutes: \$\{\{ matrix\.group\.timeoutMinutes \}\}\n/u);
   // A stuck install fails by itself, inside the allowance and with time left for the other setup steps.
-  const [firefox] = groupMatrix(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} })).filter(({ id }) => id === 'browser-firefox');
+  const [firefox] = groupMatrix(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} })).filter(({ id }) => id === 'browser-firefox-1');
   const installLimit = Number(step('Install Playwright browsers').match(/\n {8}timeout-minutes: (\d+)\n/u)?.[1]);
   assert.ok(installLimit > 0 && installLimit < firefox.jobTimeoutMinutes - firefox.timeoutMinutes, `install step limit ${installLimit}`);
 });
@@ -1983,36 +2110,36 @@ test('the full plan runs the browser checks as parallel groups, each React test 
   assert.ok(crossEngine.includes('test/browser/autocomplete-dismissal.test.mjs'));
   assert.ok(chromiumOnly.includes('test/browser/dialog-motion.test.mjs'), 'engine-agnostic tests are Chromium-only');
 
-  // The Chromium-only list is main's long pole, so it splits into three stable shards; the
-  // cross-engine lists stay whole to keep main's matrix near 14 jobs.
-  const shards = Array.from({ length: 3 }, (_, index) => chromiumOnly.filter((file) => shardOf(file, 3) === index));
-  assert.ok(shards.every((files) => files.length > 0), 'each Chromium-only shard has files');
+  // Each list splits into two stable shards. Scale's browser checks get a group of their own.
+  const shardsOf = (files) => Array.from({ length: 2 }, (_, index) => files.filter((file) => shardOf(file, 2) === index));
+  const crossShards = shardsOf(crossEngine);
+  const onlyShards = shardsOf(chromiumOnly);
+  assert.ok([...crossShards, ...onlyShards].every((files) => files.length > 0), 'each shard has files');
 
   const plan = fullWorkspacePlan('test');
   const groups = browserGroups(executionGroups(plan, { packages, environment: {} }));
   assert.deepEqual(groups.map(({ id, browserEngines, timeoutMinutes }) => [id, browserEngines, timeoutMinutes]), [
-    ['browser-chromium', '', 30],
-    ['browser-chromium-only-1', '', 30], ['browser-chromium-only-2', '', 30], ['browser-chromium-only-3', '', 30],
-    ['browser-firefox', 'firefox', 30], ['browser-webkit', 'webkit', 30],
+    ['browser-chromium-1', '', 30], ['browser-chromium-2', '', 30],
+    ['browser-chromium-only-1', '', 30], ['browser-chromium-only-2', '', 30],
+    ['browser-firefox-1', 'firefox', 30], ['browser-firefox-2', 'firefox', 30],
+    ['browser-webkit-1', 'webkit', 30], ['browser-webkit-2', 'webkit', 30],
+    ['browser-scale', '', 30],
   ]);
   assert.ok(groupMatrix(groups).every(({ kind }) => kind === 'browser'));
 
   const exec = ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1'];
-  const [chromium, ...only] = groups.slice(0, 4);
-  const [firefox, webkit] = groups.slice(4);
-  assert.deepEqual(ownCommands(chromium).map(({ args, env }) => [args, env]), [[[...exec, ...crossEngine], { MUXUI_BROWSER_ENGINES: 'chromium' }]]);
-  // Scale's browser checks, one of which builds the docs site, join the last shard, which has the most slack.
-  const scale = [['--filter', '@muxui/scale', 'run', 'check:browser'], ['--filter', '@muxui/scale', 'run', 'check:browser:docs']];
-  only.forEach((group, index) => {
-    const own = ownCommands(group);
-    assert.deepEqual(own[0], { command: 'pnpm', args: [...exec, ...shards[index]], env: {}, unsetEnv: [] }, group.id);
-    assert.deepEqual(own.slice(1).map(({ args }) => args), index === only.length - 1 ? scale : [], group.id);
-  });
-  for (const [group, engine] of [[firefox, 'firefox'], [webkit, 'webkit']]) {
-    assert.deepEqual(ownCommands(group).map(({ args, env }) => [args, env]), [
-      [[...exec, ...crossEngine], { MUXUI_BROWSER_ENGINES: engine }],
-    ], group.id);
+  const shardCommand = (files, env) => ({ command: 'pnpm', args: [...exec, ...files], env, unsetEnv: [] });
+  const byId = Object.fromEntries(groups.map((group) => [group.id, ownCommands(group)]));
+  for (const [index, files] of onlyShards.entries()) assert.deepEqual(byId[`browser-chromium-only-${index + 1}`], [shardCommand(files, {})]);
+  for (const engine of ['chromium', 'firefox', 'webkit']) {
+    for (const [index, files] of crossShards.entries()) {
+      assert.deepEqual(byId[`browser-${engine}-${index + 1}`], [shardCommand(files, { MUXUI_BROWSER_ENGINES: engine })], `${engine} ${index + 1}`);
+    }
   }
+  // Scale's browser checks, one of which builds the docs site, are a group of their own, whatever the browser layout.
+  assert.deepEqual(byId['browser-scale'].map(({ args }) => args), [
+    ['--filter', '@muxui/scale', 'run', 'check:browser'], ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
+  ]);
 
   // Every file runs exactly once in each engine it supports, and none is missed.
   const expected = [
@@ -2085,22 +2212,23 @@ test('scoped plans emit only the browser groups that have work', async () => {
   const optIn = "import { browserEngines } from './harness.mjs'; browserEngines();";
   const shardIds = (id, count) => Array.from({ length: count }, (_, index) => `${id}-${index + 1}`);
 
-  // The full React package proof runs every browser group as the full plan does: the Chromium-only list in shards.
+  // The full React package proof runs every browser group as the full plan does: each list in two shards.
   const react = await plan(['packages/react/src/generate.mjs']);
   assert.equal(react.reactPackageFull, true);
   assert.deepEqual(browserIds(react), [
-    'browser-chromium', ...shardIds('browser-chromium-only', 3), 'browser-firefox', 'browser-webkit',
+    'browser-scale', ...shardIds('browser-chromium', 2), ...shardIds('browser-chromium-only', 2),
+    ...shardIds('browser-firefox', 2), ...shardIds('browser-webkit', 2),
   ]);
-  // Without a cross-engine test there is nothing for Firefox or WebKit; Scale's browser checks keep browser-chromium.
+  // Without a cross-engine test there is nothing for Firefox or WebKit; Scale's browser checks keep browser-scale.
   const none = browserIds(react, { testSources: fixedBrowserSources('export {};') });
-  assert.deepEqual(none, ['browser-chromium', ...shardIds('browser-chromium-only', 3)]);
+  assert.deepEqual(none, ['browser-scale', ...shardIds('browser-chromium-only', 2)]);
   // Without a Chromium-only test there is no Chromium-only group.
   const all = browserIds(react, { testSources: fixedBrowserSources(optIn) });
-  assert.deepEqual(all, ['browser-chromium', 'browser-firefox', 'browser-webkit']);
+  assert.deepEqual(all, ['browser-scale', ...shardIds('browser-chromium', 2), ...shardIds('browser-firefox', 2), ...shardIds('browser-webkit', 2)]);
 
   // Docs and Scale browser checks are Chromium-only and need no React browser group.
-  assert.deepEqual(browserIds(await plan(['apps/docs/src/content/docs/foundations/index.mdx'])), ['browser-chromium']);
-  assert.deepEqual(browserIds(await plan(['apps/scale/test/browser/theme-builder.test.mjs'])), ['browser-chromium']);
+  assert.deepEqual(browserIds(await plan(['apps/docs/src/content/docs/foundations/index.mdx'])), ['browser-scale']);
+  assert.deepEqual(browserIds(await plan(['apps/scale/test/browser/theme-builder.test.mjs'])), ['browser-scale']);
 
   // A changed cross-engine test plans one group per engine and nothing in the React group.
   const dismissal = await plan(['packages/react/test/browser/autocomplete-dismissal.test.mjs']);
@@ -2115,6 +2243,31 @@ test('the full React proof runs a browser test that the plan also selects only o
   assert.deepEqual(reactBrowserRuns(groups.flatMap(ownCommands)).filter((run) => run.endsWith(file)).sort(), [
     `chromium ${file}`, `firefox ${file}`, `webkit ${file}`,
   ]);
+});
+
+test('the full React package check is not followed by reruns of the top-level test files it runs', async () => {
+  const react = await plan(['packages/react/src/generate.mjs']);
+  assert.equal(react.reactPackageFull, true);
+  const crossEngine = 'test/cross-engine-unit.test.mjs';
+  const optIn = "import { browserEngines } from './harness.mjs'; browserEngines();";
+  const selected = ['test/styling-emission.test.mjs', 'test/styling-recipes.test.mjs', 'test/helpers/shared.test.mjs', crossEngine];
+  const reactCommands = (result) => ownCommands(executionGroups(result, {
+    packages, environment: {}, pageIndex, testSources: { [crossEngine]: optIn },
+  }).find(({ id }) => id === 'react')).map(({ args }) => args.join(' '));
+  const exec = '--filter @muxui/react exec node --test --test-concurrency=1';
+
+  // Only a test the package check runs differently (every engine) or does not run (below test/) keeps its command.
+  const full = reactCommands({ ...react, reactTestFiles: selected });
+  assert.ok(full.includes('--filter @muxui/react run check'));
+  assert.deepEqual(full.filter((command) => command.startsWith(exec)), [`${exec} test/helpers/shared.test.mjs`, `${exec} ${crossEngine}`]);
+  // Without the full package check, every selected file runs.
+  const scoped = reactCommands({ ...react, reactPackageFull: false, reactTestFiles: selected });
+  assert.deepEqual(scoped.filter((command) => command.startsWith(exec)), selected.map((file) => `${exec} ${file}`));
+
+  // The theme proof's two styling files are in the package check too, so only a theme plan without it runs them.
+  const themeTests = '--filter @muxui/react exec node --test test/style-scopes.test.mjs test/styling-tokens.test.mjs';
+  assert.ok(!reactCommands({ ...react, reactTheme: true, reactTestFiles: [] }).includes(themeTests));
+  assert.ok(reactCommands({ ...react, reactPackageFull: false, reactTheme: true, reactTestFiles: [] }).includes(themeTests));
 });
 
 test('each browser group is reused on its own routing', () => {
@@ -2346,7 +2499,7 @@ test('an Autocomplete runtime change runs its browser test in every engine, in t
     `chromium ${dismissalTest}`, `firefox ${dismissalTest}`, `webkit ${dismissalTest}`,
   ]);
   assert.deepEqual(browserGroups(groups).map(({ id, browserEngines }) => [id, browserEngines]), [
-    ['browser-chromium', ''], ['browser-firefox', 'firefox'], ['browser-webkit', 'webkit'],
+    ['browser-scale', ''], ['browser-chromium', ''], ['browser-firefox', 'firefox'], ['browser-webkit', 'webkit'],
   ]);
 });
 
@@ -2366,7 +2519,7 @@ test('a React-test-only group generates the React closure it imports in its own 
 test('story page groups generate Storybook metadata unless this process already prepared it', async () => {
   const result = await plan([sizingExamplePath]);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium', 'react', 'storybook-story']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks-tooling', 'checks', 'browser-scale', 'react', 'storybook-story']);
   for (const group of groups) {
     assert.equal(group.commands[0].prerequisite, true);
     assert.ok(generationFilters(group.commands[0]).includes('@muxui/react-storybook'), `${group.id} generates Storybook`);
@@ -2484,7 +2637,7 @@ test('a selection CI would shard, or cannot bound, keeps the full local audit wi
   const filler = { family: 'Filler', stories: Array.from({ length: storyShardPageBudget }, (_, index) => ({ id: `filler--${index}`, exportName: 'Default' })) };
   const wideIndex = [...pageIndex, filler];
   const shared = await plan(['apps/react-storybook/src/storybook-factory.mjs'], { pageIndex: wideIndex });
-  assert.match(storybookSelection(shared, { packages, environment: {}, pageIndex: wideIndex }).reason, /shard the selection of \d+ pages \(more than 80 per shard\)/u);
+  assert.match(storybookSelection(shared, { packages, environment: {}, pageIndex: wideIndex }).reason, new RegExp(`shard the selection of \\d+ pages \\(more than ${storyShardPageBudget} per shard\\)`, 'u'));
   assert.equal(storybookSelection(shared, { packages, environment: {}, pageIndex: wideIndex }).full, true);
 
   // Chrome proof audits the manager UI, not pages, so a wide index never shards it.
@@ -2527,8 +2680,8 @@ test('the full plan splits check:all into independently runnable groups', () => 
     packages, environment: { RUNNER_TEMP: '/tmp/runner' },
   });
   assert.deepEqual(groupIds(groups), [
-    'checks-policy', 'checks-tooling', 'checks', 'react', 'browser-chromium', 'browser-chromium-only-1', 'browser-chromium-only-2',
-    'browser-chromium-only-3', 'browser-firefox', 'browser-webkit', 'storybook-a11y', 'storybook', 'tailwind',
+    'checks-policy', 'checks-tooling', 'checks', 'react', 'browser-chromium-1', 'browser-chromium-2', 'browser-chromium-only-1', 'browser-chromium-only-2',
+    'browser-firefox-1', 'browser-firefox-2', 'browser-webkit-1', 'browser-webkit-2', 'browser-scale', 'storybook-a11y', 'storybook',
   ]);
   for (const group of groups) {
     assert.deepEqual(group.commands[0].args, ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'generate']);
@@ -2538,7 +2691,13 @@ test('the full plan splits check:all into independently runnable groups', () => 
   const byId = Object.fromEntries(groups.map((group) => [group.id, group.commands.slice(1).map(({ args }) => args.join(' '))]));
   // Policy keeps both its scripts on the full plan, and tooling has its own group.
   assert.deepEqual(byId['checks-policy'], ['--filter @muxui/repository-policy run check', '--filter @muxui/repository-policy run check:evidence']);
-  assert.deepEqual(byId['checks-tooling'], ['--filter @muxui/tooling run check']);
+  // The Tailwind fixture's install and check end the tooling group instead of taking a group of their own.
+  assert.deepEqual(byId['checks-tooling'], [
+    '--filter @muxui/tooling run check',
+    '--dir tests/fixtures/tailwind-consumer install --ignore-workspace --frozen-lockfile',
+    '--dir tests/fixtures/tailwind-consumer run check',
+  ]);
+  assert.equal(groups.find(({ id }) => id === 'checks-tooling').commands[2].prerequisite, true);
   // Every other package check is one command per package, as in pull-request plans, and the root's `check` (the affected-scope runner) stays out.
   assert.equal(byId.checks.at(-1), 'generate:check');
   const rest = byId.checks.slice(0, -1);
@@ -2554,12 +2713,14 @@ test('the full plan splits check:all into independently runnable groups', () => 
   }
   assert.deepEqual(byId.react, ['--filter @muxui/react run check']);
   const reactBrowser = '--filter @muxui/react exec node --test --test-concurrency=1 test/browser/';
-  for (const id of ['browser-chromium', 'browser-chromium-only-1', 'browser-chromium-only-2', 'browser-chromium-only-3', 'browser-firefox', 'browser-webkit']) {
+  const reactBrowserGroupIds = groupIds(groups).filter((id) => id.startsWith('browser-') && id !== 'browser-scale');
+  assert.equal(reactBrowserGroupIds.length, 8);
+  for (const id of reactBrowserGroupIds) {
     assert.ok(byId[id][0].startsWith(reactBrowser), id);
-    assert.equal(byId[id].length, id === 'browser-chromium-only-3' ? 3 : 1, id);
+    assert.equal(byId[id].length, 1, id);
   }
-  // Scale's browser checks, one of which builds the docs site, ride in the last Chromium-only shard, away from the cross-engine groups.
-  assert.deepEqual(byId['browser-chromium-only-3'].slice(1), ['--filter @muxui/scale run check:browser', '--filter @muxui/scale run check:browser:docs']);
+  // Scale's browser checks, one of which builds the docs site, have a group of their own.
+  assert.deepEqual(byId['browser-scale'], ['--filter @muxui/scale run check:browser', '--filter @muxui/scale run check:browser:docs']);
   assert.ok(byId['storybook-a11y'][0].endsWith('test/storybook-a11y.test.mjs'));
   assert.ok(!byId.storybook.at(-1).includes('storybook-a11y'));
   assert.ok(byId.storybook.at(-1).includes('test/storybook-colors.test.mjs'));
@@ -2680,7 +2841,7 @@ test('group signatures are stable under key order and change with any command de
   ]) assert.notEqual(groupSignature([changed]), signature);
 });
 
-test('a docs change after a full React proof reruns whichever group hosts the Scale docs check', async () => {
+test('a docs change after a full React proof reruns browser-scale, the one group that hosts the Scale docs check', async () => {
   const docsFile = 'apps/docs/src/theme-prepaint-entry.mjs';
   const scaleDocs = 'check:browser:docs';
   // Workspace links as in the repository: the Scale docs check builds the docs site inside its script.
@@ -2692,10 +2853,10 @@ test('a docs change after a full React proof reruns whichever group hosts the Sc
     id: group.id, kind: group.kind, signature: groupSignature(group.commands), packageDirectories: groupPackageDirectories(ownCommands(group), workspace),
   });
 
-  // Before the fix a docs-only follow-up routed to browser-chromium while the earlier run hosted the check elsewhere.
+  // A docs-only follow-up routes to the group the earlier run hosted the check in, whatever that run's browser layout.
   const later = await plan([docsFile]);
   const laterGroups = executionGroups(later, options);
-  assert.ok(laterGroups.some(({ id }) => id === 'browser-chromium'), 'a docs change plans the docs check in browser-chromium');
+  assert.equal(host(laterGroups).id, 'browser-scale', 'a docs change plans the docs check in browser-scale');
   const delta = { changedPaths: [docsFile], groupIds: groupIds(laterGroups), storyRuns: [], storyTooling: false };
 
   // The earlier run: the full React proof, a pull request plan, and the full plan that main runs.
@@ -2713,13 +2874,18 @@ test('a docs change after a full React proof reruns whichever group hosts the Sc
     const decisions = await decide([passed], delta, groups.map(forReuse));
     assert.equal(decisions.find(({ id }) => id === hosting.id).reusedFrom, '', `${label}: ${hosting.id} reruns`);
   }
-  // A pull request plan keeps the check in the browser-chromium family, the family a docs change routes to.
-  assert.equal(groupFamily(host(earlier['a full React proof']).id), 'browser-chromium');
+  // Every plan hosts the check in browser-scale: full, a selected test, and sharded lists.
+  for (const groups of Object.values(earlier)) assert.equal(host(groups).id, 'browser-scale');
   const selected = await plannedWith(['test/browser/sidebar.test.mjs'], { docs: true });
-  assert.equal(groupFamily(host(executionGroups(selected, options)).id), 'browser-chromium');
+  assert.equal(host(executionGroups(selected, options)).id, 'browser-scale');
   const sharded = syntheticBrowserTests(12, 19);
   const wide = executionGroups(await plannedWith(sharded.files, { docs: true }), { ...options, testSources: sharded.testSources });
-  assert.equal(groupFamily(host(wide).id), 'browser-chromium');
+  assert.equal(host(wide).id, 'browser-scale');
+  // Scale's group is not a shard of a React browser group, so a React browser change never reruns it by family.
+  const group = { id: 'browser-scale', kind: 'browser', packageDirectories: ['apps/docs', 'apps/scale'] };
+  const routed = (ids) => ({ changedPaths: ['packages/other/index.mjs'], groupIds: ids, storyRuns: [], storyTooling: false });
+  assert.equal(affectedReason(group, routed(['browser-chromium-only-1', 'browser-chromium-2'])), null);
+  assert.match(affectedReason(group, routed(['browser-scale'])), /route to browser-scale/u);
 });
 
 test('a package script that builds another package makes that package an input of the group', () => {
@@ -2966,16 +3132,16 @@ test('checks-policy and checks-tooling are reused and rerun independently of the
   const signedGroups = async (paths, options = {}) => executionGroups(await plan(paths, options), { packages, environment: {}, pageIndex })
     .map(({ id, kind, commands }) => ({ id, kind, signature: groupSignature(commands), packageDirectories: groupPackageDirectories(commands, packages) }));
   const groups = await signedGroups(['catalog/guides/foundations-component-tokens.md']);
-  assert.deepEqual(groups.map(({ id }) => id), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium']);
+  assert.deepEqual(groups.map(({ id }) => id), ['checks-policy', 'checks-tooling', 'checks', 'browser-scale']);
   const passed = earlierRun(3, Object.fromEntries(groups.map(({ id }) => [id, 'success'])), { groups });
   const decideAll = (delta, earlier = [passed], current = groups) => decide(earlier, delta, current);
   const reused = (decisions) => Object.fromEntries(decisions.map(({ id, reusedFrom }) => [id, reusedFrom !== '']));
 
-  assert.deepEqual(reused(await decideAll(noDelta)), { 'checks-policy': true, 'checks-tooling': true, checks: true, 'browser-chromium': true });
+  assert.deepEqual(reused(await decideAll(noDelta)), { 'checks-policy': true, 'checks-tooling': true, checks: true, 'browser-scale': true });
   // A follow-up that routes only to `checks` leaves the two long suites reused.
   const docsOnly = { changedPaths: ['apps/docs/src/index.md'], groupIds: ['checks'], storyRuns: [], storyTooling: false };
   const afterDocs = await decideAll(docsOnly);
-  assert.deepEqual(reused(afterDocs), { 'checks-policy': true, 'checks-tooling': true, checks: false, 'browser-chromium': true });
+  assert.deepEqual(reused(afterDocs), { 'checks-policy': true, 'checks-tooling': true, checks: false, 'browser-scale': true });
   assert.match(afterDocs.find(({ id }) => id === 'checks').reason, /affected since .*: changes (?:touch apps\/docs|route to checks)/u);
   // Each group reruns for its own id, never for a sibling's.
   for (const [id, others] of [['checks-tooling', ['checks-policy', 'checks']], ['checks-policy', ['checks-tooling', 'checks']]]) {
@@ -3192,7 +3358,7 @@ test('deltaImpact diffs trees directly and maps story IDs to families in a real 
     assert.equal(result.status, 0, result.stderr);
     const delta = JSON.parse(result.stdout.trim().split('\n').at(-1));
     assert.deepEqual(delta.changedPaths, ['apps/docs/guide.md', 'apps/docs/handbook.md', 'apps/scale/src/app.mjs', example]);
-    assert.deepEqual(delta.groupIds, ['checks-tooling', 'checks', 'browser-chromium', 'react', 'storybook-story']);
+    assert.deepEqual(delta.groupIds, ['checks-tooling', 'checks', 'browser-scale', 'react', 'storybook-story']);
     assert.deepEqual(delta.storyRuns, [{ proof: 'story', families: ['NumberField'] }]);
   } finally {
     rmSync(root, { recursive: true, force: true });

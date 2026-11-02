@@ -45,8 +45,10 @@ deduplicate those scopes.
 React browser tests run in per-engine groups, in pull requests and in the full
 plan. A test that calls the harness's `browserEngines()` runs once in each of
 `browser-chromium`, `browser-firefox`, and `browser-webkit`; every other browser
-test runs once, in `browser-chromium-only`; unit tests stay in `react`. A group
-installs only its own engine. A component check leaves its browser tests to
+test runs once, in `browser-chromium-only`; unit tests stay in `react`. The full
+React package check runs every top-level test file once, so a plan that has it
+adds a separate command only for a selected unit test below `test/` or one that
+runs in every engine. A group installs only its own engine. A component check leaves its browser tests to
 these groups (`MUXUI_COMPONENT_SKIP_BROWSER_TESTS=1`) and keeps their case
 filters. A long list splits into numbered shards, such as `browser-firefox-2`:
 more than six cross-engine files, or more than 18 Chromium-only files. A file's
@@ -54,13 +56,19 @@ shard is a hash of its path, so shards keep their identity as the selection
 changes. A pull request that selects test files shards a cross-engine list at
 most two ways and the Chromium-only list at most three. A plan that runs the
 whole browser suite (main, the weekly run, and a pull request that needs the
-full React proof) keeps the cross-engine groups whole, so main's matrix stays
-near 14 jobs, and shards `browser-chromium-only` three ways. Main runs Scale's
-browser checks, including the docs build, in the last of those shards; pull
-requests keep them in the `browser-chromium` family, so reuse routes a docs or
-Scale change to the same family in every plan. Reuse treats a browser group and
-its shards as one family: a change routed to any shard reruns its siblings, and
-a shard is reused only when its id and file list match.
+full React proof) shards each list two ways, so a shard runs about eight
+minutes. Scale's browser checks, including the docs build, run in the
+`browser-scale` group in every plan, main included, whatever the React browser
+layout is, so reuse routes a docs or Scale change to the same group whichever
+plan ran the earlier pass. Reuse treats a React browser group and its shards as
+one family: a change routed to any shard reruns its siblings, and a shard is
+reused only when its id and file list match.
+
+GitHub's Free plan runs 20 jobs at once, and a job over that queues instead of
+failing. Main plans 15 groups. A full-proof React pull request plans 19 run jobs,
+and 21 when a theme change adds the two Storybook theme groups; the Storybook
+groups come last in the matrix and are the shortest browser-driven jobs, so they
+are the ones that wait for a free slot.
 
 Each group's `timeoutMinutes` limits its checks step. A group that installs
 Firefox or WebKit (`browserEngines` is set) also gets a 30 minute setup
@@ -77,6 +85,19 @@ changes route through verified workspace importers; changes whose consumers
 cannot be resolved fail with an actionable ownership error. Manual and
 scheduled CI keep the explicit full graph and broad browser checks.
 
+In a pull request run the plan job uploads the metadata it prepared
+(`generatedMetadataDirectories`) as a one-day artifact, but only when
+generation left the tracked tree clean: a head whose tracked generator outputs
+are stale prints a notice naming the changed files and skips the handoff, so
+each group regenerates them locally as it always did and no proof changes. Each
+group that runs restores the artifact and sets `MUXUI_CI_METADATA_READY=1` only
+when the restore succeeded. The group then skips the generation of
+`@muxui/react-storybook` and its dependencies, as if it had run it, only when
+the React contract and the Storybook manifest are both there. A restore missing
+either is discarded whole and the group generates the metadata itself, as it
+does when the artifact is missing. Main, scheduled, and manual runs do not use
+the artifact.
+
 Local `pnpm check --files <paths>` and the default changed-owner `pnpm check`
 run the Storybook lane CI would plan for the same paths: the story-index
 generation check, any focused Storybook unit tests, and the scoped page audits,
@@ -89,7 +110,7 @@ page index is current; `--preview` plans from the existing index. Other
 dependents of the selected paths keep their full package checks. If CI plans no
 Storybook proof for the paths, the lane is skipped with a printed notice. The
 lane keeps the full Storybook audit, with a printed notice naming the cause,
-when the selection is more than one CI shard (80 pages in total), when the
+when the selection is more than one CI shard (120 pages in total), when the
 planner widens to the full workspace, needs a page index that is missing, or
 throws, or, in the default scope, when a forced-full Storybook event is active
 (`--files` rejects that event with `MUXUI_TASK_SCOPE_CONFLICT`). `pnpm check:all`,
@@ -114,7 +135,10 @@ group repeats the plan's generation prerequisites in its own runner, keeps the
 and exists only when it has work. Main and scheduled runs plan the same groups
 from the workspace packages: one `pnpm --filter <package> run check` per package
 with a `check` script except React and Storybook, which have their own groups,
-checked in dependency order within `checks`.
+checked in dependency order within `checks`. The Tailwind consumer fixture's
+install and check take about a minute, so they run last in `checks-tooling`
+whenever the plan has it; a plan without the tooling check keeps a `tailwind`
+group.
 
 ### Retained-evidence tests
 
