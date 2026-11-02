@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { appendFileSync, cpSync, existsSync, globSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -8,7 +7,6 @@ import { dirname, join, posix, resolve } from 'node:path';
 import { parse } from 'acorn';
 import test from 'node:test';
 import {
-  browserShardIndex,
   buildPullRequestImpact,
   callsBrowserEngines,
   catalogExampleRendersPath,
@@ -28,6 +26,7 @@ import {
   isWorkspaceWideChange,
   needsStorybookGeneration,
   normalizeCommand,
+  packBrowserShards,
   parseCliArguments,
   partMapPath,
   planStorybookCommands,
@@ -40,6 +39,7 @@ import {
   storybookSelection,
   storyShardPageBudget,
   stylingReferencePath,
+  uncostedBrowserFiles,
   validateScopedEntrypoints,
   workspaceDependentRoutes,
 } from '../src/ci-impact.mjs';
@@ -2098,8 +2098,11 @@ const reactBrowserRuns = (commands) => commands
     .map((file) => `${env.MUXUI_BROWSER_ENGINES ?? 'chromium'} ${file}`));
 const fixedBrowserSources = (source) => Object.fromEntries(reactBrowserTests.map((file) => [file, source]));
 
-// The documented shard of a file: the first four bytes of sha256(path), big-endian, modulo the shard count.
-const shardOf = (file, count) => createHash('sha256').update(file).digest().readUInt32BE(0) % count;
+// A list split into `count` shards the way the planner packs it (files stay in list order).
+const packedShards = (files, count) => {
+  const packed = packBrowserShards(files, count);
+  return Array.from({ length: count }, (_, index) => files.filter((file) => packed.get(file) === index));
+};
 const browserFilesOf = (group) => ownCommands(group).flatMap(({ args }) => args.filter((arg) => arg.startsWith('test/browser/')));
 const crossEngineTests = reactBrowserTests
   .filter((file) => callsBrowserEngines(readFileSync(resolve(repositoryRoot, 'packages/react', file), 'utf8')));
@@ -2110,10 +2113,9 @@ test('the full plan runs the browser checks as parallel groups, each React test 
   assert.ok(crossEngine.includes('test/browser/autocomplete-dismissal.test.mjs'));
   assert.ok(chromiumOnly.includes('test/browser/dialog-motion.test.mjs'), 'engine-agnostic tests are Chromium-only');
 
-  // Each list splits into two stable shards. Scale's browser checks get a group of their own.
-  const shardsOf = (files) => Array.from({ length: 2 }, (_, index) => files.filter((file) => shardOf(file, 2) === index));
-  const crossShards = shardsOf(crossEngine);
-  const onlyShards = shardsOf(chromiumOnly);
+  // Each list splits into two cost-packed shards. Scale's browser checks get a group of their own.
+  const crossShards = packedShards(crossEngine, 2);
+  const onlyShards = packedShards(chromiumOnly, 2);
   assert.ok([...crossShards, ...onlyShards].every((files) => files.length > 0), 'each shard has files');
 
   const plan = fullWorkspacePlan('test');
@@ -2301,22 +2303,38 @@ async function plannedWith(reactTestFiles, extra = {}) {
 
 const groupFamily = (id) => id.replace(/-\d+$/u, '');
 
-test('browser shards follow a stable hash of the path and stay balanced', () => {
-  // The documented rule: the first four bytes of sha256(path), big-endian, modulo the shard count.
-  const paths = Array.from({ length: 300 }, (_, index) => `test/browser/synthetic-${index}.test.mjs`);
-  for (const path of paths.slice(0, 20)) {
-    for (const count of [1, 2, 3]) assert.equal(browserShardIndex(path, count), shardOf(path, count));
+test('browser shards pack files by cost, longest first, and balance within the largest file', () => {
+  // Longest-processing-time packing: files by descending cost (ties by path), each to the least loaded shard (ties to the lowest index).
+  const costs = { a: 7, b: 6, c: 5, d: 4, e: 3, f: 3, g: 3 };
+  const packWith = (files, count, table) => packBrowserShards(files, count, (file) => table[file]);
+  const expected = { a: 0, b: 1, c: 1, d: 0, e: 0, f: 1, g: 0 };
+  assert.deepEqual(Object.fromEntries(packWith(Object.keys(costs), 2, costs)), expected);
+  assert.deepEqual(Object.fromEntries(packWith(Object.keys(costs).reverse(), 2, costs)), expected, 'the list order does not matter');
+  // A spread of costs balances within the largest single file for any shard count.
+  const many = Object.fromEntries(Array.from({ length: 80 }, (_, index) => [`test/browser/f-${index}.test.mjs`, 1 + ((index * 37) % 61)]));
+  for (const count of [2, 3, 4]) {
+    const loads = Array(count).fill(0);
+    for (const [file, shard] of packWith(Object.keys(many), count, many)) loads[shard] += many[file];
+    assert.ok(Math.max(...loads) - Math.min(...loads) <= Math.max(...Object.values(many)), `${count} shards: ${loads.join(', ')}`);
   }
-  // A file keeps its shard when other files come and go, so the shard that did not change keeps its identity.
-  for (const count of [2, 3]) {
-    const before = new Map(paths.map((path) => [path, browserShardIndex(path, count)]));
-    const after = paths.filter((_, index) => index % 7 !== 0).map((path) => [path, browserShardIndex(path, count)]);
-    for (const [path, shard] of after) assert.equal(shard, before.get(path), path);
+  // A file the cost table does not list costs its default, so equal files alternate by path.
+  const unlisted = ['d', 'b', 'a', 'c'].map((name) => `test/browser/unlisted-${name}.test.mjs`);
+  const [a, b, c, d] = unlisted.toSorted();
+  assert.deepEqual(Object.fromEntries(packBrowserShards(unlisted, 2)), { [a]: 0, [b]: 1, [c]: 0, [d]: 1 });
+});
+
+test('the browser cost table names whole positive seconds and packs the real lists within their largest file', () => {
+  const table = JSON.parse(readFileSync(resolve(repositoryRoot, 'tooling/audits/repository-policy/browser-test-costs.json'), 'utf8'));
+  const positive = (value) => Number.isInteger(value) && value > 0;
+  assert.ok(positive(table.defaultSeconds));
+  for (const [file, seconds] of Object.entries(table.seconds)) {
+    assert.match(file, /^test\/browser\/[^/]+\.test\.mjs$/u);
+    assert.ok(positive(seconds), file);
   }
-  // Large lists spread within a fifth of an even split.
-  for (const count of [2, 3]) {
-    const sizes = Array.from({ length: count }, (_, shard) => paths.filter((path) => browserShardIndex(path, count) === shard).length);
-    for (const size of sizes) assert.ok(Math.abs(size - paths.length / count) <= paths.length / count / 5, `${count} shards: ${sizes.join(', ')}`);
+  const costOf = (file) => table.seconds[file] ?? table.defaultSeconds;
+  for (const files of [crossEngineTests, reactBrowserTests.filter((file) => !crossEngineTests.includes(file))]) {
+    const loads = packedShards(files, 2).map((shard) => shard.reduce((sum, file) => sum + costOf(file), 0));
+    assert.ok(Math.abs(loads[0] - loads[1]) <= Math.max(...files.map(costOf)), loads.join(', '));
   }
 });
 
@@ -2356,11 +2374,12 @@ test('a pull request runs each selected browser test once per engine it supports
     'browser-firefox-1', 'browser-firefox-2', 'browser-webkit-1', 'browser-webkit-2',
   ]);
   const shardFiles = (id) => browserFilesOf(sharded.browser.find((group) => group.id === id));
-  for (const [count, family, files] of [[2, 'browser-chromium', sharded.crossFiles], [2, 'browser-firefox', sharded.crossFiles], [2, 'browser-webkit', sharded.crossFiles], [2, 'browser-chromium-only', sharded.onlyFiles]]) {
-    for (let shard = 1; shard <= count; shard += 1) {
-      assert.deepEqual(shardFiles(`${family}-${shard}`), files.filter((file) => shardOf(file, count) === shard - 1), `${family}-${shard}`);
-    }
+  for (const [family, files] of [['browser-chromium', sharded.crossFiles], ['browser-firefox', sharded.crossFiles], ['browser-webkit', sharded.crossFiles], ['browser-chromium-only', sharded.onlyFiles]]) {
+    for (const [index, expected] of packedShards(files, 2).entries()) assert.deepEqual(shardFiles(`${family}-${index + 1}`), expected, `${family}-${index + 1}`);
   }
+  // The planner names the files its cost table does not list, in numbered shards only.
+  assert.deepEqual(uncostedBrowserFiles(sharded.browser), [...sharded.crossFiles, ...sharded.onlyFiles].sort());
+  assert.deepEqual(uncostedBrowserFiles(short.browser), []);
   // Neither shard of a list is under a third of it.
   for (const family of ['browser-chromium', 'browser-chromium-only']) {
     const sizes = [1, 2].map((shard) => shardFiles(`${family}-${shard}`).length);
@@ -2374,28 +2393,20 @@ test('a pull request runs each selected browser test once per engine it supports
     'browser-chromium-only-1', 'browser-chromium-only-2', 'browser-chromium-only-3',
   ]);
   assert.equal(groupIds(wide.browser).filter((id) => id.startsWith('browser-firefox')).length, 2);
-
-  // A list that hashes into one shard keeps the plain id instead of an empty sibling.
-  const crowded = Array.from({ length: 400 }, (_, index) => `test/browser/cross-${index}.test.mjs`)
-    .filter((file) => shardOf(file, 2) === 0).slice(0, 8);
-  const optIn = "import { browserEngines } from './harness.mjs'; browserEngines();";
-  const oneShard = executionGroups(await plannedWith(crowded), {
-    packages, environment: {}, pageIndex, testSources: Object.fromEntries(crowded.map((file) => [file, optIn])),
-  });
-  assert.deepEqual(groupIds(oneShard), ['browser-chromium', 'browser-firefox', 'browser-webkit']);
 });
 
-test('a shard keeps its identity while the files of the other shard change', async () => {
+test('a cross-engine file lands in the same-numbered shard in every engine, and planning repeats the packing', async () => {
   const { files, testSources } = syntheticBrowserTests(12, 0);
-  const idOf = (groups, file, engine) => groups.find((group) => groupFamily(group.id) === `browser-${engine}` && browserFilesOf(group).includes(file)).id;
   const groupsFor = async (selected) => browserGroups(executionGroups(await plannedWith(selected), { packages, environment: {}, pageIndex, testSources }));
+  const shardOf = (groups, file, engine) => groups.find((group) => groupFamily(group.id) === `browser-${engine}` && browserFilesOf(group).includes(file)).id.split('-').at(-1);
   const base = await groupsFor(files);
+  for (const file of files) assert.equal(new Set(['chromium', 'firefox', 'webkit'].map((engine) => shardOf(base, file, engine))).size, 1, file);
+  // The same selection plans the same groups, so a rerun of an unchanged plan reuses every shard.
+  const signatures = (groups) => groups.map(({ id, commands }) => [id, groupSignature(commands)]);
+  assert.deepEqual(signatures(await groupsFor(files)), signatures(base));
+  // Dropping a file changes the shard that held it. Packing may move other files too, so a shard's reuse is only
+  // by its own list: the sibling reruns once when its list changed.
   const withoutOne = await groupsFor(files.filter((file) => file !== files[0]));
-  // Dropping one file moves no other file between shards, and the untouched shard keeps its signature.
-  for (const file of files.slice(1)) for (const engine of ['chromium', 'firefox', 'webkit']) assert.equal(idOf(withoutOne, file, engine), idOf(base, file, engine));
-  const untouched = base.find((group) => !browserFilesOf(group).includes(files[0]) && group.id.startsWith('browser-chromium'));
-  const same = withoutOne.find(({ id }) => id === untouched.id);
-  assert.equal(groupSignature(same.commands), groupSignature(untouched.commands));
   const touched = base.find((group) => browserFilesOf(group).includes(files[0]) && group.id.startsWith('browser-chromium'));
   assert.notEqual(groupSignature(withoutOne.find(({ id }) => id === touched.id).commands), groupSignature(touched.commands));
   // Every group id is planned once.

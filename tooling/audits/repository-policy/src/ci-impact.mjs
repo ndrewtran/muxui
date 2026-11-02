@@ -1,5 +1,4 @@
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { appendFile, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -2097,7 +2096,8 @@ const scaleBrowserGroup = 'browser-scale';
 // selects test files caps cross-engine lists at two shards and Chromium-only
 // lists at three. A plan that runs the whole browser suite (main, the weekly run,
 // and a pull request that needs the full React proof) caps both at two, which
-// puts every shard near 8 minutes beside the React job and Scale's group.
+// puts every shard near 8 minutes beside the React job and Scale's group. A list's
+// files are spread over its shards by measured cost (packBrowserShards).
 //
 // Job budget: GitHub Free runs 20 jobs at once, and a job over the ceiling queues
 // rather than fails. Main plans 15 groups. A full-proof React pull request plans 19
@@ -2113,10 +2113,38 @@ const browserShardCap = {
   suite: { crossEngine: 2, chromiumOnly: 2 },
 };
 
-// The shard a test file belongs to: a hash of its path, so a file keeps its
-// shard, and a shard its identity, while other files are added or removed.
-export function browserShardIndex(file, count) {
-  return createHash('sha256').update(file).digest().readUInt32BE(0) % count;
+// Advisory seconds per browser test file, measured in one engine from CI logs
+// (see browser-test-costs.json and the README); a file with no entry costs
+// `defaultSeconds`. Only the packing below reads it.
+const browserTestCosts = parseJson(
+  readFileSync(resolve(import.meta.dirname, '../browser-test-costs.json'), 'utf8'), 'browser-test-costs.json',
+);
+const browserTestCost = (file) => browserTestCosts.seconds[file] ?? browserTestCosts.defaultSeconds;
+
+// Spreads a browser list over `count` shards by cost, longest-processing-time first:
+// files in descending cost (ties by path) each go to the shard with the least cost so
+// far (ties to the lowest index). Returns a Map from file to shard index. The result
+// is deterministic for a list and a cost table, but adding or removing a file, or
+// changing a cost, can move other files between shards, so reuse for the browser
+// groups then reruns once. Costs must be positive so that no shard is left empty.
+export function packBrowserShards(files, count, costOf = browserTestCost) {
+  const loads = Array(count).fill(0);
+  const assignment = new Map();
+  const byCost = [...files].sort((left, right) => costOf(right) - costOf(left) || (left < right ? -1 : 1));
+  for (const file of byCost) {
+    const index = loads.indexOf(Math.min(...loads));
+    assignment.set(file, index);
+    loads[index] += costOf(file);
+  }
+  return assignment;
+}
+
+// Browser test files in the plan's numbered (sharded) groups that the cost table does
+// not list: the packing gave them the default, so the table needs an entry.
+export function uncostedBrowserFiles(groups) {
+  const files = groups.filter(({ kind, id }) => kind === 'browser' && /-\d+$/u.test(id))
+    .flatMap(({ commands }) => commands.flatMap(({ args }) => args.filter((arg) => arg.startsWith('test/browser/'))));
+  return [...new Set(files)].filter((file) => !Object.hasOwn(browserTestCosts.seconds, file)).sort();
 }
 
 // True when the source calls browserEngines() imported from the harness
@@ -2240,14 +2268,15 @@ function reactBrowserSuiteRuns(packages) {
 }
 
 // The groups one browser list runs in: the plain group, or numbered shards
-// (`-1`, `-2`, ...) named by hash bucket. Empty shards are dropped, and a list
-// that lands in one shard keeps the plain id.
+// (`-1`, `-2`, ...) that packBrowserShards fills by cost. A list that fits one
+// shard keeps the plain id.
 function browserShards(group, runs, kind, caps) {
   const count = Math.max(1, Math.min(caps[kind], Math.ceil(runs.length / browserShardLimit[kind])));
+  const assignment = packBrowserShards(runs.map(({ file }) => file), count);
   const shards = Array.from({ length: count }, (_, index) => ({
     id: `${group}-${index + 1}`,
-    runs: runs.filter(({ file }) => browserShardIndex(file, count) === index),
-  })).filter((shard) => shard.runs.length > 0);
+    runs: runs.filter(({ file }) => assignment.get(file) === index),
+  }));
   return shards.length === 1 ? [{ id: group, runs: shards[0].runs }] : shards;
 }
 
@@ -2972,6 +3001,11 @@ export async function runCiImpact({
   const { plan, packages, pageIndex, baseRef, mergeBase, metadataPrepared, testSources } = context;
   const options = { packages, metadataPrepared, environment, pageIndex, testSources };
   const groups = executionGroups(plan, options);
+  const uncosted = mode.run === 'none' ? uncostedBrowserFiles(groups) : [];
+  if (uncosted.length > 0) {
+    const notice = `browser shards packed these files at the default ${browserTestCosts.defaultSeconds} s, which browser-test-costs.json does not list: ${uncosted.join(', ')}`;
+    (plan.notices ??= []).push(notice);
+  }
   const report = planReport(plan, { baseRef, mergeBase, metadataPrepared, groups });
   const reuse = reuseRecord ? await writeReuse({ plan, full, groups, packages, reuseRecord, reuseClient, environment }) : [];
   const matrix = groupMatrix(groups, reuse);

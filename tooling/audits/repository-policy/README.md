@@ -51,9 +51,9 @@ adds a separate command only for a selected unit test below `test/` or one that
 runs in every engine. A group installs only its own engine. A component check leaves its browser tests to
 these groups (`MUXUI_COMPONENT_SKIP_BROWSER_TESTS=1`) and keeps their case
 filters. A long list splits into numbered shards, such as `browser-firefox-2`:
-more than six cross-engine files, or more than 18 Chromium-only files. A file's
-shard is a hash of its path, so shards keep their identity as the selection
-changes. A pull request that selects test files shards a cross-engine list at
+more than six cross-engine files, or more than 18 Chromium-only files. Each list
+is packed into its shards by measured cost, described below, and a file lands in
+the same-numbered shard in every engine. A pull request that selects test files shards a cross-engine list at
 most two ways and the Chromium-only list at most three. A plan that runs the
 whole browser suite (main, the weekly run, and a pull request that needs the
 full React proof) shards each list two ways, so a shard runs about eight
@@ -63,6 +63,26 @@ layout is, so reuse routes a docs or Scale change to the same group whichever
 plan ran the earlier pass. Reuse treats a React browser group and its shards as
 one family: a change routed to any shard reruns its siblings, and a shard is
 reused only when its id and file list match.
+
+Shards are packed by cost so that none is the long pole. `browser-test-costs.json`
+lists seconds for each `test/browser/<file>.test.mjs`, measured in one engine, and
+a file without an entry costs `defaultSeconds` (9, the median of the table when it
+was built). The planner sorts a list by cost, largest first (ties by path), and
+puts each file in the shard with the least total so far (ties to the lowest
+index), so two shards differ by at most the cost of the largest file. Adding or
+removing a file, or changing a cost, can move other files between shards, and a
+shard whose file list changed reruns once instead of being reused. A plan
+preview (`--preview` or `--plan`) prints one notice listing the files in sharded
+lists that fell back to the default. The table is advisory data, not a contract:
+a stale or missing entry only skews the balance. To refresh it when a notice names
+new files or the shards drift apart, take a recent run of `main` and read the logs
+(`gh api repos/<owner>/<repo>/actions/jobs/<jobId>/logs --allow-escape-sequences`)
+of its `run browser-chromium-1` and `run browser-chromium-2` jobs for the
+cross-engine files and its `run browser-chromium-only-1` and
+`run browser-chromium-only-2` jobs for the rest. Sum each top-level test's
+`(NNNms)` duration into the file that declares it (a subtest is already inside its
+parent's time) and round to whole seconds, at least 1. Set `defaultSeconds` to the
+new median.
 
 GitHub's Free plan runs 20 jobs at once, and a job over that queues instead of
 failing. Main plans 15 groups. A full-proof React pull request plans 19 run jobs,
