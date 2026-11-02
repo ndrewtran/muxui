@@ -580,8 +580,9 @@ test('Scale, Starlight docs, and CI policy edits stay in their independent owner
 
 test('root and directory guidance docs without another owner take the policy route', async () => {
   const guidancePaths = [
-    'LICENSE', 'README.md', 'apps/AGENTS.md', 'apps/react-storybook/AGENTS.md', 'catalog/AGENTS.md',
-    'packages/AGENTS.md', 'tests/AGENTS.md', 'tests/evidence/README.md',
+    'LICENSE', 'README.md', 'apps/AGENTS.md', 'apps/react-playground/AGENTS.md', 'apps/react-storybook/AGENTS.md', 'apps/scale/AGENTS.md',
+    'catalog/AGENTS.md', 'packages/AGENTS.md', 'packages/catalog/AGENTS.md', 'packages/react/AGENTS.md', 'packages/schema/AGENTS.md',
+    'packages/tokens/AGENTS.md', 'packages/tooling/AGENTS.md', 'tests/AGENTS.md', 'tests/evidence/README.md', 'tooling/generators/figma/AGENTS.md',
   ];
   for (const path of guidancePaths) {
     const result = await plan([path], edited(path));
@@ -589,6 +590,9 @@ test('root and directory guidance docs without another owner take the policy rou
     // Only the retained evidence's own guidance is an input of the evidence tests.
     assert.equal(result.evidence, path === 'tests/evidence/README.md', path);
     assert.equal(result.full || result.catalog || result.docs || result.storyTooling, false, path);
+    // A package's own route map is guidance too: it plans no package check, React suite, or browser shard.
+    assert.equal(result.reactPackageFull || result.scale, false, path);
+    assert.deepEqual(result.packageChecks, [], path);
     assert.deepEqual(result.storyRuns, [], path);
   }
 });
@@ -1946,15 +1950,15 @@ test('only groups that run a cross-engine browser test request Firefox and WebKi
 test('groups that install browser system libraries get a setup allowance outside their checks limit', async () => {
   const limits = (groups) => groupMatrix(groups).map(({ id, timeoutMinutes, jobTimeoutMinutes }) => [id, timeoutMinutes, jobTimeoutMinutes]);
   assert.deepEqual(limits(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} })), [
-    ['checks-policy', 30, 30], ['checks-tooling', 30, 30], ['checks', 30, 30], ['react', 30, 30],
-    ['browser-chromium-1', 30, 30], ['browser-chromium-2', 30, 30], ['browser-chromium-only-1', 30, 30], ['browser-chromium-only-2', 30, 30],
-    ['browser-firefox-1', 30, 60], ['browser-firefox-2', 30, 60], ['browser-webkit-1', 30, 60], ['browser-webkit-2', 30, 60],
-    ['browser-scale', 30, 30], ['storybook-a11y', 30, 30], ['storybook', 30, 30],
+    ['checks-policy', 20, 20], ['checks-tooling', 20, 20], ['checks', 20, 20], ['react', 20, 20],
+    ['browser-chromium-1', 20, 20], ['browser-chromium-2', 20, 20], ['browser-chromium-only-1', 20, 20], ['browser-chromium-only-2', 20, 20],
+    ['browser-firefox-1', 20, 50], ['browser-firefox-2', 20, 50], ['browser-webkit-1', 20, 50], ['browser-webkit-2', 20, 50],
+    ['browser-scale', 20, 20], ['storybook-a11y', 20, 20], ['storybook', 20, 20],
   ]);
 
   const dismissal = await plan(['packages/react/test/browser/autocomplete-dismissal.test.mjs']);
   assert.deepEqual(limits(executionGroups(dismissal, { packages, environment: {}, pageIndex })), [
-    ['browser-chromium', 30, 30], ['browser-firefox', 30, 60], ['browser-webkit', 30, 60],
+    ['browser-chromium', 20, 20], ['browser-firefox', 20, 50], ['browser-webkit', 20, 50],
   ]);
 });
 
@@ -2128,11 +2132,11 @@ test('the full plan runs the browser checks as parallel groups, each React test 
   const plan = fullWorkspacePlan('test');
   const groups = browserGroups(executionGroups(plan, { packages, environment: {} }));
   assert.deepEqual(groups.map(({ id, browserEngines, timeoutMinutes }) => [id, browserEngines, timeoutMinutes]), [
-    ['browser-chromium-1', '', 30], ['browser-chromium-2', '', 30],
-    ['browser-chromium-only-1', '', 30], ['browser-chromium-only-2', '', 30],
-    ['browser-firefox-1', 'firefox', 30], ['browser-firefox-2', 'firefox', 30],
-    ['browser-webkit-1', 'webkit', 30], ['browser-webkit-2', 'webkit', 30],
-    ['browser-scale', '', 30],
+    ['browser-chromium-1', '', 20], ['browser-chromium-2', '', 20],
+    ['browser-chromium-only-1', '', 20], ['browser-chromium-only-2', '', 20],
+    ['browser-firefox-1', 'firefox', 20], ['browser-firefox-2', 'firefox', 20],
+    ['browser-webkit-1', 'webkit', 20], ['browser-webkit-2', 'webkit', 20],
+    ['browser-scale', '', 20],
   ]);
   assert.ok(groupMatrix(groups).every(({ kind }) => kind === 'browser'));
 
@@ -2485,7 +2489,7 @@ test('a pull request runs each selected browser test once per engine it supports
     const sizes = [1, 2].map((shard) => shardFiles(`${family}-${shard}`).length);
     assert.ok(Math.min(...sizes) >= (sizes[0] + sizes[1]) / 3, `${family}: ${sizes.join(', ')}`);
   }
-  assert.ok(sharded.browser.every(({ timeoutMinutes, kind }) => timeoutMinutes === 30 && kind === 'browser'));
+  assert.ok(sharded.browser.every(({ timeoutMinutes, kind }) => timeoutMinutes === 20 && kind === 'browser'));
 
   // Sixty Chromium-only files would need four shards, so the cap holds them at three; the 14 cross-engine files would need three and stay at two.
   const wide = await planFor(14, 60);
@@ -3229,10 +3233,10 @@ test('checks-* groups keep kind checks and the checks timeout in pull-request an
     assert.deepEqual(checks.map(({ id }) => id), ['checks-policy', 'checks-tooling', 'checks']);
     for (const group of checks) {
       assert.equal(group.kind, 'checks', group.id);
-      assert.equal(group.timeoutMinutes, 30, group.id);
+      assert.equal(group.timeoutMinutes, 20, group.id);
     }
     assert.deepEqual(groupMatrix(groups).filter(({ id }) => id.startsWith('checks')).map(({ id, kind, timeoutMinutes }) => [id, kind, timeoutMinutes]), [
-      ['checks-policy', 'checks', 30], ['checks-tooling', 'checks', 30], ['checks', 'checks', 30],
+      ['checks-policy', 'checks', 20], ['checks-tooling', 'checks', 20], ['checks', 'checks', 20],
     ]);
   }
 });

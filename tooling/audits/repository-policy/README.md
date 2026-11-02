@@ -108,7 +108,9 @@ and 21 when a theme change adds the two Storybook theme groups; the Storybook
 groups come last in the matrix and are the shortest browser-driven jobs, so they
 are the ones that wait for a free slot.
 
-Each group's `timeoutMinutes` limits its checks step. A group that installs
+Each group's `timeoutMinutes` limits its checks step: 20 minutes, or 15 for
+Tailwind. The longest clean step is the React suite at about 11 minutes, so
+duration creep fails the job instead of passing silently. A group that installs
 Firefox or WebKit (`browserEngines` is set) also gets a 30 minute setup
 allowance in `jobTimeoutMinutes`, the job limit, because Playwright's apt
 install of system libraries can crawl on a slow runner-image mirror. The
@@ -169,7 +171,7 @@ instead of queueing behind the rest: `checks-policy` (this package),
 `checks-tooling` (`@muxui/tooling`), and `checks` (every other package check,
 the root `generate:check`, and the Storybook generation and unit checks). Each
 group repeats the plan's generation prerequisites in its own runner, keeps the
-`checks` kind (the 30-minute timeout and per-group reuse of an earlier pass),
+`checks` kind (the 20-minute timeout and per-group reuse of an earlier pass),
 and exists only when it has work. Main and scheduled runs plan the same groups
 from the workspace packages: one `pnpm --filter <package> run check` per package
 with a `check` script except React and Storybook, which have their own groups,
