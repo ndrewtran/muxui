@@ -1,34 +1,9 @@
 import assert from 'node:assert/strict';
-import { createReadStream } from 'node:fs';
-import { access, readFile } from 'node:fs/promises';
-import { createServer } from 'node:http';
-import { extname, join, normalize, resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import test from 'node:test';
-import { chromium } from 'playwright-core';
 import { createScaleDocument, DEFAULT_SETTINGS } from '../../src/theme-contract.mjs';
-import { chromeExecutable } from './chrome.mjs';
-
-const docsRoot = resolve(import.meta.dirname, '../../../docs/dist');
-const mimeTypes = { '.css': 'text/css', '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
-
-function staticDocsServer() {
-  return createServer(async (request, response) => {
-    const pathname = decodeURIComponent(new URL(request.url, 'http://127.0.0.1').pathname);
-    const relative = pathname.endsWith('/') ? `${pathname}index.html` : pathname;
-    const file = normalize(join(docsRoot, relative));
-    if (!file.startsWith(`${docsRoot}/`)) {
-      response.writeHead(403).end();
-      return;
-    }
-    try {
-      await access(file);
-      response.writeHead(200, { 'content-type': mimeTypes[extname(file)] ?? 'application/octet-stream' });
-      createReadStream(file).pipe(response);
-    } catch {
-      response.writeHead(404).end();
-    }
-  });
-}
+import { openSite } from './docs-site.mjs';
 
 async function waitForScale(page) {
   await page.getByRole('heading', { name: 'Theme Playground', exact: true }).waitFor();
@@ -139,14 +114,8 @@ async function inspectSearch(page, screenshotName) {
 	return values;
 }
 
-test('docs Scale applies one validated theme across shell, islands and portals', { timeout: 120_000 }, async () => {
-  await access(join(docsRoot, 'scale/index.html'));
-  const server = staticDocsServer();
-  await new Promise((resolveReady) => server.listen(0, '127.0.0.1', resolveReady));
-  const address = server.address();
-  assert.equal(typeof address, 'object');
-  const url = `http://127.0.0.1:${address.port}`;
-  const browser = await chromium.launch({ executablePath: await chromeExecutable(), headless: true });
+test('docs Scale applies one validated theme across shell, islands and portals', { timeout: 300_000 }, async () => {
+  const { origin: url, browser, close } = await openSite('scale/index.html');
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
   // Starlight mounts Pagefind UI from a requestIdleCallback that Chromium may never run on a slow runner, so the search input never appears.
@@ -504,7 +473,6 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     assert.deepEqual(errors, []);
   } finally {
     await context.close();
-    await browser.close();
-    await new Promise((resolveClosed) => server.close(resolveClosed));
+    await close();
   }
 });

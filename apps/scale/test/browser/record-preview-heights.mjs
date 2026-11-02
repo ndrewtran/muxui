@@ -7,7 +7,7 @@
 // A preview is a client-only island: it is empty until its example renders, and an empty frame that then grows pushes everything under it
 // down (a layout shift). The page therefore reserves the example's own height up front. This script opens every page that has previews in
 // Chromium, lets both examples render, and records the tallest the example gets across a range of widths, once for the single-column layout
-// (`narrow`) and once for the two-column layout (`wide`), in whole pixels. `docs-styling.test.mjs` fails when an example is taller than what
+// (`narrow`) and once for the two-column layout (`wide`), in whole pixels. `docs-styling-heights.test.mjs` fails when an example is taller than what
 // is recorded for it, so a changed example means running this again.
 //
 // What is recorded is the example's INTRINSIC height, read with motion off so that a spring is never caught in flight (preview-heights.mjs holds
@@ -55,7 +55,7 @@ async function record(slug) {
 	await page.waitForFunction(() => {
 		const islands = [...document.querySelectorAll('#styling [data-styling-pane] astro-island')];
 		return islands.length === 2 && islands.every((island) => island.firstElementChild !== null && island.querySelector('.example-loading') === null);
-	}, undefined, { timeout: 30000 });
+	}, undefined, { timeout: 60000 });
 	const heights = await measureIntrinsicHeights(page);
 	await page.context().close();
 	return heights;
