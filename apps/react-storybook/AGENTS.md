@@ -15,3 +15,12 @@ remains the complete Storybook package audit. Style-only component changes
 need selected-family accessibility/browser proof in light and dark modes plus
 relevant visual evidence. Common scopes and proof rules are in the root
 [`AGENTS.md`](../../AGENTS.md) Verification section.
+
+## Page-visiting proofs
+
+A proof that needs Storybook pages joins the single fused visit in
+`test/storybook-a11y.test.mjs`, through `auditPagePaints` in
+`test/helpers/page-visit.mjs`: axe and colour collection share one page open
+per page and scheme. A second test file that opens the same pages doubled the
+Storybook jobs before, and the planner's page-shard budget assumes one visit
+per page, so a standalone page-visiting file is unplanned work on every shard.
