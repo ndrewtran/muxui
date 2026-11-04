@@ -283,11 +283,14 @@ evidence indexes, lockfile, and token source as committed at the release commit,
 identities, and the icon visual contract; absent when `@muxui/react` is reused), and the
 publication and rollback plans. It rejects repacked bytes under a version, a package missing from the tuple, a
 published package built from another commit, and a reused package that is not exactly the
-record of the earlier manifest that published it or whose compatibility no longer holds.
+record of the earlier manifest that published it (a manifest for the commit the record
+names) or whose compatibility no longer holds.
 
 Release preparation compares the proposed versions with the prior portfolio release:
-`MUXUI_PRIOR_RELEASE_MANIFEST` names it, or `MUXUI_FIRST_PORTFOLIO_RELEASE=true` declares
-the first one, which holds only while no tracked file is a portfolio release manifest.
+`MUXUI_PRIOR_RELEASE_MANIFEST` names it (read as committed at the release commit, and it
+must be listed with its digest by the `index.json` of its `tests/evidence` route), or
+`MUXUI_FIRST_PORTFOLIO_RELEASE=true` declares the first one, which holds only while no
+tracked file is a portfolio release manifest.
 `src/release-effects.mjs` classifies the change by Architecture "Version units and
 compatibility" and rejects versions that are too small, go backwards, or release an
 unchanged unit. Classification is conservative: a change without a precise rule is
@@ -313,8 +316,8 @@ verifies the versions, the sha512 of each published tarball, and the manifest ag
 the commit. A package is published exactly when its version input is not empty, and
 the manifest's role for it must say so. For a reused package, `candidate` and
 `prepared` fetch the tarball from the registry again, hold it to the recorded
-integrity, and verify the tuple with it against the manifest of the release that
-published it. All of that runs in the `prepare` job, which has no OIDC access, so a
+integrity and to the registry's attestation of it (see "Reusing packages"), and verify the
+tuple with it against the manifest of the release that published it. All of that runs in the `prepare` job, which has no OIDC access, so a
 candidate from another commit, another workflow, or other versions ends the run
 before the `publish` job starts.
 
@@ -336,11 +339,13 @@ Preparation (`src/release-prepare.mjs`, with `planReuse` in `src/release-effects
 - reads the reused records from the prior manifest and the manifest that published each
   (the prior one, or for a package the prior release itself reused, the manifest of the
   release before it, which must be retained as `tests/evidence/**/release-manifest.json` at
-  the release commit);
+  the release commit). Each of those manifests is retained evidence: tracked at the
+  release commit under a route whose `index.json` lists its path with the sha256 of exactly
+  those bytes (`readIndexedArtifact`). A manifest of a wanted release that its route does
+  not list, or two different manifests of one release, stop the release;
 - fetches each reused tarball from the public registry by its exact version before packing
-  anything, and stops unless the version document names the recorded integrity with SLSA
-  provenance and the bytes hash to it (`fetchReusedTarball`). A reused package is never
-  repacked;
+  anything and verifies it (`verifyReused`, `fetchReusedTarball`, below). A reused package is
+  never repacked;
 - takes the reused packages' versions as their recorded ones, so the version check
   (`E-P2.1-04`) reads a reused package as proposing its prior version. An unchanged package
   at its version passes. A changed package at its version is refused (`P2_1_VERSION_NOT_AHEAD`
@@ -355,6 +360,39 @@ Preparation (`src/release-prepare.mjs`, with `planReuse` in `src/release-effects
   of the release that published it, so the new manifest has none;
 - writes the published tarballs, in publish order, and the manifest. The `npm publish
   --dry-run` rehearsal covers the same packages.
+
+What authenticates a reused package. A retained manifest that agrees with its own digest
+proves nothing about the bytes, because a repack can update every digest it records and
+recompute its own. The check that does not rest on the repository is the registry's
+attestation of the original publish. For each reused package, `verifyReused` reads the
+version document and then the attestation at its `dist.attestations.url`, and stops unless
+all of this holds:
+
+- the version document names the recorded integrity and an SLSA provenance attestation, and
+  the attestation URL, the tarball URL, and every fetch are on `https://registry.npmjs.org`.
+  No read follows a redirect (`redirect: 'error'`; the registry served the version document,
+  the attestation, the packument, and the tarball of `@muxui/react@0.1.0-rc.5` directly when
+  this was checked), so a redirect fails the read;
+- the attestation holds exactly one SLSA provenance statement, whose subject is exactly the
+  package (`pkg:npm/%40muxui/<name>@<version>`) with the sha512 of the recorded integrity;
+- its workflow is `.github/workflows/npm-publish.yml` of `ndrewtran/muxui`, on `refs/heads/main`;
+  its resolved source is that repository at the record's `sourceCommit`, which the verifier
+  holds equal to the `source.revision` of the origin manifest; and its run is a run of that
+  repository;
+- `next` is the reused version, `latest` and `next` are the only dist-tags, and the version
+  is listed (`E-P2.1-06` requires `next` at the verified rc). The publish job does this for
+  every reused package in its whole-set preflight, before any publish, and again before each
+  publish with the same drift rule it has for a published package.
+
+Limits. The Sigstore signature and certificate chain of the attestation, and the registry's
+signature over the version document, are not verified here: the statement is read from the
+public registry over TLS, which accepts an attestation only for a publish its own verification
+passed. A consumer install with `npm audit signatures` verifies both; the React evidence
+captures run it, and a release does not. The run is only required to be a run of the
+repository: the manifest does not record the publish run, so it is not matched to a recorded
+one. The index of a route lists the digest of a file in the same commit, so it ties a manifest
+to retained evidence a reviewer saw; it does not defend against a change that updates both,
+and the attestation is what holds then.
 
 The untagged `0.0.0-stage` version npm lists beside each new package's first release is no
 release candidate; reuse reads exact versions and the publish preflight reads `latest` and
@@ -408,13 +446,13 @@ It checks out only `src/npm-publication.mjs`, `src/release-set.mjs`, and
   separated, in any order, no more and no fewer. (The first release's input held
   the `@muxui/react` digest alone, and the retained evidence of that run keeps its
   binding.) A package the manifest marks `reused` is not published.
-- `publish-set` (the `Publish the set in order` step) first reads each reused package's
-  version document from the registry, which must name the recorded integrity with
-  SLSA provenance, and preflights every package it publishes read-only, so a collision,
-  a reused package that is not on the registry as recorded, or a broken `next` lineage
-  anywhere in the set stops the release before the first publish. It claims nothing
-  about a reused package's dist-tags. Then, for each published package in order, it
-  rechecks the registry for drift, runs `npm publish --tag next --provenance
+- `publish-set` (the `Publish the set in order` step) first verifies each reused package
+  on the registry (`verifyReused`: the recorded integrity, the attestation of the
+  original publish, and `next` at the recorded version), and preflights every package it
+  publishes read-only, so a collision, a reused package that is not on the registry as
+  recorded, or a broken `next` lineage anywhere in the set stops the release before the
+  first publish. Then, for each published package in order, it rechecks the registry for
+  drift (the package's own dist-tags and those of every reused package), runs `npm publish --tag next --provenance
   --access public` (with the token for a first publish only), and reads back the version document (integrity and SLSA
   provenance) and the dist-tags (`next` is the candidate, `latest` unchanged or set
   by the registry on a first publish). The first failure stops the set and no later
@@ -470,7 +508,7 @@ adapters, and `test/evidence-integrity.test.mjs` rebuilds the committed rc.1 to 
 routes byte for byte. For a portfolio run the candidate is `@muxui/react`, so the
 `E-R1-EXIT` records keep their shape; the dry run's portfolio manifest (schema,
 digest, source commit and tree, and every tarball's recorded bytes) and each
-package's preflight, publish, and workflow read-back ride along under `portfolio`. A package the publish attempted without a confirmed read-back is recorded `published: 'unverified'`, never `false`, which is only for a package never attempted. A later release's candidate holds only its published tarballs, and a package it reuses rides along under `portfolio` without one: its version and digests are the earlier release's, and the publish run's check of it on the registry is recorded as `portfolio.reused`. The capture binds a `tarball-sha512` that is either the `@muxui/react` digest alone (the first release's input) or the digests of exactly the published tarballs. A release that reuses `@muxui/react` has no React candidate and so no R1 exit route: the capture refuses it, and the earlier rc's route stays the evidence of that candidate. The retained P2.1 route (`tests/evidence/capture-p2.1.mjs`) binds the first release only. Evidence for a release that publishes no React package needs a capture of its own, which this tool does not provide.
+package's preflight, publish, and workflow read-back ride along under `portfolio`. A package the publish attempted without a confirmed read-back is recorded `published: 'unverified'`, never `false`, which is only for a package never attempted. A later release's candidate holds only its published tarballs, and a package it reuses rides along under `portfolio` without one: its version and digests are the earlier release's, and the publish run's check of it on the registry is recorded as `portfolio.reused`. The capture binds a `tarball-sha512` that is either the `@muxui/react` digest alone (the first release's input) or the digests of exactly the published tarballs. A release that reuses `@muxui/react` has no React candidate and so no R1 exit route: the capture refuses it, and the earlier rc's route stays the evidence of that candidate. The retained P2.1 route (`tests/evidence/capture-p2.1.mjs`) binds the first release only. Evidence for a release that publishes no React package needs a capture of its own, which this tool does not provide and which is not built yet: it is written after a real dry run shows the log shape of a release that reuses packages.
 The capture accepts a publish log only in the workflow's own shape: one block per package, in publish order, each package's read-back finished before the next package's publish starts, and each read-back's dist-tags what that package's preflight allows (`next` the new version, `latest` unchanged or registry-set on a first publish, no other tag).
 `test/evidence-integrity.test.mjs` also captures a hosted portfolio release
 built by `test/evidence-portfolio-fixture.mjs`, whose publish job log is what
