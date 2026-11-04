@@ -65,17 +65,17 @@ Item 8, the release builds once:
    step, which verifies the dry run again and fails if any of them changed. No
    general archive extractor reads the artifact. The workflow downloads the raw
    ZIP by that artifact id, checks its size and sha256 against the API digest
-   before parsing it, accepts it only if it holds exactly the two expected file
-   names (plain names, once each, regular files, unencrypted), and writes only
-   those two files into a fresh directory outside the checkout. It then checks
-   the bytes itself: each published tarball's version is its version input, the
-   sha512 of each is in the authorized `tarball-sha512` input, which lists the
-   sha512 of exactly the published tarballs, comma separated (Decision 0032
-   item 9: a release publishes only the packages it changed), and the release
-   manifest names the same versions and digests, this commit as its source
-   revision, and this commit's tree. The publish job keeps its own version and
-   digest re-verification, the registry preflight, the drift recheck, the OIDC
-   publish, and the read-back.
+   before parsing it, accepts it only if it holds exactly the published
+   tarballs and one release manifest (plain names, once each, regular files,
+   unencrypted), and writes only those files into a fresh directory outside the
+   checkout. It then checks the bytes itself: each published tarball's version
+   is its version input, the sha512 of each is in the authorized
+   `tarball-sha512` input, which lists the sha512 of exactly the published
+   tarballs, comma separated (Decision 0032 item 9: a release publishes only
+   the packages it changed), and the release manifest names the same versions
+   and digests, this commit as its source revision, and this commit's tree. The
+   publish job keeps its own version and digest re-verification, the registry
+   preflight, the drift recheck, the OIDC publish, and the read-back.
 3. **Provenance.** The registry's provenance is signed by the publish run, for
    bytes built by the dry run of the same workflow at the same commit. That is
    accepted. The attestation names the commit and the publish run; the retained
