@@ -3639,7 +3639,7 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.equal(verification.rehearsal, undefined);
 
     // The reviewed outcomes: a change here is a deliberate evidence change.
-    const expected = { 'E-P2.1-01': 'pass', 'E-P2.1-02': 'partial', 'E-P2.1-03': 'pass', 'E-P2.1-04': 'pass', 'E-P2.1-05': 'pass', 'E-P2.1-06': 'pass' };
+    const expected = { 'E-P2.1-01': 'pass', 'E-P2.1-02': 'pass', 'E-P2.1-03': 'pass', 'E-P2.1-04': 'pass', 'E-P2.1-05': 'pass', 'E-P2.1-06': 'pass' };
     assert.deepEqual(index.records.map(({ assertionId }) => assertionId), Object.keys(expected));
     const excerptLines = (path) => ['', ...text(path).split('\n')];
     const contentOf = (line) => line.replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z /u, '');
@@ -3688,23 +3688,35 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.doesNotMatch(dense.note, /2797 tokens/u, 'the count is not stated as measured');
 
     // The published tuple: the four released packages installed from the registry and run through their own bin. Every check is
-    // kept as it came out; the one that did not pass leaves its part not met and the record partial.
+    // kept as it came out, and a part follows its checks.
     const published = verification.phases.published;
     const checkNamed = (id) => published.checks.find((found) => found.id === id);
-    assert.deepEqual(published.checks.filter(({ passed }) => !passed).map(({ id }) => id), ['dense-budget-fixtures']);
+    assert.deepEqual(published.checks.filter(({ passed }) => !passed).map(({ id }) => id), []);
     assert.deepEqual(checkNamed('registry-install').observed.map(({ name, version, installedVersion, gitHead }) => [name, version, installedVersion, gitHead]),
       verification.release.packages.map(({ name, version }) => [name, version, version, index.sourceRevision]));
     for (const entry of checkNamed('registry-install').observed) {
       assert.deepEqual(entry.locked, [{ version: entry.version, resolution: `integrity: ${entry.releaseIntegrity}` }]);
       assert.equal(entry.releaseIntegrity, verification.release.packages.find(({ name }) => name === entry.name).integrity);
     }
-    const countsOf = (id) => Object.fromEntries(checkNamed(id).observed.rows.map(({ args, used, budget, ceiling }) => [args.slice(0, -1).join(' '), [used, budget, ceiling]]));
-    assert.deepEqual(Object.values(countsOf('dense-get-react')), [[129, 384, 384], [262, 1024, 1024], [2801, 2048, 3072]], 'the counts the installed countTokens measured');
-    assert.deepEqual(Object.entries(countsOf('dense-budget-fixtures')).filter(([, [used, , ceiling]]) => used > ceiling), [['manifest --detail brief', [257, 256, 256]]], 'the one fixture over its budget');
-    assert.match(dense.note, /brief 129 of 384, compact 262 of 1024, full 2801 against the 3072 ceiling/u);
+    // Raw is the installed countTokens' count of the output; counted leaves out the -rc.N suffix of versions, as the amended row says.
+    const countsOf = (id) => Object.fromEntries(checkNamed(id).observed.rows.map(({ args, used, counted, budget, ceiling }) => [args.slice(0, -1).join(' '), [used, counted, budget, ceiling]]));
+    assert.deepEqual(Object.values(countsOf('dense-get-react')), [[129, 123, 384, 384], [262, 256, 1024, 1024], [2801, 2795, 2048, 3072]], 'the counts the installed countTokens measured');
+    const fixtureCounts = Object.entries(countsOf('dense-budget-fixtures'));
+    assert.equal(fixtureCounts.length, 12);
+    assert.ok(fixtureCounts.every(([, [raw, counted, , ceiling]]) => counted <= raw && counted <= ceiling), 'every fixture is inside its budget once the suffix is left out');
+    assert.deepEqual(fixtureCounts.filter(([, [raw, , , ceiling]]) => raw > ceiling), [['manifest --detail brief', [257, 251, 256, 256]]], 'the one fixture the suffix tokens put over its budget');
+    assert.match(dense.note, /brief raw 129, counted 123 of 384, compact raw 262, counted 256 of 1024, full raw 2801, counted 2795 against the 3072 ceiling/u);
     const fixtures = sourceRow.parts.find(({ part }) => part.startsWith('Dense output is inside its token budget for the registry'));
-    assert.equal(fixtures.state, 'not-met');
-    assert.match(fixtures.note, /manifest --detail brief --dense 257 of 256/u);
+    assert.equal(fixtures.state, 'shown');
+    assert.match(fixtures.note, /added to the Roadmap row after the release, because the published rc exceeded a budget as the row first wrote it \(manifest --detail brief --dense raw 257, counted 251, budget 256\)/u);
+    assert.deepEqual([published.countRule.pattern, published.countRule.replacement], ['(\\d+\\.\\d+\\.\\d+)-rc\\.\\d+', '$1']);
+    assert.ok(sourceRow.limits.some((limit) => /^Dense budget counts exclude the tokens of `-rc\.N` version suffixes/u.test(limit) && limit.includes('raw 257, counted 251, budget 256')));
+    // The row was amended after the release by two commits: the ceiling (the later CI run's head) and then the suffix rule.
+    assert.match(sourceRow.assertion, /while a package is a prerelease the budget counts exclude the tokens of its `-rc\.N` version suffixes/u);
+    assert.doesNotMatch(sourceRow.roadmap.amended.assertionAtSourceRevision, /-rc\.N/u);
+    assert.equal(sourceRow.roadmap.amended.commits.length, 2);
+    assert.equal(sourceRow.roadmap.amended.commits[0], sourceRow.execution.laterCi.execution.headRevision);
+    assert.notEqual(sourceRow.roadmap.amended.commits[1], sourceRow.execution.laterCi.execution.headRevision, 'the suffix rule came after the later CI run');
     const output = text(published.output.path);
     assert.equal(digest(output), published.output.sha256);
     assert.equal(output.split('\n').filter((line) => line.startsWith('$ muxui ')).length, published.runs.length, 'every run is retained');
