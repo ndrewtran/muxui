@@ -240,9 +240,19 @@
   cursor: pointer;
 }
 
-.muxui-breadcrumbs__link[data-muxui-state-hovered] {
+/* The scheme-scoped resting colours further down tie with a bare link selector, so the hover rules name the item as well.
+   Native :hover paints server markup before hydration writes the hovered state. It is limited to hovering devices because
+   React Aria ignores touch for hover, while a browser keeps :hover matched after a tap. */
+.muxui-breadcrumbs__item .muxui-breadcrumbs__link[data-muxui-state-hovered] {
   color: var(--muxui-semantic-content-link-hover);
   text-decoration: underline;
+}
+
+@media (hover: hover) {
+  .muxui-breadcrumbs__item .muxui-breadcrumbs__link:hover {
+    color: var(--muxui-semantic-content-link-hover);
+    text-decoration: underline;
+  }
 }
 
 .muxui-breadcrumbs__link[data-muxui-state-pressed] {
