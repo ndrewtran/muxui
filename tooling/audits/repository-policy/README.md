@@ -334,10 +334,14 @@ job's OIDC identity in both cases, and the read-back requires it for every
 package. If the preflight finds a first publish and no token, the run refuses
 before the first publish, naming the packages; it never falls back.
 
-First publish of a new package, in order (Andrew's steps): add the temporary
-`NPM_TOKEN` secret to the `npm-publish` environment; run the publish; set up the
-package's trusted publisher; revoke the token on npm; delete the secret. Later
-rcs of that package then publish through OIDC with no token.
+First publish of the new packages, in order (Andrew's steps): add the temporary
+`NPM_TOKEN` secret to the `npm-publish` environment; run the publish; once registry
+read-back verifies the release, revoke the token on npm and delete the secret. No
+trusted publisher is set up then. A package's trusted publisher is set up with
+Andrew's browser 2FA immediately before that package's next real release, so it
+validates inside npm's 2-day window; a package with no change needs none. Until it
+exists, a publish of that existing package stops on authentication and never falls
+back to a token. Setup and publish each need Andrew's exact authorization.
 
 It checks out only `src/npm-publication.mjs`, `src/release-set.mjs`, and
 `publish-set.json`; every workflow input reaches it through `env:`, never inside a

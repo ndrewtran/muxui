@@ -4,6 +4,7 @@
 - Decision owner: Andrew / `ndrewtran`
 - Decision: `muxui:decision:0032`
 - Amends: the Architecture, Roadmap, and Product Scope passages listed under "Authority effect"
+- Amended: 4 November 2026, item 10 only (trusted publishers move to each package's next real release); see "Amendment"
 - Effective: on merge
 
 ## Gap
@@ -146,8 +147,25 @@ Part 2, versions and release:
    Restoring the prior verifiable tuple, which Product Scope requires for
    Productization to be complete, stays owed by P2 exit.
 10. **Trusted publishers.** Each of the three new packages needs its own npm
-    trusted publisher. Setting them up takes Andrew's browser 2FA, and it is
-    done close to each package's first publish.
+    trusted publisher, and setting it up takes Andrew's browser 2FA.
+    - The first publish of schema, catalog, and tooling uses the temporary
+      `NPM_TOKEN`. Once registry read-back verifies that release, Andrew
+      revokes the token on npm and deletes the secret straight away. No
+      trusted publisher is set up then.
+    - Each new package's trusted publisher is set up immediately before that
+      package's next real release, so it validates inside npm's 2-day window.
+      A package with no change needs no setup. The setup and the publish each
+      need Andrew's exact authorization.
+    - Until a package's trusted publisher exists, a publish of that existing
+      package stops on authentication and never falls back to a token. Only a
+      package absent from the registry gets the token
+      (`src/npm-publication.mjs`).
+    - P2.1 can exit with tokenless publishing unproved for these three
+      packages. Its evidence states as a non-claim that their trusted
+      publishers are not yet set up and tokenless publishing is unproved for
+      them. The provenance of the token publish proves neither.
+      `@muxui/react` already publishes through its validated trusted
+      publisher, so `E-P2.1-06` still requires that for React.
 
 ## Authority effect
 
@@ -323,3 +341,39 @@ catalog bundled, which breaks the project-declared catalog rule.
 This record does not claim that any check passed, that any package, release
 candidate, or dist-tag changed, or that P2.1 is ready or active. Where it
 describes the code, it describes `main` at `ddbd687a`.
+
+## Amendment
+
+- Owner: Andrew / `ndrewtran`
+- Outcome: Accepted user direction; repository adoption through a protected pull request
+- Acceptance date: 4 November 2026
+
+Item 10 asked for each new package's trusted publisher to be set up close to
+its first publish, and the README's publish order set it up right after the
+token-authenticated first publish, before the token was revoked. That does not
+hold. npm expires a trusted publisher that
+has not completed a successful publish within 2 days
+(https://docs.npmjs.com/trusted-publishers), and a second release just to use
+it is not possible. Item 9 releases only the units that changed, the version
+check rejects a bump with no contract change (`P2_1_VERSION_UNIT_UNCHANGED` in
+`tooling/audits/repository-policy/src/release-effects.mjs`), and release
+preparation still packs all four packages.
+
+Andrew's choice, in his words, on 4 November 2026 was "Set up at next real
+release (Recommended)", whose option text was: "I open a PR amending the
+Roadmap, Decision 0032 and the README, merged before the dry run. P2.1 can
+finish with tokenless publishing unproved for these three packages, and the
+record says so."
+
+The amendment changes:
+
+- Item 10, as rewritten above.
+- The Roadmap's P2.1 deliverable and the trusted-publisher clause of
+  `E-P2.1-06`, the publish-order paragraph of the repository-policy README, and
+  the header comment of `npm-publish.yml`, so they agree with item 10. Product
+  Scope is unchanged: no commitment, package, or release boundary moves.
+
+It does not change the Acceptance above, which records what Andrew accepted on
+1 November 2026, nor any workflow logic or code. Rehearsal, read-back, the
+refusals, the partial-publication rehearsal, and per-release authorization stay
+in P2.1. This amendment publishes nothing and sets up no trusted publisher.
