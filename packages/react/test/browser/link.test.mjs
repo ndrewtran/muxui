@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import React from 'react';
+import { renderToString } from 'react-dom/server';
+import { Link as StaticLink } from '../../src/components.ts';
 import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 import { pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 
@@ -7,7 +10,8 @@ import { pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 // the way the Button beside it is: inert markup, the shared disabled paint, and
 // no focus stop or activation from the keyboard or the pointer. Each item holds
 // a Link and a Button; item `b` is disabled. Runs in every engine named by
-// MUXUI_BROWSER_ENGINES (see harness.mjs).
+// MUXUI_BROWSER_ENGINES (see harness.mjs). A Link in server markup that no script
+// has hydrated takes the hover colour from :hover alone, in both colour schemes.
 
 const entry = `
 import React from 'react';
@@ -48,11 +52,22 @@ const page = pageShell({
   entry: '/link-entry.mjs',
 });
 
+// Plain server markup under the stylesheet, with no hydration script, so no data-muxui-state-hovered is ever written.
+const staticPage = (scheme) => pageShell({
+  attributes: `data-muxui-color-scheme="${scheme}" data-muxui-motion="reduced"`,
+  head: '<link rel="stylesheet" href="/generated/styles.css">',
+  bodyAttributes: 'style="margin: 16px; background: var(--muxui-semantic-surface-canvas)"',
+  body: renderToString(React.createElement(React.Fragment, null,
+    React.createElement(StaticLink, { id: 'plain', href: '#plain' }, 'Plain'),
+    ' ',
+    React.createElement(StaticLink, { id: 'current', href: '#current', current: true }, 'Current'))),
+});
+
 for (const engine of browserEngines()) {
   test(`Link inside a disabled GridList item in ${engine}`, { timeout: 300_000 }, async (t) => {
     const { url, close } = await startServer({
       entries: ['src/collections.mjs', 'src/button.ts', 'src/components.ts'],
-      pages: { '/link.html': page },
+      pages: { '/link.html': page, '/link-static.html': (requested) => staticPage(requested.searchParams.get('scheme')) },
       modules: { '/link-entry.mjs': entry },
     });
     let browser;
@@ -152,6 +167,68 @@ for (const engine of browserEngines()) {
         await expectEvents([['link', 'a']], 'only the enabled Link ran');
         assert.equal(await tab.evaluate(() => location.hash), '#a', 'the disabled Link never navigated');
         assert.equal(await tab.locator('[aria-selected="true"]').count(), 0, 'the disabled item stays unselected');
+      });
+
+      await t.test('a server-rendered Link takes the hover colour in light and dark, and a current Link keeps its own', async () => {
+        for (const scheme of ['light', 'dark']) {
+          await tab.goto(`${url}/link-static.html?scheme=${scheme}`, { waitUntil: 'load' });
+          await tab.locator('#plain').waitFor();
+          await awaitFontsAndFrames(tab);
+          await tab.mouse.move(0, 0);
+          // The token colours as this page resolves them, so the test writes no colour down.
+          const token = (role) => tab.evaluate((name) => {
+            const probe = document.createElement('span');
+            probe.style.color = `var(--muxui-semantic-content-${name})`;
+            document.body.append(probe);
+            const color = getComputedStyle(probe).color;
+            probe.remove();
+            return color;
+          }, role);
+          const paint = (id) => tab.locator(id).evaluate((node) => getComputedStyle(node).color);
+          const [rest, hover] = [await token('link'), await token('link-hover')];
+          assert.notEqual(rest, hover, `${scheme}: the link and hover tokens differ`);
+
+          assert.equal(await paint('#plain'), rest, `${scheme}: a resting Link takes the link colour`);
+          await tab.locator('#plain').hover();
+          assert.equal(await tab.locator('#plain').getAttribute('data-muxui-state-hovered'), null, `${scheme}: no script has marked the Link hovered`);
+          assert.equal(await paint('#plain'), hover, `${scheme}: :hover alone paints the hover colour`);
+
+          await tab.mouse.move(0, 0);
+          const current = await paint('#current');
+          await tab.locator('#current').hover();
+          assert.equal(await paint('#current'), current, `${scheme}: a current Link keeps its colour under the pointer`);
+          assert.notEqual(current, hover, `${scheme}: and that colour is not the hover colour`);
+        }
+      });
+
+      // React Aria ignores touch for hover, so a tap must not leave the hover colour behind; the browser's own :hover can stay matched after it.
+      await t.test('a tap on a hydrated Link leaves its resting colour in light and dark', async () => {
+        const touch = await browser.newContext({ viewport: { width: 900, height: 700 }, locale: 'en-US', hasTouch: true });
+        try {
+          const touchTab = await touch.newPage();
+          touchTab.on('pageerror', (error) => errors.push(error.message));
+          for (const scheme of ['light', 'dark']) {
+            await touchTab.goto(`${url}/link.html?config=${encodeURIComponent(JSON.stringify({ layout: 'stack' }))}`, { waitUntil: 'load' });
+            await touchTab.locator('[data-muxui-grid-list-motion-ready]').waitFor();
+            await awaitFontsAndFrames(touchTab);
+            // Reduced motion makes the colour change at once, so neither the scheme switch nor the tap leaves a transition half-run.
+            await touchTab.evaluate((value) => {
+              document.documentElement.setAttribute('data-muxui-motion', 'reduced');
+              document.documentElement.setAttribute('data-muxui-color-scheme', value);
+            }, scheme);
+            await awaitFontsAndFrames(touchTab);
+            const link = touchTab.locator('[role="row"]:has([data-item="a"]) .muxui-link');
+            const paint = () => link.evaluate((node) => getComputedStyle(node).color);
+            const rest = await paint();
+            await link.tap();
+            await awaitFontsAndFrames(touchTab);
+            assert.deepEqual(await touchTab.evaluate(() => window.__events), [['link', 'a']], `${scheme}: the tap activated the Link`);
+            assert.equal(await link.getAttribute('data-muxui-state-hovered'), null, `${scheme}: React Aria does not hover a Link on touch`);
+            assert.equal(await paint(), rest, `${scheme}: the tap leaves the resting colour`);
+          }
+        } finally {
+          await touch.close();
+        }
       });
 
       assert.deepEqual(errors, [], `page errors: ${errors.join('\n')}`);

@@ -5,7 +5,7 @@ import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startSer
 // React Aria makes a tab panel a focus stop only when it has no tabbable content.
 // That stop draws the Tabs focus ring for keyboard focus, never for pointer focus
 // (including the first click on a fresh page), and a panel that wraps tabbable content
-// draws none. Runs in every engine named
+// draws none. The page's aria-label names the tablist in the accessibility tree. Runs in every engine named
 // by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const entry = `
@@ -71,6 +71,10 @@ for (const engine of browserEngines()) {
         await tab.getByRole('tab', { name }).click();
         await tab.getByRole('tab', { name, selected: true }).waitFor();
       };
+
+      await t.test('the aria-label names the tablist, which is what a screen reader announces', async () => {
+        assert.equal(await tab.getByRole('tablist', { name: 'Sections' }).count(), 1);
+      });
 
       await t.test('a panel with no tabbable content draws the ring on keyboard focus', async () => {
         await selectTab('Plain');

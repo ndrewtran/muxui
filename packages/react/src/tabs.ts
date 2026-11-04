@@ -73,14 +73,15 @@ export const Tabs: ForwardRefExoticComponent<TabsProps & RefAttributes<HTMLDivEl
       keyboardActivation,
       // React Aria's Tabs props name neither isDisabled nor the data hooks the styles read, and TypeScript accepts such a key in a call only from a spread.
       ...{ isDisabled: disabled },
-      'aria-label': ariaLabel,
-      'aria-labelledby': ariaLabelledby,
       className: classNames('muxui-tabs', className),
       ...{ 'data-muxui-size': resolvedSize, 'data-muxui-variant': resolvedVariant },
     },
     React.createElement(TabsMotion, { orientation, variant: resolvedVariant, disabled }, React.createElement(AriaTabList<NormalizedItem>, {
       items: normalized,
       className: 'muxui-tabs__list',
+      // React Aria names a tablist from the TabList's own props; the Tabs root is a div with no role to name.
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby,
       // A render function is a child of React Aria's collection parts, which TypeScript accepts as a prop here and not as a createElement child.
       children: (item) => React.createElement(AriaTab, {
         id: item.id,

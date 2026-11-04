@@ -544,6 +544,14 @@
   color: var(--muxui-semantic-content-link-hover);
 }
 
+/* Native :hover paints server markup before hydration writes the hovered state. It is limited to hovering devices because
+   React Aria ignores touch for hover, while a browser keeps :hover matched after a tap. */
+@media (hover: hover) {
+  .muxui-link:not(.muxui-button):hover {
+    color: var(--muxui-semantic-content-link-hover);
+  }
+}
+
 .muxui-link:not(.muxui-button)[data-muxui-state-pressed] {
   color: var(--muxui-semantic-content-link-pressed);
 }
@@ -1119,6 +1127,14 @@
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-link:not(.muxui-button)[data-muxui-state-hovered] {
     color: var(--muxui-semantic-content-link-hover);
+  }
+}
+
+@media (hover: hover) {
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope .muxui-link:not(.muxui-button):hover {
+      color: var(--muxui-semantic-content-link-hover);
+    }
   }
 }
 
