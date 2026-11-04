@@ -1,6 +1,7 @@
 {
   "seconds": {
     "test/browser/activity.test.mjs": 40,
+    "test/browser/astro-host.test.mjs": 21,
     "test/browser/autocomplete-dismissal.test.mjs": 23,
     "test/browser/bento-collections.test.mjs": 7,
     "test/browser/bento-input-controls.test.mjs": 18,

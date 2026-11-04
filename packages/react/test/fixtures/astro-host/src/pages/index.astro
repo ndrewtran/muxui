@@ -1,0 +1,30 @@
+---
+// Parts and providers live in local React islands. The one ProgressCircle below
+// is the negative control: its parts reach React as separate roots without context.
+import { ProgressCircle } from '@muxui/react';
+import DisclosureIsland from '../components/DisclosureIsland';
+import PendingIsland from '../components/PendingIsland';
+import ProgressIsland from '../components/ProgressIsland';
+import TabsIsland from '../components/TabsIsland';
+import '../styles/reset.css';
+import '@muxui/react/styles.css';
+import '../styles/app.css';
+---
+<html lang="en">
+  <head><meta charset="utf-8" /><link rel="icon" href="data:," /><title>Islands</title></head>
+  <body>
+    <main>
+      <section id="island-progress"><ProgressIsland client:load /></section>
+      <section id="astro-progress">
+        <ProgressCircle.Root value={50}>
+          <ProgressCircle.Track />
+          <ProgressCircle.Label>Upload</ProgressCircle.Label>
+          <ProgressCircle.Value />
+        </ProgressCircle.Root>
+      </section>
+      <section id="disclosure"><DisclosureIsland client:load /></section>
+      <section id="tabs"><TabsIsland client:load /></section>
+      <section id="pending"><PendingIsland client:load /></section>
+    </main>
+  </body>
+</html>
