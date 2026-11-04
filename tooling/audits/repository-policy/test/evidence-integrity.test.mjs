@@ -659,6 +659,16 @@ test('R1 exit capture rebuilds each committed route byte for byte from its verif
   }
 });
 
+// The next release names this retained manifest as its prior release (`prior-release`, tests/evidence path ending .json), and
+// the first-release flag is refused once it is tracked, so it must stay a manifest the prior-release check reads.
+test('the retained rc.5 release manifest passes the prior-release check against the publish set', async () => {
+  const { findPriorManifestProblems } = await import('../src/release-effects.mjs');
+  const { readPublishSet } = await import('../src/release-set.mjs');
+  const manifest = JSON.parse(readFileSync(join(repositoryRoot, r1Exit.routeFor('0.1.0-rc.5'), 'artifacts/release-manifest.json'), 'utf8'));
+  assert.equal(manifest.schema, 'muxui-portfolio-release-v1');
+  assert.deepEqual(findPriorManifestProblems(manifest, readPublishSet(repositoryRoot)), []);
+});
+
 // A rehearsal route holding a captured dry run, written as the tool would.
 async function seedR1ExitRoute(out, fixture) {
   const bound = r1Exit.bindDryRun(fixture.dryRunInput);
