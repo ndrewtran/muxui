@@ -133,10 +133,15 @@ export function assertDisclosable(text, label) {
 }
 
 // The release manifest is public package metadata, but the disclosure check
-// reads a credential-named key with a plain value (`publication.authorization:
-// "required-external-human-authorization"`) as a possible secret. Such values
-// are replaced with <public-id> and listed, original value included, in
+// reads a credential-named key with a plain value as a possible secret. Such
+// values are replaced with <public-id> and listed, original value included, in
 // verification.json; the unsanitized manifest digest binds the exact bytes.
+// The one exception is `publication.authorization:
+// "required-external-human-authorization"`, a public constant that the check
+// allows and capture keeps: a portfolio manifest's digest covers it, so the
+// retained manifest of a release stays verifiable as the next release's prior
+// manifest. Routes captured before that allowance (rc.1 to rc.4) keep the
+// rewrite they were captured with.
 const credentialKey = /token|secret|key|password|authorization|auth|credentials/iu;
 export function sanitizeManifest(value, pointer = '', rewrites = []) {
   if (Array.isArray(value)) return { value: value.map((entry, index) => sanitizeManifest(entry, `${pointer}/${index}`, rewrites).value), rewrites };

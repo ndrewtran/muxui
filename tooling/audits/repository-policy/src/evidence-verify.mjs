@@ -12,13 +12,20 @@ export class EvidenceIntegrityError extends Error {
   }
 }
 
+// A release manifest's `publication.authorization` is this constant (release-manifest.mjs): it names the
+// external authorization a publish still needs, and is not a credential. Only this exact key and value is
+// allowed; `authorization` with any other value is still a possible secret.
+const PUBLIC_AUTHORIZATION_CONSTANT = '"authorization":"required-external-human-authorization"';
+
 export function hasUnsanitizedEvidenceOutput(text, repositoryRoot) {
   // Public token IDs, including the historical `core:` namespace in retained
   // logs, are artifact identities rather than credentials.
-  const withoutPublicTokenIds = text.replace(
-    /"(muxui|core):token:[a-z0-9]+(?:-[a-z0-9]+)*"/gu,
-    '"$1:<public-token-id>"',
-  );
+  const withoutPublicTokenIds = text
+    .replaceAll(PUBLIC_AUTHORIZATION_CONSTANT, '"authorization":"<public-id>"')
+    .replace(
+      /"(muxui|core):token:[a-z0-9]+(?:-[a-z0-9]+)*"/gu,
+      '"$1:<public-token-id>"',
+    );
   // Quoted public identifiers in value position (lowercase segments joined by
   // `.` or `:`, such as `component.button.background` or `web.html:web.html`)
   // are not credentials even under a key like `token` or `key`. Keys are never

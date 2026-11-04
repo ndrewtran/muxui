@@ -80,6 +80,26 @@ test('evidence output privacy recognizes public token IDs without accepting cred
   assert.equal(hasUnsanitizedEvidenceOutput(`${root}/packages/tokens`, root), true);
 });
 
+// release-manifest.mjs publishes `publication.authorization` as a constant. Only that exact key and value is allowed.
+test('evidence output privacy allows the public authorization constant and no other authorization value', () => {
+  const root = '/tmp/muxui-evidence';
+  const constant = '"authorization":"required-external-human-authorization"';
+  assert.equal(hasUnsanitizedEvidenceOutput(`{"publication":{${constant},"status":"prepared"}}`, root), false);
+  for (const other of [
+    '{"authorization":"required-external-human-authorizations"}',
+    '{"authorization":"other-value"}',
+    '{"authorization": "required-external-human-authorization"}',
+    '{"x-authorization":"required-external-human-authorization"}',
+    '{"auth":"required-external-human-authorization"}',
+    "{'authorization':'required-external-human-authorization'}",
+    '{"authorization":"Bearer abcdefgh12345678"}',
+    `{${constant},"token":"S3cretValue"}`,
+    `{${constant},"authorization":"other-value"}`,
+  ]) {
+    assert.equal(hasUnsanitizedEvidenceOutput(other, root), true, other);
+  }
+});
+
 // Every retained root must pass the current disclosure check, so a stricter
 // pattern cannot silently start flagging historical public identifiers.
 test('every retained evidence root passes the disclosure check', async () => {
@@ -3348,7 +3368,7 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
       // The retained manifest is the portfolio manifest, sanitized.
       const retained = JSON.parse(await readFile(join(out, 'artifacts/release-manifest.json'), 'utf8'));
       assert.equal(retained.schema, 'muxui-portfolio-release-v1');
-      assert.equal(retained.publication.authorization, '<public-id>');
+      assert.equal(retained.publication.authorization, 'required-external-human-authorization', 'a public constant, kept so the manifest stays verifiable as a prior release');
 
       // Every file rebuilds from verification.json, as the committed routes do.
       const route = r1Exit.routeFor(fixture.reactVersion);
