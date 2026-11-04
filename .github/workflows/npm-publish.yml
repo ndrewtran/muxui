@@ -16,15 +16,19 @@ name: npm publish
 # version, never following a redirect, and holds it to the integrity that
 # release recorded and to the attestation the registry holds for it: the SLSA
 # statement must name those bytes, the recorded commit, and this repository's
-# publish workflow on main. `next` must still be that version. The prior release
-# manifest, and the manifest of any release it reused from, must be retained
-# evidence, listed with its digest by the index.json of its tests/evidence route.
+# publish workflow on main. `next` must still be that version. The dry run also
+# runs `npm audit signatures` on them in a project outside the checkout, which
+# verifies the attestation's Sigstore signature and the registry's signature.
+# The prior release manifest, and the manifest of any release it reused from,
+# must be retained evidence, listed with its digest by the index.json of its
+# tests/evidence route.
 # The dry run never repacks a reused package and checks the whole tuple with it;
 # an unchanged package given a version, or a changed one left empty, is refused
 # by the version check. At least one package is published. The candidate
 # artifact holds the published tarballs, in publish order, and the manifest. The
 # publish job publishes only those, and before the first publish and again
-# before each one checks every reused package against the registry the same way.
+# before each one checks every reused package's version document, attestation
+# statement, and `next` against the registry; the signatures are the dry run's.
 #
 # - mode=dry-run (default): `prepare` builds the candidate set for the input
 #   versions on the dispatched commit, rehearses `npm publish --dry-run` for

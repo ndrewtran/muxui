@@ -9,7 +9,7 @@ import { PUBLISHING_REPOSITORY, PUBLISHING_WORKFLOW, REGISTRY } from '../src/npm
 const slsa = { predicateType: 'https://slsa.dev/provenance/v1' };
 
 /** The SLSA provenance statement the registry holds for a publish by this repository's workflow, in the shape npm records it. */
-const statementOf = ({ name, version, integrity, commit }) => ({
+export const statementOf = ({ name, version, integrity, commit }) => ({
   _type: 'https://in-toto.io/Statement/v1',
   subject: [{ name: `pkg:npm/${name.replace('@', '%40')}@${version}`, digest: { sha512: Buffer.from(integrity.slice('sha512-'.length), 'base64').toString('hex') } }],
   predicateType: slsa.predicateType,
@@ -23,7 +23,7 @@ const statementOf = ({ name, version, integrity, commit }) => ({
 });
 
 /** The registry's attestation document: npm's own publish attestation and the SLSA provenance one, each a DSSE envelope. */
-const attestationDocument = (statement) => ({
+export const attestationDocument = (statement) => ({
   attestations: [
     { predicateType: 'https://github.com/npm/attestation/tree/main/specs/publish/v0.1', bundle: { dsseEnvelope: { payloadType: 'application/vnd.in-toto+json', payload: Buffer.from('{}').toString('base64') } } },
     { predicateType: slsa.predicateType, bundle: { dsseEnvelope: { payloadType: 'application/vnd.in-toto+json', payload: Buffer.from(JSON.stringify(statement)).toString('base64') } } },

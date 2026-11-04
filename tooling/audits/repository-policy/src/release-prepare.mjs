@@ -30,6 +30,7 @@ import {
   readRetainedReviewEvidence,
   replaceVersions,
   summarizeBundleModules,
+  verifyReusedSignatures,
 } from './release-proof.mjs';
 import { canonicalJson } from './canonical-json.mjs';
 import { deterministicArchive, readArchive } from './release-archive.mjs';
@@ -513,6 +514,8 @@ function unpackReused(entry, archiveBytes, destination) {
 // Fetched before any packing, so a package missing from the registry, or with other bytes than recorded, stops the release first.
 const reusedTarballs = new Map();
 for (const [name, record] of reused) reusedTarballs.set(name, await fetchReusedTarball(record));
+// Then their signatures: the registry's, and the Sigstore signature and certificate chain of each attestation. Nothing runs when nothing is reused.
+verifyReusedSignatures({ reused });
 
 const temp = mkdtempSync(join(tmpdir(), 'muxui-r1-5-release-'));
 try {
