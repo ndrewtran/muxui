@@ -3939,10 +3939,24 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
           assert.equal(contentOf(excerptLines(item.excerpt)[item.line]), item.text, `${assertionId} cites ${item.excerpt}:${item.line}`);
         }
       }
-      assert.equal(record.independentReview.status, 'pending', 'the review of this route is not written');
+      assert.deepEqual(record.independentReview, index.independentReview, `${assertionId} carries the index's review`);
+      assert.ok(!record.nonClaims.some((claim) => /review did not pass/u.test(claim)), `${assertionId} has no not-passing review to keep`);
     }
-    assert.deepEqual(index.independentReview, { ...index.independentReview, status: 'pending', artifact: null });
-    assert.match(text(`${route}/README.md`), /^\*\*P2\.1 completion is not claimed by this route or by any record in it\.\*\*/mu);
+    // The independent review passed. It is retained as the reviewer wrote it, bound to the route commit it read, and it closes nothing of P2.1.
+    const review = index.independentReview;
+    assert.deepEqual([review.status, review.reviewer, review.reviewedRevision, review.reviewedRevisionIsSource], ['retained-pass', 'GPT-6.1 Sol, Codex', '214cb047219071286ca5c8fe1f311b6a2d15e603', false]);
+    assert.match(review.verdictText, /^\*\*Pass\.\*\*/u);
+    assert.equal(review.effect, undefined, 'a passing review limits nothing');
+    assert.equal(digest(text(review.artifact.path)), review.artifact.sha256);
+    assert.ok(index.artifacts.some(({ path, sha256 }) => path === review.artifact.path && sha256 === review.artifact.sha256));
+    assert.equal(review.changedSinceReviewed.truncated, false);
+    assert.equal(review.changedSinceReviewed.pathCount, review.changedSinceReviewed.paths.length);
+    assert.equal(verification.phases.review.passes, true);
+    const readme = text(`${route}/README.md`);
+    assert.match(readme, /^\*\*P2\.1 completion is not claimed by this route or by any record in it\.\*\*/mu);
+    assert.match(readme, /read by GPT-6\.1 Sol, Codex at `214cb047219071286ca5c8fe1f311b6a2d15e603`\. It is a pass\./u);
+    assert.doesNotMatch(readme, /did not pass|review is pending|is pending, and these records claim no outcome of it/u);
+    assert.match(readme, /These records do not claim P2\.1 is complete/u);
 
     // E-P2.1-02 on the published tuple: every check passes, the CLI reports its own version, and the counts are what the installed countTokens gave.
     const published = verification.phases.published;

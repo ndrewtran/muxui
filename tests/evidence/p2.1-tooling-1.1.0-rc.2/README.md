@@ -44,7 +44,7 @@ listed, and its manifest retained; 4 of 4 checks passed.
 No Roadmap row of `E-P2.1-01` to `E-P2.1-06` was amended after the release commit, and no file the records cite changed after it (each record's `compared` block states
 this and lists what differs from the first release's source revision).
 
-No independent release-integrity review is retained: it is pending, and these records claim no outcome of it.
+The independent release-integrity review is retained as `tests/evidence/p2.1-tooling-1.1.0-rc.2/artifacts/release-integrity-review.md`, read by GPT-6.1 Sol, Codex at `214cb047219071286ca5c8fe1f311b6a2d15e603`. It is a pass.
 
 The exact authorization to publish was given in chat and is recorded in `E-P2.1-06` as reported by the capture operator; the `npm-publish` environment had no
 required reviewer (Decision 0033), so the publish run's approvals list is empty. `@muxui/tooling@1.1.0-rc.2` published by trusted publishing (OIDC). Andrew reported setting up
