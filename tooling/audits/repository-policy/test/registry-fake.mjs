@@ -4,47 +4,81 @@
 // recorded, and there is no way to deprecate, unpublish, or re-tag, so a test can assert none happened.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { REGISTRY } from '../src/npm-publication.mjs';
+import { PUBLISHING_REPOSITORY, PUBLISHING_WORKFLOW, REGISTRY } from '../src/npm-publication.mjs';
 
 const slsa = { predicateType: 'https://slsa.dev/provenance/v1' };
 
+/** The SLSA provenance statement the registry holds for a publish by this repository's workflow, in the shape npm records it. */
+const statementOf = ({ name, version, integrity, commit }) => ({
+  _type: 'https://in-toto.io/Statement/v1',
+  subject: [{ name: `pkg:npm/${name.replace('@', '%40')}@${version}`, digest: { sha512: Buffer.from(integrity.slice('sha512-'.length), 'base64').toString('hex') } }],
+  predicateType: slsa.predicateType,
+  predicate: {
+    buildDefinition: {
+      externalParameters: { workflow: { ref: 'refs/heads/main', repository: `https://github.com/${PUBLISHING_REPOSITORY}`, path: PUBLISHING_WORKFLOW } },
+      resolvedDependencies: [{ uri: `git+https://github.com/${PUBLISHING_REPOSITORY}@refs/heads/main`, digest: { gitCommit: commit } }],
+    },
+    runDetails: { metadata: { invocationId: `https://github.com/${PUBLISHING_REPOSITORY}/actions/runs/41754361620/attempts/1` } },
+  },
+});
+
+/** The registry's attestation document: npm's own publish attestation and the SLSA provenance one, each a DSSE envelope. */
+const attestationDocument = (statement) => ({
+  attestations: [
+    { predicateType: 'https://github.com/npm/attestation/tree/main/specs/publish/v0.1', bundle: { dsseEnvelope: { payloadType: 'application/vnd.in-toto+json', payload: Buffer.from('{}').toString('base64') } } },
+    { predicateType: slsa.predicateType, bundle: { dsseEnvelope: { payloadType: 'application/vnd.in-toto+json', payload: Buffer.from(JSON.stringify(statement)).toString('base64') } } },
+  ],
+});
+
 /**
- * `seed` maps a package name to { versions: { [version]: integrity }, tags, tarballs: { [version]: bytes } } already on
- * the registry: a version with bytes and no integrity is listed at the integrity of those bytes, and one with both is
- * served the bytes whatever integrity its document declares. `faults`
+ * `seed` maps a package name to { versions: { [version]: integrity }, tags, tarballs: { [version]: bytes }, commit } already
+ * on the registry: a version with bytes and no integrity is listed at the integrity of those bytes, and one with both is
+ * served the bytes whatever integrity its document declares. Every version carries the SLSA provenance attestation of a
+ * publish by this repository's workflow at `commit` (or the package's `commit`), which a test edits through
+ * `attestation(name, version)`. `faults`
  * names the package each failure hits: `refuse` (npm rejects the publish and writes nothing), `corrupt` (the
  * registry ends up with other bytes), `unattested` (no provenance attestation), `invisible` (the publish lands
  * and never becomes readable, as a registry that does not propagate), and `landThenFail` (the publish lands, the
  * command errors, and reads return 404 until `reveal(name)`, as a timeout after npm accepted the PUT).
  */
-export function createRegistry({ seed = {}, faults: initialFaults = {} } = {}) {
+export function createRegistry({ seed = {}, faults: initialFaults = {}, commit: defaultCommit = 'f'.repeat(40) } = {}) {
   const faults = { ...initialFaults };
   const packuments = new Map();
   const hidden = new Set();
   const requests = [];
   const writes = [];
   const files = new Map();
+  const statements = new Map();
+  const redirected = new Set();
   const sri = (bytes) => `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
   const tarballUrl = (name, version) => `${REGISTRY}/${name}/-/${name.split('/')[1]}-${version}.tgz`;
-  const add = (name, version, integrity, { attested = true, bytes } = {}) => {
+  const attestationUrl = (name, version) => `${REGISTRY}/-/npm/v1/attestations/${name.replace('/', '%2f')}@${version}`;
+  const add = (name, version, integrity, { attested = true, bytes, commit = defaultCommit } = {}) => {
     const packument = packuments.get(name) ?? { 'dist-tags': {}, versions: {} };
-    packument.versions[version] = { name, version, dist: { integrity, tarball: tarballUrl(name, version), ...(attested ? { attestations: { provenance: slsa } } : {}) } };
+    packument.versions[version] = { name, version, dist: { integrity, tarball: tarballUrl(name, version), ...(attested ? { attestations: { url: attestationUrl(name, version), provenance: slsa } } : {}) } };
+    if (attested) statements.set(attestationUrl(name, version), statementOf({ name, version, integrity, commit }));
     if (bytes) files.set(tarballUrl(name, version), bytes);
     packuments.set(name, packument);
     return packument;
   };
-  for (const [name, { versions = {}, tags, tarballs = {} }] of Object.entries(seed)) {
-    for (const [version, integrity] of Object.entries(versions)) add(name, version, integrity, { bytes: tarballs[version] });
-    for (const [version, bytes] of Object.entries(tarballs)) if (!(version in versions)) add(name, version, sri(bytes), { bytes });
+  for (const [name, { versions = {}, tags, tarballs = {}, commit }] of Object.entries(seed)) {
+    for (const [version, integrity] of Object.entries(versions)) add(name, version, integrity, { bytes: tarballs[version], commit });
+    for (const [version, bytes] of Object.entries(tarballs)) if (!(version in versions)) add(name, version, sri(bytes), { bytes, commit });
     packuments.get(name)['dist-tags'] = { ...tags };
   }
 
   const respond = (status, body) => ({ status, json: async () => body });
 
-  /** The `fetch` npm-publication.mjs reads the registry through. */
-  async function fetch(url) {
+  /**
+   * The `fetch` npm-publication.mjs reads the registry through. It must be asked not to follow redirects, as every read of
+   * the public registry is; a URL given to `redirect` answers as a redirect, which that request refuses.
+   */
+  async function fetch(url, init = {}) {
     requests.push(String(url));
     if (!String(url).startsWith(`${REGISTRY}/`)) throw new Error(`the fake registry only serves ${REGISTRY}, not ${url}`);
+    if (init.redirect !== 'error') throw new Error(`the read of ${url} would follow a redirect: it did not pass redirect: 'error'`);
+    if (redirected.has(String(url))) throw new TypeError('fetch failed', { cause: new Error('unexpected redirect') });
+    if (statements.has(String(url))) return respond(200, attestationDocument(statements.get(String(url))));
     if (files.has(String(url))) {
       const bytes = files.get(String(url));
       return { status: 200, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length) };
@@ -97,5 +131,9 @@ export function createRegistry({ seed = {}, faults: initialFaults = {} } = {}) {
     reveal: (name) => hidden.delete(name),
     /** The recorded state of one package, as the registry holds it now. */
     packument: (name) => packuments.get(name) ?? null,
+    /** The provenance statement the registry serves for a version; edit it to change what the attestation says. */
+    attestation: (name, version) => statements.get(attestationUrl(name, version)),
+    /** Makes a URL answer as a redirect. */
+    redirect: (url) => redirected.add(url),
   };
 }

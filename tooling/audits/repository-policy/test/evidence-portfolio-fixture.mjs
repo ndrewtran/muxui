@@ -142,7 +142,7 @@ export function portfolioFixture({ versions = {}, react: editReact, preparation,
     const registry = createRegistry({
       seed: {
         [react]: { versions: Object.fromEntries(Array.from({ length: reactRc - 1 }, (_, index) => [`0.1.0-rc.${index + 1}`, `sha512-${String(index + 1).repeat(86)}==`])), tags: { latest: '0.1.0-rc.1', next: `0.1.0-rc.${reactRc - 1}` } },
-        ...Object.fromEntries(reuse.map((name) => [name, { versions: { '0.0.0-stage': `sha512-${'s'.repeat(86)}==` }, tarballs: { [versionOf(name)]: artifacts.get(name) }, tags: { latest: versionOf(name), next: versionOf(name) } }])),
+        ...Object.fromEntries(reuse.map((name) => [name, { versions: { '0.0.0-stage': `sha512-${'s'.repeat(86)}==` }, tarballs: { [versionOf(name)]: artifacts.get(name) }, tags: { latest: versionOf(name), next: versionOf(name) }, commit: first.manifest.source.revision }])),
       },
       faults,
     });

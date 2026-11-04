@@ -13,12 +13,18 @@ name: npm publish
 # version, bytes, and provenance of the prior release, which `prior-release`
 # names, so a release that reuses anything needs it and cannot be the first.
 # The dry run fetches each reused package from the public registry by its exact
-# version and holds it to the integrity that release recorded, never repacks it,
-# and checks the whole tuple with it; an unchanged package given a version, or a
-# changed one left empty, is refused by the version check. At least one package
-# is published. The candidate artifact holds the published tarballs, in publish
-# order, and the manifest. The publish job publishes only those, and checks that
-# each reused package is still on the registry as recorded.
+# version, never following a redirect, and holds it to the integrity that
+# release recorded and to the attestation the registry holds for it: the SLSA
+# statement must name those bytes, the recorded commit, and this repository's
+# publish workflow on main. `next` must still be that version. The prior release
+# manifest, and the manifest of any release it reused from, must be retained
+# evidence, listed with its digest by the index.json of its tests/evidence route.
+# The dry run never repacks a reused package and checks the whole tuple with it;
+# an unchanged package given a version, or a changed one left empty, is refused
+# by the version check. At least one package is published. The candidate
+# artifact holds the published tarballs, in publish order, and the manifest. The
+# publish job publishes only those, and before the first publish and again
+# before each one checks every reused package against the registry the same way.
 #
 # - mode=dry-run (default): `prepare` builds the candidate set for the input
 #   versions on the dispatched commit, rehearses `npm publish --dry-run` for
@@ -44,8 +50,8 @@ name: npm publish
 #   re-derived from these inputs. The version inputs and tarball-sha512 must be
 #   the dry run's: a package is published exactly when its version input is not
 #   empty, and the authorization lists exactly the published tarballs. A reused
-#   package is fetched again from the registry and checked against the retained
-#   manifest of the release that published it. Then one `publish` job, in the `npm-publish`
+#   package is fetched again from the registry, checked against the retained
+#   manifest of the release that published it and its attestation. Then one `publish` job, in the `npm-publish`
 #   environment (main only, no required reviewer; Decision 0033), publishes the
 #   set to `next` in publish order. It is the only job with `id-token: write`.
 #   A package that exists on npm publishes through trusted publishing: its

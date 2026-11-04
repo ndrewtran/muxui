@@ -601,7 +601,10 @@ test('a promoted candidate that reuses packages fetches them from the registry a
     writeFileSync(join(directory, PORTFOLIO_MANIFEST_FILE), JSON.stringify(successor.manifest));
     const published = new Map([['@muxui/tooling', '1.1.0-rc.2']]);
     const registry = createRegistry({
-      seed: Object.fromEntries(reusedNames.map((name) => [name, { tarballs: { [first.manifest.packages.find((record) => record.name === name).version]: first.artifacts.get(name) }, tags: {} }])),
+      seed: Object.fromEntries(reusedNames.map((name) => {
+        const { version } = first.manifest.packages.find((record) => record.name === name);
+        return [name, { tarballs: { [version]: first.artifacts.get(name) }, tags: { latest: version, next: version }, commit: first.manifest.source.revision }];
+      })),
     });
     const retained = new Map([[first.manifest.id, first.manifest]]);
     const options = { directory, publishSet, versions: published, sha: secondCommit, readRetained: () => retained, io: registry.io() };
@@ -621,7 +624,7 @@ test('a promoted candidate that reuses packages fetches them from the registry a
 
     // The reuse is refused when the registry does not hold the recorded bytes, the package is missing, or the manifest that published it is not retained.
     await assert.rejects(loadReuse({ ...options, io: createRegistry({ seed: {} }).io() }), /which this release reuses, is not on the registry/u);
-    const other = createRegistry({ seed: { '@muxui/schema': { tarballs: { '0.6.0-rc.1': Buffer.from('repacked') }, versions: { '0.6.0-rc.1': first.manifest.packages[0].integrity }, tags: {} } } });
+    const other = createRegistry({ seed: { '@muxui/schema': { tarballs: { '0.6.0-rc.1': Buffer.from('repacked') }, versions: { '0.6.0-rc.1': first.manifest.packages[0].integrity }, tags: { latest: '0.6.0-rc.1', next: '0.6.0-rc.1' }, commit: first.manifest.source.revision } } });
     await assert.rejects(loadReuse({ ...options, io: other.io() }), /The tarball of @muxui\/schema@0\.6\.0-rc\.1 is sha512-.*; its earlier release recorded sha512-/u);
     await assert.rejects(verify({}, { readRetained: () => new Map() }), /P2_1_MANIFEST_REUSE_UNVERIFIED: @muxui\/schema is reused from .*, which has no verified earlier manifest/u);
     // A retained manifest that is not the one that published the package (another record, or edited) does not stand for it.
