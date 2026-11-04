@@ -80,6 +80,26 @@ test('evidence output privacy recognizes public token IDs without accepting cred
   assert.equal(hasUnsanitizedEvidenceOutput(`${root}/packages/tokens`, root), true);
 });
 
+// release-manifest.mjs publishes `publication.authorization` as a constant. Only that exact key and value is allowed.
+test('evidence output privacy allows the public authorization constant and no other authorization value', () => {
+  const root = '/tmp/muxui-evidence';
+  const constant = '"authorization":"required-external-human-authorization"';
+  assert.equal(hasUnsanitizedEvidenceOutput(`{"publication":{${constant},"status":"prepared"}}`, root), false);
+  for (const other of [
+    '{"authorization":"required-external-human-authorizations"}',
+    '{"authorization":"other-value"}',
+    '{"authorization": "required-external-human-authorization"}',
+    '{"x-authorization":"required-external-human-authorization"}',
+    '{"auth":"required-external-human-authorization"}',
+    "{'authorization':'required-external-human-authorization'}",
+    '{"authorization":"Bearer abcdefgh12345678"}',
+    `{${constant},"token":"S3cretValue"}`,
+    `{${constant},"authorization":"other-value"}`,
+  ]) {
+    assert.equal(hasUnsanitizedEvidenceOutput(other, root), true, other);
+  }
+});
+
 // Every retained root must pass the current disclosure check, so a stricter
 // pattern cannot silently start flagging historical public identifiers.
 test('every retained evidence root passes the disclosure check', async () => {
@@ -630,12 +650,23 @@ test('R1 exit capture discloses a failed earlier dry-run attempt and masks npm a
 test('R1 exit capture rebuilds each committed route byte for byte from its verification.json', async () => {
   const read = (relative) => readFileSync(join(repositoryRoot, relative), 'utf8');
   // rc.1 (token workflow), rc.2 (trusted publishing, which rebuilt its candidate in the publish run), and rc.3 and rc.4
-  // (build once, single-package manifest) keep their binding; the portfolio adapter does not touch their records.
-  for (const route of [r1Exit.route, ...['0.1.0-rc.2', '0.1.0-rc.3', '0.1.0-rc.4'].map((version) => r1Exit.routeFor(version))]) {
+  // (build once, single-package manifest) keep their binding; the portfolio adapter does not touch their records. rc.5 is the
+  // first portfolio release (Decision 0032): the same four records, with the other packages' facts beside the React candidate's.
+  for (const route of [r1Exit.route, ...['0.1.0-rc.2', '0.1.0-rc.3', '0.1.0-rc.4', '0.1.0-rc.5'].map((version) => r1Exit.routeFor(version))]) {
     const { files } = r1Exit.assembleRoute(JSON.parse(read(`${route}/verification.json`)), read);
     assert.deepEqual([...files.keys()].sort(), ['README.md', 'index.json', 'records/E-R1-EXIT-01.json', 'records/E-R1-EXIT-02.json', 'records/E-R1-EXIT-03.json', 'records/E-R1-EXIT-04.json', 'verification.json'].map((file) => `${route}/${file}`));
     for (const [relative, text] of files) assert.equal(text, read(relative), relative);
   }
+});
+
+// The next release names this retained manifest as its prior release (`prior-release`, tests/evidence path ending .json), and
+// the first-release flag is refused once it is tracked, so it must stay a manifest the prior-release check reads.
+test('the retained rc.5 release manifest passes the prior-release check against the publish set', async () => {
+  const { findPriorManifestProblems } = await import('../src/release-effects.mjs');
+  const { readPublishSet } = await import('../src/release-set.mjs');
+  const manifest = JSON.parse(readFileSync(join(repositoryRoot, r1Exit.routeFor('0.1.0-rc.5'), 'artifacts/release-manifest.json'), 'utf8'));
+  assert.equal(manifest.schema, 'muxui-portfolio-release-v1');
+  assert.deepEqual(findPriorManifestProblems(manifest, readPublishSet(repositoryRoot)), []);
 });
 
 // A rehearsal route holding a captured dry run, written as the tool would.
@@ -3128,6 +3159,8 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
   // dry run and a publish run of the workflow that carries the whole publish set. The earlier formats keep their tests in
   // evidence-integrity.test.mjs, which rebuilds every committed route byte for byte.
   const code = (expected) => (error) => error?.code === expected;
+  const latestNonClaim = 'For a package this release published for the first time, latest points at its rc on the registry; it is observed, not claimed or promoted (Decision 0023).';
+  const tokenlessNonClaim = `The trusted publishers of ${schema}, ${catalog}, and ${tooling} are not yet set up and tokenless publishing is unproved for them; the provenance of their token publish proves neither (Decision 0032 item 10).`;
   const rejectsWith = (expected, change) => assert.throws(change, code(expected), expected);
   const manifestInput = (fixture, change) => {
     const manifest = structuredClone(fixture.manifest);
@@ -3324,6 +3357,10 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
       assert.deepEqual(first.portfolio.packages.map(({ name }) => name), names);
       assert.equal(first.portfolio.manifestDigest, fixture.manifest.digest);
       assert.deepEqual(first.observed.exports, ['.', './markdown', './styles.css']);
+      // Decision 0032 item 10: the packages that published with the temporary token carry the trusted-publisher non-claim.
+      assert.ok(first.nonClaims.includes(tokenlessNonClaim), 'the records say tokenless publishing is unproved for schema, catalog, and tooling');
+      // It does not say who set latest, or that the rc is the only version a package has.
+      assert.ok(first.nonClaims.includes(latestNonClaim));
       const second = await record('E-R1-EXIT-02');
       assert.equal(second.outcome, 'partial', 'the registry read-back is the proof, and it is a later phase');
       assert.equal(second.postPublication.portfolio.packages.length, 4);
@@ -3332,10 +3369,16 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
       assert.match(readme, /# R1 exit retained publication evidence for 0\.1\.0-rc\.5/u);
       assert.match(readme, /came from the portfolio workflow \(Decision 0032\)[^\n]*@muxui\/schema@0\.6\.0-rc\.1/u);
       assert.match(readme, /The publish run published the set in order/u);
+      // Decision 0033: the publish run had no environment approval, and the README says that is expected.
+      assert.deepEqual(second.postPublication.environmentApprovals, []);
+      assert.match(readme, /The publish run had no environment approval \(Decision 0033\)/u);
+      assert.match(readme, /trusted publishers of @muxui\/schema, @muxui\/catalog, and @muxui\/tooling are not yet set up/u);
+      assert.match(readme, /On the registry, `latest` points at the rc of each of them; it is observed, not claimed\./u);
+      assert.doesNotMatch(readme, /registry set `latest`/u);
       // The retained manifest is the portfolio manifest, sanitized.
       const retained = JSON.parse(await readFile(join(out, 'artifacts/release-manifest.json'), 'utf8'));
       assert.equal(retained.schema, 'muxui-portfolio-release-v1');
-      assert.equal(retained.publication.authorization, '<public-id>');
+      assert.equal(retained.publication.authorization, 'required-external-human-authorization', 'a public constant, kept so the manifest stays verifiable as a prior release');
 
       // Every file rebuilds from verification.json, as the committed routes do.
       const route = r1Exit.routeFor(fixture.reactVersion);
@@ -3393,6 +3436,14 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.deepEqual(Object.keys(records), ['E-R1-EXIT-01', 'E-R1-EXIT-02', 'E-R1-EXIT-03', 'E-R1-EXIT-04']);
     assert.equal(records['E-R1-EXIT-02'].outcome, 'pass');
     assert.equal(records['E-R1-EXIT-02'].postPublication.portfolio.packages.length, 4);
+    for (const id of Object.keys(records)) assert.ok(records[id].nonClaims.includes(tokenlessNonClaim), `${id} states the trusted-publisher non-claim`);
+    // Once every package of a portfolio publishes through OIDC, no record carries it: the line follows the authentication the publish run printed.
+    const tokenless = structuredClone(publish);
+    for (const entry of tokenless.portfolio.packages) entry.authentication = 'trusted publishing (OIDC)';
+    const rebuilt = r1Exit.buildRoute({
+      phases: { dryRun: phase(dryRun), publish: phase(tokenless), registry: phase(registry) }, sourceRevision: fixture.head, sourceTree: fixture.tree, proofTool: {},
+    }, { validation: ref, manifest: ref, registry: ref });
+    for (const text of Object.values(rebuilt)) assert.ok(!JSON.parse(text).nonClaims.some((claim) => /trusted publishers of/u.test(claim)), 'no token publish, no non-claim');
     // latest is not moved by this publish; rollback comes from the portfolio manifest, prepared and not exercised.
     assert.equal(records['E-R1-EXIT-04'].distTags.latest.observed, '0.1.0-rc.1');
     assert.equal(records['E-R1-EXIT-04'].rollback.status, 'prepared-not-exercised');
@@ -3456,5 +3507,302 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.equal(r1Exit.bindPriorPublish({ ...failed, publishLog: rebuild(stopped) }).portfolio.packages.length, 4);
     rejectsPrior(rebuild({ ...stopped, blocks: [...stopped.blocks, parts.blocks[3]] }));
     rejectsPrior(rebuild({ ...stopped, blocks: [stopped.blocks[1], stopped.blocks[0], stopped.blocks[2]] }));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// P2.1 (Roadmap "P2.1 Public package graph and portfolio release"): the E-P2.1-01 to 06 records of the first portfolio release.
+{
+  const p2 = await import('../../../../tests/evidence/capture-p2.1.mjs');
+  const stamp = (index) => `2026-11-04T01:14:${String(index % 60).padStart(2, '0')}.0000000Z`;
+  const jobLog = (lines) => lines.map((line, index) => `${stamp(index)} ${line}`).join('\n');
+  const passing = (title) => `✔ ${title} (1.5ms)`;
+  const totals = ['ℹ tests 3', 'ℹ pass 3', 'ℹ fail 0', 'ℹ cancelled 0', 'ℹ skipped 0', 'ℹ todo 0'];
+  const code = (expected) => (error) => error?.code === expected;
+
+  test('P2.1 capture keeps the cited passing lines of a CI job, and refuses a log that does not show them once', () => {
+    const log = jobLog(['[ci-impact] running group checks-policy (3 command(s))', '[ci-impact] command: tar --version', passing('E-P2.1-01 cited'), passing('uncited neighbour'), passing('version effects: 01-a'), ...totals]);
+    const { kept, totals: counted } = p2.ciExcerpt(log, { titles: new Set(['E-P2.1-01 cited']), prefixes: ['version effects: '] });
+    assert.deepEqual(kept.map(({ text }) => text.slice(29)), ['[ci-impact] running group checks-policy (3 command(s))', passing('E-P2.1-01 cited'), passing('version effects: 01-a'), ...totals.slice(0, 6)]);
+    assert.deepEqual(counted, [{ tests: 3, pass: 3, fail: 0, cancelled: 0, skipped: 0, todo: 0 }]);
+    const rejects = (lines, expected, titles = new Set(['E-P2.1-01 cited'])) => assert.throws(() => p2.ciExcerpt(jobLog(lines), { titles }), code(expected), expected);
+    rejects([passing('another test'), ...totals], 'P2_1_CI_TEST_MISSING');
+    rejects([passing('E-P2.1-01 cited'), passing('E-P2.1-01 cited'), ...totals], 'P2_1_CI_TEST_AMBIGUOUS');
+    rejects([passing('E-P2.1-01 cited'), '✖ a failing test (2ms)', ...totals], 'P2_1_CI_TEST_FAILED');
+    rejects([passing('E-P2.1-01 cited'), 'ℹ tests 3', 'ℹ pass 2', 'ℹ fail 1'], 'P2_1_CI_TEST_TOTALS');
+    rejects([passing('E-P2.1-01 cited')], 'P2_1_CI_TEST_TOTALS');
+  });
+
+  const integrityOf = (seed) => `sha512-${Buffer.alloc(64, seed).toString('base64')}`;
+  const commit = 'a'.repeat(40);
+  const entryOf = (name, version, seed) => ({ name, version, integrity: integrityOf(seed), shasum: `${seed}`.repeat(40).slice(0, 40) });
+  const attestationFor = (entry, { revision = commit, runId = 7 } = {}) => ({
+    attestations: [{
+      predicateType: 'https://slsa.dev/provenance/v1',
+      bundle: { dsseEnvelope: { payload: Buffer.from(JSON.stringify({
+        subject: [{ name: `pkg:npm/${entry.name.replace('@', '%40')}@${entry.version}`, digest: { sha512: Buffer.from(entry.integrity.slice(7), 'base64').toString('hex') } }],
+        predicate: {
+          buildDefinition: { externalParameters: { workflow: { repository: 'https://github.com/ndrewtran/muxui', path: '.github/workflows/npm-publish.yml' } }, resolvedDependencies: [{ digest: { gitCommit: revision } }] },
+          runDetails: { metadata: { invocationId: `https://github.com/ndrewtran/muxui/actions/runs/${runId}/attempts/1` } },
+        },
+      })).toString('base64') } },
+    }],
+  });
+  const placeholder = { version: p2.placeholderVersion, description: 'Temporary package placeholder for staged publishing', fileCount: 2, unpackedSize: 335, integrity: integrityOf(9), shasum: '9'.repeat(40), publishedAt: '2026-11-04T01:29:48.766Z' };
+  const viewOf = (entry, change = {}) => ({
+    integrity: entry.integrity, shasum: entry.shasum, attestations: { url: 'https://registry.example/a', provenance: { predicateType: 'https://slsa.dev/provenance/v1' } },
+    distTags: { latest: entry.version, next: entry.version }, versions: [p2.placeholderVersion, entry.version], time: { [entry.version]: '2026-11-04T01:31:55.915Z' }, ...change,
+  });
+
+  test('P2.1 capture reads a package whose registry lists the placeholder beside its rc, and nothing else', () => {
+    const schemaEntry = entryOf('@muxui/schema', '0.6.0-rc.1', 1);
+    const bind = (input = {}) => p2.bindRegistryPackage({ entry: schemaEntry, view: viewOf(schemaEntry), attestations: attestationFor(schemaEntry), placeholders: [placeholder], publishRunId: 7, sourceRevision: commit, first: true, priorLatest: '', ...input });
+    const bound = bind();
+    assert.deepEqual(bound.otherVersions, [{ ...Object.fromEntries(Object.entries(placeholder).filter(([key]) => key !== 'attestations')), provenance: 'none' }]);
+    // An earlier rc is listed by version only: nothing here says what provenance it has.
+    const reactEntry = entryOf('@muxui/react', '0.1.0-rc.5', 4);
+    assert.deepEqual(p2.bindRegistryPackage({
+      entry: reactEntry, view: viewOf(reactEntry, { distTags: { latest: '0.1.0-rc.1', next: reactEntry.version }, versions: ['0.1.0-rc.1', reactEntry.version] }), attestations: attestationFor(reactEntry), publishRunId: 7, sourceRevision: commit, first: false, priorLatest: '0.1.0-rc.1',
+    }).otherVersions, [{ version: '0.1.0-rc.1' }]);
+    assert.equal(bound.latest.claimed, false);
+    assert.equal(bind({ view: viewOf(schemaEntry, { versions: [schemaEntry.version] }), placeholders: [] }).otherVersions.length, 0, 'a package with only its rc is still read');
+    const rejects = (expected, input) => assert.throws(() => bind(input), code(expected), expected);
+    // Any version beside the rc that is not the placeholder, a tagged placeholder, an attested one, and one the registry document does not describe.
+    rejects('P2_1_REGISTRY_TAGS_UNEXPECTED', { view: viewOf(schemaEntry, { versions: ['0.0.1', schemaEntry.version] }) });
+    rejects('P2_1_REGISTRY_TAGS_UNEXPECTED', { view: viewOf(schemaEntry, { distTags: { latest: p2.placeholderVersion, next: schemaEntry.version } }) });
+    rejects('P2_1_REGISTRY_PLACEHOLDER_UNEXPECTED', { placeholders: [{ ...placeholder, attestations: { url: 'https://registry.example/b' } }] });
+    rejects('P2_1_REGISTRY_PLACEHOLDER_UNEXPECTED', { placeholders: [] });
+    // The registry must hold the manifest's bytes, the rc on next, and provenance from this commit and this publish run.
+    rejects('P2_1_REGISTRY_DIGEST_MISMATCH', { view: viewOf(schemaEntry, { integrity: integrityOf(2) }) });
+    rejects('P2_1_REGISTRY_NEXT_MISMATCH', { view: viewOf(schemaEntry, { distTags: { latest: schemaEntry.version, next: '0.6.0-rc.2' } }) });
+    rejects('P2_1_REGISTRY_PROVENANCE_MISMATCH', { attestations: attestationFor(schemaEntry, { revision: 'b'.repeat(40) }) });
+    rejects('P2_1_REGISTRY_PROVENANCE_MISMATCH', { attestations: attestationFor(schemaEntry, { runId: 8 }) });
+    rejects('P2_1_REGISTRY_PROVENANCE_MISMATCH', { attestations: attestationFor(entryOf('@muxui/schema', '0.6.0-rc.1', 3)) });
+    // An existing package keeps the latest its preflight recorded.
+    const later = (input = {}) => p2.bindRegistryPackage({
+      entry: reactEntry, view: viewOf(reactEntry, { distTags: { latest: '0.1.0-rc.1', next: reactEntry.version }, versions: ['0.1.0-rc.1', reactEntry.version] }), attestations: attestationFor(reactEntry), publishRunId: 7, sourceRevision: commit, first: false, priorLatest: '0.1.0-rc.1', ...input,
+    });
+    assert.equal(later().latest.observed, '0.1.0-rc.1');
+    assert.throws(() => later({ priorLatest: '0.1.0-rc.2' }), code('P2_1_REGISTRY_TAGS_UNEXPECTED'));
+  });
+
+  const reviewText = (revision, { reviewer = '**Reviewer:** GPT-6.1 Sol, Codex', verdict = '## Overall verdict\n\n**Pass.** The evidence holds.\n' } = {}) => `# Review of ${revision.slice(0, 8)}\n\n${reviewer}\n\n${verdict}`;
+
+  test('P2.1 capture retains an independent review bound to the revision the reviewer read, and records one that does not pass', () => {
+    const head = gitIn(repositoryRoot, 'rev-parse', 'HEAD');
+    const bind = (text) => p2.bindReview({ text, reviewedRevision: head, sourceRevision: 'e8953dc6221306ea697739f1e4dea58ff49acc79' });
+    const bound = bind(reviewText(head));
+    assert.deepEqual([bound.reviewer, bound.reviewedRevision, bound.passes, bound.reviewedRevisionIsSource], ['GPT-6.1 Sol, Codex', head, true, false]);
+    assert.equal(bound.reviewedTree, gitIn(repositoryRoot, 'rev-parse', 'HEAD^{tree}'));
+    assert.equal(bound.artifact.sha256, digest(bound.text));
+    assert.equal(bind(reviewText(head, { verdict: '## Verdict\n\nFindings remain.\n' })).passes, false, 'a review without a pass is retained and recorded as not passing');
+    const rejects = (text, expected) => assert.throws(() => bind(text), code(expected), expected);
+    rejects(reviewText(head, { reviewer: '' }), 'P2_1_REVIEW_REVIEWER');
+    rejects(reviewText(head).replace(head.slice(0, 8), 'deadbeef'), 'P2_1_REVIEW_REVISION');
+    rejects(reviewText(head, { verdict: '## Notes\n\nNo verdict.\n' }), 'P2_1_REVIEW_VERDICT');
+    assert.throws(() => bind(`${reviewText(head)}\n## Verdict\n\n**Pass.**\n`), /verdict headings/u, 'two verdict headings are ambiguous');
+    assert.throws(() => p2.bindReview({ text: reviewText(head), reviewedRevision: head.slice(0, 12), sourceRevision: head }), code('P2_1_REVIEW_REVISION'));
+    assert.throws(() => p2.bindReview({ text: reviewText('f'.repeat(40)), reviewedRevision: 'f'.repeat(40), sourceRevision: head }), code('P2_1_REVIEW_REVISION'));
+    assert.equal(p2.bindReview({ text: reviewText(head), reviewedRevision: head, sourceRevision: head }).reviewedRevisionIsSource, true);
+  });
+
+  test('a P2.1 record passes only when every part that applies is shown', () => {
+    assert.equal(p2.outcomeOf([{ state: 'shown' }, { state: 'shown' }]), 'pass');
+    assert.equal(p2.outcomeOf([{ state: 'shown' }, { state: 'not-applicable' }]), 'pass');
+    for (const state of ['limited', 'not-met', 'not-shown']) assert.equal(p2.outcomeOf([{ state: 'shown' }, { state }]), 'partial', state);
+    assert.equal(p2.outcomeOf([{ state: 'shown' }, { state: 'not-applicable' }, { state: 'limited' }]), 'partial');
+    assert.equal(p2.outcomeOf([{ state: 'not-met' }, { state: 'not-shown' }]), 'unmet');
+    assert.equal(p2.outcomeOf([{ state: 'not-applicable' }]), 'unmet', 'a record with nothing shown is not a pass');
+  });
+
+  test('a P2.1 dense budget count leaves out the -rc.N suffix of a version and nothing else', () => {
+    assert.equal(p2.withoutRcSuffixes('catalogVersion="2.1.0-rc.1" {"@muxui/react":"0.1.0-rc.5"} 10.20.30-rc.40'), 'catalogVersion="2.1.0" {"@muxui/react":"0.1.0"} 10.20.30');
+    // Other text that mentions rc, or another prerelease, still counts.
+    for (const text of ['src/rc.mjs', 'rc 1', '-rc.1', '2.1-rc.1', '2.1.0-rc', '2.1.0-rc.', '2.1.0-rcx.1', '0.1.0-alpha.0', '2.1.0-beta.1', '2.1.0+rc.1', 'a rc.1 build']) assert.equal(p2.withoutRcSuffixes(text), text, text);
+    // Only a complete X.Y.Z-rc.N version: not part of a longer version or a longer prerelease identifier.
+    for (const text of ['packageVersion="1.2.3-rc.1.4"', '1.2.3-rc.1.beta', '1.2.3-rc.1-x', '1.2.3-rc.1a', '1.2.3-rc.10.4', '1.2.3.4-rc.1', '1.2.3-rc.1.2.3']) assert.equal(p2.withoutRcSuffixes(text), text, text);
+    assert.equal(p2.withoutRcSuffixes('Version 2.1.0-rc.1. Next: 0.1.0-rc.5, then (3.0.0-rc.12)'), 'Version 2.1.0. Next: 0.1.0, then (3.0.0)', 'a version at the end of a sentence, a list, or parentheses is complete');
+  });
+
+  test('P2.1 retained evidence rebuilds from its verification.json and every citation points at the line it names', async () => {
+    const route = 'tests/evidence/p2.1';
+    const text = (relative) => readFileSync(join(repositoryRoot, relative), 'utf8');
+    const verification = JSON.parse(text(`${route}/verification.json`));
+    const files = p2.assembleRoute(verification);
+    assert.deepEqual([...files.keys()].sort(), ['README.md', 'index.json', ...['01', '02', '03', '04', '05', '06'].map((id) => `records/E-P2.1-${id}.json`), 'verification.json'].map((file) => `${route}/${file}`));
+    for (const [relative, body] of files) assert.equal(body, text(relative), `${relative} is what the tool rebuilds`);
+
+    const index = JSON.parse(text(`${route}/index.json`));
+    const r1 = JSON.parse(text(`${verification.release.route}/verification.json`));
+    assert.deepEqual([index.sourceRevision, index.sourceTree], [r1.sourceRevision, r1.sourceTree], 'the records bind the revision the R1 exit route of the candidate binds');
+    for (const [relative, ref] of Object.entries(r1.retained)) assert.equal(digest(text(ref.path)), ref.sha256, relative);
+    assert.equal(index.artifacts.length, Object.keys(verification.retained).length);
+    assert.equal(verification.proofTool.path, 'tests/evidence/capture-p2.1.mjs');
+    assert.match(verification.proofTool.revision, /^[0-9a-f]{40}$/u, 'a real capture binds a committed tool');
+    assert.equal(verification.rehearsal, undefined);
+
+    // The reviewed outcomes: a change here is a deliberate evidence change.
+    const expected = { 'E-P2.1-01': 'pass', 'E-P2.1-02': 'partial', 'E-P2.1-03': 'pass', 'E-P2.1-04': 'pass', 'E-P2.1-05': 'pass', 'E-P2.1-06': 'pass' };
+    assert.deepEqual(index.records.map(({ assertionId }) => assertionId), Object.keys(expected));
+    const excerptLines = (path) => ['', ...text(path).split('\n')];
+    const contentOf = (line) => line.replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z /u, '');
+    for (const { assertionId, path } of index.records) {
+      const record = JSON.parse(text(path));
+      assert.equal(record.outcome, expected[assertionId], assertionId);
+      assert.equal(record.outcome, p2.outcomeOf(record.parts), assertionId);
+      assert.deepEqual([record.sourceRevision, record.executedRevision, record.executedTree], [index.sourceRevision, index.sourceRevision, index.sourceTree]);
+      assert.equal(record.disclosureClass, 'public-sanitized');
+      assert.equal(record.owner, 'ndrewtran');
+      assert.match(record.assertion, /\S/u);
+      assert.ok(record.parts.every(({ state }) => ['shown', 'limited', 'not-met', 'not-shown', 'not-applicable'].includes(state)), assertionId);
+      // No claim beyond what the Roadmap lets P2.1 claim.
+      assert.ok(record.nonClaims.some((claim) => /^P2\.1 is not claimed complete/u.test(claim)) && record.nonClaims.some((claim) => /^No stable release, support, or assistive-technology claim/u.test(claim)), assertionId);
+      assert.ok(record.nonClaims.some((claim) => /^The trusted publishers of @muxui\/schema, @muxui\/catalog, and @muxui\/tooling are not yet set up and tokenless publishing is unproved for them; the provenance of their token publish proves neither/u.test(claim)), assertionId);
+      assert.ok(record.nonClaims.some((claim) => /0\.0\.0-stage placeholder version\. It is no part of the release tuple, carries no provenance/u.test(claim)), assertionId);
+      for (const item of record.parts.flatMap(({ evidence }) => evidence)) {
+        if (item.kind === 'test') {
+          const line = excerptLines(item.excerpt)[item.line];
+          assert.equal(contentOf(line).startsWith(`✔ ${item.title} (`), true, `${assertionId} cites ${item.excerpt}:${item.line}`);
+          // A test added after the release is checked in the tree that keeps it; the release commit does not have it.
+          const source = item.revision ? text(item.file) : readAt(index.sourceRevision, item.file).toString('utf8');
+          assert.ok(source.includes(item.title.replaceAll("'", "\\'")) || source.includes(item.title), `${item.file} has "${item.title}"`);
+        } else if (item.kind === 'log') {
+          assert.equal(contentOf(excerptLines(item.excerpt)[item.line]), item.text, `${assertionId} cites ${item.excerpt}:${item.line}`);
+        } else if (item.kind === 'corpus') {
+          const lines = excerptLines(item.excerpt);
+          assert.equal(lines.filter((line) => contentOf(line).startsWith('✔ version effects: ')).length, item.cases);
+          const fixtures = gitIn(repositoryRoot, 'ls-tree', '--name-only', index.sourceRevision, `${item.fixtures}/`).split('\n').filter((name) => /\/\d\d-.+\.json$/u.test(name));
+          assert.equal(fixtures.length, item.cases, 'every fixture of the SemVer corpus at the source revision is a passing test');
+        }
+      }
+    }
+
+    // E-P2.1-02 is judged against the row as amended after the release; the test that closed the cache-provenance part and the
+    // amended row came after it, and the record says so.
+    const sourceRow = JSON.parse(text(`${route}/records/E-P2.1-02.json`));
+    assert.match(sourceRow.assertion, /full-detail `get --platform web\.react --dense` has a 3072-token ceiling/u);
+    assert.doesNotMatch(sourceRow.roadmap.amended.assertionAtSourceRevision, /ceiling/u, 'the row at the release commit named only the token budget');
+    const dense = sourceRow.parts.find(({ part }) => part.startsWith('Full-detail `get --platform web.react --dense`'));
+    assert.equal(dense.state, 'shown');
+    const amendment = dense.evidence.find(({ kind }) => kind === 'roadmap-amendment');
+    assert.equal(amendment.ceiling.roadmap, 3072);
+    assert.equal(amendment.ceiling.test.value, 3072);
+    assert.match(readAt(index.sourceRevision, amendment.ceiling.test.file).toString('utf8'), new RegExp(`const ${amendment.ceiling.test.constant} = 3072;`, 'u'), 'the test at the release commit already pinned the ceiling');
+    assert.doesNotMatch(dense.note, /2797 tokens/u, 'the count is not stated as measured');
+
+    // The published tuple: the four released packages installed from the registry and run through their own bin. Every check is
+    // kept as it came out, and a part follows its checks.
+    const published = verification.phases.published;
+    const checkNamed = (id) => published.checks.find((found) => found.id === id);
+    assert.deepEqual(published.checks.filter(({ passed }) => !passed).map(({ id }) => id), ['tooling-reports-version']);
+    assert.deepEqual(checkNamed('registry-install').observed.map(({ name, version, installedVersion, gitHead }) => [name, version, installedVersion, gitHead]),
+      verification.release.packages.map(({ name, version }) => [name, version, version, index.sourceRevision]));
+    for (const entry of checkNamed('registry-install').observed) {
+      assert.deepEqual(entry.locked, [{ version: entry.version, resolution: `integrity: ${entry.releaseIntegrity}` }]);
+      assert.equal(entry.releaseIntegrity, verification.release.packages.find(({ name }) => name === entry.name).integrity);
+    }
+    // Raw is the installed countTokens' count of the output; counted leaves out the -rc.N suffix of versions, as the amended row says.
+    const countsOf = (id) => Object.fromEntries(checkNamed(id).observed.rows.map(({ args, used, counted, budget, ceiling }) => [args.slice(0, -1).join(' '), [used, counted, budget, ceiling]]));
+    assert.deepEqual(Object.values(countsOf('dense-get-react')), [[129, 123, 384, 384], [262, 256, 1024, 1024], [2801, 2795, 2048, 3072]], 'the counts the installed countTokens measured');
+    const fixtureCounts = Object.entries(countsOf('dense-budget-fixtures'));
+    assert.equal(fixtureCounts.length, 12);
+    assert.ok(fixtureCounts.every(([, [raw, counted, , ceiling]]) => counted <= raw && counted <= ceiling), 'every fixture is inside its budget once the suffix is left out');
+    assert.deepEqual(fixtureCounts.filter(([, [raw, , , ceiling]]) => raw > ceiling), [['manifest --detail brief', [257, 251, 256, 256]]], 'the one fixture the suffix tokens put over its budget');
+    assert.match(dense.note, /brief raw 129, counted 123 of 384, compact raw 262, counted 256 of 1024, full raw 2801, counted 2795 against the 3072 ceiling/u);
+    const fixtures = sourceRow.parts.find(({ part }) => part.startsWith('Dense output is inside its token budget for the registry'));
+    assert.equal(fixtures.state, 'shown');
+    assert.match(fixtures.note, /added to the Roadmap row after the release, because the published rc exceeded a budget as the row first wrote it \(manifest --detail brief --dense raw 257, counted 251, budget 256\)/u);
+    assert.deepEqual([published.countRule.pattern, published.countRule.replacement], ['(?<![\\d.])(\\d+\\.\\d+\\.\\d+)-rc\\.\\d+(?![\\w-]|\\.\\w)', '$1']);
+    assert.ok(sourceRow.limits.some((limit) => /^Dense budget counts exclude the tokens of `-rc\.N` version suffixes/u.test(limit) && limit.includes('raw 257, counted 251, budget 256')));
+    // The row was amended after the release by two commits: the ceiling (the later CI run's head) and then the suffix rule.
+    assert.match(sourceRow.assertion, /while a package is a prerelease the budget counts exclude the tokens of its `-rc\.N` version suffixes/u);
+    assert.doesNotMatch(sourceRow.roadmap.amended.assertionAtSourceRevision, /-rc\.N/u);
+    assert.equal(sourceRow.roadmap.amended.commits.length, 2);
+    assert.equal(sourceRow.roadmap.amended.commits[0], sourceRow.execution.laterCi.execution.headRevision);
+    assert.notEqual(sourceRow.roadmap.amended.commits[1], sourceRow.execution.laterCi.execution.headRevision, 'the suffix rule came after the later CI run');
+    const output = text(published.output.path);
+    assert.equal(digest(output), published.output.sha256);
+    assert.equal(output.split('\n').filter((line) => line.startsWith('$ muxui ')).length, published.runs.length, 'every run is retained');
+    assert.ok(published.runs.every(({ status }) => Number.isInteger(status)));
+    // What is kept of the muxui output is public; the replaced values are counted, and the digests bind the originals.
+    assert.deepEqual(Object.keys(published.sanitization), ['requestKeyValues', 'sharedRulesChangedLines', 'tokenIdsInsideLongerStrings']);
+    // The published tooling reports 1.0.0 whatever version it is. That part is not met, and it is the only one: the comparison is
+    // observed, so a later tooling rc that reports its own version would show it as shown.
+    assert.deepEqual([published.toolingVersion.installed, published.toolingVersion.muxuiVersionInResponses, published.toolingVersion.cliVersionInManifest, published.toolingVersion.reportsInstalledVersion], ['1.1.0-rc.1', ['1.0.0'], '1.0.0', false]);
+    const sourcesCited = [['packages/tooling/src/local-resolver.mjs', 24, "const TOOLING_VERSION = '1.0.0';"], ['packages/tooling/command-registry.json', 5, '"version": "1.0.0",']];
+    assert.deepEqual(published.toolingVersion.sources.map(({ file, line, text }) => [file, line, text]), sourcesCited);
+    for (const [file, line, lineText] of sourcesCited) assert.equal(readAt(index.sourceRevision, file).toString('utf8').split('\n')[line - 1].trim(), lineText, `${file}:${line} at the release commit`);
+    const versionPart = sourceRow.parts.find(({ part }) => part.startsWith('The CLI reports its own version'));
+    assert.equal(versionPart.state, 'not-met');
+    assert.match(versionPart.note, /this published version stays wrong/u);
+    assert.deepEqual(versionPart.evidence.filter(({ kind }) => kind === 'source-line').map(({ file, line, revision }) => [file, line, revision]), sourcesCited.map(([file, line]) => [file, line, index.sourceRevision]));
+    assert.deepEqual(versionPart.evidence.find(({ kind }) => kind === 'published').checks.map(({ id, passed }) => [id, passed]), [['tooling-reports-version', false]]);
+    assert.deepEqual(sourceRow.parts.filter(({ state }) => state !== 'shown').map(({ part }) => part.slice(0, 29)), ['The CLI reports its own versi'], 'the other parts stay as measured');
+    assert.ok(sourceRow.limits.some((limit) => /reports muxuiVersion 1\.0\.0 in the meta of every response/u.test(limit)));
+    assert.ok(sourceRow.nonClaims.some((claim) => /does not claim that @muxui\/tooling@1\.1\.0-rc\.1 reports its own version/u.test(claim)));
+    // Source-version tests are cited as such, and only the published phase rests the installed-tarball parts.
+    const installedPart = sourceRow.parts.find(({ part }) => part.startsWith('The resolver and the packed muxui binary read'));
+    assert.deepEqual(installedPart.evidence.filter(({ kind }) => kind === 'published').flatMap(({ checks }) => checks.map(({ id }) => id)), ['registry-install', 'installed-not-source', 'release-identity', 'discovery-runs', 'installed-local-resolution']);
+    assert.ok(installedPart.evidence.filter(({ kind }) => kind === 'test').every(({ scope }) => /^source-version tuple/u.test(scope)));
+    assert.equal('checks' in sourceRow.execution.publishedRun, false, 'the checks are in the parts');
+    for (const id of ['E-P2.1-01', 'E-P2.1-03', 'E-P2.1-04', 'E-P2.1-05', 'E-P2.1-06']) assert.equal(JSON.parse(text(`${route}/records/${id}.json`)).execution.publishedRun, undefined, `${id} does not rest on the published run`);
+
+    const { laterCi } = sourceRow.execution;
+    assert.deepEqual([laterCi.checkedOut.tree, laterCi.execution.event, laterCi.execution.conclusion], [laterCi.checkedOut.headTree, 'pull_request', 'success']);
+    assert.deepEqual(laterCi.sinceRelease.resolverSource.changedPaths, [], 'the resolver source is unchanged since the release commit');
+    assert.equal(laterCi.sinceRelease.testFile.linesDeleted, 0);
+    const tamper = sourceRow.parts.find(({ part }) => part.startsWith('SCOPE-TRUST-CACHE-PROVENANCE:'));
+    assert.equal(tamper.state, 'shown');
+    assert.deepEqual(tamper.evidence.filter((item) => item.ciRun !== undefined).map(({ title, ciRun, revision }) => [title, ciRun, revision]), [[
+      'E-P2.1-02 an installed catalog whose bytes differ from its provenance sidecar makes get fail with MUXUI_CATALOG_INTEGRITY_MISMATCH', laterCi.execution.runId, laterCi.execution.headRevision,
+    ]], 'only the added test cites the later run');
+    for (const id of ['E-P2.1-01', 'E-P2.1-03', 'E-P2.1-04', 'E-P2.1-05', 'E-P2.1-06']) assert.equal(JSON.parse(text(`${route}/records/${id}.json`)).execution.laterCi, undefined, `${id} cites only the release commit's runs`);
+
+    // E-P2.1-05: tooling had no hosted or latest reader at the release commit, which the capture checked and this recomputes.
+    const hosted = JSON.parse(text(`${route}/records/E-P2.1-05.json`));
+    const advisory = hosted.parts.find(({ part }) => part === 'Hosted or latest data stays advisory.');
+    assert.equal(advisory.state, 'not-applicable');
+    assert.deepEqual(advisory.evidence.find(({ kind }) => kind === 'source-absence'), p2.toolingReaderSurface(index.sourceRevision));
+    assert.ok(hosted.nonClaims.some((claim) => /needs its own test/u.test(claim)));
+
+    // E-P2.1-06: the read-back lists every version, the placeholder is observed and not part of the tuple, and nothing claims latest.
+    const publication = JSON.parse(text(`${route}/records/E-P2.1-06.json`));
+    const readBack = JSON.parse(text(index.artifacts.find(({ path }) => path.endsWith('registry-read-back.json')).path));
+    assert.deepEqual(readBack.packages.map(({ name, version }) => `${name}@${version}`), verification.release.packages.map(({ name, version }) => `${name}@${version}`));
+    for (const entry of readBack.packages) {
+      assert.equal(entry.latest.claimed, false);
+      assert.equal(entry.latest.promoted, false);
+      // A new package lists only the placeholder beside its rc; @muxui/react lists its earlier rcs, which are not described as provenance-free.
+      const named = entry.otherVersions.map(({ version }) => version);
+      assert.ok(named.every((version) => version === p2.placeholderVersion) || entry.name === '@muxui/react', `${entry.name} lists only the placeholder beside its rc`);
+      for (const other of entry.otherVersions) assert.equal(other.provenance, other.version === p2.placeholderVersion ? 'none' : undefined, `${entry.name}@${other.version}`);
+    }
+    assert.deepEqual(readBack.packages.filter(({ otherVersions }) => otherVersions.some(({ version }) => version === p2.placeholderVersion)).map(({ name }) => name), ['@muxui/schema', '@muxui/catalog', '@muxui/tooling']);
+    assert.equal(readBack.placeholderOrigin.status, 'inferred');
+    assert.equal(readBack.placeholderOrigin.proved, false);
+    assert.equal(publication.publishApproval.approvalsRecordedByThePublishRun.length, 0, 'Decision 0033: no environment approval');
+    assert.match(publication.publishApproval.source, /not observable from hosted data/u);
+
+    // The independent review did not pass and is retained as written, bound to its digest and to the revision the reviewer read. The
+    // records keep its finding: E-P2.1-02 is partial, and P2.1 is not closed by them.
+    const review = JSON.parse(text(`${route}/records/E-P2.1-01.json`)).independentReview;
+    assert.deepEqual([review.status, review.reviewedRevision, review.reviewedRevisionIsSource, review.reviewer], ['retained-not-passing', 'cca758bc400317fb04b6a0d5f232d33a7b0845b5', false, 'GPT-6.1 Sol, Codex']);
+    assert.match(review.verdictText, /^\*\*Not passing\.\*\*/u);
+    assert.equal(digest(text(review.artifact.path)), review.artifact.sha256);
+    assert.ok(index.artifacts.some(({ path, sha256 }) => path === review.artifact.path && sha256 === review.artifact.sha256));
+    assert.deepEqual(index.independentReview, review, 'the index and every record carry the same review');
+    // What changed since the reviewed revision is listed, and includes the tool the records were rebuilt with.
+    assert.equal(review.changedSinceReviewed.truncated, false);
+    assert.equal(review.changedSinceReviewed.pathCount, review.changedSinceReviewed.paths.length);
+    assert.ok(review.changedSinceReviewed.captureToolChanged && review.changedSinceReviewed.paths.includes('tests/evidence/capture-p2.1.mjs'));
+    for (const { path } of index.records) {
+      const record = JSON.parse(text(path));
+      assert.deepEqual(record.independentReview, review, path);
+      assert.ok(record.nonClaims.some((claim) => /^The independent release-integrity review did not pass .* P2\.1 is not closed by them\.$/u.test(claim)), path);
+    }
+    const readme = text(`${route}/README.md`);
+    assert.match(readme, /\*\*It did not pass\.\*\* `E-P2\.1-02` is `partial`, and P2\.1 is not closed by these records\./u);
+    assert.match(readme, /^\| `E-P2\.1-02` \| `partial` \|$/mu);
+    assert.doesNotMatch(readme, /review is pending/u);
   });
 }

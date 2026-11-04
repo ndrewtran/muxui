@@ -133,10 +133,15 @@ export function assertDisclosable(text, label) {
 }
 
 // The release manifest is public package metadata, but the disclosure check
-// reads a credential-named key with a plain value (`publication.authorization:
-// "required-external-human-authorization"`) as a possible secret. Such values
-// are replaced with <public-id> and listed, original value included, in
+// reads a credential-named key with a plain value as a possible secret. Such
+// values are replaced with <public-id> and listed, original value included, in
 // verification.json; the unsanitized manifest digest binds the exact bytes.
+// The one exception is `publication.authorization:
+// "required-external-human-authorization"`, a public constant that the check
+// allows and capture keeps: a portfolio manifest's digest covers it, so the
+// retained manifest of a release stays verifiable as the next release's prior
+// manifest. Routes captured before that allowance (rc.1 to rc.4) keep the
+// rewrite they were captured with.
 const credentialKey = /token|secret|key|password|authorization|auth|credentials/iu;
 export function sanitizeManifest(value, pointer = '', rewrites = []) {
   if (Array.isArray(value)) return { value: value.map((entry, index) => sanitizeManifest(entry, `${pointer}/${index}`, rewrites).value), rewrites };
@@ -1075,8 +1080,16 @@ export function bindRegistry({ dryRun, view, attestations, consumer, publishRunI
 // ---------------------------------------------------------------------------
 // Route assembly: records, index, and README derive only from verification.json.
 
-// rc.1's wording is retained byte for byte; a later rc names itself.
-function nonClaimsFor(version) {
+// The packages a portfolio publish took through the temporary first-publish token (Decision 0032 item 10).
+const tokenPublishedNames = (publish) => (publish?.portfolio?.packages ?? [])
+  .filter(({ authentication }) => authentication === 'temporary npm token (first publish)')
+  .map(({ name }) => name);
+const joinNames = (names) => (names.length < 3 ? names.join(' and ') : `${names.slice(0, -1).join(', ')}, and ${names.at(-1)}`);
+
+// rc.1's wording is retained byte for byte; a later rc names itself. A portfolio capture adds the non-claims of packages
+// the registry first saw in this release; an earlier route's records never carry them.
+function nonClaimsFor(version, { portfolio, publish } = {}) {
+  const tokenPublished = portfolio ? tokenPublishedNames(publish) : [];
   return [
     version === firstVersion
       ? 'No assistive-technology support claim; rc.1 claims none (Decision 0022).'
@@ -1086,6 +1099,10 @@ function nonClaimsFor(version) {
       : 'latest is not moved by this publish; it is observed unchanged, not claimed or promoted (Decision 0023).',
     'No stable release, framework-free, native, React Native Web, parity, or equivalence claim.',
     'Completion of the R1 exit is not claimed here; merging the final R1-exit pull request is Andrew\'s separate stop.',
+    ...(tokenPublished.length === 0 ? [] : [
+      `The trusted publishers of ${joinNames(tokenPublished)} are not yet set up and tokenless publishing is unproved for them; the provenance of their token publish proves neither (Decision 0032 item 10).`,
+      'For a package this release published for the first time, latest points at its rc on the registry; it is observed, not claimed or promoted (Decision 0023).',
+    ]),
   ];
 }
 const deferred = DEFERRED_R1_EVIDENCE.map(({ id, part, status, deferredTo, provisional }) => ({ id, part, status, deferredTo, ...(provisional ? { provisional } : {}) }));
@@ -1102,7 +1119,7 @@ function record(verification, refs, assertionId, body) {
     candidate: { name: dryRun.candidate.name, version: dryRun.candidate.version, integrity: dryRun.candidate.tarball.integrity },
     sourceRevision: verification.sourceRevision,
     sourceTree: verification.sourceTree,
-    nonClaims: nonClaimsFor(dryRun.candidate.version),
+    nonClaims: nonClaimsFor(dryRun.candidate.version, { portfolio: dryRun.portfolio, publish: verification.phases.publish }),
     deferredToS1: deferred,
     validation: refs.validation,
     activeExceptionRefs: [],
@@ -1351,7 +1368,15 @@ function portfolioNote({ phases }) {
   const published = phases.publish?.portfolio
     ? ` The publish run published the set in order, each package preflighted, rechecked, and read back before the next, and the portfolio manifest ${portfolio.digest} binds all of it.`
     : '';
-  return `\n\nThis candidate came from the portfolio workflow (Decision 0032): release \`${portfolio.id}\` also prepares ${others}. Their tarball digests and workflow read-backs are retained under \`portfolio\` in \`E-R1-EXIT-01\` and \`E-R1-EXIT-02\`; they are not R1 exit claims.${published}`;
+  // Decision 0033: no environment reviewer, so an empty approvals list is expected, not a missing approval.
+  const approvals = phases.publish && phases.publish.approvals.length === 0
+    ? ' The publish run had no environment approval (Decision 0033); the exact authorization for the publish (Decision 0028 item 6) is not observable from hosted data.'
+    : '';
+  const tokenPublished = tokenPublishedNames(phases.publish);
+  const tokenless = tokenPublished.length === 0
+    ? ''
+    : ` The trusted publishers of ${joinNames(tokenPublished)} are not yet set up and tokenless publishing is unproved for them; the provenance of their token publish proves neither (Decision 0032 item 10). On the registry, \`latest\` points at the rc of each of them; it is observed, not claimed.`;
+  return `\n\nThis candidate came from the portfolio workflow (Decision 0032): release \`${portfolio.id}\` also prepares ${others}. Their tarball digests and workflow read-backs are retained under \`portfolio\` in \`E-R1-EXIT-01\` and \`E-R1-EXIT-02\`; they are not R1 exit claims.${published}${approvals}${tokenless}`;
 }
 
 function laterCandidateReadme(verification, version) {

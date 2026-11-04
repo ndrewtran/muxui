@@ -1,0 +1,11 @@
+# job: run checks-tooling (job 126372000775) of pull request CI run 41768320064 attempt 1 at head 18fc6200bda898108467e11bd186e385e95af760, which checked out merge 938c2f34a81c091eab00b1e2c6f7228d71aa56df of it into 0c2d000b23141d6999ad718a15a852c329656dcc, filtered to the group and commands it ran, the totals each node --test printed, and the passing lines this capture cites
+2026-11-04T03:38:42.7222816Z [ci-impact] running group checks-tooling (2 command(s))
+2026-11-04T03:39:02.1322607Z [ci-impact] command: pnpm --filter @muxui/tooling run check
+2026-11-04T03:39:02.3723455Z > @muxui/tooling@1.1.0 check <workspace>/packages/tooling
+2026-11-04T03:40:34.9178389Z ✔ E-P2.1-02 an installed catalog whose bytes differ from its provenance sidecar makes get fail with MUXUI_CATALOG_INTEGRITY_MISMATCH (1637.970865ms)
+2026-11-04T03:40:40.6434829Z ℹ tests 119
+2026-11-04T03:40:40.6435298Z ℹ pass 119
+2026-11-04T03:40:40.6435491Z ℹ fail 0
+2026-11-04T03:40:40.6436043Z ℹ cancelled 0
+2026-11-04T03:40:40.6436252Z ℹ skipped 0
+2026-11-04T03:40:40.6436429Z ℹ todo 0
