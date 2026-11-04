@@ -93,6 +93,9 @@ const fixedPackageEntries = Object.freeze([
   'package/README.md',
   'package/package.json',
 ]);
+// The packed example walk renders every catalog example, so it has its own budget apart from the R1.5 simple SSR one
+// in closure.json (Decision 0034).
+const exampleWalkBudgetMilliseconds = 2000;
 
 function fail(code, detail) {
   throw new Error(`${code}: ${detail}`);
@@ -948,8 +951,8 @@ try {
     .flatMap(([specifier, names]) => names.map((name) => `${specifier}:${name}`))
     .filter((name) => !covered.has(name));
   if (uncovered.length !== 0) fail('R1_EXIT_PACK_SSR_COVERAGE_MISSING', `runtime exports with no SSR example, fixture, or value check: ${uncovered.join(', ')}`);
-  if (!Number.isFinite(serverResult.ssrMilliseconds) || serverResult.ssrMilliseconds > budgets.ssrMilliseconds) {
-    fail('R1.5_PACK_PERFORMANCE_BUDGET_EXCEEDED', JSON.stringify({ exampleSsrMilliseconds: serverResult.ssrMilliseconds, budgets }));
+  if (!Number.isFinite(serverResult.ssrMilliseconds) || serverResult.ssrMilliseconds > exampleWalkBudgetMilliseconds) {
+    fail('R1.5_PACK_PERFORMANCE_BUDGET_EXCEEDED', JSON.stringify({ exampleSsrMilliseconds: serverResult.ssrMilliseconds, exampleWalkBudgetMilliseconds }));
   }
   const hydration = runChild('packed hydration', process.execPath, ['hydrate-examples.mjs', 'ssr-result.json', 'hydration-result.json', resolvePinnedTool('jsdom').url], { cwd: consumer, env: developmentEnvironment });
   // The hydration script exits 3 only for mismatches; any other failure is the script's own.
@@ -966,7 +969,7 @@ try {
   }
   const consoleNotes = hydrationResult.results.filter(({ consoleErrors }) => consoleErrors.length !== 0);
   const exportCount = Object.values(serverResult.exportKeys).reduce((sum, names) => sum + names.length, 0);
-  console.log(`R1 exit packed SSR/hydration: ${serverResult.renders.length} renders (${planModules.length - 1 - variants.length} component examples, ${variants.length} pattern variants, plus fixtures) cover ${exportCount} runtime exports across ${componentModules.join(', ')}; SSR ${serverResult.ssrMilliseconds.toFixed(2)}ms / ${budgets.ssrMilliseconds}ms; ${hydrationResult.results.length} hydrations without mismatch`);
+  console.log(`R1 exit packed SSR/hydration: ${serverResult.renders.length} renders (${planModules.length - 1 - variants.length} component examples, ${variants.length} pattern variants, plus fixtures) cover ${exportCount} runtime exports across ${componentModules.join(', ')}; SSR ${serverResult.ssrMilliseconds.toFixed(2)}ms / ${exampleWalkBudgetMilliseconds}ms; ${hydrationResult.results.length} hydrations without mismatch`);
   for (const { id, consoleErrors } of consoleNotes) console.log(`R1 exit hydration note ${id}: ${consoleErrors[0]}`);
 
   // Tree-shaking: a Button-only consumer keeps Button's own package modules and their
