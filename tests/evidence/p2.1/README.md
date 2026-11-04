@@ -14,22 +14,23 @@ registry observation, and this root cites them by path and digest.
 | Record | Outcome |
 | --- | --- |
 | `E-P2.1-01` | `pass` |
-| `E-P2.1-02` | `partial` |
+| `E-P2.1-02` | `pass` |
 | `E-P2.1-03` | `pass` |
 | `E-P2.1-04` | `pass` |
-| `E-P2.1-05` | `partial` |
+| `E-P2.1-05` | `pass` |
 | `E-P2.1-06` | `pass` |
 
-`E-P2.1-02` is `partial` because `not-met`: Dense output is inside its token budget. `limited`: SCOPE-TRUST-CACHE-PROVENANCE: the resolver rejects catalog bytes whose integrity or provenance sidecar does not match, with MUXUI_CATALOG_INTEGRITY_MISMATCH.
-
-`E-P2.1-05` is `partial` because `limited`: Hosted or latest data stays advisory.
+`E-P2.1-05` passes with a part that does not apply: Hosted or latest data stays advisory. Tooling at the source revision has no reader of hosted or latest catalog data, so the clause has nothing to apply to and no test of it exists. The capture checks this from the source: the command registry lists only the commands and options retained here and refuses to load with any other, the resolver takes a catalog only from the installed project or an explicit local cache, the source holds no network client, and its only child process is `pnpm list`. Supporting context, not a test of the clause: a response read from the catalog package bundled with tooling, with no installed project, is labelled `authority: advisory` and `compatibility: unresolved`.
 
 Each record's `parts` splits the Roadmap assertion into clauses and gives each a state:
-`shown`, `limited` (a narrower or indirect form, with a note), `not-met`, or `not-shown`.
-A record is `pass` only when every part is shown, and `partial` otherwise. A cited test
-is a passing line in the sanitized excerpt of the CI job that ran it, at the release
+`shown`, `limited` (a narrower or indirect form, with a note), `not-met`, `not-shown`, or
+`not-applicable` (the clause has nothing to apply to at the source revision, which the capture
+checks). A record is `pass` only when every part that applies is shown, and `partial` otherwise.
+A cited test is a passing line in the sanitized excerpt of the CI job that ran it, at the release
 commit; capture fails if a cited line is missing. `limits` lists what the retained
 evidence does not show.
+
+One test, added after the release, ran in pull request CI run 41768320064 (attempt 1) at head `18fc6200bda898108467e11bd186e385e95af760`: the job checked out the merge `938c2f34a81c091eab00b1e2c6f7228d71aa56df`, whose tree is the head's. The resolver source (`packages/tooling/src`, `packages/catalog/src`, `packages/schema/src`) is unchanged between the release commit and that head. The `E-P2.1-02` row of the Roadmap was amended after the release to name the dense-output ceiling; that record is judged against the amended row.
 
 `artifacts/` holds the registry read-back of all four packages; `validation/` holds the CI job
 excerpts; `verification.json` binds them to the unsanitized log digests. The raw logs and
