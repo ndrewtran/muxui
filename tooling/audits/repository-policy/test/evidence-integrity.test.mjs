@@ -3606,10 +3606,13 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.equal(p2.bindReview({ text: reviewText(head), reviewedRevision: head, sourceRevision: head }).reviewedRevisionIsSource, true);
   });
 
-  test('a P2.1 record passes only when every part of its assertion is shown', () => {
+  test('a P2.1 record passes only when every part that applies is shown', () => {
     assert.equal(p2.outcomeOf([{ state: 'shown' }, { state: 'shown' }]), 'pass');
+    assert.equal(p2.outcomeOf([{ state: 'shown' }, { state: 'not-applicable' }]), 'pass');
     for (const state of ['limited', 'not-met', 'not-shown']) assert.equal(p2.outcomeOf([{ state: 'shown' }, { state }]), 'partial', state);
+    assert.equal(p2.outcomeOf([{ state: 'shown' }, { state: 'not-applicable' }, { state: 'limited' }]), 'partial');
     assert.equal(p2.outcomeOf([{ state: 'not-met' }, { state: 'not-shown' }]), 'unmet');
+    assert.equal(p2.outcomeOf([{ state: 'not-applicable' }]), 'unmet', 'a record with nothing shown is not a pass');
   });
 
   test('P2.1 retained evidence rebuilds from its verification.json and every citation points at the line it names', async () => {

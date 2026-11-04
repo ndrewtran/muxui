@@ -10,6 +10,10 @@
 //   --evidence             main CI's jobs for the release commit (sanitized excerpts of the tests this capture cites),
 //                          a read-only registry read-back of every package of the set, and the npm-publish
 //                          environment's secret count. Needs read access to GitHub and the registry.
+//     --after-ci-run=<id>:<attempt>
+//                          the pull request CI run, after the release commit, whose tooling job ran the one test added
+//                          after the release (E-P2.1-02, installed catalog tamper). It is bound to the tree it ran,
+//                          and capture checks that the resolver source is unchanged since the release.
 //     --publish-approval=<text> --publish-approval-date=<YYYY-MM-DD>
 //                          the exact authorization to publish, as Andrew gave it in chat (Decision 0028 item 6).
 //                          Decision 0033 removed the environment approval, so hosted data cannot show it; it is
@@ -68,8 +72,9 @@ export const routeOf = (version) => (version === '0.1.0-rc.1' ? 'tests/evidence/
 //
 // A part is one clause of the Roadmap assertion. Its state is `shown` (every cited line demonstrates the clause as the
 // Roadmap writes it), `limited` (the cited lines demonstrate a narrower or indirect form, and `note` says how),
-// `not-met` (the retained lines show the clause is not met as written), or `not-shown` (nothing retained addresses it).
-// A record passes only when every part is shown. Evidence is resolved against the retained excerpts at capture, and
+// `not-met` (the retained lines show the clause is not met as written), `not-shown` (nothing retained addresses it), or
+// `not-applicable` (the clause has nothing to apply to at the source revision, which the capture checks and the note says).
+// A record passes only when every part that applies is shown. Evidence is resolved against the retained excerpts at capture, and
 // capture fails when a cited test or line is not there, so a citation never outlives the log it names.
 
 const policy = 'tooling/audits/repository-policy/test';
@@ -161,10 +166,13 @@ function claimsFor(release) {
           ],
         },
         {
-          part: 'Dense output is inside its token budget.',
-          state: 'not-met',
-          note: 'The test passes, but it holds `get muxui:component:button --platform web.react --detail full` to a pinned regression ceiling of 3072 tokens, not to the 2048 the command registry sets for `get` at full detail; the test and its comment say that this case exceeds the registry budget (the comment gives 2797 tokens). The registry\'s own budget fixtures, and `get --platform web.react` at brief and compact, are inside their budgets. The Roadmap names the token budget and no other ceiling; Andrew\'s choice of the ceiling is recorded only in the body of pull request 418, in no decision or Roadmap text. The retained log shows that the test passed, not the measured count.',
-          evidence: [test('tooling', packedCli, 'E-P2.1-02 dense output stays inside every locked token budget')],
+          part: 'Dense output is inside its token budget, with full-detail `get --platform web.react --dense` at its 3072-token ceiling and its brief and compact detail and the registry budget fixtures at their existing budgets.',
+          state: 'shown',
+          note: 'Judged against the row as amended after the release (Decision 0032, "Amendment"); the row at the source revision named only "its token budget". The test at the source revision already held that ceiling as a pinned constant and passed in the release commit\'s CI. The retained log shows the test passing, not the token counts: the test\'s comment gives 2797 for the full-detail case, and no retained log shows that figure.',
+          evidence: [
+            test('tooling', packedCli, 'E-P2.1-02 dense output stays inside every locked token budget'),
+            { kind: 'roadmap-amendment', id: 'E-P2.1-02', ceilingConstant: { file: packedCli, name: 'WEB_REACT_GET_FULL_REGRESSION_CEILING' } },
+          ],
         },
         {
           part: 'An invalid request returns a structured error with a stable code and a read-only nextCommand, and each capability P2.1 does not enable is explicitly unavailable in the manifest.',
@@ -181,9 +189,10 @@ function claimsFor(release) {
         },
         {
           part: 'SCOPE-TRUST-CACHE-PROVENANCE: the resolver rejects catalog bytes whose integrity or provenance sidecar does not match, with MUXUI_CATALOG_INTEGRITY_MISMATCH.',
-          state: 'limited',
-          note: 'These tests reject a changed provenance value in the resolver corpus, a changed byte in an explicit cache copy, and an installed catalog package whose identity or bundle is superseded or malformed. None changes a catalog byte inside the packed-tuple install the muxui binary reads: the packed test edits only the React descriptor.',
+          state: 'shown',
+          note: 'The case inside the packed-tuple install, where the muxui binary reads the catalog, is a test added after the release commit; it passed in a later pull request CI run, with the resolver source unchanged since the release (see the later run in the execution block and the limits). The other tests ran at the release commit: they reject a changed provenance value in the resolver corpus, a changed byte in an explicit cache copy, and an installed catalog package whose identity or bundle is superseded or malformed.',
           evidence: [
+            test('toolingAfter', packedCli, 'E-P2.1-02 an installed catalog whose bytes differ from its provenance sidecar makes get fail with MUXUI_CATALOG_INTEGRITY_MISMATCH'),
             test('tooling', resolverTests, 'E-G0.4 resolver verifies provenance material instead of trusting fixture flags'),
             test('tooling', resolverTests, 'E-G0.4 pnpm adapter admits only an exact verified cache tuple'),
             test('tooling', negotiation, 'E-P2.1-05 an installed catalog that lists a malformed query API version fails integrity'),
@@ -347,12 +356,16 @@ function claimsFor(release) {
         },
         {
           part: 'Hosted or latest data stays advisory.',
-          state: 'limited',
-          note: 'No test titled for this assertion exercises hosted or latest data, and P2.1 reads none. The nearest retained assertion is that a response read from the catalog package bundled with tooling, with no installed project, is labelled `authority: advisory` and `compatibility: unresolved`, where the packed install is labelled installed-local.',
-          evidence: [test('tooling', `${tooling}/cli.test.mjs`, 'E-G0.3-02 human, JSON, and dense projections preserve one response object')],
+          state: 'not-applicable',
+          note: 'Tooling at the source revision has no reader of hosted or latest catalog data, so the clause has nothing to apply to and no test of it exists. The capture checks this from the source: the command registry lists only the commands and options retained here and refuses to load with any other, the resolver takes a catalog only from the installed project or an explicit local cache, the source holds no network client, and its only child process is `pnpm list`. Supporting context, not a test of the clause: a response read from the catalog package bundled with tooling, with no installed project, is labelled `authority: advisory` and `compatibility: unresolved`.',
+          evidence: [
+            { kind: 'source-absence' },
+            test('tooling', `${tooling}/cli.test.mjs`, 'E-G0.3-02 human, JSON, and dense projections preserve one response object'),
+          ],
         },
       ],
       limits: [],
+      nonClaims: ['The clause "Hosted or latest data stays advisory" is not exercised by these records: tooling at the source revision has no hosted or latest reader. When one is added the clause applies to it and needs its own test; nothing here stands in for that test.'],
     },
     'E-P2.1-06': {
       parts: [
@@ -446,8 +459,11 @@ export function roadmapRows(text) {
   return rows;
 }
 
-/** The outcome of a record: pass only when every part is shown. */
-export const outcomeOf = (parts) => (parts.every(({ state }) => state === 'shown') ? 'pass' : parts.some(({ state }) => state === 'shown') ? 'partial' : 'unmet');
+/** The outcome of a record: pass only when every part that applies is shown, and at least one does. */
+export const outcomeOf = (parts) => {
+  const applicable = parts.filter(({ state }) => state !== 'not-applicable');
+  return applicable.length > 0 && applicable.every(({ state }) => state === 'shown') ? 'pass' : parts.some(({ state }) => state === 'shown') ? 'partial' : 'unmet';
+};
 
 const testLine = /^✔ (.+) \(\d[\d.]*ms\)$/u;
 const summaryLine = /^ℹ (tests|pass|fail|cancelled|skipped|todo) (\d+)$/u;
@@ -637,9 +653,13 @@ const independentReview = (verification) => {
 export function buildRecords(verification) {
   const { release, coverage, rows, phases } = verification;
   return Object.fromEntries(assertionIds.map((assertionId) => {
-    const { parts, limits } = coverage[assertionId];
+    const { parts, limits, nonClaims: ownNonClaims = [] } = coverage[assertionId];
     const outcome = outcomeOf(parts);
-    const row = rows[assertionId];
+    // A row amended after the release is judged as amended; the source revision's row stays in `roadmap`.
+    const { rows: amendedRows = {}, ...amendment } = verification.amendedRoadmap ?? {};
+    const amended = amendedRows[assertionId];
+    const row = amended ?? rows[assertionId];
+    const citesLater = parts.some(({ evidence }) => evidence.some((item) => item.ciRun !== undefined));
     return [assertionId, canonicalJson({
       schema: 'muxui-evidence-record-v1',
       assertionId,
@@ -648,7 +668,7 @@ export function buildRecords(verification) {
       basis: `${assertionId} under the Roadmap P2.1 acceptance table, Decision 0032, and the P2.1 activation packet`,
       assertion: row.assertion,
       requiredEvidence: row.requiredEvidence,
-      roadmap: verification.roadmap,
+      roadmap: amended ? { ...verification.roadmap, amended: { ...amendment, assertionAtSourceRevision: rows[assertionId].assertion } } : verification.roadmap,
       outcome,
       parts,
       limits,
@@ -660,13 +680,13 @@ export function buildRecords(verification) {
       proofTool: verification.proofTool,
       executedProofTools: verification.executedProofTools[assertionId],
       command: verification.commands,
-      execution: { mainCi: phases.ci.execution, ci: phases.ci.jobs, dryRun: release.dryRun, publish: release.publish },
+      execution: { mainCi: phases.ci.execution, ci: phases.ci.jobs, ...(citesLater ? { laterCi: phases.ci.later } : {}), dryRun: release.dryRun, publish: release.publish },
       environment: phases.ci.environment,
       release: { version: release.version, route: release.route, portfolioId: release.portfolioId, manifestDigest: release.manifestDigest, packages: release.packages },
       registryReadBack: phases.registry.readBack,
       ...(assertionId === 'E-P2.1-06' ? { publishApproval: phases.approval, githubEnvironment: phases.registry.githubEnvironment, route: release.routeRecords } : {}),
       crossCutting: crossCuttingOf(coverage),
-      nonClaims: nonClaims(verification),
+      nonClaims: [...nonClaims(verification), ...ownNonClaims],
       independentReview: independentReview(verification),
       validation: verification.validation,
       activeExceptionRefs: [],
@@ -688,6 +708,7 @@ function readme(verification, records) {
   const { release } = verification;
   const parsed = Object.values(records).map((text) => JSON.parse(text));
   const review = verification.phases.review;
+  const later = verification.phases.ci.later;
   return `# P2.1 retained evidence for the first portfolio release
 
 Roadmap "P2.1 Public package graph and portfolio release" requires \`E-P2.1-01\` to
@@ -705,14 +726,20 @@ registry observation, and this root cites them by path and digest.
 | --- | --- |
 ${parsed.map((record) => `| \`${record.assertionId}\` | \`${record.outcome}\` |`).join('\n')}
 
-${parsed.filter((record) => record.outcome !== 'pass').map((record) => `\`${record.assertionId}\` is \`${record.outcome}\` because ${record.parts.filter(({ state }) => state !== 'shown').map(({ state, part }) => `\`${state}\`: ${part}`).join(' ')}`).join('\n\n')}
+${[
+    ...parsed.filter((record) => record.outcome !== 'pass').map((record) => `\`${record.assertionId}\` is \`${record.outcome}\` because ${record.parts.filter(({ state }) => state !== 'shown').map(({ state, part }) => `\`${state}\`: ${part}`).join(' ')}`),
+    ...parsed.filter((record) => record.outcome === 'pass' && record.parts.some(({ state }) => state === 'not-applicable')).map((record) => `\`${record.assertionId}\` passes with a part that does not apply: ${record.parts.filter(({ state }) => state === 'not-applicable').map(({ part, note }) => `${part} ${note}`).join(' ')}`),
+  ].join('\n\n')}
 
 Each record's \`parts\` splits the Roadmap assertion into clauses and gives each a state:
-\`shown\`, \`limited\` (a narrower or indirect form, with a note), \`not-met\`, or \`not-shown\`.
-A record is \`pass\` only when every part is shown, and \`partial\` otherwise. A cited test
-is a passing line in the sanitized excerpt of the CI job that ran it, at the release
+\`shown\`, \`limited\` (a narrower or indirect form, with a note), \`not-met\`, \`not-shown\`, or
+\`not-applicable\` (the clause has nothing to apply to at the source revision, which the capture
+checks). A record is \`pass\` only when every part that applies is shown, and \`partial\` otherwise.
+A cited test is a passing line in the sanitized excerpt of the CI job that ran it, at the release
 commit; capture fails if a cited line is missing. \`limits\` lists what the retained
-evidence does not show.
+evidence does not show.${later ? `
+
+One test, added after the release, ran in pull request CI run ${later.execution.runId} (attempt ${later.execution.runAttempt}) at head \`${later.execution.headRevision}\`: the job checked out the merge \`${later.checkedOut.commit}\`, whose tree is the head's. The resolver source (\`packages/tooling/src\`, \`packages/catalog/src\`, \`packages/schema/src\`) is unchanged between the release commit and that head. The \`E-P2.1-02\` row of the Roadmap was amended after the release to name the dense-output ceiling; that record is judged against the amended row.` : ''}
 
 \`artifacts/\` holds the registry read-back of all four packages${review ? ' and the independent review' : ''}; \`validation/\` holds the CI job
 excerpts; \`verification.json\` binds them to the unsanitized log digests. The raw logs and
@@ -775,8 +802,63 @@ export function createGitHub() {
   return {
     attempt: (id, number) => json(`repos/${repository}/actions/runs/${id}/attempts/${number}`),
     attemptJobs: (id, number) => json(`repos/${repository}/actions/runs/${id}/attempts/${number}/jobs?per_page=100`).jobs,
+    commit: (sha) => { const { parents, commit } = json(`repos/${repository}/commits/${sha}`); return { parents: parents.map(({ sha: parent }) => parent), tree: commit.tree.sha }; },
     log: (jobId) => gh('api', '--allow-escape-sequences', `repos/${repository}/actions/jobs/${jobId}/logs`),
     environmentSecrets: () => json(`repos/${repository}/environments/${environmentName}/secrets`).total_count,
+  };
+}
+
+/** The `git grep` matches of `pattern` in `paths` at `revision`, as `{ path, line, text }`. */
+function grepAt(revision, pattern, paths, ...flags) {
+  const result = spawnSync('git', ['grep', '-n', '-I', '-E', ...flags, '-e', pattern, revision, '--', ...paths], { cwd: repositoryRoot, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  if (result.status > 1) fail('P2_1_GIT_GREP_FAILED', result.stderr);
+  return result.stdout.split('\n').filter(Boolean).map((row) => {
+    const [, path, line, ...text] = new RegExp(`^${revision}:([^:]+):(\\d+):`, 'u').exec(row) ? [null, ...row.slice(revision.length + 1).split(':')] : fail('P2_1_GIT_GREP_FAILED', row);
+    return { path, line: Number(line), text: text.join(':').trim() };
+  });
+}
+
+/**
+ * What the tooling source at `revision` can read, from its command registry and the source itself: no hosted or latest
+ * catalog. Fails, for a decision, when a match shows it might.
+ */
+export function toolingReaderSurface(revision) {
+  const source = 'packages/tooling/src';
+  const registryFile = `${source}/registry.mjs`;
+  const registrySource = gitShow(revision, registryFile);
+  const listed = (name) => {
+    const match = new RegExp(`const ${name} = \\[([^\\]]*)\\];`, 'u').exec(registrySource);
+    if (!match) fail('P2_1_REGISTRY_UNREADABLE', `${registryFile} at ${revision} has no ${name} list`);
+    return [...match[1].matchAll(/'([^']+)'/gu)].map(([, value]) => value);
+  };
+  const surface = { commands: listed('BASELINE_COMMANDS'), unavailableCommands: listed('UNAVAILABLE_COMMANDS'), globalOptions: listed('BASELINE_GLOBAL_OPTIONS'), selectors: listed('BASELINE_SELECTORS') };
+  // The registry refuses to load with any other option or command, so these lists are the whole surface.
+  if (!registrySource.includes('CLI_OPTION_SURFACE_DRIFT') || !registrySource.includes('canonicalJson([...commands].sort(compareText)) === canonicalJson(BASELINE_COMMANDS)')) fail('P2_1_REGISTRY_UNLOCKED', `${registryFile} at ${revision} no longer locks its surface`);
+  const hostile = Object.values(surface).flat().filter((name) => /hosted|latest|remote|url|network|fetch|download/iu.test(name));
+  if (hostile.length > 0) fail('P2_1_READER_FOUND', `the command surface names ${hostile.join(', ')}`);
+
+  const networkPattern = 'fetch\\(|node:(https?|http2|net|tls|dns|dgram)|XMLHttpRequest|WebSocket|undici|https?://';
+  const network = grepAt(revision, networkPattern, [source]);
+  if (network.length > 0) fail('P2_1_READER_FOUND', `${source} at ${revision} may reach the network: ${network[0].path}:${network[0].line}`);
+  const wording = grepAt(revision, 'hosted|latest', [source], '-i');
+  const code = wording.filter(({ text }) => !text.startsWith('//'));
+  if (code.length > 0) fail('P2_1_READER_FOUND', `${code[0].path}:${code[0].line} names hosted or latest outside a comment`);
+  const childProcess = grepAt(revision, 'child_process|spawnSync\\(|execFileSync\\(|execSync\\(|spawn\\(|fork\\(', [source]);
+  const adapter = gitShow(revision, `${source}/pnpm-adapter.mjs`);
+  const pnpm = /spawnSync\('pnpm', \[([\s\S]*?)\], \{/u.exec(adapter)?.[1].replace(/\s+/gu, ' ').trim();
+  if (childProcess.length !== 2 || childProcess.some(({ path }) => path !== `${source}/pnpm-adapter.mjs`) || !pnpm?.includes("'list'") || /'(?:view|install|add|update|publish|fetch)'/u.test(pnpm)) fail('P2_1_READER_FOUND', `${source} at ${revision} runs a child process other than pnpm list`);
+  const catalogSources = grepAt(revision, "catalogSource = '", [source]).map(({ text }) => /catalogSource = '([^']+)'/u.exec(text)[1]);
+  if (JSON.stringify(catalogSources) !== JSON.stringify(['cache', 'project'])) fail('P2_1_READER_FOUND', `the resolver takes a catalog from ${catalogSources.join(', ')}, not only the explicit cache and the installed project`);
+  return {
+    kind: 'source-absence',
+    revision,
+    registry: { file: registryFile, blob: git('rev-parse', `${revision}:${registryFile}`), ...surface },
+    searches: [
+      { for: 'a network client', pattern: networkPattern, scope: source, matches: network },
+      { for: 'the words hosted or latest (case-insensitive); each match is a comment', pattern: 'hosted|latest', scope: source, matches: wording },
+    ],
+    childProcess: { matches: childProcess, pnpmArguments: pnpm },
+    catalogSources,
   };
 }
 
@@ -849,6 +931,7 @@ function parseArguments(argv) {
     if (flag === '--evidence') options.evidence = true;
     else if (flag === '--version') options.version = value();
     else if (flag === '--capture-timestamp') options.captureTimestamp = value();
+    else if (flag === '--after-ci-run') options.afterCiRun = value();
     else if (flag === '--publish-approval') options.approval = value();
     else if (flag === '--publish-approval-date') options.approvalDate = value();
     else if (flag === '--review') options.review = resolve(value());
@@ -860,6 +943,7 @@ function parseArguments(argv) {
   if (!/^0\.1\.0-rc\.\d+$/u.test(options.version ?? '')) fail('P2_1_ARGUMENT_INVALID', 'pass --version=<the React candidate, such as 0.1.0-rc.5>');
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u.test(options.captureTimestamp ?? '')) fail('P2_1_ARGUMENT_INVALID', 'pass --capture-timestamp=YYYY-MM-DDTHH:MM:SSZ');
   if (!options.evidence && !options.review) fail('P2_1_ARGUMENT_INVALID', 'pass --evidence, --review, or both');
+  if (options.evidence && !/^\d+:\d+$/u.test(options.afterCiRun ?? '')) fail('P2_1_ARGUMENT_INVALID', '--evidence needs --after-ci-run=<run id>:<attempt>');
   if (options.evidence && !(options.approval && /^\d{4}-\d{2}-\d{2}$/u.test(options.approvalDate ?? ''))) {
     fail('P2_1_ARGUMENT_INVALID', '--evidence needs --publish-approval=<text> and --publish-approval-date=<YYYY-MM-DD>');
   }
@@ -911,6 +995,81 @@ function publishBlock(lines, label) {
   return { start, end: next < 0 ? lines.length : next };
 }
 
+const resolverSource = ['packages/tooling/src', 'packages/catalog/src', 'packages/schema/src'];
+
+/**
+ * The pull request CI run, after the release commit, whose tooling job ran the test added after it. A pull request job
+ * checks out the merge of the head into its base, so the job is bound by that merge's tree, which must be the head's,
+ * and capture checks that the resolver source did not change between the release commit and the head.
+ */
+function readLaterCi({ github, run, sourceRevision, cites, stage }) {
+  const [runId, attempt] = run.split(':').map(Number);
+  const ciRun = github.attempt(runId, attempt);
+  const head = ciRun.head_sha;
+  if (ciRun.path !== ciWorkflowPath || ciRun.event !== 'pull_request' || ciRun.status !== 'completed' || ciRun.conclusion !== 'success' || ciRun.run_attempt !== attempt || !/^[0-9a-f]{40}$/u.test(head)) {
+    fail('P2_1_LATER_CI_INVALID', `run ${runId} attempt ${attempt} is not a successful pull request CI run`);
+  }
+  if (spawnSync('git', ['merge-base', '--is-ancestor', sourceRevision, head], { cwd: repositoryRoot }).status !== 0) fail('P2_1_LATER_CI_INVALID', `${head} is not a descendant of ${sourceRevision} in this checkout`);
+  const jobs = github.attemptJobs(runId, attempt);
+  const name = 'run checks-tooling';
+  const job = jobs.find((candidate) => candidate.name === name);
+  const aggregate = jobs.find((candidate) => candidate.name === 'check');
+  if (job?.conclusion !== 'success' || aggregate?.conclusion !== 'success') fail('P2_1_LATER_CI_INVALID', `job ${name} or the aggregate check of run ${runId} did not succeed`);
+  if (job.steps?.find((step) => step.name === 'Reuse earlier pass')?.conclusion !== 'skipped') fail('P2_1_CI_JOB_REUSED', `job ${name} reused an earlier pass, so it ran no tests`);
+  const raw = github.log(job.id);
+  const lines = raw.split('\n');
+  if (!lines.some((line) => content(line).startsWith('[ci-impact] running group checks-tooling '))) fail('P2_1_CI_JOB_UNBOUND', `job ${name} did not run group checks-tooling`);
+  const checkedOut = lines.map((line, at) => (content(line).includes('git log -1 --format=%H') ? content(lines[at + 1] ?? '').trim() : null)).find(Boolean);
+  const merge = github.commit(checkedOut);
+  const headTree = git('rev-parse', `${head}^{tree}`);
+  if (merge.parents.length !== 2 || merge.parents[1] !== head || merge.tree !== headTree) fail('P2_1_LATER_CI_UNBOUND', `the job checked out ${checkedOut}, which is not a merge of ${head} with the head's tree`);
+  const changed = git('diff', '--name-only', sourceRevision, head, '--', ...resolverSource).split('\n').filter(Boolean);
+  if (changed.length > 0) fail('P2_1_LATER_RESOLVER_CHANGED', `the resolver source changed between ${sourceRevision} and ${head}: ${changed.join(', ')}`);
+  // The test file gained tests and lost none, so every test cited from the release commit's run is still what it was.
+  const [added, deleted] = git('diff', '--numstat', sourceRevision, head, '--', packedCli).split('\t');
+  if (!(Number(added) > 0 && deleted === '0')) fail('P2_1_LATER_TEST_FILE', `${packedCli} did not only gain lines between ${sourceRevision} and ${head} (${added} added, ${deleted} deleted)`);
+
+  const { kept, totals } = ciExcerpt(raw, cites);
+  const text = `${[`# job: ${name} (job ${job.id}) of pull request CI run ${runId} attempt ${attempt} at head ${head}, which checked out merge ${checkedOut} of it into ${merge.parents[0]}, filtered to the group and commands it ran, the totals each node --test printed, and the passing lines this capture cites`, ...kept.map(({ text: line }) => line)].join('\n')}\n`;
+  const ref = stage(`${root}/validation/checks-tooling-${job.id}.txt`, text);
+  const excerpt = { ...ref, rawLines: kept.map(({ raw: at }) => at) };
+  return {
+    head,
+    ref,
+    lines: [''].concat(text.split('\n').slice(0, -1)),
+    group: 'checks-tooling',
+    excerpt,
+    phase: {
+      execution: {
+        repository, workflowPath: ciRun.path, event: ciRun.event, headBranch: ciRun.head_branch, pullRequests: (ciRun.pull_requests ?? []).map(({ number }) => number), runId: ciRun.id, runAttempt: ciRun.run_attempt, headRevision: head,
+        startedAt: ciRun.run_started_at, conclusion: ciRun.conclusion, aggregateCheck: { jobId: aggregate.id, conclusion: aggregate.conclusion },
+        headInDefaultBranchHistory: spawnSync('git', ['merge-base', '--is-ancestor', head, 'origin/main'], { cwd: repositoryRoot }).status === 0,
+      },
+      job: {
+        jobId: job.id, job: name, group: 'checks-tooling', conclusion: job.conclusion, startedAt: job.started_at, completedAt: job.completed_at,
+        commands: lines.map((line) => /^\[ci-impact\] command: (.+)$/u.exec(content(line))?.[1]).filter(Boolean).map(sanitize),
+        testTotals: totals, rawLog: { bytes: Buffer.byteLength(raw), lines: lines.length, sha256: sha256(raw), retained: false }, excerpt,
+      },
+      checkedOut: { ref: 'the pull request merge ref', commit: checkedOut, parents: merge.parents, tree: merge.tree, headTree },
+      sinceRelease: { sourceRevision, head, resolverSource: { command: `git diff --name-only ${sourceRevision} ${head} -- ${resolverSource.join(' ')}`, changedPaths: changed }, testFile: { path: packedCli, linesAdded: Number(added), linesDeleted: Number(deleted) } },
+    },
+  };
+}
+
+/** The Roadmap as amended after the release: the rows, the one that changed, and the ceiling its dense clause names. */
+function readAmendedRoadmap({ head, sourceRevision, rows, ceilingConstant }) {
+  const amendedRows = roadmapRows(gitShow(head, roadmap));
+  const changedIds = assertionIds.filter((id) => JSON.stringify(amendedRows[id]) !== JSON.stringify(rows[id]));
+  if (JSON.stringify(changedIds) !== JSON.stringify(['E-P2.1-02']) || amendedRows['E-P2.1-02'].requiredEvidence !== rows['E-P2.1-02'].requiredEvidence) fail('P2_1_AMENDED_ROADMAP_ROWS', `the rows changed between ${sourceRevision} and ${head} are ${changedIds.join(', ') || 'none'}, not E-P2.1-02's assertion alone`);
+  if (git('rev-parse', `HEAD:${roadmap}`) !== git('rev-parse', `${head}:${roadmap}`)) fail('P2_1_AMENDED_ROADMAP_CHANGED', `${roadmap} at HEAD is not the one at ${head}`);
+  const commit = git('log', '-1', '--format=%H', head, '--', roadmap);
+  if (spawnSync('git', ['merge-base', '--is-ancestor', commit, sourceRevision], { cwd: repositoryRoot }).status === 0) fail('P2_1_AMENDED_ROADMAP_CHANGED', `${commit} is not after the release commit`);
+  const fromRoadmap = /full-detail `get --platform web\.react --dense` has a (\d+)-token ceiling/u.exec(amendedRows['E-P2.1-02'].assertion)?.[1];
+  const fromTest = new RegExp(`const ${ceilingConstant.name} = (\\d+);`, 'u').exec(gitShow(sourceRevision, ceilingConstant.file))?.[1];
+  if (!fromRoadmap || fromRoadmap !== fromTest) fail('P2_1_CEILING_MISMATCH', `the amended row names a ceiling of ${fromRoadmap}; the test at ${sourceRevision} pins ${fromTest}`);
+  return { path: roadmap, revision: head, blob: git('rev-parse', `${head}:${roadmap}`), commit, ceiling: { roadmap: Number(fromRoadmap), test: { file: ceilingConstant.file, constant: ceilingConstant.name, value: Number(fromTest), revision: sourceRevision } }, rows: { 'E-P2.1-02': amendedRows['E-P2.1-02'] } };
+}
+
 export async function capture(options, github = createGitHub(), observe = viewPackage) {
   const { route, verification: r1, records: routeRecords, excerpts } = readRoute(options.version, options);
   const outPath = (relative) => join(options.out, relative.slice(root.length + 1));
@@ -955,7 +1114,7 @@ export async function capture(options, github = createGitHub(), observe = viewPa
   verification.release = release;
   verification.sourceRevision = sourceRevision;
   verification.sourceTree = r1.sourceTree;
-  verification.captureProcedure = `node ${captureTool} --version=${options.version} --capture-timestamp=<ISO-8601 UTC> [--evidence --publish-approval=<text> --publish-approval-date=<YYYY-MM-DD>] [--review=<file> --review-revision=<sha>]`;
+  verification.captureProcedure = `node ${captureTool} --version=${options.version} --capture-timestamp=<ISO-8601 UTC> [--evidence --after-ci-run=<id>:<attempt> --publish-approval=<text> --publish-approval-date=<YYYY-MM-DD>] [--review=<file> --review-revision=<sha>]`;
   const roadmapText = gitShow(sourceRevision, roadmap);
   verification.roadmap = { path: roadmap, revision: sourceRevision, blob: git('rev-parse', `${sourceRevision}:${roadmap}`) };
   verification.rows = roadmapRows(roadmapText);
@@ -1015,6 +1174,12 @@ export async function capture(options, github = createGitHub(), observe = viewPa
       };
       jobs[key].lines = [''].concat(text.split('\n').slice(0, -1));
     }
+    // The one test added after the release, from a later pull request run; every other citation stays with the release commit's run.
+    const later = readLaterCi({ github, run: options.afterCiRun, sourceRevision, cites: cited('toolingAfter'), stage });
+    verification.retained.ciToolingAfter = later.ref;
+    const amendment = Object.values(claims).flatMap(({ parts }) => parts.flatMap(({ evidence }) => evidence)).find(({ kind }) => kind === 'roadmap-amendment');
+    verification.amendedRoadmap = readAmendedRoadmap({ head: later.head, sourceRevision, rows: verification.rows, ceilingConstant: amendment.ceilingConstant });
+    claims['E-P2.1-02'].limits.push(`The installed-catalog tamper test and the amended Roadmap row came after the release: the test passed in pull request CI run ${later.phase.execution.runId} at head ${later.head}${later.phase.execution.headInDefaultBranchHistory ? '' : ', which is a pull request head not in the default branch\'s history at capture'}, over a merge whose tree is the head's. The resolver source (packages/tooling/src, packages/catalog/src, packages/schema/src) is unchanged between the release commit and that head. The release was prepared and published against the earlier wording of the row.`);
     // The registry, read now: every package of the set against the manifest and the publish run.
     const readBack = [];
     for (const entry of release.packages) {
@@ -1083,14 +1248,20 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     // Retained route excerpts, by key, with their lines.
     const logs = { dryRun: excerpts.dryRunExcerpt, publish: excerpts.publishExcerpt, publishPrepare: excerpts.publishPrepareExcerpt };
     logs.dryRunCollect = logs.dryRun;
+    const sources = { ...jobs, toolingAfter: later };
     const resolveItem = (item) => {
       if (item.kind === 'test') {
-        const { lines } = jobs[item.job];
+        const { lines, group, excerpt } = sources[item.job];
+        const revision = item.job === 'toolingAfter' ? later.head : sourceRevision;
         const at = lines.findIndex((line) => testLine.exec(content(line))?.[1] === item.title);
-        const source = gitShow(sourceRevision, item.file);
-        if (!hasTitle(source, item.title)) fail('P2_1_TEST_NOT_IN_FILE', `${item.file} at ${sourceRevision} has no test titled "${item.title}"`);
-        return { kind: 'test', job: jobs[item.job].group, file: item.file, title: item.title, excerpt: jobs[item.job].excerpt.path, line: at };
+        if (!hasTitle(gitShow(revision, item.file), item.title)) fail('P2_1_TEST_NOT_IN_FILE', `${item.file} at ${revision} has no test titled "${item.title}"`);
+        return { kind: 'test', job: group, file: item.file, title: item.title, excerpt: excerpt.path, line: at, ...(item.job === 'toolingAfter' ? { ciRun: later.phase.execution.runId, revision } : {}) };
       }
+      if (item.kind === 'roadmap-amendment') {
+        const { rows: _rows, ...amended } = verification.amendedRoadmap;
+        return { kind: 'roadmap-amendment', id: item.id, ...amended };
+      }
+      if (item.kind === 'source-absence') return toolingReaderSurface(sourceRevision);
       if (item.kind === 'corpus') {
         // Every fixture of the corpus is a test, and each passes.
         const names = execFileSync('git', ['ls-tree', '--name-only', sourceRevision, `${item.fixtures}/`], { cwd: repositoryRoot, encoding: 'utf8' }).split('\n')
@@ -1142,12 +1313,15 @@ export async function capture(options, github = createGitHub(), observe = viewPa
       }
       return fail('P2_1_CLAIM_UNKNOWN', JSON.stringify(item));
     };
-    verification.coverage = Object.fromEntries(Object.entries(claims).map(([assertionId, { parts, limits }]) => [assertionId, {
+    verification.coverage = Object.fromEntries(Object.entries(claims).map(([assertionId, { parts, limits, nonClaims: ownNonClaims }]) => [assertionId, {
       parts: parts.map(({ part, state, note, evidence }) => ({ part, state, ...(note ? { note } : {}), evidence: evidence.map(resolveItem) })),
       limits,
+      ...(ownNonClaims ? { nonClaims: ownNonClaims } : {}),
     }]));
-    const executedFiles = (assertionId) => [...new Set(Object.values(verification.coverage[assertionId].parts).flatMap(({ evidence }) => evidence.flatMap((item) => (item.file ? [item.file] : []))))].sort();
-    verification.executedProofTools = Object.fromEntries(assertionIds.map((assertionId) => [assertionId, executedFiles(assertionId).map((path) => ({ path, blob: git('rev-parse', `${sourceRevision}:${path}`) }))]));
+    // The blob each executed file had at the revision that ran it: the release commit, or the later head for the later test.
+    const executedFiles = (assertionId) => [...new Map(Object.values(verification.coverage[assertionId].parts).flatMap(({ evidence }) => evidence.flatMap((item) => (item.file ? [{ path: item.file, ...(item.revision ? { revision: item.revision } : {}) }] : [])))
+      .map((entry) => [`${entry.path}@${entry.revision ?? sourceRevision}`, entry])).entries()].sort(([left], [right]) => (left < right ? -1 : 1)).map(([, entry]) => entry);
+    verification.executedProofTools = Object.fromEntries(assertionIds.map((assertionId) => [assertionId, executedFiles(assertionId).map(({ path, revision }) => ({ path, blob: git('rev-parse', `${revision ?? sourceRevision}:${path}`), ...(revision ? { revision } : {}) }))]));
     // The dry run's own preparation tool, as its manifest records it, is what ran the release checks.
     const preparationTool = JSON.parse(readFileSync(join(repositoryRoot, excerpts.manifest.path), 'utf8')).preparation?.tool;
     if (preparationTool) {
@@ -1168,6 +1342,7 @@ export async function capture(options, github = createGitHub(), observe = viewPa
       ci: {
         execution: { repository, workflowPath: ciRun.path, event: ciRun.event, headBranch: ciRun.head_branch, runId: ciRun.id, runAttempt: ciRun.run_attempt, headRevision: ciRun.head_sha, startedAt: ciRun.run_started_at, conclusion: ciRun.conclusion, aggregateCheck: { jobId: aggregate.id, conclusion: aggregate.conclusion } },
         jobs,
+        later: later.phase,
         environment: { runnerImage: jobs.policy.environmentLines.runnerImage, node: jobs.policy.environmentLines.node, preparation: dryRun.environment },
       },
       registry: {
