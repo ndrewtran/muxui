@@ -37,9 +37,12 @@ name: npm publish
 #   package), so its first publish alone uses the temporary NPM_TOKEN secret of
 #   the npm-publish environment, which only the `Publish the set in order` step
 #   sees; the run refuses before any publish when a first publish has no token
-#   and never falls back. Provenance is signed with the OIDC identity either way,
-#   and trust is set up and the token revoked after the first publish. Per
-#   package the publish job preflights
+#   and never falls back. Provenance is signed with the OIDC identity either way.
+#   The token is revoked after the first release's read-back. Each new package's
+#   trusted publisher is set up just before its next real release, since npm
+#   expires one after 2 days without a publish; until then a publish of that
+#   existing package stops on authentication and never falls back to a token.
+#   Per package the publish job preflights
 #   the registry, rechecks for drift, publishes with provenance, and reads back
 #   the version, integrity, provenance attestation, and `next`; it stops at the
 #   first failure and never continues to a later package. A failure prints a
