@@ -104,6 +104,19 @@ test('E-G0.3-01 programmatic and CLI JSON surfaces return the same responses', (
   assert.throws(() => assert.deepEqual(manifestDrift, catalogManifest));
 });
 
+// The catalog embeds command-registry.json, so its cli.version changes only with a catalog release (and digest). A project
+// manifest reports the installed package version over it.
+test('a project manifest reports the installed tooling version over the registry version the catalog embeds', async () => {
+  const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const authored = JSON.parse(await readFile(new URL('../command-registry.json', import.meta.url), 'utf8'));
+  assert.deepEqual(getManifest({ detail: 'full' }).data.cli.cli, authored.cli);
+
+  const resolution = resolvePnpmProjectCatalog();
+  assert.equal(resolution.type, 'success');
+  const [brief, compact, full] = details.map((detail) => resolution.api.getManifest({ detail }).data.cli);
+  assert.deepEqual([brief.version, compact.cli.version, full.cli.version], [version, version, version]);
+});
+
 test('E-G0.3-02 human, JSON, and dense projections preserve one response object', () => {
   const response = executeCommand('get', {
     'id-or-alias': 'muxui:component:button',

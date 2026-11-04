@@ -6,6 +6,7 @@ import {
   parserMetadata,
 } from '../generated/command-surface.mjs';
 import { API_VERSION } from '@muxui/schema';
+import { TOOLING_VERSION } from './version.mjs';
 
 function usageError(ruleId, message, details, nextCommand = 'muxui --json') {
   return {
@@ -56,7 +57,11 @@ export function parseCliArguments(args) {
     ) };
   }
   if (args.length === 0 || canonicalJson(args) === canonicalJson(['--help'])) {
-    return { kind: 'help', mode: 'human', text: helpText };
+    return {
+      kind: 'help',
+      mode: 'human',
+      text: `${parserMetadata.cli.name} ${TOOLING_VERSION}\n${helpText}`,
+    };
   }
   if (canonicalJson(args) === canonicalJson(['--json'])) {
     return { kind: 'command', command: 'manifest', mode: 'json', request: { detail: 'compact' } };

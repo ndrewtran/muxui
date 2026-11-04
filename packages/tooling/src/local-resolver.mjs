@@ -8,6 +8,7 @@ import {
   negotiateQueryApiVersion,
 } from '@muxui/schema';
 import { satisfies, valid, validRange } from 'semver';
+import { TOOLING_VERSION } from './version.mjs';
 
 export const RESOLVER_ERROR_PRECEDENCE = Object.freeze([
   'MUXUI_PROJECT_NOT_FOUND',
@@ -21,7 +22,6 @@ export const RESOLVER_ERROR_PRECEDENCE = Object.freeze([
 ]);
 
 const TOOLING_SCHEMA_VERSION = SCHEMA_VERSION;
-const TOOLING_VERSION = '1.0.0';
 
 function compareText(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;

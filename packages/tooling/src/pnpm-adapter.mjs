@@ -12,8 +12,29 @@ import {
 } from '@muxui/schema';
 import { satisfies, valid, validRange } from 'semver';
 import { resolveCatalogGraph } from './local-resolver.mjs';
+import { TOOLING_VERSION } from './version.mjs';
 
 const CATALOG_PACKAGE = '@muxui/catalog';
+
+/**
+ * A project's manifest reports this installed CLI's version, inline on brief and under `cli.cli` on compact and full.
+ * The registry's `cli.version` is embedded in the published catalog and can only change with a real catalog release,
+ * so the CLI overrides it instead.
+ */
+function withCliVersion(api) {
+  return {
+    ...api,
+    getManifest(request) {
+      const response = api.getManifest(request);
+      if (response.type !== 'catalog.manifest') return response;
+      const { cli } = response.data;
+      const stamped = cli.cli
+        ? { ...cli, cli: { ...cli.cli, version: TOOLING_VERSION } }
+        : { ...cli, version: TOOLING_VERSION };
+      return { ...response, data: { ...response.data, cli: stamped } };
+    },
+  };
+}
 
 function sha256(value) {
   return `sha256:${createHash('sha256').update(value).digest('hex')}`;
@@ -642,10 +663,10 @@ export function resolvePnpmProjectCatalog({
     finalResolution = resolved.resolution;
     availableBindings = bindingRequests.length > 0 ? bindingRequests : undefined;
   }
-  const api = createCatalogApi(candidate.bundle, {
+  const api = withCliVersion(createCatalogApi(candidate.bundle, {
     resolution: finalResolution,
     ...(availableBindings === undefined ? {} : { availableBindings }),
-  });
+  }));
   return {
     type: 'success',
     api,

@@ -328,8 +328,8 @@ function validateCommandRegistry(registry) {
 }
 
 function helpFor(registry) {
+  // The title line (name and version) is added at runtime by the parser, which knows the installed version.
   const lines = [
-    `${registry.cli.name} ${registry.cli.version}`,
     registry.cli.description,
     '',
     'Usage: muxui <command> [arguments] [options]',
