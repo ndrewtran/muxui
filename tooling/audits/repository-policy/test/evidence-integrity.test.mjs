@@ -3894,4 +3894,147 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.match(readme, /^\| `E-P2\.1-02` \| `partial` \|$/mu);
     assert.doesNotMatch(readme, /review is pending/u);
   });
+
+  // A later release: @muxui/tooling@1.1.0-rc.2 alone, reusing schema, catalog, and React from the first release. Its route is judged
+  // at its own release commit, with the first release's route and manifest as the baseline.
+  test('the P2.1 route of tooling 1.1.0-rc.2 rebuilds from its verification.json, and what it measured and reused is pinned', () => {
+    const route = 'tests/evidence/p2.1-tooling-1.1.0-rc.2';
+    const text = (relative) => readFileSync(join(repositoryRoot, relative), 'utf8');
+    const verification = JSON.parse(text(`${route}/verification.json`));
+    const files = p2.assembleRoute(verification);
+    assert.deepEqual([...files.keys()].sort(), ['README.md', 'index.json', ...['01', '02', '03', '04', '05', '06'].map((id) => `records/E-P2.1-${id}.json`), 'verification.json'].map((file) => `${route}/${file}`));
+    for (const [relative, body] of files) assert.equal(body, text(relative), `${relative} is what the tool rebuilds`);
+
+    const index = JSON.parse(text(`${route}/index.json`));
+    assert.equal(verification.route, route);
+    assert.deepEqual([index.sourceRevision, index.sourceTree], ['0cd44350e734c4ba6282654f06f2ca07c96879fa', '6f8a0aac82bcd0e2b0a1f54e5c2f35aa929e8023']);
+    assert.equal(index.artifacts.length, Object.keys(verification.retained).length);
+    assert.match(verification.proofTool.revision, /^[0-9a-f]{40}$/u, 'a real capture binds a committed tool');
+    assert.equal(verification.rehearsal, undefined);
+    assert.deepEqual(index.records.map(({ assertionId }) => assertionId), ['E-P2.1-01', 'E-P2.1-02', 'E-P2.1-03', 'E-P2.1-04', 'E-P2.1-05', 'E-P2.1-06']);
+
+    const excerptLines = (path) => ['', ...text(path).split('\n')];
+    const contentOf = (line) => line.replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z /u, '');
+    const notApplicable = { 'E-P2.1-03': ['The first portfolio release publishes all four.'], 'E-P2.1-05': ['Hosted or latest data stays advisory.'], 'E-P2.1-06': ['@muxui/react publishes through its configured trusted publisher, and the publish carries provenance.'] };
+    for (const { assertionId, path } of index.records) {
+      const record = JSON.parse(text(path));
+      assert.equal(record.outcome, 'pass', assertionId);
+      assert.equal(record.outcome, p2.outcomeOf(record.parts), assertionId);
+      assert.deepEqual(record.parts.filter(({ state }) => state === 'not-applicable').map(({ part }) => part), notApplicable[assertionId] ?? [], assertionId);
+      assert.ok(record.parts.every(({ state }) => ['shown', 'not-applicable'].includes(state)), assertionId);
+      assert.deepEqual([record.sourceRevision, record.executedRevision, record.executedTree], [index.sourceRevision, index.sourceRevision, index.sourceTree]);
+      assert.ok(record.nonClaims.some((claim) => /^P2\.1 is not claimed complete/u.test(claim)) && record.nonClaims.some((claim) => /^No stable release, support, or assistive-technology claim/u.test(claim)), assertionId);
+      assert.ok(record.nonClaims.some((claim) => /^@muxui\/schema and @muxui\/catalog: Andrew reported setting up their trusted publishers on npm\. That is not observable from public data, no publish has used them, and tokenless publishing stays unproved for those two\. As given to this capture, npm's documentation says a trusted publisher that goes unused lapses after 2 days/u.test(claim)), assertionId);
+      assert.ok(record.nonClaims.some((claim) => /0\.0\.0-stage placeholder version\. It is no part of the release tuple, carries no provenance/u.test(claim)), assertionId);
+      // The records name no post-release amendment because there is none: the Roadmap is unamended and no cited file changed after the release commit.
+      assert.deepEqual(record.roadmap.amendedAfterRelease.rows, [], assertionId);
+      assert.deepEqual(record.compared.citedFilesChangedAfterRelease, [], assertionId);
+      assert.equal(record.compared.firstRelease.route, 'tests/evidence/p2.1');
+      for (const item of record.parts.flatMap(({ evidence }) => evidence)) {
+        if (item.kind === 'test') {
+          assert.equal(contentOf(excerptLines(item.excerpt)[item.line]).startsWith(`✔ ${item.title} (`), true, `${assertionId} cites ${item.excerpt}:${item.line}`);
+          const source = readAt(index.sourceRevision, item.file).toString('utf8');
+          assert.ok(source.includes(item.title.replaceAll("'", "\\'")) || source.includes(item.title), `${item.file} has "${item.title}"`);
+        } else if (item.kind === 'log') {
+          assert.equal(contentOf(excerptLines(item.excerpt)[item.line]), item.text, `${assertionId} cites ${item.excerpt}:${item.line}`);
+        }
+      }
+      assert.equal(record.independentReview.status, 'pending', 'the review of this route is not written');
+    }
+    assert.deepEqual(index.independentReview, { ...index.independentReview, status: 'pending', artifact: null });
+    assert.match(text(`${route}/README.md`), /^\*\*P2\.1 completion is not claimed by this route or by any record in it\.\*\*/mu);
+
+    // E-P2.1-02 on the published tuple: every check passes, the CLI reports its own version, and the counts are what the installed countTokens gave.
+    const published = verification.phases.published;
+    const checkNamed = (id) => published.checks.find((found) => found.id === id);
+    assert.deepEqual(published.checks.filter(({ passed }) => !passed), []);
+    assert.deepEqual([published.toolingVersion.installed, published.toolingVersion.muxuiVersionInResponses, published.toolingVersion.cliVersionInManifest, published.toolingVersion.reportsInstalledVersion], ['1.1.0-rc.2', ['1.1.0-rc.2'], '1.1.0-rc.2', true]);
+    const countsOf = (id) => Object.fromEntries(checkNamed(id).observed.rows.map(({ args, used, counted, budget, ceiling }) => [args.slice(0, -1).join(' '), [used, counted, budget, ceiling]]));
+    assert.deepEqual(Object.values(countsOf('dense-get-react')), [[131, 123, 384, 384], [264, 256, 1024, 1024], [2803, 2795, 2048, 3072]]);
+    const fixtureCounts = Object.entries(countsOf('dense-budget-fixtures'));
+    assert.equal(fixtureCounts.length, 12);
+    assert.ok(fixtureCounts.every(([, [, counted, , ceiling]]) => counted <= ceiling));
+    assert.deepEqual(fixtureCounts.filter(([, [raw, , , ceiling]]) => raw > ceiling), [['manifest --detail brief', [261, 251, 256, 256]]]);
+    // The tuple is the registry's bytes: the new tooling from this commit, the rest from the first release's.
+    const firstSource = JSON.parse(text('tests/evidence/p2.1/verification.json')).sourceRevision;
+    assert.deepEqual(checkNamed('registry-install').observed.map(({ name, version, installedVersion, gitHead }) => [name, version, installedVersion, gitHead]), [
+      ['@muxui/schema', '0.6.0-rc.1', '0.6.0-rc.1', firstSource], ['@muxui/catalog', '2.1.0-rc.1', '2.1.0-rc.1', firstSource],
+      ['@muxui/tooling', '1.1.0-rc.2', '1.1.0-rc.2', index.sourceRevision], ['@muxui/react', '0.1.0-rc.5', '0.1.0-rc.5', firstSource],
+    ]);
+    const cli = JSON.parse(text(`${route}/records/E-P2.1-02.json`)).parts.find(({ part }) => part.startsWith('The CLI reports its own version'));
+    assert.equal(cli.state, 'shown');
+    assert.match(cli.note, /This later release satisfies the part, and 1\.1\.0-rc\.1, the first release's tooling, does not and stays wrong: installed again for this capture, it reports muxuiVersion 1\.0\.0 and CLI version 1\.0\.0\./u);
+
+    // E-P2.1-03: each reused record is the first release's, by version, digest, and provenance, and only tooling is published, from this commit.
+    const manifest = JSON.parse(text(`${route}/artifacts/release-manifest.json`));
+    const origin = JSON.parse(text('tests/evidence/r1-exit-0.1.0-rc.5/artifacts/release-manifest.json'));
+    assert.deepEqual(manifest.packages.map(({ name, role }) => [name, role]), [['@muxui/schema', 'reused'], ['@muxui/catalog', 'reused'], ['@muxui/tooling', 'published'], ['@muxui/react', 'reused']]);
+    for (const record of manifest.packages.filter(({ role }) => role === 'reused')) {
+      assert.deepEqual(record, { ...origin.packages.find(({ name }) => name === record.name), role: 'reused' });
+      assert.equal(record.provenance.releaseId, origin.id);
+    }
+    assert.deepEqual(manifest.packages.find(({ name }) => name === '@muxui/tooling').provenance, { kind: 'release-commit', releaseId: manifest.id, sourceCommit: index.sourceRevision });
+    assert.equal(manifest.preparation.verification.versionEffects.priorRelease, origin.id);
+    const reuse = JSON.parse(text(`${route}/records/E-P2.1-03.json`)).parts.flatMap(({ evidence }) => evidence).find(({ kind }) => kind === 'reuse');
+    assert.deepEqual(reuse.reused.map(({ name, recordEqualsOrigin }) => [name, recordEqualsOrigin]), [['@muxui/schema', true], ['@muxui/catalog', true], ['@muxui/react', true]]);
+
+    // E-P2.1-06: tooling published by trusted publishing, every version of the first release is still listed, and the placeholders are unchanged.
+    const publication = JSON.parse(text(`${route}/records/E-P2.1-06.json`));
+    const toolingPublish = publication.parts.flatMap(({ evidence }) => evidence).find(({ kind, name }) => kind === 'publish-package' && name === '@muxui/tooling');
+    assert.equal(toolingPublish.authentication.value, 'trusted publishing (OIDC)');
+    assert.equal(toolingPublish.authentication.text, 'Authentication for @muxui/tooling: trusted publishing (OIDC)');
+    const prior = verification.phases.priorTuple;
+    assert.deepEqual(prior.checks.map(({ id, passed }) => [id, passed]), [['prior-install', true], ['prior-bin-runs', true], ['versions-kept', true], ['prior-manifest-retained', true]]);
+    assert.deepEqual(prior.packages.map(({ name, version }) => `${name}@${version}`), ['@muxui/schema@0.6.0-rc.1', '@muxui/catalog@2.1.0-rc.1', '@muxui/tooling@1.1.0-rc.1', '@muxui/react@0.1.0-rc.5']);
+    assert.deepEqual(prior.checks.find(({ id }) => id === 'versions-kept').observed.map(({ name, missing, added }) => [name, missing, added]), [
+      ['@muxui/schema', [], []], ['@muxui/catalog', [], []], ['@muxui/tooling', [], ['1.1.0-rc.2']], ['@muxui/react', [], []],
+    ]);
+    const readBack = JSON.parse(text(index.artifacts.find(({ path }) => path.endsWith('registry-read-back.json')).path));
+    const firstReadBack = JSON.parse(text('tests/evidence/p2.1/artifacts/registry-read-back.json'));
+    for (const entry of readBack.packages) {
+      assert.equal(entry.latest.claimed, false);
+      assert.equal(entry.distTags.latest, firstReadBack.packages.find(({ name }) => name === entry.name).distTags.latest, `${entry.name} latest has not moved`);
+      assert.equal(entry.distTags.next, entry.version);
+    }
+    assert.equal(readBack.placeholderOrigin.proved, false);
+    assert.equal(publication.publishApproval.approvalsRecordedByThePublishRun.length, 0, 'Decision 0033: no environment approval');
+    assert.match(publication.publishApproval.statement, /Approve both \(Recommended\)/u);
+  });
+
+  // The next release names this route's manifest as its prior release, so it must stay a manifest that check reads, retained once.
+  test('the manifest of tooling 1.1.0-rc.2 is retained evidence a later release can name as its prior release or reuse from', async () => {
+    const { PRIOR_RELEASE_VARIABLE, findPriorManifestProblems, planReuse, resolvePriorRelease } = await import('../src/release-effects.mjs');
+    const { readIndexedArtifact, readRetainedManifests } = await import('../src/release-manifest.mjs');
+    const { readPublishSet } = await import('../src/release-set.mjs');
+    const publishSet = readPublishSet(repositoryRoot);
+    const path = 'tests/evidence/p2.1-tooling-1.1.0-rc.2/artifacts/release-manifest.json';
+    const originPath = 'tests/evidence/r1-exit-0.1.0-rc.5/artifacts/release-manifest.json';
+    const cwd = repositoryRoot;
+    const revision = 'HEAD';
+    const manifest = JSON.parse(readIndexedArtifact({ path, revision, cwd }).toString('utf8'));
+    const origin = JSON.parse(readIndexedArtifact({ path: originPath, revision, cwd }).toString('utf8'));
+    assert.equal(manifest.schema, 'muxui-portfolio-release-v1');
+    assert.deepEqual(findPriorManifestProblems(manifest, publishSet), [], 'its digest and release id recompute and it inventories the whole publish set');
+    assert.equal(manifest.digest, `sha256:${createHash('sha256').update(canonicalJson((({ digest: _digest, preparation: _preparation, ...body }) => body)(manifest))).digest('hex')}`);
+    // The release names it as `prior-release`, and the first-release flag is refused once it is tracked.
+    const prior = resolvePriorRelease({ environment: { [PRIOR_RELEASE_VARIABLE]: path }, revision, cwd });
+    assert.deepEqual([prior.first, prior.priorManifest.id], [false, manifest.id]);
+    // Both manifests are retained once each, so a reuse chain never finds two different manifests of one release.
+    const retained = readRetainedManifests({ ids: [manifest.id, origin.id], revision, cwd });
+    assert.deepEqual([...retained.keys()].sort(), [manifest.id, origin.id].sort());
+    const tracked = gitIn(repositoryRoot, 'ls-tree', '-r', '--name-only', revision, '--', 'tests/evidence').split('\n').filter((file) => file.endsWith('/release-manifest.json'));
+    const ids = tracked.map((file) => JSON.parse(gitIn(repositoryRoot, 'show', `${revision}:${file}`)).id);
+    assert.equal(ids.filter((id) => id === manifest.id).length, 1);
+    assert.equal(ids.filter((id) => id === origin.id).length, 1);
+    // A later release that publishes tooling alone reuses the other three from this one (their origin is the first release's manifest), and a
+    // release that publishes React reuses tooling from this one: either chain finds every manifest it needs.
+    const [schemaName, catalogName, toolingName, reactName] = publishSet.packages.map(({ name }) => name);
+    const alone = planReuse({ publishSet, published: new Map([[toolingName, '1.1.0-rc.3']]), priorRelease: prior, revision, cwd });
+    assert.deepEqual([...alone.reused.keys()], [schemaName, catalogName, reactName]);
+    assert.deepEqual([...alone.priorManifests.keys()].sort(), [manifest.id, origin.id].sort());
+    const react = planReuse({ publishSet, published: new Map([[reactName, '0.1.0-rc.6']]), priorRelease: prior, revision, cwd });
+    assert.deepEqual([...react.reused.keys()], [schemaName, catalogName, toolingName]);
+    assert.equal(react.reused.get(toolingName).provenance.releaseId, manifest.id);
+    assert.deepEqual([...react.priorManifests.keys()].sort(), [manifest.id, origin.id].sort());
+  });
 }
