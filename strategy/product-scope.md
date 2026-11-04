@@ -201,7 +201,7 @@ stable release is promoted, and install guidance uses `@muxui/react@next`.
 | --- | --- | --- | --- |
 | `SCOPE-OUTCOME-REACT-PRIMARY` | `committed` | Installable React prerelease using Mux UI-owned experimental bindings and generated package guidance. | R1.0–R1 exit |
 | `SCOPE-SYSTEM-REACT` | `committed` | Standalone React substrate, CSS/runtime ownership, exact React Aria baseline, Mux UI-owned styling and tranche delivery. | R1.0–R1.5 |
-| `SCOPE-REACT-BREADTH-001` | `committed` | Disposition-complete Mux UI coverage of the applicable pinned React Aria component surface. | R1.1–R1.5 |
+| `SCOPE-REACT-BREADTH-001` | `committed` | Disposition-complete Mux UI coverage of the applicable pinned React Aria component surface. The [Fixed React registry](#fixed-react-registry) requires complete delivery of every family. | R1.1–R1.5 |
 | `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` | `committed` | Mux UI-owned experimental bindings, CSS, interaction contracts, and exports outside the fixed React registry: the R1.6 inventory and every later experimental React family, prop, example, or token added under the standing development rule (Decision 0028). The single current supplemental mapping lists the families. | R1.6, later React additions, and R1 exit |
 | `SCOPE-PRODUCT-REACT-PRERELEASE` | `committed` | Exact `@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under `next`, or any number of later exact `0.1.0-rc.N` candidates published in sequence under Decision 0023 amendment 01. | R1 tranche exits and R1 exit |
 | `SCOPE-SURFACE-REACT-PACKAGE-GUIDANCE` | `committed` | Generated version-bound install, API, export/component, styling, and compatibility guidance in the tarball. | R1.0 and every tranche |
