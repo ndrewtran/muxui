@@ -221,10 +221,11 @@ export function firstReleaseFixture(options = {}) {
  * its record in the manifest that published it, as `buildPortfolioManifest` takes them.
  */
 export function successorFixture({
-  first = firstReleaseFixture(), published = ['@muxui/tooling'], versions = { '@muxui/tooling': '1.1.0-rc.2' }, revision = secondCommit, extra,
+  first = firstReleaseFixture(), published = ['@muxui/tooling'], versions = { '@muxui/tooling': '1.1.0-rc.2' }, revision = secondCommit, extra, edit,
 } = {}) {
   const reused = new Map(publishSet.packages.filter(({ name }) => !published.includes(name)).map(({ name }) => [name, first.manifest.packages.find((record) => record.name === name)]));
   const tuple = tupleFixture({ versions, commits: Object.fromEntries(published.map((name) => [name, revision])), extra });
+  edit?.(tuple);
   const built = artifactsOf(tuple, { reused, revision });
   const artifacts = new Map([...built].map(([name, bytes]) => [name, reused.has(name) ? first.artifacts.get(name) : bytes]));
   const manifest = manifestOf(artifacts, { reused, source: { revision, tree: secondTree } });

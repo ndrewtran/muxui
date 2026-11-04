@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { chmod, cp, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -3507,6 +3507,76 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.equal(r1Exit.bindPriorPublish({ ...failed, publishLog: rebuild(stopped) }).portfolio.packages.length, 4);
     rejectsPrior(rebuild({ ...stopped, blocks: [...stopped.blocks, parts.blocks[3]] }));
     rejectsPrior(rebuild({ ...stopped, blocks: [stopped.blocks[1], stopped.blocks[0], stopped.blocks[2]] }));
+  });
+
+  // Decision 0032 item 9: a later release publishes some packages and reuses the rest. The candidate holds only the published
+  // tarballs, and the tarball-sha512 input lists each of them.
+  test('a retained run keeps its binding: the React-only authorization and lines of the first release still bind, and a list binds too', async () => {
+    const legacy = portfolioFixture({ legacy: true });
+    assert.equal(legacy.authorization, legacy.integrityOf(react));
+    const { input } = await boundRuns(legacy);
+    const retained = r1Exit.bindPublish(await input());
+    assert.equal(retained.promotion.version, legacy.reactVersion);
+    assert.equal(retained.promotion.integrity, legacy.integrityOf(react));
+    assert.equal(retained.portfolio.packages.length, 4);
+
+    const fixture = portfolioFixture();
+    assert.equal(fixture.authorization, names.map((name) => fixture.integrityOf(name)).join(','));
+    const bound = await boundRuns(fixture);
+    const publish = r1Exit.bindPublish(await bound.input());
+    assert.equal(publish.promotion.version, fixture.reactVersion, 'the record keeps the React candidate it always named');
+    assert.equal(publish.promotion.integrity, fixture.integrityOf(react));
+    assert.deepEqual(r1Exit.dryRunBindingProblems({ dryRun: bound.dryRun, publish }), {});
+    // Any order and spacing is the same authorization; one tarball short, one extra, or another digest is not.
+    const all = names.map((name) => fixture.integrityOf(name));
+    const bindWith = async (expected, overrides = {}) => r1Exit.bindPublish(await bound.input({ publishLog: await fixture.publishLog({ expected }), ...overrides }));
+    assert.equal((await bindWith([...all].reverse().join(', '))).portfolio.packages.length, 4);
+    for (const expected of [all.slice(1).join(','), `${all.join(',')},sha512-other`, [...all.slice(0, 3), 'sha512-other'].join(','), fixture.integrityOf(catalog)]) {
+      await assert.rejects(bindWith(expected), code('R1_EXIT_DIGEST_MISMATCH'), expected);
+    }
+    // The promotion line names every published tarball, and must be the dry run's.
+    await assert.rejects(Promise.resolve().then(async () => r1Exit.bindPublish(await bound.input({ prepareLog: fixture.promotedLog({ integrity: 'sha512-other' }) }))), code('R1_EXIT_DIGEST_MISMATCH'));
+    // The prepared line of the dry run lists the published tarballs as well.
+    const log = fixture.dryRunLog();
+    assert.throws(() => r1Exit.bindDryRun(fixture.dryRunInput({ prepareLog: log.replace(`published ${names[0]}@`, `published ${names[1]}@`) })), code('R1_EXIT_DIGEST_MISMATCH'));
+  });
+
+  test('a later release that publishes React and reuses the others is the R1 exit evidence of its React candidate, with the reused packages beside it', async () => {
+    const reuse = [schema, catalog, tooling];
+    const fixture = portfolioFixture({ reuse, versions: { [react]: '0.1.0-rc.6' } });
+    assert.equal(fixture.reactVersion, '0.1.0-rc.6');
+    assert.deepEqual(readdirSync(fixture.directory).sort(), ['muxui-portfolio.release-manifest.json', 'muxui-react-0.1.0-rc.6.tgz'], 'the candidate holds the published tarball and the manifest');
+    assert.equal(fixture.versionsText, `${schema}=,${catalog}=,${tooling}=,${react}=0.1.0-rc.6`);
+    const dryRun = r1Exit.bindDryRun(fixture.dryRunInput());
+    assert.deepEqual(dryRun.portfolio.packages.map(({ name, role }) => [name, role]), [[schema, 'reused'], [catalog, 'reused'], [tooling, 'reused'], [react, 'published']]);
+    // A reused package has no tarball to bind: its record is the earlier release's, by version and digest.
+    assert.deepEqual(Object.keys(JSON.parse(JSON.stringify(dryRun.portfolio.packages[0]))).sort(), ['file', 'integrity', 'name', 'retained', 'role', 'sha256', 'version']);
+    assert.equal(dryRun.portfolio.packages[0].integrity, fixture.integrityOf(schema));
+    assert.deepEqual(dryRun.portfolio.published.map(({ name }) => name), [react]);
+    assert.deepEqual(dryRun.portfolio.preflightChecks.map(({ name }) => name), [`npm publish --dry-run ${react}@0.1.0-rc.6`]);
+    assert.equal(dryRun.candidate.tarball.integrity, fixture.integrityOf(react));
+
+    const { input } = await boundRuns(fixture);
+    const publish = r1Exit.bindPublish(await input());
+    assert.deepEqual(publish.portfolio.packages.map(({ name, state }) => [name, state]), [[react, 'verified']]);
+    assert.deepEqual(publish.portfolio.reused.map(({ name, version }) => [name, version]), [[schema, '0.6.0-rc.1'], [catalog, '2.1.0-rc.1'], [tooling, '1.1.0-rc.1']]);
+    assert.deepEqual(publish.portfolio.packages.map(({ authentication }) => authentication), ['trusted publishing (OIDC)']);
+    assert.equal(publish.observed.published, `${react}@0.1.0-rc.6`);
+    assert.match(publish.excerpts.publish.text, /Published @muxui\/react@0\.1\.0-rc\.6 \(1 of 1\)/u);
+    assert.deepEqual(r1Exit.dryRunBindingProblems({ dryRun: { ...dryRun, manifest: fixture.manifest }, publish }), {});
+    // The version inputs must say what the manifest records: a reused package has an empty one.
+    await assert.rejects(Promise.resolve().then(async () => r1Exit.bindPublish(await input({ publishLog: await fixture.publishLog({ versionsEnvironment: fixture.versionsText.replace(`${schema}=`, `${schema}=0.6.0-rc.1`) }) }))), code('R1_EXIT_TUPLE_MISMATCH'));
+    // Each reused package was checked on the registry before anything published, or the run is not what it claims to be.
+    const log = await fixture.publishLog();
+    assert.ok(log.includes(`${catalog}@2.1.0-rc.1: reused, on the registry with ${fixture.integrityOf(catalog)}`));
+    await assert.rejects(Promise.resolve().then(async () => r1Exit.bindPublish(await input({ publishLog: log.replace(`${catalog}@2.1.0-rc.1: reused, on the registry with`, `${catalog}@2.1.0-rc.1: seen with`) }))), code('R1_EXIT_RUN_INVALID'));
+  });
+
+  test('a release that reuses @muxui/react has no React candidate, so the R1 exit capture refuses it and says why', () => {
+    const fixture = portfolioFixture({ reuse: [schema, catalog, react], versions: { [tooling]: '1.1.0-rc.2' } });
+    assert.deepEqual(readdirSync(fixture.directory).sort(), ['muxui-portfolio.release-manifest.json', 'muxui-tooling-1.1.0-rc.2.tgz']);
+    assert.throws(() => r1Exit.bindDryRun(fixture.dryRunInput()), (error) => error.code === 'R1_EXIT_TUPLE_MISMATCH'
+      && /does not publish @muxui\/react: it reuses 0\.1\.0-rc\.5, so this release has no React candidate and no R1 exit route, and 0\.1\.0-rc\.5's own route stays that candidate's evidence/u.test(error.message));
   });
 }
 
