@@ -4,7 +4,7 @@
 - Decision owner: Andrew / `ndrewtran`
 - Decision: `muxui:decision:0032`
 - Amends: the Architecture, Roadmap, and Product Scope passages listed under "Authority effect"
-- Amended: 4 November 2026, item 10 (trusted publishers move to each package's next real release) and the dense-output clause of `E-P2.1-02` (full-detail platform `get` has a 3,072-token ceiling); see "Amendment"
+- Amended: 4 November 2026, item 10 (trusted publishers move to each package's next real release) and the dense-output clause of `E-P2.1-02` (full-detail platform `get` has a 3,072-token ceiling, and budget counts exclude `-rc.N` suffix tokens while a package is a prerelease); see "Amendment"
 - Effective: on merge
 
 ## Gap
@@ -399,3 +399,27 @@ existing budgets. It moves no budget in the registry and changes no code. The
 amendment is made after the first portfolio release (`0.1.0-rc.5` of
 `@muxui/react`), so the release was prepared and published against the earlier
 wording.
+
+### Prerelease suffixes in the dense-output counts of `E-P2.1-02`
+
+Release preparation does not run the `muxui` binary against the candidate, so the
+budgets were first measured on the published packages, after the release. There
+`muxui manifest --detail brief --dense` counts 257 tokens against its 256-token
+budget. The catalog version `2.1.0-rc.1` appears three times in it, and the
+counter reads `rc` and `1` as two tokens each; with the `-rc.N` suffixes removed
+the count is 251.
+
+Andrew's choice, in his words, on 4 November 2026 was "Don't count -rc.N suffixes
+(Recommended)", whose option text was: "Amend E-P2.1-02: while a package is a
+prerelease, budget counts exclude `-rc.N` suffix tokens. The record shows both
+257 raw and 251 counted, and states the amendment came after the release. No
+arbitrary new limit, and nothing changes at stable."
+
+The amendment adds to the dense-output clause of the `E-P2.1-02` row that, while
+a package is a prerelease, the budget counts exclude the tokens of its `-rc.N`
+version suffixes. It moves no budget and not the 3,072-token ceiling, and it
+changes no code, including the counter. At a stable release the suffix is
+absent, so the counted number is the raw number. The amendment is made after the
+release (`0.1.0-rc.5` of `@muxui/react`): the published rc exceeded the budget
+as the row first wrote it, and the P2.1 records keep both the raw and the
+counted numbers.
