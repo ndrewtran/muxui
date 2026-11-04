@@ -4,7 +4,8 @@
 //
 //   node tests/evidence/capture-p2.1.mjs --version=<0.1.0-rc.N> --capture-timestamp=<ISO-8601 UTC> <phase>...
 //
-// The records bind to what already ran; nothing is rerun. The R1 exit route of the candidate
+// The records bind to what already ran; nothing of the release is rerun, apart from the published-run phase below, which
+// installs and runs the released packages at capture time. The R1 exit route of the candidate
 // (tests/evidence/r1-exit-<version>) names the main CI run, the dry run, and the publish run, and is read, not recaptured.
 //
 //   --evidence             main CI's jobs for the release commit (sanitized excerpts of the tests this capture cites),
@@ -748,7 +749,8 @@ Roadmap "P2.1 Public package graph and portfolio release" requires \`E-P2.1-01\`
 \`${verification.sourceRevision}\` (tree \`${verification.sourceTree}\`), captured by
 \`node ${captureTool} --version=${release.version}\`.
 
-Nothing is rerun. Each record binds to what already ran at that commit: main CI run
+Nothing of the release is rerun. Each record binds to what already ran at that commit, apart from the published-run phase
+described below: main CI run
 ${verification.phases.ci.execution.runId} (attempt ${verification.phases.ci.execution.runAttempt}), dry run ${release.dryRun.runId}, and publish run ${release.publish.runId}. The React candidate's
 R1 exit route \`${release.route}\` holds the dry run and publish excerpts and the React
 registry observation, and this root cites them by path and digest.
@@ -758,7 +760,7 @@ registry observation, and this root cites them by path and digest.
 ${parsed.map((record) => `| \`${record.assertionId}\` | \`${record.outcome}\` |`).join('\n')}
 
 ${[
-    ...parsed.filter((record) => record.outcome !== 'pass').map((record) => `\`${record.assertionId}\` is \`${record.outcome}\` because ${record.parts.filter(({ state }) => state !== 'shown').map(({ state, part }) => `\`${state}\`: ${part}`).join(' ')}`),
+    ...parsed.filter((record) => record.outcome !== 'pass').map((record) => `\`${record.assertionId}\` is \`${record.outcome}\` because ${record.parts.filter(({ state }) => state !== 'shown').map(({ state, part, note }) => `\`${state}\`: ${part}${note ? ` ${note}` : ''}`).join(' ')}`),
     ...parsed.filter((record) => record.outcome === 'pass' && record.parts.some(({ state }) => state === 'not-applicable')).map((record) => `\`${record.assertionId}\` passes with a part that does not apply: ${record.parts.filter(({ state }) => state === 'not-applicable').map(({ part, note }) => `${part} ${note}`).join(' ')}`),
   ].join('\n\n')}
 
