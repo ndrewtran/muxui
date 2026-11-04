@@ -1,0 +1,43 @@
+# step: Verify dry run (raw lines 196-204)
+2026-11-04T01:29:19.6791811Z ##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs dry-run
+2026-11-04T01:29:19.6815042Z shell: /usr/bin/bash -e {0}
+2026-11-04T01:29:19.6815189Z env:
+2026-11-04T01:29:19.6815447Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=0.6.0-rc.1,@muxui/catalog=2.1.0-rc.1,@muxui/tooling=1.1.0-rc.1,@muxui/react=0.1.0-rc.5
+2026-11-04T01:29:19.6815735Z   DRY_RUN_ID: 41753792194
+2026-11-04T01:29:19.6817053Z   <redacted credential input>
+2026-11-04T01:29:19.6817175Z ##[endgroup]
+2026-11-04T01:29:20.4413606Z Dry run 41753792194 attempt 1 succeeded at e8953dc6221306ea697739f1e4dea58ff49acc79; npm-candidate artifact 13287129099 (3019085 bytes, sha256:b923ce4d83483f96dd0e3756649ef8112c7957cf3dcfd2bc874e112c0e53fcb9)
+# step: Fetch dry-run candidate (raw lines 205-218)
+2026-11-04T01:29:20.4495810Z ##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs fetch-candidate
+2026-11-04T01:29:20.4522902Z shell: /usr/bin/bash -e {0}
+2026-11-04T01:29:20.4523050Z env:
+2026-11-04T01:29:20.4523308Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=0.6.0-rc.1,@muxui/catalog=2.1.0-rc.1,@muxui/tooling=1.1.0-rc.1,@muxui/react=0.1.0-rc.5
+2026-11-04T01:29:20.4523591Z   DRY_RUN_ID: 41753792194
+2026-11-04T01:29:20.4523739Z   DRY_RUN_ATTEMPT: 1
+2026-11-04T01:29:20.4523871Z   ARTIFACT_ID: 13287129099
+2026-11-04T01:29:20.4524096Z   ARTIFACT_DIGEST: sha256:b923ce4d83483f96dd0e3756649ef8112c7957cf3dcfd2bc874e112c0e53fcb9
+2026-11-04T01:29:20.4524337Z   ARTIFACT_SIZE: 3019085
+2026-11-04T01:29:20.4524489Z   CANDIDATE_DIR: <runner-temp>
+2026-11-04T01:29:20.4525877Z   <redacted credential input>
+2026-11-04T01:29:20.4526006Z ##[endgroup]
+2026-11-04T01:29:21.9244292Z Fetched npm-candidate artifact 13287129099 (3019085 bytes, sha256:b923ce4d83483f96dd0e3756649ef8112c7957cf3dcfd2bc874e112c0e53fcb9) from dry run 41753792194 attempt 1
+# step: Verify promoted candidate (raw lines 219-230)
+2026-11-04T01:29:21.9337822Z ##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs candidate
+2026-11-04T01:29:21.9364791Z shell: /usr/bin/bash -e {0}
+2026-11-04T01:29:21.9364935Z env:
+2026-11-04T01:29:21.9365198Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=0.6.0-rc.1,@muxui/catalog=2.1.0-rc.1,@muxui/tooling=1.1.0-rc.1,@muxui/react=0.1.0-rc.5
+2026-11-04T01:29:21.9365668Z   EXPECTED_SHA512: sha512-OhPAZ7dM5RfygJgqi89t642BuiJqyFN2tmtPPwI2fWzkEBRnmHS8vHxNUh1HLJL53IsiVtKhBVUCoCkiCBHPtQ==
+2026-11-04T01:29:21.9366000Z   DRY_RUN_ID: 41753792194
+2026-11-04T01:29:21.9366134Z   DRY_RUN_ATTEMPT: 1
+2026-11-04T01:29:21.9366287Z   CANDIDATE_DIR: <runner-temp>
+2026-11-04T01:29:21.9366457Z ##[endgroup]
+2026-11-04T01:29:22.1948874Z Promoted candidate 0.1.0-rc.5 sha512-OhPAZ7dM5RfygJgqi89t642BuiJqyFN2tmtPPwI2fWzkEBRnmHS8vHxNUh1HLJL53IsiVtKhBVUCoCkiCBHPtQ== from dry run 41753792194 attempt 1
+2026-11-04T01:29:22.1949867Z Dry run preparation: reused main CI run 41752399564 attempt 1
+# step: Collect candidate (raw lines 231-268)
+2026-11-04T01:29:22.2060927Z ##[group]Run set -euo pipefail
+2026-11-04T01:29:22.2092492Z shell: /usr/bin/bash -e {0}
+2026-11-04T01:29:22.2092640Z env:
+2026-11-04T01:29:22.2092906Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=0.6.0-rc.1,@muxui/catalog=2.1.0-rc.1,@muxui/tooling=1.1.0-rc.1,@muxui/react=0.1.0-rc.5
+2026-11-04T01:29:22.2093216Z   PROMOTED_DIR: <runner-temp>
+2026-11-04T01:29:22.2093383Z ##[endgroup]
+2026-11-04T01:29:22.2279315Z Candidate @muxui/schema@0.6.0-rc.1 @muxui/catalog@2.1.0-rc.1 @muxui/tooling@1.1.0-rc.1 @muxui/react@0.1.0-rc.5

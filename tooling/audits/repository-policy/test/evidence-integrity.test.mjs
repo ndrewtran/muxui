@@ -630,8 +630,9 @@ test('R1 exit capture discloses a failed earlier dry-run attempt and masks npm a
 test('R1 exit capture rebuilds each committed route byte for byte from its verification.json', async () => {
   const read = (relative) => readFileSync(join(repositoryRoot, relative), 'utf8');
   // rc.1 (token workflow), rc.2 (trusted publishing, which rebuilt its candidate in the publish run), and rc.3 and rc.4
-  // (build once, single-package manifest) keep their binding; the portfolio adapter does not touch their records.
-  for (const route of [r1Exit.route, ...['0.1.0-rc.2', '0.1.0-rc.3', '0.1.0-rc.4'].map((version) => r1Exit.routeFor(version))]) {
+  // (build once, single-package manifest) keep their binding; the portfolio adapter does not touch their records. rc.5 is the
+  // first portfolio release (Decision 0032): the same four records, with the other packages' facts beside the React candidate's.
+  for (const route of [r1Exit.route, ...['0.1.0-rc.2', '0.1.0-rc.3', '0.1.0-rc.4', '0.1.0-rc.5'].map((version) => r1Exit.routeFor(version))]) {
     const { files } = r1Exit.assembleRoute(JSON.parse(read(`${route}/verification.json`)), read);
     assert.deepEqual([...files.keys()].sort(), ['README.md', 'index.json', 'records/E-R1-EXIT-01.json', 'records/E-R1-EXIT-02.json', 'records/E-R1-EXIT-03.json', 'records/E-R1-EXIT-04.json', 'verification.json'].map((file) => `${route}/${file}`));
     for (const [relative, text] of files) assert.equal(text, read(relative), relative);
