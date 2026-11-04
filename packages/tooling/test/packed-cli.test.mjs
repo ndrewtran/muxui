@@ -166,6 +166,28 @@ test('E-P2.1-02 the muxui bin and every package it reads are the installed tarba
   });
 });
 
+/** The tooling version `run` reports in response meta, in each manifest detail, and in the help title. */
+async function reportedVersions(run) {
+  const [brief, full, help] = await Promise.all([
+    run(['manifest', '--detail', 'brief', '--json']),
+    run(['manifest', '--json']),
+    run(['--help']),
+  ]);
+  const [briefResponse, fullResponse] = [brief, full].map(({ stdout }) => JSON.parse(stdout));
+  return {
+    meta: [briefResponse.meta.muxuiVersion, fullResponse.meta.muxuiVersion],
+    manifest: [briefResponse.data.cli.version, fullResponse.data.cli.cli.version],
+    help: help.stdout.split('\n')[0],
+  };
+}
+
+const reportedAs = (version) => ({ meta: [version, version], manifest: [version, version], help: `muxui ${version}` });
+
+test('E-P2.1-02 responses, the manifest, and help report the installed tooling version', async () => {
+  const version = tuple.versions['@muxui/tooling'];
+  assert.deepEqual(await reportedVersions(muxui), reportedAs(version));
+});
+
 test('E-P2.1-02 list, search, and get discover and retrieve the installed React tuple', async () => {
   const react = await realpath(join(tuple.root, 'node_modules/@muxui/react'));
   const { bindings } = JSON.parse(await readFile(join(react, 'generated/renderer-descriptor.json'), 'utf8'));
@@ -350,5 +372,24 @@ test('E-P2.1-02 an installed catalog whose bytes differ from its provenance side
   } finally {
     await rm(catalogPath, { force: true });
     await writeFile(catalogPath, original);
+  }
+});
+
+// Also edits the installed package, so it restores the file. Release preparation rewrites the packed version to an rc,
+// and the CLI must report that one, not the version it was packed with.
+test('E-P2.1-02 a version rewritten in the installed package.json is the version the CLI reports', async () => {
+  const manifestPath = join(await realpath(join(tuple.root, 'node_modules/@muxui/tooling')), 'package.json');
+  const original = await readFile(manifestPath, 'utf8');
+  const rewritten = '1.1.0-rc.2';
+  assert.notEqual(JSON.parse(original).version, rewritten);
+
+  // Installed files may share inodes with the pnpm store, so replace the file rather than writing in place.
+  try {
+    await rm(manifestPath);
+    await writeFile(manifestPath, `${JSON.stringify({ ...JSON.parse(original), version: rewritten }, null, 2)}\n`);
+    assert.deepEqual(await reportedVersions((args) => tuple.muxui(args)), reportedAs(rewritten));
+  } finally {
+    await rm(manifestPath, { force: true });
+    await writeFile(manifestPath, original);
   }
 });

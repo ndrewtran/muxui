@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "cli": {
     "name": "muxui",
-    "version": "1.0.0",
+    "version": "0.0.0",
     "description": "Deterministic Mux UI documentation over the local catalog query API."
   },
   "tokenizer": {

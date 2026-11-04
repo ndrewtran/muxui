@@ -325,6 +325,10 @@ test('E-G0.3-04 registry generates parser, help, completion, manifest, types, an
     assert.throws(() => validateFamily('query-envelope', malformed), /MUXUI_SCHEMA_INVALID/);
   }
 
+  // The registry names no release, so a number written here would drift from the installed package.
+  const hardCodedVersion = structuredClone(authoredRegistry);
+  hardCodedVersion.cli.version = '1.0.0';
+  assert.throws(() => buildCommandProjections(hardCodedVersion), /CLI_REGISTRY_INVALID/);
   const extra = structuredClone(authoredRegistry);
   extra.commands.push({ ...extra.commands[0], name: 'doctor' });
   assert.throws(() => buildCommandProjections(extra), /CLI_COMMAND_SURFACE_DRIFT/);
