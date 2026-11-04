@@ -3633,7 +3633,7 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.equal(verification.rehearsal, undefined);
 
     // The reviewed outcomes: a change here is a deliberate evidence change.
-    const expected = { 'E-P2.1-01': 'pass', 'E-P2.1-02': 'pass', 'E-P2.1-03': 'pass', 'E-P2.1-04': 'pass', 'E-P2.1-05': 'pass', 'E-P2.1-06': 'pass' };
+    const expected = { 'E-P2.1-01': 'pass', 'E-P2.1-02': 'partial', 'E-P2.1-03': 'pass', 'E-P2.1-04': 'pass', 'E-P2.1-05': 'pass', 'E-P2.1-06': 'pass' };
     assert.deepEqual(index.records.map(({ assertionId }) => assertionId), Object.keys(expected));
     const excerptLines = (path) => ['', ...text(path).split('\n')];
     const contentOf = (line) => line.replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z /u, '');
@@ -3654,7 +3654,7 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
         if (item.kind === 'test') {
           const line = excerptLines(item.excerpt)[item.line];
           assert.equal(contentOf(line).startsWith(`✔ ${item.title} (`), true, `${assertionId} cites ${item.excerpt}:${item.line}`);
-          // A test added after the release is checked in the tree that keeps it; the pull request head that ran it may not stay in history.
+          // A test added after the release is checked in the tree that keeps it; the release commit does not have it.
           const source = item.revision ? text(item.file) : readAt(index.sourceRevision, item.file).toString('utf8');
           assert.ok(source.includes(item.title.replaceAll("'", "\\'")) || source.includes(item.title), `${item.file} has "${item.title}"`);
         } else if (item.kind === 'log') {
@@ -3673,13 +3673,51 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     const sourceRow = JSON.parse(text(`${route}/records/E-P2.1-02.json`));
     assert.match(sourceRow.assertion, /full-detail `get --platform web\.react --dense` has a 3072-token ceiling/u);
     assert.doesNotMatch(sourceRow.roadmap.amended.assertionAtSourceRevision, /ceiling/u, 'the row at the release commit named only the token budget');
-    const dense = sourceRow.parts.find(({ part }) => part.startsWith('Dense output is inside its token budget'));
+    const dense = sourceRow.parts.find(({ part }) => part.startsWith('Full-detail `get --platform web.react --dense`'));
     assert.equal(dense.state, 'shown');
     const amendment = dense.evidence.find(({ kind }) => kind === 'roadmap-amendment');
     assert.equal(amendment.ceiling.roadmap, 3072);
     assert.equal(amendment.ceiling.test.value, 3072);
     assert.match(readAt(index.sourceRevision, amendment.ceiling.test.file).toString('utf8'), new RegExp(`const ${amendment.ceiling.test.constant} = 3072;`, 'u'), 'the test at the release commit already pinned the ceiling');
     assert.doesNotMatch(dense.note, /2797 tokens/u, 'the count is not stated as measured');
+
+    // The published tuple: the four released packages installed from the registry and run through their own bin. Every check is
+    // kept as it came out; the one that did not pass leaves its part not met and the record partial.
+    const published = verification.phases.published;
+    const checkNamed = (id) => published.checks.find((found) => found.id === id);
+    assert.deepEqual(published.checks.filter(({ passed }) => !passed).map(({ id }) => id), ['dense-budget-fixtures']);
+    assert.deepEqual(checkNamed('registry-install').observed.map(({ name, version, installedVersion, gitHead }) => [name, version, installedVersion, gitHead]),
+      verification.release.packages.map(({ name, version }) => [name, version, version, index.sourceRevision]));
+    for (const entry of checkNamed('registry-install').observed) {
+      assert.deepEqual(entry.locked, [{ version: entry.version, resolution: `integrity: ${entry.releaseIntegrity}` }]);
+      assert.equal(entry.releaseIntegrity, verification.release.packages.find(({ name }) => name === entry.name).integrity);
+    }
+    const countsOf = (id) => Object.fromEntries(checkNamed(id).observed.rows.map(({ args, used, budget, ceiling }) => [args.slice(0, -1).join(' '), [used, budget, ceiling]]));
+    assert.deepEqual(Object.values(countsOf('dense-get-react')), [[129, 384, 384], [262, 1024, 1024], [2801, 2048, 3072]], 'the counts the installed countTokens measured');
+    assert.deepEqual(Object.entries(countsOf('dense-budget-fixtures')).filter(([, [used, , ceiling]]) => used > ceiling), [['manifest --detail brief', [257, 256, 256]]], 'the one fixture over its budget');
+    assert.match(dense.note, /brief 129 of 384, compact 262 of 1024, full 2801 against the 3072 ceiling/u);
+    const fixtures = sourceRow.parts.find(({ part }) => part.startsWith('Dense output is inside its token budget for the registry'));
+    assert.equal(fixtures.state, 'not-met');
+    assert.match(fixtures.note, /manifest --detail brief --dense 257 of 256/u);
+    const output = text(published.output.path);
+    assert.equal(digest(output), published.output.sha256);
+    assert.equal(output.split('\n').filter((line) => line.startsWith('$ muxui ')).length, published.runs.length, 'every run is retained');
+    assert.ok(published.runs.every(({ status }) => Number.isInteger(status)));
+    // What is kept of the muxui output is public; the replaced values are counted, and the digests bind the originals.
+    assert.deepEqual(Object.keys(published.sanitization), ['requestKeyValues', 'sharedRulesChangedLines', 'tokenIdsInsideLongerStrings']);
+    // Tooling reports 1.0.0 whatever version it is: a limit and a non-claim of the record, not a failed part.
+    assert.deepEqual([published.toolingVersion.installed, published.toolingVersion.muxuiVersionInResponses, published.toolingVersion.reportsInstalledVersion], ['1.1.0-rc.1', ['1.0.0'], false]);
+    assert.equal(published.toolingVersion.source.text, "const TOOLING_VERSION = '1.0.0';");
+    assert.match(readAt(index.sourceRevision, published.toolingVersion.source.path).toString('utf8').split('\n')[published.toolingVersion.source.line - 1], /const TOOLING_VERSION = '1\.0\.0';/u);
+    assert.ok(sourceRow.limits.some((limit) => /reports muxuiVersion 1\.0\.0 in the meta of every response/u.test(limit)));
+    assert.ok(sourceRow.nonClaims.some((claim) => /does not claim that @muxui\/tooling@1\.1\.0-rc\.1 reports its own version/u.test(claim)));
+    // Source-version tests are cited as such, and only the published phase rests the installed-tarball parts.
+    const installedPart = sourceRow.parts.find(({ part }) => part.startsWith('The resolver and the packed muxui binary read'));
+    assert.deepEqual(installedPart.evidence.filter(({ kind }) => kind === 'published').flatMap(({ checks }) => checks.map(({ id }) => id)), ['registry-install', 'installed-not-source', 'release-identity', 'discovery-runs', 'installed-local-resolution']);
+    assert.ok(installedPart.evidence.filter(({ kind }) => kind === 'test').every(({ scope }) => /^source-version tuple/u.test(scope)));
+    assert.equal('checks' in sourceRow.execution.publishedRun, false, 'the checks are in the parts');
+    for (const id of ['E-P2.1-01', 'E-P2.1-03', 'E-P2.1-04', 'E-P2.1-05', 'E-P2.1-06']) assert.equal(JSON.parse(text(`${route}/records/${id}.json`)).execution.publishedRun, undefined, `${id} does not rest on the published run`);
+
     const { laterCi } = sourceRow.execution;
     assert.deepEqual([laterCi.checkedOut.tree, laterCi.execution.event, laterCi.execution.conclusion], [laterCi.checkedOut.headTree, 'pull_request', 'success']);
     assert.deepEqual(laterCi.sinceRelease.resolverSource.changedPaths, [], 'the resolver source is unchanged since the release commit');
