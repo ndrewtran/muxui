@@ -331,3 +331,24 @@ test('E-P2.1-02 an installed descriptor the resolver rejects makes get fail with
   }
   assert.equal((await get()).status, 0);
 });
+
+// Also edits the installed package, so it restores the file before the next test and leaves the install as it found it.
+test('E-P2.1-02 an installed catalog whose bytes differ from its provenance sidecar makes get fail with MUXUI_CATALOG_INTEGRITY_MISMATCH', async () => {
+  const catalogPath = join(await realpath(join(tuple.root, 'node_modules/@muxui/catalog')), 'generated/catalog.json');
+  const original = await readFile(catalogPath, 'utf8');
+  const get = () => tuple.muxui(['get', BUTTON, '--platform', 'web.react', '--json']);
+
+  // Installed files may share inodes with the pnpm store, so replace the file rather than writing in place.
+  try {
+    await rm(catalogPath);
+    await writeFile(catalogPath, `${original} `);
+
+    const { status, stdout, stderr } = await get();
+    const { error } = JSON.parse(stdout);
+    assert.deepEqual({ status, stderr, code: error.code }, { status: 14, stderr: '', code: 'MUXUI_CATALOG_INTEGRITY_MISMATCH' });
+    assert.equal(error.nextCommand.effect, 'read-only');
+  } finally {
+    await rm(catalogPath, { force: true });
+    await writeFile(catalogPath, original);
+  }
+});
