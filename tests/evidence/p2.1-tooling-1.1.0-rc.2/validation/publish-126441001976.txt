@@ -1,0 +1,80 @@
+# step: Re-verify candidate (raw lines 176-185)
+2026-11-04T07:07:17.7540583Z ##[group]Run node tooling/audits/repository-policy/src/npm-publication.mjs verify-candidate
+2026-11-04T07:07:17.7568788Z shell: /usr/bin/bash -e {0}
+2026-11-04T07:07:17.7569017Z env:
+2026-11-04T07:07:17.7569324Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=,@muxui/catalog=,@muxui/tooling=1.1.0-rc.2,@muxui/react=
+2026-11-04T07:07:17.7569733Z   CANDIDATE_DIR: <runner-temp>
+2026-11-04T07:07:17.7570253Z   EXPECTED_SHA512: sha512-C1GJ2TkuYzGPQkvxQMaiG6zUFQQ68LEoWOl77upuftIzXb9EepAUUWexv793iPn9KAkzmGgkjuwjEpzpHzGcIA==
+2026-11-04T07:07:17.7570720Z ##[endgroup]
+2026-11-04T07:07:17.7922462Z Candidate verified: @muxui/tooling@1.1.0-rc.2 sha512-C1GJ2TkuYzGPQkvxQMaiG6zUFQQ68LEoWOl77upuftIzXb9EepAUUWexv793iPn9KAkzmGgkjuwjEpzpHzGcIA==
+2026-11-04T07:07:17.7924931Z Reused, not published: @muxui/schema@0.6.0-rc.1 sha512-ekBKpx18Hj/pL1y2XNHpwx93q1aELGi3CdsTQfubjWu2yXJ3pehH7aGYtvSV8NSa14OIbjXnu7B1kaWbnhao9Q==, @muxui/catalog@2.1.0-rc.1 sha512-veSRonVOsS+eY4R4bs3Bl2qGoqDN634uwTwTYHLSFB3KTed9XylkDpmmw36voR/tGfDyAbCdhpKY/dUsAP51pQ==, @muxui/react@0.1.0-rc.5 sha512-OhPAZ7dM5RfygJgqi89t642BuiJqyFN2tmtPPwI2fWzkEBRnmHS8vHxNUh1HLJL53IsiVtKhBVUCoCkiCBHPtQ==
+# step: Publish the set in order (raw lines 186-255)
+2026-11-04T07:07:17.7980475Z ##[group]Run node tooling/audits/repository-policy/src/npm-publication.mjs publish-set
+2026-11-04T07:07:17.8008694Z shell: /usr/bin/bash -e {0}
+2026-11-04T07:07:17.8008918Z env:
+2026-11-04T07:07:17.8009222Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=,@muxui/catalog=,@muxui/tooling=1.1.0-rc.2,@muxui/react=
+2026-11-04T07:07:17.8009626Z   CANDIDATE_DIR: <runner-temp>
+2026-11-04T07:07:17.8010142Z   EXPECTED_SHA512: sha512-C1GJ2TkuYzGPQkvxQMaiG6zUFQQ68LEoWOl77upuftIzXb9EepAUUWexv793iPn9KAkzmGgkjuwjEpzpHzGcIA==
+2026-11-04T07:07:17.8010611Z   <redacted credential input>
+2026-11-04T07:07:17.8010788Z ##[endgroup]
+2026-11-04T07:07:17.8347204Z Publish set: @muxui/tooling@1.1.0-rc.2
+2026-11-04T07:07:18.0642818Z @muxui/schema@0.6.0-rc.1: reused, on the registry with sha512-ekBKpx18Hj/pL1y2XNHpwx93q1aELGi3CdsTQfubjWu2yXJ3pehH7aGYtvSV8NSa14OIbjXnu7B1kaWbnhao9Q==
+2026-11-04T07:07:18.0644529Z @muxui/schema@0.6.0-rc.1: attested by https://github.com/ndrewtran/muxui/actions/runs/41754361620/attempts/1, next 0.6.0-rc.1
+2026-11-04T07:07:18.2315337Z @muxui/catalog@2.1.0-rc.1: reused, on the registry with sha512-veSRonVOsS+eY4R4bs3Bl2qGoqDN634uwTwTYHLSFB3KTed9XylkDpmmw36voR/tGfDyAbCdhpKY/dUsAP51pQ==
+2026-11-04T07:07:18.2316347Z @muxui/catalog@2.1.0-rc.1: attested by https://github.com/ndrewtran/muxui/actions/runs/41754361620/attempts/1, next 2.1.0-rc.1
+2026-11-04T07:07:18.3962506Z @muxui/react@0.1.0-rc.5: reused, on the registry with sha512-OhPAZ7dM5RfygJgqi89t642BuiJqyFN2tmtPPwI2fWzkEBRnmHS8vHxNUh1HLJL53IsiVtKhBVUCoCkiCBHPtQ==
+2026-11-04T07:07:18.3964210Z @muxui/react@0.1.0-rc.5: attested by https://github.com/ndrewtran/muxui/actions/runs/41754361620/attempts/1, next 0.1.0-rc.5
+2026-11-04T07:07:18.8411285Z @muxui/tooling@1.1.0-rc.2: 404 (no collision)
+2026-11-04T07:07:18.8411736Z @muxui/tooling dist-tags latest=1.1.0-rc.1 next=1.1.0-rc.1
+2026-11-04T07:07:18.8412173Z Preflight passed for 1 packages; publishing in order.
+2026-11-04T07:07:18.8412736Z Publishing @muxui/tooling@1.1.0-rc.2 (1 of 1)
+2026-11-04T07:07:19.0216606Z No drift since the preflight: @muxui/tooling dist-tags latest=1.1.0-rc.1 next=1.1.0-rc.1
+2026-11-04T07:07:19.0428591Z No drift since the preflight: @muxui/schema dist-tags latest=0.6.0-rc.1 next=0.6.0-rc.1
+2026-11-04T07:07:19.0638094Z No drift since the preflight: @muxui/catalog dist-tags latest=2.1.0-rc.1 next=2.1.0-rc.1
+2026-11-04T07:07:19.0835757Z No drift since the preflight: @muxui/react dist-tags latest=0.1.0-rc.1 next=0.1.0-rc.5
+2026-11-04T07:07:19.0836508Z Authentication for @muxui/tooling: trusted publishing (OIDC)
+2026-11-04T07:07:19.3794552Z npm notice
+2026-11-04T07:07:19.3797689Z npm notice 📦  @muxui/tooling@1.1.0-rc.2
+2026-11-04T07:07:19.3798266Z npm notice Tarball Contents
+2026-11-04T07:07:19.3801350Z npm notice 1.1kB LICENSE
+2026-11-04T07:07:19.3801696Z npm notice 1.5kB README.md
+2026-11-04T07:07:19.3801917Z npm notice 257B bin/muxui.mjs
+2026-11-04T07:07:19.3802310Z npm notice 27.1kB generated/command-surface.mjs
+2026-11-04T07:07:19.3802859Z npm notice 540B generated/response-types.d.ts
+2026-11-04T07:07:19.3803126Z npm notice 1.3kB package.json
+2026-11-04T07:07:19.3803418Z npm notice 4.4kB src/cli.mjs
+2026-11-04T07:07:19.3803637Z npm notice 359B src/index.mjs
+2026-11-04T07:07:19.3803958Z npm notice 30.6kB src/local-resolver.mjs
+2026-11-04T07:07:19.3804219Z npm notice 6.9kB src/parser.mjs
+2026-11-04T07:07:19.3804483Z npm notice 25.4kB src/pnpm-adapter.mjs
+2026-11-04T07:07:19.3804750Z npm notice 2.3kB src/renderers.mjs
+2026-11-04T07:07:19.3805031Z npm notice 329B src/version.mjs
+2026-11-04T07:07:19.3805300Z npm notice Tarball Details
+2026-11-04T07:07:19.3805542Z npm notice name: @muxui/tooling
+2026-11-04T07:07:19.3805861Z npm notice version: 1.1.0-rc.2
+2026-11-04T07:07:19.3806176Z npm notice filename: muxui-tooling-1.1.0-rc.2.tgz
+2026-11-04T07:07:19.3806567Z npm notice package size: 21.6 kB
+2026-11-04T07:07:19.3806813Z npm notice unpacked size: 102.0 kB
+2026-11-04T07:07:19.3807470Z npm notice shasum: 0e2fac41b0f6e8164652acf48c4225e05943023a
+2026-11-04T07:07:19.3807868Z npm notice integrity: sha512-C1GJ2TkuYzGPQ[...]uwjEpzpHzGcIA==
+2026-11-04T07:07:19.3808160Z npm notice total files: 13
+2026-11-04T07:07:19.3808352Z npm notice
+2026-11-04T07:07:20.6843438Z npm notice npm tokens that bypass 2FA are being restricted for account changes and direct publishing. Learn how to prepare: https://gh.io/npm-gat-bypass2fa-deprecation
+2026-11-04T07:07:20.7144294Z npm notice Publishing to https://registry.npmjs.org/ with tag next and public access
+2026-11-04T07:07:21.4033462Z npm notice publish Signed provenance statement with source and build information from GitHub Actions
+2026-11-04T07:07:21.4034699Z npm notice publish Provenance statement published to transparency log: https://search.sigstore.dev/?logIndex=3686758437
+2026-11-04T07:07:23.3424562Z npm notice Your package is being processed and may take a few minutes to become available.
+2026-11-04T07:07:23.3426602Z + @muxui/tooling@1.1.0-rc.2
+2026-11-04T07:07:23.3484555Z Read back @muxui/tooling@1.1.0-rc.2
+2026-11-04T07:07:23.5066583Z Waiting for @muxui/tooling@1.1.0-rc.2 (attempt 1 of 21)
+2026-11-04T07:07:38.7133469Z Waiting for @muxui/tooling@1.1.0-rc.2 (attempt 2 of 21)
+2026-11-04T07:07:53.8916269Z Waiting for @muxui/tooling@1.1.0-rc.2 (attempt 3 of 21)
+2026-11-04T07:08:09.0681150Z Waiting for @muxui/tooling@1.1.0-rc.2 (attempt 4 of 21)
+2026-11-04T07:08:24.3086184Z Waiting for @muxui/tooling@1.1.0-rc.2 (attempt 5 of 21)
+2026-11-04T07:08:39.5103223Z Waiting for @muxui/tooling@1.1.0-rc.2 (attempt 6 of 21)
+2026-11-04T07:08:54.6951750Z Waiting for @muxui/tooling@1.1.0-rc.2 (attempt 7 of 21)
+2026-11-04T07:09:09.8680408Z Waiting for @muxui/tooling dist-tags next=1.1.0-rc.2 (attempt 1 of 41)
+2026-11-04T07:09:24.9041191Z dist.integrity: sha512-C1GJ2TkuYzGPQkvxQMaiG6zUFQQ68LEoWOl77upuftIzXb9EepAUUWexv793iPn9KAkzmGgkjuwjEpzpHzGcIA==
+2026-11-04T07:09:24.9042024Z provenance: https://slsa.dev/provenance/v1
+2026-11-04T07:09:24.9042667Z dist-tags: {"next":"1.1.0-rc.2","latest":"1.1.0-rc.1"}
+2026-11-04T07:09:24.9043022Z Published @muxui/tooling@1.1.0-rc.2 (1 of 1)

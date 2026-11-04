@@ -1,0 +1,127 @@
+# step: Find main CI proof (raw lines 245-253)
+2026-11-04T06:43:39.8902655Z ##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs main-ci
+2026-11-04T06:43:39.8933533Z shell: /usr/bin/bash -e {0}
+2026-11-04T06:43:39.8933810Z env:
+2026-11-04T06:43:39.8934205Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=,@muxui/catalog=,@muxui/tooling=1.1.0-rc.2,@muxui/react=
+2026-11-04T06:43:39.8934730Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-11-04T06:43:39.8937603Z   <redacted credential input>
+2026-11-04T06:43:39.8937856Z ##[endgroup]
+2026-11-04T06:43:41.8689213Z Main CI proof: reusing run 41786122448 attempt 1 (https://github.com/ndrewtran/muxui/actions/runs/41786122448); running generate:check and release-prepare.mjs instead of the full check graph
+# step: Prepare release candidate (raw lines 254-514)
+2026-11-04T06:43:41.8845268Z ##[group]Run set -euo pipefail
+2026-11-04T06:43:41.8877631Z shell: /usr/bin/bash -e {0}
+2026-11-04T06:43:41.8877892Z env:
+2026-11-04T06:43:41.8878276Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=,@muxui/catalog=,@muxui/tooling=1.1.0-rc.2,@muxui/react=
+2026-11-04T06:43:41.8878799Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-11-04T06:43:41.8879122Z   MAIN_CI_MODE: reuse
+2026-11-04T06:43:41.8879362Z   MUXUI_RELEASE_MAIN_CI_RUN: 41786122448
+2026-11-04T06:43:41.8879696Z   MUXUI_RELEASE_MAIN_CI_ATTEMPT: 1
+2026-11-04T06:43:41.8880155Z   MUXUI_PRIOR_RELEASE_MANIFEST: tests/evidence/r1-exit-0.1.0-rc.5/artifacts/release-manifest.json
+2026-11-04T06:43:41.8880642Z   MUXUI_FIRST_PORTFOLIO_RELEASE: 
+2026-11-04T06:43:41.8880904Z ##[endgroup]
+2026-11-04T06:45:19.0523533Z [E-G0.0-04] independent clean checkouts 0cd44350e734c4ba6282654f06f2ca07c96879fa generated identical projections with clean worktrees (sha256:a05e6c3e662c72c9323c5a200c7ec5bbd0774338f47f47786c62c36f8ded851d)
+2026-11-04T06:45:22.2119524Z P2.1 version effects match the change since muxui-portfolio:40dcc0032b7db3a47e19797d4e73bc9d; changed and publishing @muxui/tooling; publishing @muxui/tooling; reusing @muxui/schema@0.6.0-rc.1, @muxui/catalog@2.1.0-rc.1, @muxui/react@0.1.0-rc.5
+2026-11-04T06:45:36.3969190Z P2.1 npm audit signatures (npm 11.17.0) verified the registry signature and the Sigstore attestation of @muxui/schema@0.6.0-rc.1, @muxui/catalog@2.1.0-rc.1, @muxui/react@0.1.0-rc.5: 0 invalid, 0 missing, 52 attested packages in the install; each reused attestation names its recorded bytes and commit
+2026-11-04T06:45:37.2564190Z P2.1 packed and audited @muxui/tooling@1.1.0-rc.2
+2026-11-04T06:45:37.2565491Z P2.1 reused @muxui/schema@0.6.0-rc.1, @muxui/catalog@2.1.0-rc.1 from the registry at the recorded bytes
+2026-11-04T06:45:49.2834815Z P2.1 reused @muxui/react@0.1.0-rc.5 from muxui-portfolio:40dcc0032b7db3a47e19797d4e73bc9d, the bytes sha512-OhPAZ7dM5RfygJgqi89t642BuiJqyFN2tmtPPwI2fWzkEBRnmHS8vHxNUh1HLJL53IsiVtKhBVUCoCkiCBHPtQ==
+2026-11-04T06:45:54.2885305Z R1.5 packed import 657.35ms / 2000ms; SSR 132.50ms / 1000ms
+2026-11-04T06:45:54.3187903Z R1 exit offline consumer resolves @tiptap/core 3.31.4 across 122 runtime packages
+2026-11-04T06:45:54.8273962Z R1 exit public-surface leak scan passed for 132 upstream names across 75 declarations, 6 public entries, README, and 7 guidance projections
+2026-11-04T06:45:55.0117043Z R1 exit side-effect scan passed for 103 packed JS modules
+2026-11-04T06:46:04.2414943Z R1 exit packed SSR/hydration: 239 renders (217 component examples, 20 pattern variants, plus fixtures) cover 106 runtime exports across @muxui/react, @muxui/react/markdown, @muxui/react/text-editor; SSR 1058.87ms / 2000ms; 239 hydrations without mismatch
+2026-11-04T06:46:04.7157008Z R1 exit tree-shaking (vite 8.2.1, Button only): 119091 rendered JS bytes from 46 modules; @muxui/react keeps only generated/button.js, generated/substrate.js, generated/styling-contract.js; packages: react-aria 101260, react-aria-components 8600, @muxui/react 8285, clsx 615, react-stately 331; stylesheet 4330363 bytes kept
+2026-11-04T06:46:08.1159090Z R1 exit consumer matrix pnpm 10.33.0: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 122 runtime packages
+2026-11-04T06:46:17.0621948Z R1 exit consumer matrix npm 11.17.0: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 122 runtime packages
+2026-11-04T06:46:29.9779763Z R1 exit consumer matrix yarn 1.22.22: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 119 runtime packages
+2026-11-04T06:46:33.3228577Z P2.1 set consumer: 4 tarballs installed together, 13 entries imported and 7 resolved, 84 descriptor bindings export their members
+2026-11-04T06:46:34.0995374Z R1 exit npm publish dry-run passed for @muxui/tooling without lifecycle hooks or registry mutation
+2026-11-04T06:46:34.4145566Z P2.1 correlation: @muxui/react is reused, so its generated outputs and visual contract stay those of muxui-portfolio:40dcc0032b7db3a47e19797d4e73bc9d; 5 captured CI evidence indexes, 1 retained review evidence index
+2026-11-04T06:46:34.7215598Z R1 exit artifacts written to <tmp>/muxui-r1-exit-output-y2ZkoB
+2026-11-04T06:46:38.0347949Z R1 exit release preparation passed for @muxui/schema@0.6.0-rc.1, @muxui/catalog@2.1.0-rc.1, @muxui/tooling@1.1.0-rc.2, @muxui/react@0.1.0-rc.5; the sources remain private and unpublished.
+# step: Collect candidate (raw lines 515-553)
+2026-11-04T06:46:38.1177537Z ##[group]Run set -euo pipefail
+2026-11-04T06:46:38.1236807Z shell: /usr/bin/bash -e {0}
+2026-11-04T06:46:38.1237077Z env:
+2026-11-04T06:46:38.1237495Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=,@muxui/catalog=,@muxui/tooling=1.1.0-rc.2,@muxui/react=
+2026-11-04T06:46:38.1238025Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-11-04T06:46:38.1238357Z   PROMOTED_DIR: 
+2026-11-04T06:46:38.1238568Z ##[endgroup]
+2026-11-04T06:46:38.1492289Z Candidate @muxui/schema@0.6.0-rc.1 @muxui/catalog@2.1.0-rc.1 @muxui/tooling@1.1.0-rc.2 @muxui/react@0.1.0-rc.5
+# step: Rehearse npm publish (dry run) (raw lines 554-598)
+2026-11-04T06:46:38.1583479Z ##[group]Run set -euo pipefail
+2026-11-04T06:46:38.1615089Z shell: /usr/bin/bash -e {0}
+2026-11-04T06:46:38.1615356Z env:
+2026-11-04T06:46:38.1615753Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=,@muxui/catalog=,@muxui/tooling=1.1.0-rc.2,@muxui/react=
+2026-11-04T06:46:38.1616289Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-11-04T06:46:38.1616960Z   CANDIDATE_DIR: <runner-temp>
+2026-11-04T06:46:38.1617491Z   MANIFEST: <runner-temp>/muxui-portfolio.release-manifest.json
+2026-11-04T06:46:38.1617962Z   npm_config_engine_strict: false
+2026-11-04T06:46:38.1618224Z ##[endgroup]
+2026-11-04T06:46:38.5360479Z npm notice
+2026-11-04T06:46:38.5364717Z npm notice 📦  @muxui/tooling@1.1.0-rc.2
+2026-11-04T06:46:38.5365127Z npm notice Tarball Contents
+2026-11-04T06:46:38.5369680Z npm notice 1.1kB LICENSE
+2026-11-04T06:46:38.5370133Z npm notice 1.5kB README.md
+2026-11-04T06:46:38.5370440Z npm notice 257B bin/muxui.mjs
+2026-11-04T06:46:38.5370823Z npm notice 27.1kB generated/command-surface.mjs
+2026-11-04T06:46:38.5371442Z npm notice 540B generated/response-types.d.ts
+2026-11-04T06:46:38.5371797Z npm notice 1.3kB package.json
+2026-11-04T06:46:38.5372148Z npm notice 4.4kB src/cli.mjs
+2026-11-04T06:46:38.5372494Z npm notice 359B src/index.mjs
+2026-11-04T06:46:38.5372822Z npm notice 30.6kB src/local-resolver.mjs
+2026-11-04T06:46:38.5373277Z npm notice 6.9kB src/parser.mjs
+2026-11-04T06:46:38.5373627Z npm notice 25.4kB src/pnpm-adapter.mjs
+2026-11-04T06:46:38.5374005Z npm notice 2.3kB src/renderers.mjs
+2026-11-04T06:46:38.5374407Z npm notice 329B src/version.mjs
+2026-11-04T06:46:38.5374694Z npm notice Tarball Details
+2026-11-04T06:46:38.5374995Z npm notice name: @muxui/tooling
+2026-11-04T06:46:38.5375296Z npm notice version: 1.1.0-rc.2
+2026-11-04T06:46:38.5375653Z npm notice filename: muxui-tooling-1.1.0-rc.2.tgz
+2026-11-04T06:46:38.5376066Z npm notice package size: 21.6 kB
+2026-11-04T06:46:38.5376878Z npm notice unpacked size: 102.0 kB
+2026-11-04T06:46:38.5378061Z npm notice shasum: 0e2fac41b0f6e8164652acf48c4225e05943023a
+2026-11-04T06:46:38.5379267Z npm notice integrity: sha512-C1GJ2TkuYzGPQ[...]uwjEpzpHzGcIA==
+2026-11-04T06:46:38.5380073Z npm notice total files: 13
+2026-11-04T06:46:38.5380908Z npm notice
+2026-11-04T06:46:38.5407857Z npm warn publish This command requires you to be logged in to https://registry.npmjs.org/ (dry-run)
+2026-11-04T06:46:38.6520742Z npm notice Publishing to https://registry.npmjs.org/ with tag next and public access (dry-run)
+2026-11-04T06:46:38.6523987Z + @muxui/tooling@1.1.0-rc.2
+# step: Check candidate against inputs (raw lines 599-608)
+2026-11-04T06:46:38.6686173Z ##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs prepared
+2026-11-04T06:46:38.6717065Z shell: /usr/bin/bash -e {0}
+2026-11-04T06:46:38.6717336Z env:
+2026-11-04T06:46:38.6717726Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=,@muxui/catalog=,@muxui/tooling=1.1.0-rc.2,@muxui/react=
+2026-11-04T06:46:38.6718250Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-11-04T06:46:38.6718619Z   CANDIDATE_DIR: <runner-temp>
+2026-11-04T06:46:38.6718934Z   EXPECTED_SHA512: 
+2026-11-04T06:46:38.6719164Z ##[endgroup]
+2026-11-04T06:46:40.1825764Z Prepared candidate set @muxui/schema@0.6.0-rc.1, @muxui/catalog@2.1.0-rc.1, @muxui/tooling@1.1.0-rc.2, @muxui/react@0.1.0-rc.5; release manifest sha256:688fb485b2810b987c1519f5cb4d54d368416220c593fd3d65147f351f3b53b9; published @muxui/tooling@1.1.0-rc.2 sha512-C1GJ2TkuYzGPQkvxQMaiG6zUFQQ68LEoWOl77upuftIzXb9EepAUUWexv793iPn9KAkzmGgkjuwjEpzpHzGcIA==
+# step: Upload candidate (raw lines 609-635)
+2026-11-04T06:46:40.2205029Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-04T06:46:40.2205481Z with:
+2026-11-04T06:46:40.2205692Z   name: npm-candidate
+2026-11-04T06:46:40.2205966Z   path: <runner-temp>
+2026-11-04T06:46:40.2206282Z   if-no-files-found: error
+2026-11-04T06:46:40.2206771Z   retention-days: 30
+2026-11-04T06:46:40.2207003Z   compression-level: 6
+2026-11-04T06:46:40.2207231Z   overwrite: false
+2026-11-04T06:46:40.2207459Z   include-hidden-files: false
+2026-11-04T06:46:40.2207717Z env:
+2026-11-04T06:46:40.2208094Z   MUXUI_RELEASE_VERSIONS: @muxui/schema=,@muxui/catalog=,@muxui/tooling=1.1.0-rc.2,@muxui/react=
+2026-11-04T06:46:40.2208619Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-11-04T06:46:40.2208940Z ##[endgroup]
+2026-11-04T06:46:40.3951954Z (node:3703) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-04T06:46:40.3952905Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-04T06:46:40.4028219Z With the provided path, there will be 2 files uploaded
+2026-11-04T06:46:40.4029602Z Artifact name is valid!
+2026-11-04T06:46:40.4030315Z Root directory input is valid!
+2026-11-04T06:46:40.6868739Z Beginning upload of artifact content to blob storage
+2026-11-04T06:46:40.7097023Z (node:3703) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-04T06:46:40.8930803Z Uploaded bytes 24918
+2026-11-04T06:46:40.9408679Z Finished uploading artifact content to blob storage!
+2026-11-04T06:46:40.9410011Z SHA256 digest of uploaded artifact zip is b9736f3757d1bea276389b4fcb98c9c1ffa3977d33ca998fdf571d56ad618e0c
+2026-11-04T06:46:40.9411226Z Finalizing artifact upload
+2026-11-04T06:46:41.4052186Z Artifact npm-candidate.zip successfully finalized. Artifact ID 13301643218
+2026-11-04T06:46:41.4053728Z Artifact npm-candidate has been successfully uploaded! Final size is 24918 bytes. Artifact ID is 13301643218
+2026-11-04T06:46:41.4060212Z Artifact download URL: https://github.com/ndrewtran/muxui/actions/runs/41787407523/artifacts/13301643218
