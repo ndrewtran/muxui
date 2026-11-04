@@ -21,8 +21,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { crc32, inflateRawSync } from 'node:zlib';
-import { committedFileReader, verifyPortfolioRelease } from './release-manifest.mjs';
-import { candidateFileNames, parseReleaseVersions, readPublishSet, readSourceVersions } from './release-set.mjs';
+import { assertAuthorizedTarballs, fetchReusedTarball } from './npm-publication.mjs';
+import { committedFileReader, readRetainedManifests, verifyPortfolioRelease } from './release-manifest.mjs';
+import { candidateFileNames, parseReleaseVersions, readPublishSet, readSourceVersions, tarballFileName } from './release-set.mjs';
 
 export const CI_WORKFLOW = '.github/workflows/ci.yml';
 export const PUBLISH_WORKFLOW = '.github/workflows/npm-publish.yml';
@@ -323,36 +324,85 @@ export async function fetchCandidate({ repository, sha, dryRunId, currentRunId, 
 }
 
 /**
- * Verifies the extracted candidate set's bytes: exactly the tarballs and the portfolio manifest that `versions`
- * name, and the manifest holds to them (`verifyPortfolioRelease`): every package's recorded integrity and tuple
- * position, every published package built from this commit (`sha`), the commit's tree, the compatibility of the
- * tuple, and the retained evidence as committed at `sha`. A reused package needs the earlier manifest that
- * published it in `priorManifests`. The versions are the inputs. `expectedSha512` is the React tarball's integrity: required when
- * `requireDigest`, as promotion does, and checked whenever given. Returns what the workflow reports.
+ * Verifies the extracted candidate set's bytes: exactly the tarballs of the published packages and the portfolio
+ * manifest that `versions` (the published packages' versions) name, and the manifest holds to them
+ * (`verifyPortfolioRelease`): every package's recorded integrity and tuple position, every published package built from
+ * this commit (`sha`), the commit's tree, the compatibility of the tuple, and the retained evidence as committed at
+ * `sha`. A package whose version is not given is reused: the manifest must record it as reused, `reusedArtifacts` holds
+ * its bytes from the registry, and `priorManifests` the earlier manifests that published it. `expectedSha512` is the
+ * tarball-sha512 input, the integrities of exactly the published tarballs: required when `requireDigest`, as promotion
+ * does, and checked whenever given. Returns what the workflow reports.
  */
 export function verifyCandidate({
-  directory, publishSet, versions, expectedSha512, requireDigest = true, sha, tree, readCommitted = committedFileReader(sha, repositoryRoot), priorManifests = new Map(),
+  directory, publishSet, versions, expectedSha512, requireDigest = true, sha, tree, readCommitted = committedFileReader(sha, repositoryRoot),
+  priorManifests = new Map(), reusedArtifacts = new Map(),
 }) {
   if (requireDigest && !expectedSha512) stop('Digest required', 'mode=publish needs the tarball-sha512 input.');
   const expectedNames = candidateFileNames(publishSet, versions);
   const files = readdirSync(directory).sort();
   if (files.length !== expectedNames.length || files.join() !== [...expectedNames].sort().join()) {
-    stop('Candidate ambiguous', `Expected exactly the tarball of each package and one release manifest, ${JSON.stringify(expectedNames)}; found ${JSON.stringify(files)}.`);
+    stop('Candidate ambiguous', `Expected exactly the tarball of each published package and one release manifest, ${JSON.stringify(expectedNames)}; found ${JSON.stringify(files)}.`);
   }
-  const manifestName = expectedNames.at(-1);
-  const artifacts = new Map(publishSet.packages.map(({ name }, index) => [name, readFileSync(join(directory, expectedNames[index]))]));
-  const manifest = JSON.parse(readFileSync(join(directory, manifestName), 'utf8'));
+  const manifest = JSON.parse(readFileSync(join(directory, expectedNames.at(-1)), 'utf8'));
+  // A package is published exactly when its version input is not empty, at that version.
+  const mismatched = (manifest.packages ?? []).flatMap(({ name, version, role }) => {
+    if (!versions.has(name)) return role === 'published' ? [`${name} is published, and its empty version input reuses it`] : [];
+    if (role !== 'published') return [`${name} is ${role}, and its version input publishes it`];
+    return version === versions.get(name) ? [] : [`${name} is ${version}, not the version input ${versions.get(name)}`];
+  });
+  if (mismatched.length > 0) stop('Candidate mismatch', `${mismatched.join('; ')}.`);
+  const artifacts = new Map(publishSet.packages
+    .map(({ name }) => [name, versions.has(name) ? readFileSync(join(directory, tarballFileName(name, versions.get(name)))) : reusedArtifacts.get(name)])
+    .filter(([, bytes]) => bytes !== undefined));
   try {
     verifyPortfolioRelease({ manifest, artifacts, publishSet, expected: { revision: sha, tree }, readCommitted, priorManifests });
   } catch (error) {
     stop('Candidate mismatch', `${error.message}.`);
   }
-  const mismatched = manifest.packages.filter(({ name, version }) => version !== versions.get(name)).map(({ name, version }) => `${name} is ${version}, not the version input ${versions.get(name)}`);
-  if (mismatched.length > 0) stop('Candidate mismatch', `${mismatched.join('; ')}.`);
-  const integrity = manifest.packages.find(({ name }) => name === '@muxui/react').integrity;
-  if (expectedSha512 && integrity !== expectedSha512) stop('Integrity mismatch', `Promoted tarball is ${integrity}; the tarball-sha512 input is ${expectedSha512}.`);
-  return { versions, integrity, digest: manifest.digest, preparation: manifest.preparation ?? null };
+  const published = manifest.packages.filter(({ role }) => role === 'published');
+  if (expectedSha512) {
+    try {
+      assertAuthorizedTarballs(published, expectedSha512);
+    } catch (error) {
+      stop(error.title ?? 'Integrity mismatch', error.message);
+    }
+  }
+  return {
+    versions,
+    published: published.map(({ name, version, integrity }) => ({ name, version, integrity })),
+    reused: manifest.packages.filter(({ role }) => role === 'reused').map(({ name, version, integrity }) => ({ name, version, integrity })),
+    digest: manifest.digest,
+    preparation: manifest.preparation ?? null,
+  };
 }
+
+/**
+ * What a candidate that reuses packages needs beyond its own files: the reused tarballs, from the public registry by exact
+ * version and held to the integrity the manifest records (`fetchReusedTarball`), and the manifests that published them,
+ * retained in the repository at the release commit. Nothing is fetched for a release that reuses nothing.
+ */
+export async function loadReuse({ directory, publishSet, versions, sha, cwd = repositoryRoot, readRetained = readRetainedManifests, io = {} }) {
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(join(directory, candidateFileNames(publishSet, versions).at(-1)), 'utf8'));
+  } catch {
+    // No readable manifest: verifyCandidate reports the candidate it was given.
+    return { reusedArtifacts: new Map(), priorManifests: new Map() };
+  }
+  const records = (manifest.packages ?? []).filter(({ role }) => role === 'reused');
+  const reusedArtifacts = new Map();
+  for (const record of records) {
+    try {
+      reusedArtifacts.set(record.name, await fetchReusedTarball(record, io));
+    } catch (error) {
+      stop(error.title ?? 'Reused package invalid', error.message);
+    }
+  }
+  return { reusedArtifacts, priorManifests: readRetained({ ids: records.map(({ provenance }) => provenance?.releaseId), revision: sha, cwd }) };
+}
+
+// `name@version integrity` for each tarball, the form the publish job's own `Candidate verified` line uses.
+const describeTarballs = (entries) => entries.map(({ name, version, integrity }) => `${name}@${version} ${integrity}`).join(', ');
 
 const describePreparation = (preparation) => {
   if (preparation?.mode === 'main-ci-reused') return `reused main CI run ${preparation.mainCi?.runId} attempt ${preparation.mainCi?.runAttempt}`;
@@ -368,7 +418,8 @@ function writeSummary(environment, markdown) {
   if (environment.GITHUB_STEP_SUMMARY) appendFileSync(environment.GITHUB_STEP_SUMMARY, `${markdown}\n`);
 }
 
-// The publish set and the versions of this release (`MUXUI_RELEASE_VERSIONS`, as release preparation reads them).
+// The publish set and the versions of the packages this release publishes (`MUXUI_RELEASE_VERSIONS`, as release
+// preparation reads them; an empty version reuses a package, which `versions` leaves out).
 function releaseTuple(environment) {
   if (!environment.MUXUI_RELEASE_VERSIONS) stop('Environment missing', 'MUXUI_RELEASE_VERSIONS is not set.');
   const publishSet = readPublishSet(repositoryRoot);
@@ -455,17 +506,20 @@ export async function main(command, environment = process.env, io = {}) {
       const { GITHUB_SHA: sha, DRY_RUN_ATTEMPT: attempt } = environment;
       if (!/^[1-9]\d*$/u.test(attempt)) stop('Environment invalid', `DRY_RUN_ATTEMPT is ${attempt}.`);
       const { publishSet, versions } = releaseTuple(environment);
+      const reuse = await loadReuse({ directory: environment.CANDIDATE_DIR, publishSet, versions, sha, readRetained: io.readRetained, io });
       const candidate = verifyCandidate({
-        directory: environment.CANDIDATE_DIR, publishSet, versions, expectedSha512: environment.EXPECTED_SHA512, sha, tree: (io.readTree ?? readTree)(sha), readCommitted: io.readCommitted,
+        directory: environment.CANDIDATE_DIR, publishSet, versions, expectedSha512: environment.EXPECTED_SHA512, sha, tree: (io.readTree ?? readTree)(sha), readCommitted: io.readCommitted, ...reuse,
       });
-      log(`Promoted candidate ${candidate.versions.get('@muxui/react')} ${candidate.integrity} from dry run ${environment.DRY_RUN_ID} attempt ${attempt}`);
+      log(`Promoted candidate ${describeTarballs(candidate.published)} from dry run ${environment.DRY_RUN_ID} attempt ${attempt}`);
+      if (candidate.reused.length > 0) log(`Reused, not published: ${describeTarballs(candidate.reused)}`);
       log(`Dry run preparation: ${describePreparation(candidate.preparation)}`);
       writeSummary(environment, [
         '### Promoted candidate',
         '',
-        ...[...candidate.versions].map(([name, version]) => `- ${name}: \`${version}\``),
+        ...candidate.published.map(({ name, version }) => `- ${name}: \`${version}\` (published)`),
+        ...candidate.reused.map(({ name, version }) => `- ${name}: \`${version}\` (reused)`),
         `- release manifest digest: \`${candidate.digest}\``,
-        `- @muxui/react tarball-sha512: \`${candidate.integrity}\``,
+        ...candidate.published.map(({ name, integrity }) => `- ${name} tarball-sha512: \`${integrity}\``),
         `- built by dry run ${environment.DRY_RUN_ID} attempt ${attempt} at \`${sha}\`; this run did not rebuild it`,
         `- dry run preparation: ${describePreparation(candidate.preparation)}`,
       ].join('\n'));
@@ -475,11 +529,12 @@ export async function main(command, environment = process.env, io = {}) {
       // The dry run's own candidate, read the way a promotion reads it: same bytes, same manifest, this commit.
       requireEnvironment(environment, ['GITHUB_REPOSITORY', 'GITHUB_SHA', 'CANDIDATE_DIR']);
       const { publishSet, versions } = releaseTuple(environment);
+      const reuse = await loadReuse({ directory: environment.CANDIDATE_DIR, publishSet, versions, sha: environment.GITHUB_SHA, readRetained: io.readRetained, io });
       const candidate = verifyCandidate({
         directory: environment.CANDIDATE_DIR, publishSet, versions, expectedSha512: environment.EXPECTED_SHA512, requireDigest: false,
-        sha: environment.GITHUB_SHA, tree: (io.readTree ?? readTree)(environment.GITHUB_SHA), readCommitted: io.readCommitted,
+        sha: environment.GITHUB_SHA, tree: (io.readTree ?? readTree)(environment.GITHUB_SHA), readCommitted: io.readCommitted, ...reuse,
       });
-      log(`Prepared candidate set ${[...candidate.versions].map(([name, version]) => `${name}@${version}`).join(', ')}; release manifest ${candidate.digest}; @muxui/react ${candidate.integrity}`);
+      log(`Prepared candidate set ${publishSet.packages.map(({ name }) => `${name}@${candidate.versions.get(name) ?? candidate.reused.find((entry) => entry.name === name).version}`).join(', ')}; release manifest ${candidate.digest}; published ${describeTarballs(candidate.published)}`);
       return;
     }
     default:

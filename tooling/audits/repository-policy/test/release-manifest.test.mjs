@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { canonicalJson } from '../src/canonical-json.mjs';
 import { readArchive } from '../src/release-archive.mjs';
-import { caretAllows, readEvidenceRecord, releaseIdFor, sha256, sha512Integrity, verifyPortfolioRelease } from '../src/release-manifest.mjs';
+import { caretAllows, readEvidenceRecord, readRetainedManifests, releaseIdFor, sha256, sha512Integrity, verifyPortfolioRelease } from '../src/release-manifest.mjs';
 import {
   archiveOf, artifactsOf, catalogFiles, catalogModuleFor, commit, digest, committedStore, jsonBytes, manifestOf, otherCommit, publishSet, readCommitted, sidecarFor, tree, tupleFixture,
 } from './release-tuple-fixture.mjs';
@@ -391,6 +394,40 @@ test('E-P2.1-03 a reused package must still be compatible with the new tuple', (
   // A compatible reuse verifies.
   const compatible = reuseScenario({ reuse: ['@muxui/react'] });
   verify(manifestOf(compatible.artifacts, { reused: compatible.reused }), compatible.artifacts, { priorManifests: compatible.priorManifests });
+});
+
+// The manifests that vouch for a reused package are the ones the repository retains as tests/evidence/**/release-manifest.json.
+test('E-P2.1-03 the manifest of the release that published a reused package is read from the retained evidence at the release commit', () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'muxui-retained-manifests-'));
+  try {
+    const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { cwd: scratch, encoding: 'utf8' }).trim();
+    const write = (path, value) => {
+      mkdirSync(dirname(join(scratch, path)), { recursive: true });
+      writeFileSync(join(scratch, path), `${JSON.stringify(value)}\n`);
+    };
+    const { manifest } = honest();
+    git('init', '-q');
+    write('tests/evidence/r1-exit-0.1.0-rc.5/artifacts/release-manifest.json', manifest);
+    write('tests/evidence/r1-exit-0.1.0-rc.4/artifacts/release-manifest.json', { schema: 'muxui-release-manifest-v1', id: manifest.id });
+    write('tests/evidence/p2.1/notes.json', manifest);
+    write('docs/release-manifest.json', manifest);
+    git('add', '-A');
+    git('commit', '-q', '-m', 'retain');
+    const revision = git('rev-parse', 'HEAD');
+    // Only a portfolio manifest of a release asked for, wherever its file is named release-manifest.json under tests/evidence.
+    assert.deepEqual([...readRetainedManifests({ ids: [manifest.id], revision, cwd: scratch })], [[manifest.id, JSON.parse(JSON.stringify(manifest))]]);
+    assert.deepEqual([...readRetainedManifests({ ids: ['muxui-portfolio:other'], revision, cwd: scratch })], []);
+    assert.deepEqual([...readRetainedManifests({ ids: [], revision: 'not-read', cwd: scratch })], [], 'a release that reuses nothing reads nothing');
+    // The commit decides: a manifest added after it is not retained at it.
+    const earlier = revision;
+    write('tests/evidence/later/release-manifest.json', { ...manifest, id: 'muxui-portfolio:later' });
+    git('add', '-A');
+    git('commit', '-q', '-m', 'later');
+    assert.deepEqual([...readRetainedManifests({ ids: ['muxui-portfolio:later'], revision: earlier, cwd: scratch })], []);
+    assert.deepEqual([...readRetainedManifests({ ids: ['muxui-portfolio:later'], revision: git('rev-parse', 'HEAD'), cwd: scratch }).keys()], ['muxui-portfolio:later']);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 });
 
 test('the deterministic archive reads back the files it was built from, in name order', () => {

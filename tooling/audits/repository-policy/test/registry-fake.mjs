@@ -1,5 +1,5 @@
-// An in-process npm registry for the publication tests (E-P2.1-06): the two public read endpoints
-// npm-publication.mjs uses (a version document and a packument) and a `publish` that stands in for
+// An in-process npm registry for the publication tests (E-P2.1-06): the public read endpoints
+// npm-publication.mjs uses (a version document, a packument, and a version's tarball) and a `publish` that stands in for
 // `npm publish --tag next --provenance`. No network and no real registry; every request and every write is
 // recorded, and there is no way to deprecate, unpublish, or re-tag, so a test can assert none happened.
 import { createHash } from 'node:crypto';
@@ -9,7 +9,9 @@ import { REGISTRY } from '../src/npm-publication.mjs';
 const slsa = { predicateType: 'https://slsa.dev/provenance/v1' };
 
 /**
- * `seed` maps a package name to { versions: { [version]: integrity }, tags } already on the registry. `faults`
+ * `seed` maps a package name to { versions: { [version]: integrity }, tags, tarballs: { [version]: bytes } } already on
+ * the registry: a version with bytes and no integrity is listed at the integrity of those bytes, and one with both is
+ * served the bytes whatever integrity its document declares. `faults`
  * names the package each failure hits: `refuse` (npm rejects the publish and writes nothing), `corrupt` (the
  * registry ends up with other bytes), `unattested` (no provenance attestation), `invisible` (the publish lands
  * and never becomes readable, as a registry that does not propagate), and `landThenFail` (the publish lands, the
@@ -21,14 +23,19 @@ export function createRegistry({ seed = {}, faults: initialFaults = {} } = {}) {
   const hidden = new Set();
   const requests = [];
   const writes = [];
-  const add = (name, version, integrity, { attested = true } = {}) => {
+  const files = new Map();
+  const sri = (bytes) => `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
+  const tarballUrl = (name, version) => `${REGISTRY}/${name}/-/${name.split('/')[1]}-${version}.tgz`;
+  const add = (name, version, integrity, { attested = true, bytes } = {}) => {
     const packument = packuments.get(name) ?? { 'dist-tags': {}, versions: {} };
-    packument.versions[version] = { name, version, dist: { integrity, ...(attested ? { attestations: { provenance: slsa } } : {}) } };
+    packument.versions[version] = { name, version, dist: { integrity, tarball: tarballUrl(name, version), ...(attested ? { attestations: { provenance: slsa } } : {}) } };
+    if (bytes) files.set(tarballUrl(name, version), bytes);
     packuments.set(name, packument);
     return packument;
   };
-  for (const [name, { versions, tags }] of Object.entries(seed)) {
-    for (const [version, integrity] of Object.entries(versions)) add(name, version, integrity);
+  for (const [name, { versions = {}, tags, tarballs = {} }] of Object.entries(seed)) {
+    for (const [version, integrity] of Object.entries(versions)) add(name, version, integrity, { bytes: tarballs[version] });
+    for (const [version, bytes] of Object.entries(tarballs)) if (!(version in versions)) add(name, version, sri(bytes), { bytes });
     packuments.get(name)['dist-tags'] = { ...tags };
   }
 
@@ -38,6 +45,11 @@ export function createRegistry({ seed = {}, faults: initialFaults = {} } = {}) {
   async function fetch(url) {
     requests.push(String(url));
     if (!String(url).startsWith(`${REGISTRY}/`)) throw new Error(`the fake registry only serves ${REGISTRY}, not ${url}`);
+    if (files.has(String(url))) {
+      const bytes = files.get(String(url));
+      return { status: 200, arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length) };
+    }
+    if (String(url).includes('/-/')) return respond(404, null);
     // A scoped package name is two path segments; a version follows it.
     const [, name, version] = /^(@[^/]+\/[^/]+)(?:\/([^/]+))?$/u.exec(String(url).slice(REGISTRY.length + 1)) ?? [];
     if (name === undefined) return respond(404, null);
@@ -57,9 +69,9 @@ export function createRegistry({ seed = {}, faults: initialFaults = {} } = {}) {
     if (packuments.has(name) && token) throw new Error(`policy violation: a token was used to publish the existing package ${name}`);
     if (faults.refuse?.includes(name)) throw new Error(`npm error code E403\nnpm error 403 Forbidden - PUT ${REGISTRY}/${name} - refused`);
     const bytes = readFileSync(file);
-    const integrity = faults.corrupt?.includes(name) ? `sha512-${createHash('sha512').update(`other ${bytes.toString('base64')}`).digest('base64')}` : `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
+    const integrity = faults.corrupt?.includes(name) ? `sha512-${createHash('sha512').update(`other ${bytes.toString('base64')}`).digest('base64')}` : sri(bytes);
     const first = !packuments.has(name);
-    const packument = add(name, version, integrity, { attested: !faults.unattested?.includes(name) });
+    const packument = add(name, version, integrity, { attested: !faults.unattested?.includes(name), bytes });
     // `--tag next` moves next; the registry itself sets latest on a package's first version.
     packument['dist-tags'].next = version;
     if (first) packument['dist-tags'].latest = version;

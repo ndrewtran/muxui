@@ -204,3 +204,29 @@ export const readCommitted = committedStore().read;
 export const manifestOf = (artifacts, options = {}) => buildPortfolioManifest({
   publishSet, artifacts, source: { revision: commit, tree }, readCommitted, preparation: { mode: 'full-checks' }, ...options,
 });
+
+export const secondCommit = 'd'.repeat(40);
+export const secondTree = 'e'.repeat(40);
+
+/** The first portfolio release: the tuple, its tarballs, and its manifest, all published from `commit`. */
+export function firstReleaseFixture(options = {}) {
+  const tuple = tupleFixture(options);
+  const artifacts = artifactsOf(tuple);
+  return { tuple, artifacts, manifest: manifestOf(artifacts) };
+}
+
+/**
+ * A later release of the same set (Decision 0032 item 9): it builds the `published` packages anew at `revision`, at
+ * `versions`, and reuses the others, keeping the bytes and the records of `first`. `reused` maps each reused package to
+ * its record in the manifest that published it, as `buildPortfolioManifest` takes them.
+ */
+export function successorFixture({
+  first = firstReleaseFixture(), published = ['@muxui/tooling'], versions = { '@muxui/tooling': '1.1.0-rc.2' }, revision = secondCommit, extra,
+} = {}) {
+  const reused = new Map(publishSet.packages.filter(({ name }) => !published.includes(name)).map(({ name }) => [name, first.manifest.packages.find((record) => record.name === name)]));
+  const tuple = tupleFixture({ versions, commits: Object.fromEntries(published.map((name) => [name, revision])), extra });
+  const built = artifactsOf(tuple, { reused, revision });
+  const artifacts = new Map([...built].map(([name, bytes]) => [name, reused.has(name) ? first.artifacts.get(name) : bytes]));
+  const manifest = manifestOf(artifacts, { reused, source: { revision, tree: secondTree } });
+  return { tuple, artifacts, manifest, reused, first, published, revision };
+}

@@ -1,15 +1,20 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import test, { after } from 'node:test';
 import * as npm from '../src/npm-publication.mjs';
-import { verifyCandidate, verifyDryRun } from '../src/release-lineage.mjs';
-import { PORTFOLIO_MANIFEST_FILE, tarballFileName } from '../src/release-set.mjs';
+import { loadReuse, verifyCandidate, verifyDryRun } from '../src/release-lineage.mjs';
+import { planReuse } from '../src/release-effects.mjs';
+import { buildPortfolioManifest, verifyPortfolioRelease } from '../src/release-manifest.mjs';
+import { PORTFOLIO_MANIFEST_FILE, parseReleaseVersions, readPublishSet, readSourceVersions, tarballFileName } from '../src/release-set.mjs';
 import { createRegistry } from './registry-fake.mjs';
-import { archiveOf, artifactsOf, commit, manifestOf, otherCommit, publishSet, readCommitted, tree, tupleFixture } from './release-tuple-fixture.mjs';
+import {
+  archiveOf, artifactsOf, commit, firstReleaseFixture, manifestOf, otherCommit, publishSet, readCommitted, secondCommit, secondTree, successorFixture, tree, tupleFixture,
+} from './release-tuple-fixture.mjs';
 
 // The publish job of npm-publish.yml against an in-process registry (E-P2.1-06): no network, no registry mutation.
+const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const scratch = mkdtempSync(join(tmpdir(), 'muxui-npm-publication-'));
 after(() => rmSync(scratch, { recursive: true, force: true }));
 
@@ -38,10 +43,11 @@ function candidateOf({ versions = {}, revision = commit } = {}) {
   mkdirSync(directory);
   for (const [name, bytes] of artifacts) writeFileSync(join(directory, tarballFileName(name, tuple.versions[name])), bytes);
   writeFileSync(join(directory, PORTFOLIO_MANIFEST_FILE), JSON.stringify(manifest));
-  const integrity = manifest.packages.find((record) => record.name === react).integrity;
+  // The tarball-sha512 input authorizes exactly the tarballs this release publishes: every package, for the first release.
+  const integrity = manifest.packages.map((record) => record.integrity).join(',');
   const text = names.map((name) => `${name}=${tuple.versions[name]}`).join(',');
   return {
-    directory, manifest, artifacts, integrity, text, versions: new Map(names.map((name) => [name, tuple.versions[name]])),
+    directory, manifest, artifacts, integrity, text, tree, versions: new Map(names.map((name) => [name, tuple.versions[name]])),
     environment: { GITHUB_SHA: commit, CANDIDATE_DIR: directory, MUXUI_RELEASE_VERSIONS: text, EXPECTED_SHA512: integrity, RUNNER_TEMP: scratch, NPM_TOKEN: temporaryToken },
   };
 }
@@ -54,8 +60,11 @@ const reactHistory = () => ({
   },
 });
 
-/** One publish run's two jobs against `registry`: the prepare job's promotion checks, then the publish job. */
-function publishRun({ registry, candidate = candidateOf(), github = dryRunGithub(), sha = commit, environment = {}, lines = [] }) {
+/**
+ * One publish run's two jobs against `registry`: the prepare job's promotion checks (a reused package is fetched from the
+ * registry and checked against the manifests the repository retains), then the publish job.
+ */
+function publishRun({ registry, candidate = candidateOf(), github = dryRunGithub({}, candidate.environment.GITHUB_SHA), sha = candidate.environment.GITHUB_SHA, environment = {}, lines = [] }) {
   const io = { ...registry.io({ log: (line) => lines.push(line) }), publish: registry.publish };
   const env = { ...candidate.environment, GITHUB_SHA: sha, ...environment };
   return {
@@ -63,7 +72,8 @@ function publishRun({ registry, candidate = candidateOf(), github = dryRunGithub
     run: async () => {
       // prepare: Verify dry run, Verify promoted candidate (needs: prepare, so a failure here ends the run before approval).
       await verifyDryRun({ repository, sha, dryRunId: '555', currentRunId: '777', github });
-      verifyCandidate({ directory: candidate.directory, publishSet, versions: candidate.versions, expectedSha512: candidate.integrity, sha, tree, readCommitted });
+      const reuse = await loadReuse({ directory: candidate.directory, publishSet, versions: candidate.versions, sha, readRetained: candidate.readRetained, io });
+      verifyCandidate({ directory: candidate.directory, publishSet, versions: candidate.versions, expectedSha512: candidate.integrity, sha, tree: candidate.tree, readCommitted, ...reuse });
       // publish: Re-verify candidate, Publish the set in order.
       await npm.main('verify-candidate', env, io);
       await npm.main('publish-set', env, io);
@@ -72,17 +82,17 @@ function publishRun({ registry, candidate = candidateOf(), github = dryRunGithub
 }
 
 const repository = 'ndrewtran/muxui';
-const dryRunRun = (overrides) => ({
-  id: 555, path: '.github/workflows/npm-publish.yml', event: 'workflow_dispatch', head_branch: 'main', head_sha: commit, status: 'completed',
+const dryRunRun = (overrides, at = commit) => ({
+  id: 555, path: '.github/workflows/npm-publish.yml', event: 'workflow_dispatch', head_branch: 'main', head_sha: at, status: 'completed',
   conclusion: 'success', run_attempt: 1, repository: { full_name: repository }, head_repository: { full_name: repository }, ...overrides,
 });
-// A scripted read-only GitHub client answering for dry run 555.
-const dryRunGithub = (overrides = {}) => async (path) => {
+// A scripted read-only GitHub client answering for dry run 555 at commit `at`.
+const dryRunGithub = (overrides = {}, at = commit) => async (path) => {
   if (path.includes('/jobs')) return { jobs: [{ name: 'prepare', conclusion: 'success', steps: [{ name: 'Upload candidate', conclusion: 'success' }] }, { name: 'publish', conclusion: 'skipped' }] };
   if (path.includes('/artifacts')) {
-    return { artifacts: [{ id: 9, name: 'npm-candidate', size_in_bytes: 4096, digest: `sha256:${'a'.repeat(64)}`, expired: false, workflow_run: { id: 555, head_sha: commit } }] };
+    return { artifacts: [{ id: 9, name: 'npm-candidate', size_in_bytes: 4096, digest: `sha256:${'a'.repeat(64)}`, expired: false, workflow_run: { id: 555, head_sha: at } }] };
   }
-  return dryRunRun(overrides);
+  return dryRunRun(overrides, at);
 };
 
 test('every package has its own rc rule: a first publish is its rc.1, a later one the next number over next', () => {
@@ -130,23 +140,32 @@ test('the publish job reads the candidate as the manifest records it and publish
   const read = (overrides = {}) => npm.readCandidateSet({
     directory: candidate.directory, publishSet, versions: candidate.versions, revision: commit, expectedIntegrity: candidate.integrity, ...overrides,
   });
-  const packages = read();
+  const { packages, reused } = read();
   assert.deepEqual(packages.map(({ name, version }) => [name, version]), names.map((name) => [name, candidate.versions.get(name)]));
   assert.deepEqual(packages.map(({ integrity }) => integrity), candidate.manifest.packages.map(({ integrity }) => integrity));
+  assert.deepEqual(reused, []);
   assert.ok(packages.every(({ file }) => file.startsWith(candidate.directory)));
 
-  // A package the release reuses is not published again.
-  const reused = candidateOf();
-  const edited = structuredClone(reused.manifest);
-  edited.packages[0].role = 'reused';
-  writeFileSync(join(reused.directory, PORTFOLIO_MANIFEST_FILE), JSON.stringify(edited));
-  assert.deepEqual(npm.readCandidateSet({ directory: reused.directory, publishSet, versions: reused.versions, revision: commit, expectedIntegrity: reused.integrity }).map(({ name }) => name), [catalog, tooling, react]);
-  edited.packages[0].role = 'draft';
-  writeFileSync(join(reused.directory, PORTFOLIO_MANIFEST_FILE), JSON.stringify(edited));
-  assert.throws(() => npm.readCandidateSet({ directory: reused.directory, publishSet, versions: reused.versions, revision: commit, expectedIntegrity: reused.integrity }), /@muxui\/schema has role "draft"/u);
+  // A package is published exactly when its version input is not empty: the manifest's role must agree with the input.
+  const edit = (change) => {
+    const edited = candidateOf();
+    const manifest = structuredClone(edited.manifest);
+    change(manifest);
+    writeFileSync(join(edited.directory, PORTFOLIO_MANIFEST_FILE), JSON.stringify(manifest));
+    return edited;
+  };
+  const roleDraft = edit((manifest) => { manifest.packages[0].role = 'draft'; });
+  assert.throws(() => npm.readCandidateSet({ directory: roleDraft.directory, publishSet, versions: roleDraft.versions, revision: commit, expectedIntegrity: roleDraft.integrity }), /@muxui\/schema has role "draft" in the release manifest, and its version input publishes it/u);
+  const reusedByManifest = edit((manifest) => { manifest.packages[0].role = 'reused'; });
+  assert.throws(() => npm.readCandidateSet({ directory: reusedByManifest.directory, publishSet, versions: reusedByManifest.versions, revision: commit, expectedIntegrity: reusedByManifest.integrity }), /@muxui\/schema has role "reused" in the release manifest, and its version input publishes it/u);
 
-  assert.throws(() => read({ expectedIntegrity: '' }), /the tarball-sha512 input is empty/u);
-  assert.throws(() => read({ versions: new Map([...candidate.versions, [catalog, '2.1.0-rc.2']]) }), /Expected exactly the tarball of each package/u);
+  // The authorization lists exactly the tarballs the release publishes.
+  assert.throws(() => read({ expectedIntegrity: '' }), /the tarball-sha512 input authorizes nothing/u);
+  assert.throws(() => read({ expectedIntegrity: packages[3].integrity }), /This release publishes @muxui\/schema sha512-.*, @muxui\/react sha512-.*; the tarball-sha512 input authorizes sha512-/u);
+  assert.throws(() => read({ expectedIntegrity: `${candidate.integrity},${draftIntegrity('x')}` }), /the tarball-sha512 input authorizes .*x+==/u);
+  assert.throws(() => read({ expectedIntegrity: 'sha512-short' }), /lists \["sha512-short"\], which is not a sha512 integrity/u);
+  assert.deepEqual(read({ expectedIntegrity: [...candidate.integrity.split(',')].reverse().join(', ') }).packages.map(({ name }) => name), names, 'any order');
+  assert.throws(() => read({ versions: new Map([...candidate.versions, [catalog, '2.1.0-rc.2']]) }), /Expected exactly the tarball of each published package/u);
 });
 
 test('the set publishes in publish order, each package preflighted, rechecked, published, and read back before the next', async () => {
@@ -203,8 +222,8 @@ test('E-P2.1-06 refusals: an artifact-integrity mismatch stops the release befor
     message: /@muxui\/tooling@1\.1\.0-rc\.1 tarball is sha512-.*; the release manifest records sha512-/u,
   });
   // The operator authorized another @muxui/react digest.
-  await refuse({ environment: { EXPECTED_SHA512: draftIntegrity('x') }, message: /@muxui\/react is sha512-.*; the tarball-sha512 input is sha512-x+==/u });
-  await refuse({ environment: { EXPECTED_SHA512: '' }, message: /the tarball-sha512 input is empty/u });
+  await refuse({ environment: { EXPECTED_SHA512: draftIntegrity('x') }, message: /@muxui\/react sha512-.*; the tarball-sha512 input authorizes sha512-x+==/u });
+  await refuse({ environment: { EXPECTED_SHA512: '' }, message: /the tarball-sha512 input authorizes nothing/u });
   // A manifest edited after preparation to match another artifact.
   await refuse({
     edit: ({ directory, manifest }) => writeFileSync(join(directory, PORTFOLIO_MANIFEST_FILE), JSON.stringify({ ...manifest, packages: manifest.packages.map((record) => (record.name === catalog ? { ...record, integrity: draftIntegrity('m') } : record)) })),
@@ -228,7 +247,7 @@ test('E-P2.1-06 refusals: an invalid promotion lineage stops the release before 
   await refuse({ candidate: candidateOf({ revision: otherCommit }), message: /P2_1_MANIFEST_SOURCE_MISMATCH: the manifest source revision is b+, not a+/u });
   // A candidate of other versions than the inputs name.
   const stale = candidateOf({ versions: { [react]: '0.1.0-rc.6' } });
-  await refuse({ candidate: { ...stale, versions: new Map([...stale.versions, [react, first.react]]) }, message: /Expected exactly the tarball of each package and one release manifest/u });
+  await refuse({ candidate: { ...stale, versions: new Map([...stale.versions, [react, first.react]]) }, message: /Expected exactly the tarball of each published package and one release manifest/u });
 
   // The publish job repeats the lineage it can read from the bytes, in case its artifact is not the one prepare checked.
   const registry = createRegistry({ seed: reactHistory() });
@@ -236,7 +255,7 @@ test('E-P2.1-06 refusals: an invalid promotion lineage stops the release before 
   const candidate = candidateOf({ revision: otherCommit });
   await assert.rejects(npm.main('verify-candidate', candidate.environment, io), /The release manifest is for b+; this run is at a+/u);
   const other = candidateOf();
-  await assert.rejects(npm.main('verify-candidate', { ...other.environment, MUXUI_RELEASE_VERSIONS: other.text.replace(first.react, '0.1.0-rc.6') }, io), /Expected exactly the tarball of each package/u);
+  await assert.rejects(npm.main('verify-candidate', { ...other.environment, MUXUI_RELEASE_VERSIONS: other.text.replace(first.react, '0.1.0-rc.6') }, io), /Expected exactly the tarball of each published package/u);
   await assert.rejects(npm.main('publish-set', { ...other.environment, GITHUB_SHA: 'main' }, io), /GITHUB_SHA is "main"/u);
   await assert.rejects(npm.main('publish-set', { ...other.environment, CANDIDATE_DIR: 'relative/dir' }, io), /CANDIDATE_DIR is "relative\/dir"/u);
   assert.deepEqual(registry.writes, []);
@@ -452,4 +471,207 @@ test('npm publish inherits no credential, and a first publish gets the token as 
   assert.equal(first.NODE_AUTH_TOKEN, undefined);
   assert.equal(first.ACTIONS_ID_TOKEN_REQUEST_URL, 'https://oidc.example');
   assert.equal(environment.NPM_TOKEN, temporaryToken, 'the caller\'s environment is not edited');
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// A later release publishes only the packages whose version units changed and reuses the rest (Decision 0032 item 9).
+
+const prior = firstReleaseFixture();
+const priorOrigins = () => new Map([[prior.manifest.id, prior.manifest]]);
+const priorRelease = { first: false, priorManifest: prior.manifest };
+const recordOf = (manifest, name) => manifest.packages.find((record) => record.name === name);
+// The registry after the first release: each package at its rc, with the bytes it published and `latest` and `next` on it. The
+// three new packages also list the untagged 0.0.0-stage version npm shows beside a first publish.
+const afterFirstRelease = () => Object.fromEntries(names.map((name) => [name, {
+  versions: name === react
+    ? Object.fromEntries([1, 2, 3, 4].map((rc) => [`0.1.0-rc.${rc}`, draftIntegrity(String(rc))]))
+    : { '0.0.0-stage': draftIntegrity('s') },
+  tarballs: { [versionOf[name]]: prior.artifacts.get(name) },
+  tags: name === react ? { latest: '0.1.0-rc.1', next: first.react } : { latest: versionOf[name], next: versionOf[name] },
+}]));
+
+/** A later release's candidate directory and environment: `published` are built anew and the rest reused from the first release. */
+function successorOf(options = {}) {
+  const successor = successorFixture(options);
+  const published = names.filter((name) => !successor.reused.has(name));
+  const directory = join(scratch, `candidate-${sequence += 1}`);
+  mkdirSync(directory);
+  for (const name of published) writeFileSync(join(directory, tarballFileName(name, successor.tuple.versions[name])), successor.artifacts.get(name));
+  writeFileSync(join(directory, PORTFOLIO_MANIFEST_FILE), JSON.stringify(successor.manifest));
+  const integrity = published.map((name) => recordOf(successor.manifest, name).integrity).join(',');
+  const text = names.map((name) => `${name}=${successor.reused.has(name) ? '' : successor.tuple.versions[name]}`).join(',');
+  return {
+    ...successor,
+    directory,
+    integrity,
+    text,
+    tree: secondTree,
+    readRetained: priorOrigins,
+    versions: new Map(published.map((name) => [name, successor.tuple.versions[name]])),
+    environment: { GITHUB_SHA: successor.revision, CANDIDATE_DIR: directory, MUXUI_RELEASE_VERSIONS: text, EXPECTED_SHA512: integrity, RUNNER_TEMP: scratch, NPM_TOKEN: temporaryToken },
+  };
+}
+
+test('a version input is empty to reuse a package, and a release publishes at least one', () => {
+  const pairs = (tooling_) => `${schema}=,${catalog}=,${tooling}=${tooling_},${react}=`;
+  assert.deepEqual([...npm.parseVersionPairs(pairs('1.1.0-rc.2'), publishSet)], [[tooling, '1.1.0-rc.2']], 'reused packages are left out of the Map');
+  const rejects = (value, message) => assert.throws(() => npm.parseVersionPairs(value, publishSet), message, value);
+  rejects(pairs(''), /publishes at least one package; every version is empty/u);
+  rejects(pairs('1.1.0-rc.2').replace(`,${react}=`, ''), /missing @muxui\/react/u);
+  rejects(pairs('1.1.0'), /not an admitted candidate version for @muxui\/tooling/u);
+  rejects(`${react}=0.2.0-rc.1,${schema}=,${catalog}=,${tooling}=`, /not an admitted candidate version for @muxui\/react/u);
+});
+
+// The dry run's reuse, step by step as release-prepare.mjs takes it: plan the reuse from the prior release, fetch each reused
+// package from the registry by exact version, build the manifest with the records kept, and verify what was built.
+test('E-P2.1-03 a later release plans its reuse, fetches the reused bytes from the registry, and builds a manifest that verifies', async () => {
+  const successor = successorFixture();
+  const registry = createRegistry({ seed: afterFirstRelease() });
+  const published = parseReleaseVersions(`${schema}=,${catalog}=,${tooling}=1.1.0-rc.2,${react}=`, publishSet, readSourceVersions(readPublishSet(repositoryRoot), repositoryRoot));
+  assert.deepEqual([...published], [[tooling, '1.1.0-rc.2']]);
+  const plan = planReuse({ publishSet, published, priorRelease, revision: secondCommit, cwd: repositoryRoot, readRetained: priorOrigins });
+  assert.deepEqual([...plan.reused.keys()], [schema, catalog, react]);
+  assert.deepEqual([...plan.versions], [[schema, first.schema], [catalog, first.catalog], [tooling, '1.1.0-rc.2'], [react, first.react]], 'a reused package keeps its recorded version');
+  const fetched = new Map();
+  for (const [name, record] of plan.reused) fetched.set(name, await npm.fetchReusedTarball(record, registry.io()));
+  for (const [name, bytes] of fetched) assert.ok(bytes.equals(prior.artifacts.get(name)), `${name} is the published tarball, byte for byte`);
+  assert.deepEqual(registry.writes, []);
+
+  const artifacts = new Map(names.map((name) => [name, plan.reused.has(name) ? fetched.get(name) : successor.artifacts.get(name)]));
+  const built = buildPortfolioManifest({ publishSet, artifacts, reused: plan.reused, source: { revision: secondCommit, tree: secondTree }, readCommitted, preparation: { mode: 'full-checks' } });
+  assert.equal(built.digest, successor.manifest.digest, 'the same commit, versions, and reuse give the same manifest');
+  assert.deepEqual(built.packages.map(({ name, role }) => [name, role]), [[schema, 'reused'], [catalog, 'reused'], [tooling, 'published'], [react, 'reused']]);
+  assert.deepEqual(built.publication.order, [tooling]);
+  assert.equal(built.react, undefined, 'a reused React keeps the correlation of the release that published it');
+  for (const name of plan.reused.keys()) assert.deepEqual({ ...recordOf(built, name), role: 'published' }, recordOf(prior.manifest, name), 'version, digests, and provenance are the original record');
+  verifyPortfolioRelease({ manifest: built, artifacts, publishSet, expected: { revision: secondCommit, tree: secondTree }, readCommitted, priorManifests: plan.priorManifests });
+
+  // A reuse needs a prior release, one that is usable, and the retained manifest of the release that published the package.
+  assert.throws(() => planReuse({ publishSet, published, priorRelease: { first: true }, revision: secondCommit, cwd: repositoryRoot }), /P2_1_REUSE_NEEDS_PRIOR_RELEASE: @muxui\/schema, @muxui\/catalog, @muxui\/react are reused/u);
+  assert.throws(() => planReuse({ publishSet, published, priorRelease: { first: false, priorManifest: { ...prior.manifest, packages: prior.manifest.packages.slice(1) } }, revision: secondCommit, cwd: repositoryRoot }), /P2_1_PRIOR_RELEASE_INVALID/u);
+  const chained = structuredClone(successor.manifest);
+  assert.throws(() => planReuse({ publishSet, published: new Map([[schema, '0.6.0-rc.2']]), priorRelease: { first: false, priorManifest: chained }, revision: secondCommit, cwd: repositoryRoot, readRetained: () => new Map() }), /P2_1_REUSE_ORIGIN_UNAVAILABLE: @muxui\/catalog@2\.1\.0-rc\.1 was published by .*, whose manifest is not retained/u);
+  // Nothing reused needs no prior release.
+  assert.equal(planReuse({ publishSet, published: new Map(prior.manifest.packages.map(({ name, version }) => [name, version])), priorRelease: { first: true }, revision: commit, cwd: repositoryRoot }).reused.size, 0);
+});
+
+test('E-P2.1-03 a reused package that is not on the registry as recorded fails the release', async () => {
+  const [record] = [recordOf(prior.manifest, react)];
+  const refuse = async (seed, message) => {
+    const registry = createRegistry({ seed });
+    await assert.rejects(npm.fetchReusedTarball(record, registry.io()), message);
+  };
+  await refuse({}, /@muxui\/react@0\.1\.0-rc\.5, which this release reuses, is not on the registry/u);
+  const history = afterFirstRelease();
+  // The registry lists the version at another integrity.
+  await refuse({ [react]: { ...history[react], versions: { ...history[react].versions, [first.react]: draftIntegrity('z') } } }, /@muxui\/react@0\.1\.0-rc\.5 has sha512-z+==; expected sha512-/u);
+  // The registry lists the recorded integrity and serves other bytes.
+  await refuse({ [react]: { ...history[react], versions: { ...history[react].versions, [first.react]: record.integrity }, tarballs: { [first.react]: Buffer.from('other bytes') } } }, /The tarball of @muxui\/react@0\.1\.0-rc\.5 is sha512-.*; its earlier release recorded sha512-/u);
+  // The recorded bytes were published without provenance.
+  const unattested = createRegistry({ seed: history });
+  await assert.rejects(npm.fetchReusedTarball({ ...record, version: '0.1.0-rc.3', integrity: draftIntegrity('3') }, { ...unattested.io(), fetch: async (url) => {
+    const response = await unattested.fetch(url);
+    return { ...response, json: async () => { const body = await response.json(); delete body.dist.attestations; return body; } };
+  } }), /@muxui\/react@0\.1\.0-rc\.3 has no SLSA provenance attestation/u);
+  // A tarball named at another host is not downloaded.
+  const elsewhere = createRegistry({ seed: history });
+  await assert.rejects(npm.fetchReusedTarball(record, { ...elsewhere.io(), fetch: async (url) => {
+    const response = await elsewhere.fetch(url);
+    return { ...response, json: async () => { const body = await response.json(); body.dist.tarball = 'https://example.com/react.tgz'; return body; } };
+  } }), /names its tarball at "https:\/\/example\.com\/react\.tgz", not on https:\/\/registry\.npmjs\.org/u);
+});
+
+test('E-P2.1-03 and E-P2.1-06 a tooling-only release goes from its candidate through promotion to publishing only tooling', async () => {
+  const candidate = successorOf();
+  const registry = createRegistry({ seed: afterFirstRelease() });
+  const { run, lines } = publishRun({ registry, candidate });
+  await run();
+
+  // Only tooling publishes, through OIDC (it exists), and the others stay where they are.
+  assert.deepEqual(registry.writes, [{ op: 'publish', name: tooling, version: '1.1.0-rc.2', tag: 'next', auth: 'oidc' }]);
+  assert.deepEqual(readdirSync(candidate.directory).sort(), [tarballFileName(tooling, '1.1.0-rc.2'), PORTFOLIO_MANIFEST_FILE].sort(), 'the candidate holds the published tarball and the manifest');
+  assert.deepEqual(lines.filter((line) => /^(Publish set|Candidate verified|Reused|Publishing|Published|Preflight passed)/u.test(line) || line.includes(': reused,')), [
+    `Candidate verified: ${tooling}@1.1.0-rc.2 ${recordOf(candidate.manifest, tooling).integrity}`,
+    `Reused, not published: ${[schema, catalog, react].map((name) => `${name}@${versionOf[name]} ${recordOf(candidate.manifest, name).integrity}`).join(', ')}`,
+    `Publish set: ${tooling}@1.1.0-rc.2`,
+    ...[schema, catalog, react].map((name) => `${name}@${versionOf[name]}: reused, on the registry with ${recordOf(candidate.manifest, name).integrity}`),
+    'Preflight passed for 1 packages; publishing in order.',
+    `Publishing ${tooling}@1.1.0-rc.2 (1 of 1)`,
+    `Published ${tooling}@1.1.0-rc.2 (1 of 1)`,
+  ]);
+  // next moved over tooling's rc.1 without touching latest; the reused packages and their placeholders are untouched.
+  assert.deepEqual(registry.packument(tooling)['dist-tags'], { latest: first.tooling, next: '1.1.0-rc.2' });
+  for (const name of [schema, catalog]) assert.deepEqual(registry.packument(name)['dist-tags'], { latest: versionOf[name], next: versionOf[name] });
+  assert.deepEqual(registry.packument(react)['dist-tags'], { latest: '0.1.0-rc.1', next: first.react });
+  assert.ok(Object.hasOwn(registry.packument(tooling).versions, '0.0.0-stage'));
+  assert.ok(!registry.requests.some((url) => url.endsWith('.tgz') && url.includes('tooling')), 'the publish job reads the version documents of reused packages, not their tarballs');
+});
+
+test('E-P2.1-03 a release that reuses React publishes catalog and tooling in order and leaves schema and React alone', async () => {
+  const candidate = successorOf({ published: [catalog, tooling], versions: { [catalog]: '2.1.0-rc.2', [tooling]: '1.1.0-rc.2' } });
+  const registry = createRegistry({ seed: afterFirstRelease() });
+  const { run, lines } = publishRun({ registry, candidate });
+  await run();
+  assert.deepEqual(registry.writes.map(({ name, version, auth }) => [name, version, auth]), [[catalog, '2.1.0-rc.2', 'oidc'], [tooling, '1.1.0-rc.2', 'oidc']]);
+  assert.ok(lines.includes(`Preflight passed for 2 packages; publishing in order.`));
+  assert.ok(lines.includes(`${react}@${first.react}: reused, on the registry with ${recordOf(candidate.manifest, react).integrity}`));
+  assert.deepEqual(candidate.manifest.publication.order, [catalog, tooling]);
+  assert.deepEqual(registry.packument(react)['dist-tags'], { latest: '0.1.0-rc.1', next: first.react }, '@muxui/react is untouched');
+});
+
+test('E-P2.1-06 refusals: a reused package the registry does not hold as recorded stops the release before any publish', async () => {
+  const history = afterFirstRelease();
+  const refuse = async (seed, message) => {
+    const registry = createRegistry({ seed });
+    const candidate = successorOf();
+    const { run } = publishRun({ registry, candidate });
+    await assert.rejects(run(), message);
+    assert.deepEqual(registry.writes, [], 'nothing was published');
+  };
+  // Promotion fetches the reused bytes, so each of these ends the prepare job; the publish job checks the same version document.
+  await refuse({ ...history, [catalog]: { ...history[catalog], versions: { '0.0.0-stage': draftIntegrity('s') }, tarballs: {} } }, /@muxui\/catalog@2\.1\.0-rc\.1, which this release reuses, is not on the registry/u);
+  await refuse({ ...history, [react]: { ...history[react], tarballs: { [first.react]: Buffer.from('repacked') }, versions: { ...history[react].versions, [first.react]: recordOf(prior.manifest, react).integrity } } }, /The tarball of @muxui\/react@0\.1\.0-rc\.5 is sha512-.*; its earlier release recorded sha512-/u);
+  // The publish job alone: its candidate is verified and its reused package was changed on the registry since (same version, other integrity).
+  const candidate = successorOf();
+  const registry = createRegistry({ seed: { ...history, [schema]: { ...history[schema], versions: { ...history[schema].versions, [first.schema]: draftIntegrity('q') }, tarballs: {} } } });
+  const io = { ...registry.io(), publish: registry.publish };
+  await npm.main('verify-candidate', candidate.environment, io);
+  await assert.rejects(npm.main('publish-set', candidate.environment, io), (error) => error.title === 'Registry integrity mismatch' && /@muxui\/schema@0\.6\.0-rc\.1 has sha512-q+==/u.test(error.message));
+  assert.deepEqual(registry.writes, []);
+});
+
+test('E-P2.1-06 refusals: a collision of a published version, and a version input that disagrees with the manifest, stop the release', async () => {
+  const history = afterFirstRelease();
+  // Tooling's rc.2 is already on the registry: nothing publishes.
+  const collide = createRegistry({ seed: { ...history, [tooling]: { ...history[tooling], versions: { ...history[tooling].versions, '1.1.0-rc.2': draftIntegrity('t') }, tags: { latest: first.tooling, next: '1.1.0-rc.2' } } } });
+  await assert.rejects(publishRun({ registry: collide, candidate: successorOf() }).run(), /@muxui\/tooling@1\.1\.0-rc\.2 is already on the registry/u);
+  assert.deepEqual(collide.writes, []);
+  // A publish input for a package the manifest reuses (React was unchanged), or an empty input for one it publishes.
+  const candidate = successorOf();
+  const read = (versions, expectedIntegrity = candidate.integrity) => npm.readCandidateSet({ directory: candidate.directory, publishSet, versions, revision: secondCommit, expectedIntegrity });
+  assert.throws(() => read(new Map([...candidate.versions, [react, '0.1.0-rc.6']])), /Expected exactly the tarball of each published package/u);
+  const asPublished = successorOf();
+  const manifest = structuredClone(asPublished.manifest);
+  manifest.packages.find((record) => record.name === react).role = 'published';
+  writeFileSync(join(asPublished.directory, PORTFOLIO_MANIFEST_FILE), JSON.stringify(manifest));
+  assert.throws(() => npm.readCandidateSet({ directory: asPublished.directory, publishSet, versions: asPublished.versions, revision: secondCommit, expectedIntegrity: asPublished.integrity }), /The version input for @muxui\/react is empty, which reuses it, and the release manifest has it as "published"/u);
+  // The authorization names exactly the published tarball: not the reused ones, and not none.
+  assert.throws(() => read(candidate.versions, `${candidate.integrity},${recordOf(candidate.manifest, react).integrity}`), /the tarball-sha512 input authorizes .*,/u);
+  assert.throws(() => read(candidate.versions, recordOf(candidate.manifest, react).integrity), /This release publishes @muxui\/tooling sha512-/u);
+  assert.throws(() => read(candidate.versions, ''), /authorizes nothing/u);
+  assert.deepEqual(read(candidate.versions).reused.map(({ name }) => name), [schema, catalog, react]);
+});
+
+test('the publication CLI preflights only what a release publishes', async () => {
+  const registry = createRegistry({ seed: afterFirstRelease() });
+  const lines = [];
+  await npm.main('preflight-set', { MUXUI_RELEASE_VERSIONS: successorOf().text }, { ...registry.io({ log: (line) => lines.push(line) }), publish: registry.publish });
+  assert.deepEqual(lines, [
+    `${schema}: reused (not preflighted; the prior release manifest names its version)`,
+    `${catalog}: reused (not preflighted; the prior release manifest names its version)`,
+    `${react}: reused (not preflighted; the prior release manifest names its version)`,
+    `${tooling}@1.1.0-rc.2: 404 (no collision)`,
+    `${tooling} dist-tags latest=${first.tooling} next=${first.tooling}`,
+  ]);
+  assert.deepEqual(registry.writes, []);
 });

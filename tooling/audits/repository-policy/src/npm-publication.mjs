@@ -4,7 +4,7 @@
 //
 //   node npm-publication.mjs validate-version   VERSION                           @muxui/react's rule
 //   node npm-publication.mjs check-npm
-//   node npm-publication.mjs preflight-set      MUXUI_RELEASE_VERSIONS            every package of the set, read-only
+//   node npm-publication.mjs preflight-set      MUXUI_RELEASE_VERSIONS            every package the release publishes, read-only
 //   node npm-publication.mjs verify-candidate   CANDIDATE_DIR MUXUI_RELEASE_VERSIONS EXPECTED_SHA512 GITHUB_SHA
 //   node npm-publication.mjs publish-set        the same, plus RUNNER_TEMP, and NPM_TOKEN for a first publish
 //   node npm-publication.mjs preflight|recheck|read-back   one package (PACKAGE, default @muxui/react)
@@ -260,41 +260,67 @@ const describe = (state) => (state.kind === 'first'
 // The release's package set and its candidate.
 
 /**
- * The version of each package, from `name=version` pairs (the workflow's MUXUI_RELEASE_VERSIONS): exactly one per
- * member of the publish set, each an admitted candidate version of its package. That each is an rc of the package's
- * source version is `release-set.mjs validate-versions` in the prepare job, which has the sources.
+ * The version of each package the release publishes, from `name=version` pairs (the workflow's MUXUI_RELEASE_VERSIONS):
+ * exactly one pair per member of the publish set, each an admitted candidate version of its package. A pair with an
+ * empty version (`name=`) reuses the package: the Map leaves it out, and the release manifest says what it reuses. That
+ * each version is an rc of the package's source version is `release-set.mjs validate-versions` in the prepare job,
+ * which has the sources.
  */
 export function parseVersionPairs(text, publishSet) {
   const given = new Map();
   for (const pair of String(text ?? '').split(',').map((part) => part.trim()).filter(Boolean)) {
     const [name, version, ...extra] = pair.split('=');
-    if (!version || extra.length > 0) stop('Invalid versions', `${JSON.stringify(pair)} is not name=version.`);
+    if (version === undefined || extra.length > 0) stop('Invalid versions', `${JSON.stringify(pair)} is not name=version.`);
     if (!publishSet.packages.some((entry) => entry.name === name)) stop('Invalid versions', `${name} is not in the publish set.`);
     if (given.has(name)) stop('Invalid versions', `${name} is listed twice.`);
-    parseCandidate(name, version);
+    if (version !== '') parseCandidate(name, version);
     given.set(name, version);
   }
   const missing = publishSet.packages.filter(({ name }) => !given.has(name)).map(({ name }) => name);
-  if (missing.length > 0) stop('Invalid versions', `A release takes a version for every member of the set; missing ${missing.join(', ')}.`);
-  return new Map(publishSet.packages.map(({ name }) => [name, given.get(name)]));
+  if (missing.length > 0) stop('Invalid versions', `A release names every member of the set, with an empty version to reuse one; missing ${missing.join(', ')}.`);
+  const versions = new Map(publishSet.packages.filter(({ name }) => given.get(name) !== '').map(({ name }) => [name, given.get(name)]));
+  if (versions.size === 0) stop('Invalid versions', 'A release publishes at least one package; every version is empty.');
+  return versions;
 }
 
 const integrityOf = (bytes) => `sha512-${createHash('sha512').update(bytes).digest('base64')}`;
 const integrityPattern = /^sha512-[A-Za-z0-9+/]{86}==$/u;
 
+/** The integrities the `tarball-sha512` input authorizes: one sha512 per tarball the release publishes, comma separated. */
+function parseAuthorized(text) {
+  const listed = String(text ?? '').split(',').map((part) => part.trim()).filter(Boolean);
+  const bad = listed.filter((integrity) => !integrityPattern.test(integrity));
+  if (bad.length > 0) stop('Integrity mismatch', `The tarball-sha512 input lists ${JSON.stringify(bad)}, ${bad.length === 1 ? 'which is not a sha512 integrity' : 'which are not sha512 integrities'}.`);
+  return new Set(listed);
+}
+
 /**
- * Reads the downloaded candidate the way the publish job must trust it: exactly the tarball of each package and the
- * portfolio manifest for `versions`; the manifest is for this commit (`revision`) and lists the set in publish order;
- * each published package is the manifest's recorded bytes (sha512), built from this commit and this release; and
- * @muxui/react is the tarball the operator authorized (`expectedIntegrity`, the tarball-sha512 input). The prepare
- * job already verified the manifest against its sources; this repeats only what the bytes and inputs can show.
- * Returns the packages to publish, in publish order: { name, version, file, integrity }. A reused package is skipped.
+ * Stops unless the tarball-sha512 input (`text`) authorizes exactly the tarballs a release publishes: the sha512
+ * integrities of `published` (their manifest records), no more and no fewer, comma separated.
+ */
+export function assertAuthorizedTarballs(published, text) {
+  const authorized = parseAuthorized(text);
+  const recorded = new Set(published.map((record) => record.integrity));
+  if (authorized.size !== recorded.size || ![...recorded].every((integrity) => authorized.has(integrity))) {
+    stop('Integrity mismatch', `This release publishes ${published.map((record) => `${record.name} ${record.integrity}`).join(', ')}; the tarball-sha512 input authorizes ${authorized.size === 0 ? 'nothing' : [...authorized].join(', ')}.`);
+  }
+}
+
+/**
+ * Reads the downloaded candidate the way the publish job must trust it: exactly the tarball of each published package
+ * and the portfolio manifest; the manifest is for this commit (`revision`) and lists the set in publish order; a package
+ * is published exactly when its version input is not empty, and reused exactly when it is; each published package is the
+ * manifest's recorded bytes (sha512) built from this commit and this release; and the published tarballs are exactly the
+ * ones the operator authorized (`expectedIntegrity`, the tarball-sha512 input: their sha512 integrities, comma
+ * separated). `versions` maps the published packages only. The prepare job already verified the manifest against its
+ * sources; this repeats only what the bytes and inputs can show. Returns the packages to publish, in publish order, as
+ * { name, version, file, integrity }, and the packages the release reuses, as { name, version, integrity }.
  */
 export function readCandidateSet({ directory, publishSet, versions, revision, expectedIntegrity }) {
   const expected = candidateFileNames(publishSet, versions);
   const found = readdirSync(directory).sort();
   if (found.join() !== [...expected].sort().join()) {
-    stop('Candidate ambiguous', `Expected exactly the tarball of each package and one release manifest, ${JSON.stringify(expected)}; found ${JSON.stringify(found)}.`);
+    stop('Candidate ambiguous', `Expected exactly the tarball of each published package and one release manifest, ${JSON.stringify(expected)}; found ${JSON.stringify(found)}.`);
   }
   const manifest = JSON.parse(readFileSync(join(directory, PORTFOLIO_MANIFEST_FILE), 'utf8'));
   if (manifest.source?.revision !== revision) {
@@ -304,19 +330,20 @@ export function readCandidateSet({ directory, publishSet, versions, revision, ex
   if (records.map(({ name }) => name).join() !== publishSet.packages.map(({ name }) => name).join()) {
     stop('Candidate lineage', `The release manifest lists ${records.map(({ name }) => name).join(', ')}, not the publish set in order.`);
   }
-  const react = records.find(({ name }) => name === PACKAGE_NAME);
-  if (!expectedIntegrity || react?.integrity !== expectedIntegrity) {
-    stop('Integrity mismatch', `${PACKAGE_NAME} is ${react?.integrity}; the tarball-sha512 input is ${expectedIntegrity || 'empty'}.`);
-  }
   const packages = [];
+  const reused = [];
   for (const record of records) {
     const { name } = record;
     const version = versions.get(name);
+    if (version === undefined) {
+      if (record.role !== 'reused') stop('Candidate lineage', `The version input for ${name} is empty, which reuses it, and the release manifest has it as ${JSON.stringify(record.role)}.`);
+      reused.push({ name, version: record.version, integrity: record.integrity });
+      continue;
+    }
+    if (record.role !== 'published') stop('Candidate lineage', `${name} has role ${JSON.stringify(record.role)} in the release manifest, and its version input publishes it.`);
     if (record.version !== version || record.file !== tarballFileName(name, version)) {
       stop('Version mismatch', `${name} is ${record.version} (${record.file}) in the release manifest; the version input is ${version}.`);
     }
-    if (record.role === 'reused') continue;
-    if (record.role !== 'published') stop('Candidate lineage', `${name} has role ${JSON.stringify(record.role)} in the release manifest.`);
     const file = join(directory, record.file);
     const integrity = integrityOf(readFileSync(file));
     if (!integrityPattern.test(record.integrity ?? '') || integrity !== record.integrity) {
@@ -327,8 +354,37 @@ export function readCandidateSet({ directory, publishSet, versions, revision, ex
     }
     packages.push({ name, version, file, integrity });
   }
-  if (packages.length === 0) stop('Candidate empty', 'The release manifest publishes no package.');
-  return packages;
+  assertAuthorizedTarballs(records.filter(({ name }) => versions.has(name)), expectedIntegrity);
+  return { packages, reused };
+}
+
+const fetchBytes = async (url, { fetch = globalThis.fetch } = {}) => {
+  const response = await fetch(url, { signal: AbortSignal.timeout(fetchTimeoutMs) });
+  return { status: response.status, bytes: response.status === 200 ? Buffer.from(await response.arrayBuffer()) : null };
+};
+
+/**
+ * Whether `name@version` is on the registry exactly as its earlier release recorded it: the version document names the
+ * recorded integrity and carries SLSA provenance, as the publish read-back requires. Returns the version document.
+ */
+export async function readReusedVersion({ name, version, integrity }, io = {}) {
+  const { status, body } = await readRegistry(packageUrl(name, version), io);
+  if (status === 404) stop('Reused package absent', `${name}@${version}, which this release reuses, is not on the registry.`);
+  if (status !== 200) stop('Registry read failed', `Unexpected HTTP ${status} reading ${name}@${version}.`);
+  judgeVersionDocument({ name, version, expectedIntegrity: integrity, document: body });
+  return body;
+}
+
+/** The bytes of a reused package, taken from the public registry by exact version and held to the recorded integrity. */
+export async function fetchReusedTarball(record, io = {}) {
+  const { name, version, integrity } = record;
+  const document = await readReusedVersion(record, io);
+  const url = document.dist.tarball;
+  if (typeof url !== 'string' || !url.startsWith(`${REGISTRY}/`)) stop('Registry tarball invalid', `${name}@${version} names its tarball at ${JSON.stringify(url)}, not on ${REGISTRY}.`);
+  const { status, bytes } = await fetchBytes(url, io);
+  if (status !== 200) stop('Registry read failed', `Unexpected HTTP ${status} reading the tarball of ${name}@${version}.`);
+  if (integrityOf(bytes) !== integrity) stop('Registry integrity mismatch', `The tarball of ${name}@${version} is ${integrityOf(bytes)}; its earlier release recorded ${integrity}.`);
+  return bytes;
 }
 
 // ---------------------------------------------------------------------------
@@ -337,18 +393,30 @@ export function readCandidateSet({ directory, publishSet, versions, revision, ex
 /**
  * Publishes `packages` in order, one at a time, and stops at the first failure.
  *
- * First every package is preflighted (read-only), so a collision or a bad lineage anywhere in the set stops the
- * release before the first publish. So does a first publish (the package is absent) when there is no `token`: such a
+ * First every package the release reuses is read from the registry at its recorded integrity, and every package it
+ * publishes is preflighted (read-only), so a collision or a bad lineage anywhere in the set stops the release before
+ * the first publish. So does a first publish (the package is absent) when there is no `token`: such a
  * package cannot publish through trusted publishing, and nothing falls back. Then for each package: the drift
  * recheck, `publish(package, { token })` (the injected `npm publish`; `token` is given to a first publish only, an
  * existing package publishes through OIDC), and the registry read-back of its integrity, provenance, and dist-tags. A failure rethrows with
  * `error.progress` = { attempted, verified, failed }: the packages whose publish was attempted, those whose
  * read-back passed, and the one that failed with the phase it failed in. Nothing later is attempted.
  */
-export async function publishSet({ packages, publish, token, ...io }) {
+export async function publishSet({ packages, reused = [], publish, token, ...io }) {
   const log = io.log ?? console.log;
   const progress = { attempted: [], verified: [], failed: null };
   const recorded = new Map();
+  // A reused package is not published, but the release stands on it: it must be on the registry as recorded.
+  for (const record of reused) {
+    try {
+      await readReusedVersion(record, io);
+    } catch (error) {
+      progress.failed = { name: record.name, version: record.version, phase: 'preflight' };
+      error.progress = progress;
+      throw error;
+    }
+    log(`${record.name}@${record.version}: reused, on the registry with ${record.integrity}`);
+  }
   for (const { name, version } of packages) {
     let state;
     try {
@@ -526,15 +594,17 @@ function requireEnvironment(environment, checks) {
   }
 }
 
-/** The versions and verified candidate of this run: the packages to publish, in publish order. */
+/** The versions and verified candidate of this run: the packages to publish, in publish order, and the ones it reuses. */
 function candidateFromEnvironment(environment) {
   requireEnvironment(environment, { GITHUB_SHA: /^[0-9a-f]{40}$/u, CANDIDATE_DIR: /^\/\S+$/u });
   const publishSet = readPublishSet();
   const versions = parseVersionPairs(environment.MUXUI_RELEASE_VERSIONS, publishSet);
-  const packages = readCandidateSet({
-    directory: environment.CANDIDATE_DIR, publishSet, versions, revision: environment.GITHUB_SHA, expectedIntegrity: environment.EXPECTED_SHA512,
-  });
-  return { versions, packages };
+  return {
+    versions,
+    ...readCandidateSet({
+      directory: environment.CANDIDATE_DIR, publishSet, versions, revision: environment.GITHUB_SHA, expectedIntegrity: environment.EXPECTED_SHA512,
+    }),
+  };
 }
 
 export async function main(command, environment = process.env, io = {}) {
@@ -560,8 +630,13 @@ export async function main(command, environment = process.env, io = {}) {
       return;
     }
     case 'preflight-set': {
-      const versions = parseVersionPairs(environment.MUXUI_RELEASE_VERSIONS, readPublishSet());
+      const publishSet = readPublishSet();
+      const versions = parseVersionPairs(environment.MUXUI_RELEASE_VERSIONS, publishSet);
       const lines = [];
+      for (const name of publishSet.packages.map((entry) => entry.name).filter((entry) => !versions.has(entry))) {
+        log(`${name}: reused (not preflighted; the prior release manifest names its version)`);
+        lines.push(`- ${name}: reused, not preflighted`);
+      }
       for (const [packageName, packageVersion] of versions) {
         const state = await preflight(packageVersion, io, packageName);
         log(`${packageName}@${packageVersion}: 404 (no collision)`);
@@ -594,17 +669,18 @@ export async function main(command, environment = process.env, io = {}) {
       return;
     }
     case 'verify-candidate': {
-      const { packages } = candidateFromEnvironment(environment);
+      const { packages, reused } = candidateFromEnvironment(environment);
       log(`Candidate verified: ${packages.map((entry) => `${entry.name}@${entry.version} ${entry.integrity}`).join(', ')}`);
+      if (reused.length > 0) log(`Reused, not published: ${reused.map((entry) => `${entry.name}@${entry.version} ${entry.integrity}`).join(', ')}`);
       return;
     }
     case 'publish-set': {
       requireEnvironment(environment, { RUNNER_TEMP: /^\/\S+$/u });
-      const { packages } = candidateFromEnvironment(environment);
+      const { packages, reused } = candidateFromEnvironment(environment);
       const token = takeToken(environment);
       log(`Publish set: ${packages.map((entry) => `${entry.name}@${entry.version}`).join(', ')}`);
       try {
-        const verified = await publishSet({ ...io, packages, token, publish: io.publish ?? ((pkg, auth) => npmPublish(pkg, environment, auth)) });
+        const verified = await publishSet({ ...io, packages, reused, token, publish: io.publish ?? ((pkg, auth) => npmPublish(pkg, environment, auth)) });
         writeSummary(environment, [
           '### Published to next',
           '',

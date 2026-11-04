@@ -123,6 +123,28 @@ export function committedFileReader(revision, cwd) {
   };
 }
 
+/**
+ * The portfolio manifests retained at `revision` (a tracked `tests/evidence/**\/release-manifest.json`) for the releases
+ * `ids` name: where a reused package's record is checked against the release that published it. A release whose manifest
+ * is not retained is absent from the Map, and `verifyPortfolioRelease` then refuses the reuse.
+ */
+export function readRetainedManifests({ ids, revision, cwd }) {
+  const found = new Map();
+  const wanted = new Set(ids);
+  if (wanted.size === 0) return found;
+  const listing = execFileSync('git', ['ls-tree', '-r', '--name-only', '-z', revision, '--', 'tests/evidence'], { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  for (const path of listing.split('\0').filter((entry) => entry.endsWith('/release-manifest.json'))) {
+    let retained;
+    try {
+      retained = JSON.parse(execFileSync('git', ['show', `${revision}:${path}`], { cwd, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }));
+    } catch {
+      continue;
+    }
+    if (retained?.schema === PORTFOLIO_SCHEMA && wanted.has(retained.id)) found.set(retained.id, retained);
+  }
+  return found;
+}
+
 /** A file as committed at the release commit; a missing one stops the release. */
 function requireCommitted(readCommitted, path) {
   if (typeof readCommitted !== 'function') fail('P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE', 'the committed sources must be readable to build or verify a release');
