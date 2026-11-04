@@ -28,7 +28,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, posix, resolve } from 'node:path';
+import { join, posix, relative, resolve, sep } from 'node:path';
 import {
   SchemaValidationError,
   bindingSpecRevision,
@@ -39,7 +39,7 @@ import {
 import { compileTokenRequirementSet } from '@muxui/tokens';
 import { semanticDiff } from '@muxui/tooling/authoring';
 import { canonicalJson } from './canonical-json.mjs';
-import { PORTFOLIO_SCHEMA, caretAllows, readRetainedManifests, releaseIdFor, sha256 } from './release-manifest.mjs';
+import { PORTFOLIO_SCHEMA, caretAllows, readIndexedArtifact, readRetainedManifests, releaseIdFor, sha256 } from './release-manifest.mjs';
 import { releaseVersions, reusedNames } from './release-set.mjs';
 
 const SCHEMA_PACKAGE = '@muxui/schema';
@@ -835,7 +835,8 @@ function portfolioManifestsIn(revision, cwd) {
  * What a release compares with. It must say so: `MUXUI_PRIOR_RELEASE_MANIFEST` is the path of the prior portfolio
  * manifest, or `MUXUI_FIRST_PORTFOLIO_RELEASE=true` declares there is none, which holds only while no tracked file at
  * `revision` is a portfolio release manifest of any schema version. Neither, both, or a flag that contradicts the evidence
- * is refused, so a later release cannot skip the check by leaving the variable unset.
+ * is refused, so a later release cannot skip the check by leaving the variable unset. The prior manifest is the one
+ * committed at `revision`, listed with its digest by its evidence route's index (`readIndexedArtifact`).
  */
 export function resolvePriorRelease({ environment, revision, cwd }) {
   const path = environment[PRIOR_RELEASE_VARIABLE] ?? '';
@@ -850,10 +851,12 @@ export function resolvePriorRelease({ environment, revision, cwd }) {
     if (retained.length > 0) fail('P2_1_FIRST_RELEASE_CONTRADICTED', `${FIRST_RELEASE_VARIABLE}=true, but ${retained.join(', ')} is a portfolio release; give ${PRIOR_RELEASE_VARIABLE}`);
     return { first: true };
   }
+  // The prior manifest is the one the repository retains at the release commit, not whatever file the path names.
+  const retainedPath = relative(cwd, resolve(cwd, path)).split(sep).join(posix.sep);
   try {
-    return { first: false, priorManifest: JSON.parse(readFileSync(resolve(path), 'utf8')) };
+    return { first: false, priorManifest: JSON.parse(readIndexedArtifact({ path: retainedPath, revision, cwd }).toString('utf8')) };
   } catch (error) {
-    return fail('P2_1_PRIOR_RELEASE_UNAVAILABLE', `${PRIOR_RELEASE_VARIABLE} ${path} cannot be read (${error.message.split('\n')[0]})`);
+    return fail('P2_1_PRIOR_RELEASE_UNAVAILABLE', `${PRIOR_RELEASE_VARIABLE} ${path} cannot be read as retained evidence (${error.message.split('\n')[0]})`);
   }
 }
 

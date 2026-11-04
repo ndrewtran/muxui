@@ -562,6 +562,8 @@ test('a release names its prior release, or declares the first and agrees with t
     git('commit', '-q', '-m', 'unrelated evidence');
     assert.deepEqual(resolve({ [FIRST_RELEASE_VARIABLE]: 'true' }, git('rev-parse', 'HEAD')), { first: true });
     write('tests/evidence/p2-1/release.json', priorManifest);
+    const indexed = (bytes) => ({ schema: 'muxui-evidence-index-v1', artifacts: [{ path: 'tests/evidence/p2-1/release.json', sha256: sha256(Buffer.from(bytes)) }] });
+    write('tests/evidence/p2-1/index.json', indexed(`${JSON.stringify(priorManifest)}\n`));
     git('add', '-A');
     git('commit', '-q', '-m', 'retain a portfolio release');
     const retained = git('rev-parse', 'HEAD');
@@ -580,9 +582,23 @@ test('a release names its prior release, or declares the first and agrees with t
       rmSync(join(scratch, path));
       assert.match(refusal({ [FIRST_RELEASE_VARIABLE]: 'true' }, revision), new RegExp(`P2_1_FIRST_RELEASE_CONTRADICTED: .*${path.replace(/[./]/gu, '\\$&')}`, 'u'), what);
     }
-    // The prior manifest's path is read as given.
+    // The prior manifest is read as committed, from the path given (absolute or relative to the repository).
     const path = join(scratch, 'tests/evidence/p2-1/release.json');
     assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, retained), { first: false, priorManifest });
+    assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: 'tests/evidence/p2-1/release.json' }, retained), { first: false, priorManifest });
+    // A forged prior manifest, self-consistent and in the working tree or tracked, is not retained evidence unless its route's index lists it.
+    const forged = { ...priorManifest, packages: priorManifest.packages.map((record, index) => (index === 0 ? { ...record, integrity: `sha512-${'f'.repeat(86)}==` } : record)) };
+    const forgedText = `${JSON.stringify(forged)}\n`;
+    write('tests/evidence/p2-1/release.json', forged);
+    assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, retained), { first: false, priorManifest }, 'an edit that is not committed is not read');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'a forged prior manifest, its index left alone');
+    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: path }, git('rev-parse', 'HEAD')), /P2_1_PRIOR_RELEASE_UNAVAILABLE: .* cannot be read as retained evidence \(P2_1_MANIFEST_EVIDENCE_UNINDEXED: tests\/evidence\/p2-1\/release\.json is not listed with its sha256/u);
+    write('tests/evidence/p2-1/index.json', indexed(forgedText));
+    git('add', '-A');
+    git('commit', '-q', '-m', 'its index updated');
+    assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, git('rev-parse', 'HEAD')), { first: false, priorManifest: forged }, 'the index alone is not the last defence: the registry attestation is');
+    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: join(tmpdir(), 'elsewhere.json') }, retained), /cannot be read as retained evidence/u, 'a path outside the repository');
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }

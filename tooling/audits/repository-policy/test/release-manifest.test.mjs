@@ -370,6 +370,9 @@ test('E-P2.1-03 a reused package is the record of the release that published it,
   assert.throws(() => verify(manifest, artifacts, { priorManifests: new Map([['muxui-portfolio:other', earlierManifest]]) }), /P2_1_MANIFEST_REUSE_UNVERIFIED/u);
   const tampered = { ...earlierManifest, source: { ...earlierManifest.source, tree: 'd'.repeat(40) } };
   assert.throws(() => verify(manifest, artifacts, { priorManifests: new Map([[earlierManifest.id, tampered]]) }), /P2_1_MANIFEST_REUSE_UNVERIFIED/u);
+  // The commit the registry attests for the reused bytes is the commit of the origin release: an origin for another commit does not vouch for the record.
+  const otherOrigin = redigest({ ...earlierManifest, source: { ...earlierManifest.source, revision: commit } });
+  assert.throws(() => verify(manifest, artifacts, { priorManifests: new Map([[earlierManifest.id, otherOrigin]]) }), new RegExp(`P2_1_MANIFEST_REUSE_MISMATCH: @muxui/schema@0\\.6\\.0-rc\\.1 is built from ${otherCommit}, and ${earlierManifest.id} is for ${commit}`, 'u'));
   // It cannot name this release as its own origin.
   const self = redigest({ ...manifest, packages: manifest.packages.map((record) => (record.role === 'reused' ? { ...record, provenance: { ...record.provenance, releaseId: manifest.id } } : record)) });
   assert.throws(() => verify(self, artifacts, { priorManifests }), /P2_1_MANIFEST_PACKAGE_INVALID: @muxui\/schema is reused and records this release as its origin/u);
@@ -396,7 +399,8 @@ test('E-P2.1-03 a reused package must still be compatible with the new tuple', (
   verify(manifestOf(compatible.artifacts, { reused: compatible.reused }), compatible.artifacts, { priorManifests: compatible.priorManifests });
 });
 
-// The manifests that vouch for a reused package are the ones the repository retains as tests/evidence/**/release-manifest.json.
+// The manifests that vouch for a reused package are the ones the repository retains as tests/evidence/**/release-manifest.json,
+// and each is vouched for by the index.json of its evidence route: a tracked file that agrees with its own digest is not enough.
 test('E-P2.1-03 the manifest of the release that published a reused package is read from the retained evidence at the release commit', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'muxui-retained-manifests-'));
   try {
@@ -405,26 +409,54 @@ test('E-P2.1-03 the manifest of the release that published a reused package is r
       mkdirSync(dirname(join(scratch, path)), { recursive: true });
       writeFileSync(join(scratch, path), `${JSON.stringify(value)}\n`);
     };
+    // A route holding `value` as its release manifest, with the index that lists it (`listed`: the digest the index records, by default the file's).
+    const retain = (route, value, listed = sha256(Buffer.from(`${JSON.stringify(value)}\n`))) => {
+      const path = `tests/evidence/${route}/artifacts/release-manifest.json`;
+      write(path, value);
+      write(`tests/evidence/${route}/index.json`, { artifacts: [{ path, sha256: listed }], schema: 'muxui-evidence-index-v1' });
+    };
+    const commitAll = (message) => {
+      git('add', '-A');
+      git('commit', '-q', '-m', message);
+      return git('rev-parse', 'HEAD');
+    };
+    const read = (id, revision) => readRetainedManifests({ ids: [id], revision, cwd: scratch });
     const { manifest } = honest();
     git('init', '-q');
-    write('tests/evidence/r1-exit-0.1.0-rc.5/artifacts/release-manifest.json', manifest);
+    retain('r1-exit-0.1.0-rc.5', manifest);
     write('tests/evidence/r1-exit-0.1.0-rc.4/artifacts/release-manifest.json', { schema: 'muxui-release-manifest-v1', id: manifest.id });
     write('tests/evidence/p2.1/notes.json', manifest);
     write('docs/release-manifest.json', manifest);
-    git('add', '-A');
-    git('commit', '-q', '-m', 'retain');
-    const revision = git('rev-parse', 'HEAD');
+    const revision = commitAll('retain');
     // Only a portfolio manifest of a release asked for, wherever its file is named release-manifest.json under tests/evidence.
-    assert.deepEqual([...readRetainedManifests({ ids: [manifest.id], revision, cwd: scratch })], [[manifest.id, JSON.parse(JSON.stringify(manifest))]]);
-    assert.deepEqual([...readRetainedManifests({ ids: ['muxui-portfolio:other'], revision, cwd: scratch })], []);
+    assert.deepEqual([...read(manifest.id, revision)], [[manifest.id, JSON.parse(JSON.stringify(manifest))]]);
+    assert.deepEqual([...read('muxui-portfolio:other', revision)], []);
     assert.deepEqual([...readRetainedManifests({ ids: [], revision: 'not-read', cwd: scratch })], [], 'a release that reuses nothing reads nothing');
     // The commit decides: a manifest added after it is not retained at it.
-    const earlier = revision;
-    write('tests/evidence/later/release-manifest.json', { ...manifest, id: 'muxui-portfolio:later' });
-    git('add', '-A');
-    git('commit', '-q', '-m', 'later');
-    assert.deepEqual([...readRetainedManifests({ ids: ['muxui-portfolio:later'], revision: earlier, cwd: scratch })], []);
-    assert.deepEqual([...readRetainedManifests({ ids: ['muxui-portfolio:later'], revision: git('rev-parse', 'HEAD'), cwd: scratch }).keys()], ['muxui-portfolio:later']);
+    retain('later', { ...manifest, id: 'muxui-portfolio:later' });
+    const later = commitAll('later');
+    assert.deepEqual([...read('muxui-portfolio:later', revision)], []);
+    assert.deepEqual([...read('muxui-portfolio:later', later).keys()], ['muxui-portfolio:later']);
+
+    // A forged manifest of the same release (a repacked package, the retained integrity and sha256 updated, its own digest
+    // recomputed) is self-consistent. It is retained evidence only if its route's index lists these bytes.
+    const [schemaRecord, ...otherRecords] = manifest.packages;
+    const forged = redigest({ ...manifest, packages: [{ ...schemaRecord, integrity: `sha512-${'f'.repeat(86)}==`, sha256: digest('f') }, ...otherRecords] });
+    assert.notEqual(forged.digest, manifest.digest);
+    const refuses = (pattern, message) => assert.throws(() => read(manifest.id, git('rev-parse', 'HEAD')), pattern, message);
+    const original = 'tests/evidence/r1-exit-0.1.0-rc.5/artifacts/release-manifest.json';
+    write(original, forged);
+    commitAll('the retained manifest replaced, its index left alone');
+    refuses(/P2_1_MANIFEST_EVIDENCE_UNINDEXED: tests\/evidence\/r1-exit-0\.1\.0-rc\.5\/artifacts\/release-manifest\.json is not listed with its sha256/u, 'an index that lists the original bytes');
+    write(original, manifest);
+    rmSync(join(scratch, 'tests/evidence/later'), { recursive: true });
+    write('tests/evidence/forged-without-index/artifacts/release-manifest.json', forged);
+    commitAll('a forged copy in a route without an index');
+    refuses(/P2_1_MANIFEST_EVIDENCE_UNINDEXED: tests\/evidence\/forged-without-index\//u, 'no index at all');
+    rmSync(join(scratch, 'tests/evidence/forged-without-index'), { recursive: true });
+    retain('forged-and-listed', forged);
+    commitAll('a forged copy whose own index lists it');
+    refuses(/P2_1_MANIFEST_EVIDENCE_AMBIGUOUS: tests\/evidence\/r1-exit-0\.1\.0-rc\.5\/artifacts\/release-manifest\.json is a second, different manifest of /u, 'two different manifests of one release');
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }

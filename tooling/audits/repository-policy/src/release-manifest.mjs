@@ -124,23 +124,52 @@ export function committedFileReader(revision, cwd) {
 }
 
 /**
- * The portfolio manifests retained at `revision` (a tracked `tests/evidence/**\/release-manifest.json`) for the releases
- * `ids` name: where a reused package's record is checked against the release that published it. A release whose manifest
- * is not retained is absent from the Map, and `verifyPortfolioRelease` then refuses the reuse.
+ * A retained artifact's bytes as committed at `revision`, authenticated by its evidence route: `tests/evidence/<route>/index.json`
+ * must list the artifact's path with the sha256 of exactly these bytes. A file that is merely tracked, or whose own digest
+ * agrees with itself, is not retained evidence.
+ */
+export function readIndexedArtifact({ path, revision, cwd }) {
+  const read = committedFileReader(revision, cwd);
+  const route = /^tests\/evidence\/[^/]+(?=\/)/u.exec(path)?.[0];
+  const bytes = read(path);
+  let listed;
+  try {
+    listed = JSON.parse(read(`${route}/index.json`)).artifacts.find((artifact) => artifact.path === path);
+  } catch {
+    listed = undefined;
+  }
+  if (bytes === undefined || listed?.sha256 !== sha256(bytes)) {
+    fail('P2_1_MANIFEST_EVIDENCE_UNINDEXED', `${path} is not listed with its sha256 by the index.json of its evidence route at ${revision}`);
+  }
+  return bytes;
+}
+
+/**
+ * The portfolio manifests retained at `revision` (a tracked `tests/evidence/**\/release-manifest.json`, authenticated by its
+ * route's index, see `readIndexedArtifact`) for the releases `ids` name: where a reused package's record is checked against
+ * the release that published it. A release whose manifest is not retained is absent from the Map, and
+ * `verifyPortfolioRelease` then refuses the reuse. A manifest of a wanted release that its route's index does not
+ * vouch for stops the release, as do two different manifests with one id.
  */
 export function readRetainedManifests({ ids, revision, cwd }) {
   const found = new Map();
   const wanted = new Set(ids);
   if (wanted.size === 0) return found;
   const listing = execFileSync('git', ['ls-tree', '-r', '--name-only', '-z', revision, '--', 'tests/evidence'], { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const read = committedFileReader(revision, cwd);
   for (const path of listing.split('\0').filter((entry) => entry.endsWith('/release-manifest.json'))) {
     let retained;
     try {
-      retained = JSON.parse(execFileSync('git', ['show', `${revision}:${path}`], { cwd, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] }));
+      retained = JSON.parse(read(path));
     } catch {
       continue;
     }
-    if (retained?.schema === PORTFOLIO_SCHEMA && wanted.has(retained.id)) found.set(retained.id, retained);
+    if (retained?.schema !== PORTFOLIO_SCHEMA || !wanted.has(retained.id)) continue;
+    const bytes = readIndexedArtifact({ path, revision, cwd });
+    if (found.has(retained.id) && canonicalJson(found.get(retained.id)) !== canonicalJson(retained)) {
+      fail('P2_1_MANIFEST_EVIDENCE_AMBIGUOUS', `${path} is a second, different manifest of ${retained.id}`);
+    }
+    found.set(retained.id, JSON.parse(bytes.toString('utf8')));
   }
   return found;
 }
@@ -499,6 +528,10 @@ export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expect
     const earlier = (origin.packages ?? []).find((candidate) => candidate.name === name && candidate.role === 'published');
     if (earlier === undefined || canonicalJson({ ...record, role: 'published' }) !== canonicalJson(earlier)) {
       fail('P2_1_MANIFEST_REUSE_MISMATCH', `${name}@${record.version} is not the record ${origin.id} published (${earlier?.version}, ${earlier?.integrity})`);
+    }
+    // The commit the registry's attestation names is the record's sourceCommit, so it must be the commit the origin release is for.
+    if (origin.source?.revision !== record.provenance.sourceCommit) {
+      fail('P2_1_MANIFEST_REUSE_MISMATCH', `${name}@${record.version} is built from ${record.provenance.sourceCommit}, and ${origin.id} is for ${origin.source?.revision}`);
     }
   }
 
