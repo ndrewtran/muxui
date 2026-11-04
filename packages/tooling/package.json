@@ -25,6 +25,7 @@
     "src/pnpm-adapter.mjs",
     "src/local-resolver.mjs",
     "src/renderers.mjs",
+    "src/version.mjs",
     "README.md",
     "LICENSE",
     "package.json"
