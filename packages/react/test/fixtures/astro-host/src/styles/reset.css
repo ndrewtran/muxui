@@ -1,0 +1,8 @@
+/* Declares the order every layer below sits in; the app imports this file first. */
+@layer reset, muxui, app;
+
+@layer reset {
+  button {
+    background-color: rgb(255, 0, 0);
+  }
+}

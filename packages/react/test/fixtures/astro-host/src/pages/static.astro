@@ -1,0 +1,25 @@
+---
+// No client directive anywhere: this page must ship no script.
+import { Button, Link } from '@muxui/react';
+import '../styles/reset.css';
+import '@muxui/react/styles.css';
+import '../styles/app.css';
+---
+<html lang="en" data-muxui-motion="reduced">
+  <head><meta charset="utf-8" /><link rel="icon" href="data:," /><title>Static</title></head>
+  <body>
+    <main>
+      <Link href="#target">Static link</Link>
+      <form action="/submitted/"><Button type="submit" pending>Save</Button></form>
+      <div id="reset-case"><Button>Plain</Button></div>
+      <div id="app-case"><Button className="app-button">App layer</Button></div>
+      <div id="scoped-case" class="scoped"><Button className="app-button">Scoped</Button></div>
+      <p id="target">Target</p>
+    </main>
+  </body>
+</html>
+<style>
+  .scoped :global(.muxui-button) {
+    background-color: rgb(0, 0, 255);
+  }
+</style>

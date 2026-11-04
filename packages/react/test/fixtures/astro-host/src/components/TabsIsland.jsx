@@ -1,0 +1,13 @@
+import { Tabs } from '@muxui/react';
+
+export default function TabsIsland() {
+  return (
+    <Tabs
+      aria-label="Sections"
+      items={[
+        { id: 'overview', label: 'Overview', panel: 'Project overview' },
+        { id: 'activity', label: 'Activity', panel: 'Recent project activity' },
+      ]}
+    />
+  );
+}
