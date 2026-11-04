@@ -8,8 +8,10 @@
 // (tests/evidence/r1-exit-<version>) names the main CI run, the dry run, and the publish run, and is read, not recaptured.
 //
 //   --evidence             main CI's jobs for the release commit (sanitized excerpts of the tests this capture cites),
-//                          a read-only registry read-back of every package of the set, and the npm-publish
-//                          environment's secret count. Needs read access to GitHub and the registry.
+//                          a read-only registry read-back of every package of the set, the npm-publish environment's
+//                          secret count, and a published-run phase: the four released packages installed from the public
+//                          registry into a clean project and run through their own muxui bin (E-P2.1-02). Needs read access
+//                          to GitHub and the registry, and runs pnpm install and the installed bin.
 //     --after-ci-run=<id>:<attempt>
 //                          the pull request CI run, after the release commit, whose tooling job ran the one test added
 //                          after the release (E-P2.1-02, installed catalog tamper). It is bound to the tree it ran,
@@ -27,11 +29,12 @@
 // memory and replaces the route, or leaves it untouched on failure. A record never claims P2.1 is complete, or a stable,
 // support, or assistive-technology property. `--rehearsal --out=<dir>` writes elsewhere from an uncommitted tool.
 import { createHash } from 'node:crypto';
-import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { execFile, execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, posix, relative, resolve } from 'node:path';
+import { dirname, join, posix, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual, promisify } from 'node:util';
 import { canonicalJson } from '../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { isolatedPackageManagerEnvironment } from '../../tooling/audits/repository-policy/src/release-proof.mjs';
 import { assertDisclosable, findStep, sanitizationRules, sanitize } from './capture-r1-exit.mjs';
@@ -81,6 +84,10 @@ const policy = 'tooling/audits/repository-policy/test';
 const tooling = 'packages/tooling/test';
 const test = (job, file, title) => ({ kind: 'test', job, file, title });
 const logLine = (source, pattern) => ({ kind: 'log', source, pattern });
+// The packed CLI tests pack the checkout at the release commit with the source manifests' versions, not the published rcs.
+const sourceVersion = (job, file, title) => ({ ...test(job, file, title), scope: 'source-version tuple: packed from the release commit at the source manifests\' versions, not the published release candidates' });
+// Checks of the published-run phase (`observePublishedTuple`) that a part rests on.
+const publishedChecks = (...checks) => ({ kind: 'published', checks });
 // A test title is `version effects: <fixture>` for every SemVer corpus case; capture lists them from the fixtures.
 const versionEffects = { kind: 'corpus', job: 'policy', file: `${policy}/release-effects.test.mjs`, fixtures: `${policy}/fixtures/version-effects`, prefix: 'version effects: ' };
 
@@ -152,47 +159,68 @@ function claimsFor(release) {
         {
           part: 'The resolver and the packed muxui binary read the React descriptor and catalog from the installed tarballs, never the source tree, and list, search, and get discover and retrieve the React tuple.',
           state: 'shown',
+          note: 'Rests on the published-run phase: the four released packages installed from the public registry, at their exact versions and the release manifest\'s integrity, into a clean project outside the checkout, and run through their own muxui bin. The source-version tests are supporting only.',
           evidence: [
-            test('tooling', packedCli, 'E-P2.1-02 the muxui bin and every package it reads are the installed tarballs'),
-            test('tooling', packedCli, 'E-P2.1-02 list, search, and get discover and retrieve the installed React tuple'),
+            publishedChecks('registry-install', 'installed-not-source', 'release-identity', 'discovery-runs', 'installed-local-resolution'),
+            sourceVersion('tooling', packedCli, 'E-P2.1-02 the muxui bin and every package it reads are the installed tarballs'),
+            sourceVersion('tooling', packedCli, 'E-P2.1-02 list, search, and get discover and retrieve the installed React tuple'),
           ],
         },
         {
-          part: 'Golden human, JSON, and dense output for the discovery baseline, and the three renderings normalize to the same response as the catalog API.',
+          part: 'Golden human, JSON, and dense output for the discovery baseline.',
           state: 'shown',
+          note: 'The goldens hold the source-version tuple\'s output and are compared to the source-version run only. They are not compared to the published output, which carries other versions.',
+          evidence: [sourceVersion('tooling', packedCli, 'E-P2.1-02 discovery output matches the packed goldens in human, JSON, and dense modes')],
+        },
+        {
+          part: 'The human, JSON, and dense renderings normalize to the same response as the catalog API.',
+          state: 'shown',
+          note: 'Checked on the published tuple at every command and detail level: each rendering parsed by the installed parser equals the response the installed catalog API and project resolver build for the same request.',
           evidence: [
-            test('tooling', packedCli, 'E-P2.1-02 discovery output matches the packed goldens in human, JSON, and dense modes'),
-            test('tooling', packedCli, 'E-P2.1-02 human, JSON, and dense output normalize to the catalog API response'),
+            publishedChecks('modes-normalize'),
+            sourceVersion('tooling', packedCli, 'E-P2.1-02 human, JSON, and dense output normalize to the catalog API response'),
           ],
         },
         {
-          part: 'Dense output is inside its token budget, with full-detail `get --platform web.react --dense` at its 3072-token ceiling and its brief and compact detail and the registry budget fixtures at their existing budgets.',
+          part: 'Full-detail `get --platform web.react --dense` is inside its 3072-token ceiling, and its brief and compact detail inside their budgets.',
           state: 'shown',
-          note: 'Judged against the row as amended after the release (Decision 0032, "Amendment"); the row at the source revision named only "its token budget". The test at the source revision already held that ceiling as a pinned constant and passed in the release commit\'s CI. The retained log shows the test passing, not the token counts: the test\'s comment gives 2797 for the full-detail case, and no retained log shows that figure.',
+          note: (phase) => `Judged against the row as amended after the release (Decision 0032, "Amendment"); the row at the source revision named only "its token budget". Measured on the published tuple with the installed countTokens and the installed registry's budgets: ${phase.denseGetSummary}. The test at the source revision pins the same ceiling and passed in the release commit's CI.`,
           evidence: [
-            test('tooling', packedCli, 'E-P2.1-02 dense output stays inside every locked token budget'),
+            publishedChecks('dense-get-react'),
+            sourceVersion('tooling', packedCli, 'E-P2.1-02 dense output stays inside every locked token budget'),
             { kind: 'roadmap-amendment', id: 'E-P2.1-02', ceilingConstant: { file: packedCli, name: 'WEB_REACT_GET_FULL_REGRESSION_CEILING' } },
+          ],
+        },
+        {
+          part: 'Dense output is inside its token budget for the registry\'s budget fixtures (manifest, list, search, and get) at every detail level.',
+          state: 'shown',
+          note: (phase) => `Measured on the published tuple with the installed countTokens and the installed registry's budgets: ${phase.denseFixtureSummary}. The source-version test passed in the release commit's CI against the source-version tuple.`,
+          evidence: [
+            publishedChecks('dense-budget-fixtures'),
+            sourceVersion('tooling', packedCli, 'E-P2.1-02 dense output stays inside every locked token budget'),
           ],
         },
         {
           part: 'An invalid request returns a structured error with a stable code and a read-only nextCommand, and each capability P2.1 does not enable is explicitly unavailable in the manifest.',
           state: 'shown',
           evidence: [
-            test('tooling', packedCli, 'E-P2.1-02 invalid requests return structured errors with stable codes and a read-only nextCommand'),
-            test('tooling', packedCli, 'E-P2.1-02 the manifest reports the commands P2.1 does not enable as unavailable'),
+            publishedChecks('invalid-requests', 'unavailable-commands'),
+            sourceVersion('tooling', packedCli, 'E-P2.1-02 invalid requests return structured errors with stable codes and a read-only nextCommand'),
+            sourceVersion('tooling', packedCli, 'E-P2.1-02 the manifest reports the commands P2.1 does not enable as unavailable'),
           ],
         },
         {
           part: 'A descriptor the resolver rejects makes get fail with its typed error.',
           state: 'shown',
-          evidence: [test('tooling', packedCli, 'E-P2.1-02 an installed descriptor the resolver rejects makes get fail with MUXUI_CATALOG_INCOMPATIBLE')],
+          note: 'A negative fixture on the source-version install. The published tooling is built from the same commit (its installed package.json gitHead is the source revision), and the published phase does not repeat the negative.',
+          evidence: [sourceVersion('tooling', packedCli, 'E-P2.1-02 an installed descriptor the resolver rejects makes get fail with MUXUI_CATALOG_INCOMPATIBLE')],
         },
         {
           part: 'SCOPE-TRUST-CACHE-PROVENANCE: the resolver rejects catalog bytes whose integrity or provenance sidecar does not match, with MUXUI_CATALOG_INTEGRITY_MISMATCH.',
           state: 'shown',
           note: 'The case inside the packed-tuple install, where the muxui binary reads the catalog, is a test added after the release commit; it passed in a later pull request CI run, with the resolver source unchanged since the release (see the later run in the execution block and the limits). The other tests ran at the release commit: they reject a changed provenance value in the resolver corpus, a changed byte in an explicit cache copy, and an installed catalog package whose identity or bundle is superseded or malformed.',
           evidence: [
-            test('toolingAfter', packedCli, 'E-P2.1-02 an installed catalog whose bytes differ from its provenance sidecar makes get fail with MUXUI_CATALOG_INTEGRITY_MISMATCH'),
+            sourceVersion('toolingAfter', packedCli, 'E-P2.1-02 an installed catalog whose bytes differ from its provenance sidecar makes get fail with MUXUI_CATALOG_INTEGRITY_MISMATCH'),
             test('tooling', resolverTests, 'E-G0.4 resolver verifies provenance material instead of trusting fixture flags'),
             test('tooling', resolverTests, 'E-G0.4 pnpm adapter admits only an exact verified cache tuple'),
             test('tooling', negotiation, 'E-P2.1-05 an installed catalog that lists a malformed query API version fails integrity'),
@@ -213,7 +241,7 @@ function claimsFor(release) {
         },
       ],
       limits: [
-        'The packed muxui binary runs against the tuple the test packs itself with `pnpm pack` from the checkout at the release commit, at the source manifests\' versions. It does not run against the rc tarballs this release published; those are checked by the pack audit, the set install and entry imports, and the descriptor audit, and release preparation does not run the muxui binary against them.',
+        'The packed-tuple tests (the goldens, the descriptor and catalog tamper negatives, and the other source-version runs) pack the checkout at the release commit with the source manifests\' versions, not the published release candidates. Release preparation does not run the muxui binary against the candidate; the published-run phase did, after the release.',
       ],
     },
     'E-P2.1-03': {
@@ -435,7 +463,7 @@ const crossCuttingScopes = [
   'SCOPE-THEME-PLATFORM-SAFETY',
 ];
 const crossCuttingElsewhere = [
-  { scopeId: 'SCOPE-QUALITY-PERFORMANCE', owner: 'not P2.1', note: 'P2 exit owns the Productization policy; P2.1 keeps the dense-output token budget of E-P2.1-02 (its fourth part)' },
+  { scopeId: 'SCOPE-QUALITY-PERFORMANCE', owner: 'not P2.1', note: 'P2 exit owns the Productization policy; P2.1 keeps the dense-output token budget of E-P2.1-02 (its dense-output part)' },
   { scopeId: 'SCOPE-TRUST-EVIDENCE-PRIVACY', owner: 'not applicable', note: 'P2.1 captures registry, CI, and packed-artifact data, and no consumer code, prompts, screens, or traces' },
 ];
 export const crossCuttingOf = (coverage) => [
@@ -660,6 +688,8 @@ export function buildRecords(verification) {
     const amended = amendedRows[assertionId];
     const row = amended ?? rows[assertionId];
     const citesLater = parts.some(({ evidence }) => evidence.some((item) => item.ciRun !== undefined));
+    const { checks: _checks, ...publishedRun } = phases.published ?? {};
+    const citesPublished = parts.some(({ evidence }) => evidence.some((item) => item.kind === 'published'));
     return [assertionId, canonicalJson({
       schema: 'muxui-evidence-record-v1',
       assertionId,
@@ -680,7 +710,7 @@ export function buildRecords(verification) {
       proofTool: verification.proofTool,
       executedProofTools: verification.executedProofTools[assertionId],
       command: verification.commands,
-      execution: { mainCi: phases.ci.execution, ci: phases.ci.jobs, ...(citesLater ? { laterCi: phases.ci.later } : {}), dryRun: release.dryRun, publish: release.publish },
+      execution: { mainCi: phases.ci.execution, ci: phases.ci.jobs, ...(citesLater ? { laterCi: phases.ci.later } : {}), ...(citesPublished ? { publishedRun } : {}), dryRun: release.dryRun, publish: release.publish },
       environment: phases.ci.environment,
       release: { version: release.version, route: release.route, portfolioId: release.portfolioId, manifestDigest: release.manifestDigest, packages: release.packages },
       registryReadBack: phases.registry.readBack,
@@ -709,6 +739,7 @@ function readme(verification, records) {
   const parsed = Object.values(records).map((text) => JSON.parse(text));
   const review = verification.phases.review;
   const later = verification.phases.ci.later;
+  const published = verification.phases.published;
   return `# P2.1 retained evidence for the first portfolio release
 
 Roadmap "P2.1 Public package graph and portfolio release" requires \`E-P2.1-01\` to
@@ -741,7 +772,7 @@ evidence does not show.${later ? `
 
 One test, added after the release, ran in pull request CI run ${later.execution.runId} (attempt ${later.execution.runAttempt}) at head \`${later.execution.headRevision}\`: the job checked out the merge \`${later.checkedOut.commit}\`, whose tree is the head's. The resolver source (\`packages/tooling/src\`, \`packages/catalog/src\`, \`packages/schema/src\`) is unchanged between the release commit and that head. The \`E-P2.1-02\` row of the Roadmap was amended after the release to name the dense-output ceiling; that record is judged against the amended row.` : ''}
 
-\`artifacts/\` holds the registry read-back of all four packages${review ? ' and the independent review' : ''}; \`validation/\` holds the CI job
+${published ? `\`E-P2.1-02\` also rests on a published-run phase: at ${published.captureTimestamp} the four released packages were installed from the public registry into a clean project outside the checkout, and the installed \`muxui\` bin was run through the discovery matrix, the budget fixtures, an invalid-request corpus, and the commands P2.1 does not enable (\`${published.output.path}\`). ${published.checks.filter(({ passed }) => passed).length} of ${published.checks.length} checks passed. The packed-CLI tests of the release commit pack the source manifests' versions, and the records cite them as source-version supporting evidence.\n\n` : ''}\`artifacts/\` holds the registry read-back of all four packages${review ? ' and the independent review' : ''}; \`validation/\` holds the CI job
 excerpts; \`verification.json\` binds them to the unsanitized log digests. The raw logs and
 tarballs are not retained.
 
@@ -864,13 +895,7 @@ export function toolingReaderSurface(revision) {
 
 /** Read-only `npm view` of a package, with empty user and global npm config so no host credential or override reaches it. */
 async function viewPackage({ name, version }) {
-  const temp = mkdtempSync(join(tmpdir(), 'muxui-p2-1-registry-'));
-  try {
-    const userConfig = join(temp, 'empty-userconfig');
-    const globalConfig = join(temp, 'empty-globalconfig');
-    writeFileSync(userConfig, '');
-    writeFileSync(globalConfig, '');
-    const env = isolatedPackageManagerEnvironment(process.env, { userConfig, globalConfig });
+  return withIsolatedTemp('muxui-p2-1-registry-', async ({ temp, env }) => {
     const npm = (args) => {
       const result = spawnSync('npm', [...args, `--registry=${registry}`], { cwd: temp, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 120_000 });
       if (result.status !== 0) fail('P2_1_REGISTRY_COMMAND_FAILED', `npm ${args.slice(0, 2).join(' ')}: ${(result.stderr || result.stdout).trim().slice(-1000)}`);
@@ -904,9 +929,330 @@ async function viewPackage({ name, version }) {
       });
     }
     return { view, attestations: await response.json(), placeholders };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// The published tuple: the four released packages installed from the public registry into a clean project, then run through
+// their own muxui bin. The checks mirror what packages/tooling/test/packed-cli.test.mjs asks of the source-version tuple, where
+// that still applies: its goldens hold the source-version output, so the published output is normalized instead.
+
+const execFileAsync = promisify(execFile);
+const BUTTON = 'muxui:component:button';
+const detailLevels = ['brief', 'compact', 'full'];
+const publishedPackageManager = 'pnpm@10.33.0';
+const outputModes = { human: [], json: ['--json'], dense: ['--dense'] };
+// Each case is a CLI invocation and the catalog API request it stands for.
+const discoveryCases = detailLevels.flatMap((detail) => [
+  { command: 'manifest', detail, args: ['manifest', '--detail', detail], request: { detail } },
+  { command: 'list', detail, args: ['list', 'component', '--platform', 'web.react', '--detail', detail, '--limit', '2'], request: { kind: 'component', platform: 'web.react', detail, limit: 2, purpose: null, cursor: null, uses: null } },
+  { command: 'search', detail, args: ['search', 'button', '--platform', 'web.react', '--detail', detail, '--limit', '2'], request: { query: 'button', platform: 'web.react', detail, limit: 2, purpose: null, cursor: null, uses: null } },
+  { command: 'get', detail, args: ['get', BUTTON, '--platform', 'web.react', '--detail', detail], request: { id: BUTTON, platform: 'web.react', detail, purpose: null, section: null } },
+]);
+// The registry's budget fixtures: the arguments each command's dense budget is measured with.
+const budgetFixtureArguments = { manifest: [], list: ['--limit', '1'], search: ['button', '--limit', '1'], get: [BUTTON] };
+const invalidRequests = [
+  { args: ['unknown'], code: 'MUXUI_QUERY_INVALID', exitCode: 2, ruleId: 'cli.command.unknown', next: 'muxui --json' },
+  { args: ['list', '--bogus'], code: 'MUXUI_QUERY_INVALID', exitCode: 2, ruleId: 'cli.option.unknown', next: 'muxui list --help' },
+  { args: ['get', BUTTON, '--platform', 'nope'], code: 'MUXUI_QUERY_INVALID', exitCode: 2, ruleId: 'cli.option.value', next: 'muxui get --help' },
+  { args: ['list', '--cursor', 'wrong'], code: 'MUXUI_CURSOR_INVALID', exitCode: 3, ruleId: 'query.cursor.identity', next: 'muxui list --help' },
+  { args: ['get', 'muxui:component:missing'], code: 'MUXUI_ARTIFACT_NOT_FOUND', exitCode: 4, ruleId: 'artifact.resolve.exists', next: 'muxui search "muxui:component:missing" --json' },
+];
+const unavailableCommandNames = ['validate', 'plan', 'doctor', 'init', 'migrate'];
+
+// Run inside the project, so every import is the installed package.
+const REFERENCE = `
+  import { join } from 'node:path';
+  import { pathToFileURL } from 'node:url';
+  import * as catalog from '@muxui/catalog';
+  const { resolvePnpmProjectCatalog } = await import(
+    pathToFileURL(join(process.cwd(), 'node_modules/@muxui/tooling/src/pnpm-adapter.mjs')).href
+  );
+  const operations = { manifest: 'getManifest', list: 'listArtifacts', search: 'searchArtifacts', get: 'getArtifact' };
+  console.log(JSON.stringify(input.map(({ command, request }) => {
+    const resolved = resolvePnpmProjectCatalog({
+      platform: request.platform ?? null,
+      artifact: command === 'get' ? request.id : null,
+      filterBindings: command === 'list' || command === 'search',
+    });
+    if (resolved.type !== 'success') throw new Error(JSON.stringify(resolved));
+    return {
+      project: resolved.api[operations[command]](request),
+      plain: catalog[operations[command]](request),
+    };
+  })));
+`;
+const NORMALIZE = `
+  import { countTokens, parseDense, parseHuman, tokenBudgetFor } from '@muxui/tooling';
+  import { commandRegistry } from '@muxui/tooling/registry';
+  const parse = { json: JSON.parse, dense: parseDense, human: parseHuman };
+  console.log(JSON.stringify({
+    responses: input.map(({ mode, text }) => parse[mode](text)),
+    tokens: input.map(({ mode, text, command, detail }) => (mode === 'dense' && command
+      ? { used: countTokens(text), budget: tokenBudgetFor(commandRegistry, command, detail) }
+      : null)),
+    budgetFixtures: Object.fromEntries(commandRegistry.commands.map(({ name, budgetFixture }) => [name, budgetFixture])),
+  }));
+`;
+
+/** A temporary directory and an environment that reads empty npm user and global config, so no host credential or registry override reaches npm or pnpm. */
+async function withIsolatedTemp(prefix, callback) {
+  const temp = mkdtempSync(join(tmpdir(), prefix));
+  try {
+    const userConfig = join(temp, 'empty-userconfig');
+    const globalConfig = join(temp, 'empty-globalconfig');
+    writeFileSync(userConfig, '');
+    writeFileSync(globalConfig, '');
+    return await callback({ temp, env: isolatedPackageManagerEnvironment(process.env, { userConfig, globalConfig }) });
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }
+}
+
+/**
+ * Installs the released packages (exact versions, scripts ignored) from the public registry into a new project and runs the
+ * installed muxui bin through the discovery matrix, the budget fixtures, an invalid-request corpus, and the commands P2.1 does
+ * not enable. Every check is recorded as it came out, passed or not, and the parts that rest on it follow; only a failure to
+ * install or run stops the capture. `output` is the sanitized text of every run.
+ */
+async function observePublishedTuple({ release, manifest, ceiling, sourceRevision, captureTimestamp }) {
+  return withIsolatedTemp('muxui-p2-1-published-', async ({ temp, env }) => {
+    const project = join(temp, 'project');
+    mkdirSync(project);
+    const exact = Object.fromEntries(release.packages.map(({ name, version }) => [name, version]));
+    writeFileSync(join(project, 'package.json'), `${JSON.stringify({ name: 'published-tuple-consumer', version: '1.0.0', private: true, type: 'module', packageManager: publishedPackageManager, dependencies: exact }, null, 2)}\n`);
+    const pnpm = (args) => spawnSync('pnpm', args, { cwd: project, env, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 600_000 });
+    const install = pnpm(['install', '--ignore-scripts', '--no-frozen-lockfile', `--registry=${registry}`]);
+    if (install.status !== 0) fail('P2_1_PUBLISHED_INSTALL_FAILED', (install.stderr || install.stdout).trim().slice(-1000));
+
+    const checks = [];
+    const check = (id, claim, passed, observed) => checks.push({ id, claim, passed: Boolean(passed), observed });
+    const readJson = (...path) => JSON.parse(readFileSync(join(project, ...path), 'utf8'));
+    const entryOf = (name) => release.packages.find((candidate) => candidate.name === name);
+
+    // The four packages are the registry's bytes, built from the release commit.
+    const locked = [...readFileSync(join(project, 'pnpm-lock.yaml'), 'utf8').matchAll(/^ {2}'(@muxui\/[\w-]+)@([^']+)':\n {4}resolution: \{([^}]*)\}/gmu)]
+      .map(([, name, version, resolution]) => ({ name, version, resolution }));
+    const installs = release.packages.map(({ name, version, integrity }) => {
+      const installed = readJson('node_modules', name, 'package.json');
+      const lockEntries = locked.filter((entry) => entry.name === name);
+      return { name, version, installedVersion: installed.version, gitHead: installed.gitHead ?? null, locked: lockEntries.map(({ version: lockedVersion, resolution }) => ({ version: lockedVersion, resolution })), releaseIntegrity: integrity };
+    });
+    check('registry-install', 'each released package is installed from the public registry at its exact version, with the integrity the release manifest records and the release commit as its gitHead', installs.every((item) => item.installedVersion === item.version && item.gitHead === sourceRevision
+      && isDeepStrictEqual(item.locked, [{ version: item.version, resolution: `integrity: ${item.releaseIntegrity}` }])) && locked.length === release.packages.length, installs);
+
+    // Nothing the muxui bin reads is the checkout.
+    const projectRoot = realpathSync(project);
+    const modules = join(projectRoot, 'node_modules');
+    const packageRoots = Object.fromEntries(release.packages.map(({ name }) => [name, realpathSync(join(project, 'node_modules', name))]));
+    const toolingBin = readJson('node_modules/@muxui/tooling/package.json').bin.muxui;
+    const toolingBinPath = realpathSync(join(packageRoots['@muxui/tooling'], toolingBin));
+    const schemaBesideTooling = realpathSync(join(packageRoots['@muxui/tooling'], '../schema'));
+    const shim = readFileSync(join(project, 'node_modules/.bin/muxui'), 'utf8');
+    const shimTarget = `.pnpm/@muxui+tooling@${entryOf('@muxui/tooling').version}/node_modules/@muxui/tooling/${toolingBin.replace(/^\.\//u, '')}`;
+    const inside = (path) => path.startsWith(`${modules}${sep}`);
+    check('installed-not-source', 'the project is outside the checkout and the muxui bin, the packages it reads, and the schema beside tooling all resolve inside the project\'s node_modules', !`${projectRoot}${sep}`.startsWith(`${repositoryRoot}${sep}`)
+      && Object.values(packageRoots).every(inside) && inside(toolingBinPath) && inside(schemaBesideTooling) && shim.includes(`"$basedir/../${shimTarget}"`), {
+      projectOutsideCheckout: !`${projectRoot}${sep}`.startsWith(`${repositoryRoot}${sep}`),
+      packages: Object.fromEntries(Object.entries(packageRoots).map(([name, path]) => [name, relative(projectRoot, path).split(sep).join('/')])),
+      bin: relative(projectRoot, toolingBinPath).split(sep).join('/'),
+      shimRuns: shimTarget,
+    });
+
+    // The CLI: every invocation, run at most once, a few at a time.
+    const bin = join(project, 'node_modules/.bin/muxui');
+    const invocations = new Map();
+    let active = 0;
+    const waiting = [];
+    const muxui = (args) => {
+      const key = JSON.stringify(args);
+      if (!invocations.has(key)) {
+        invocations.set(key, (async () => {
+          while (active >= 6) await new Promise((resolve) => { waiting.push(resolve); });
+          active += 1;
+          try {
+            const { stdout, stderr } = await execFileAsync(bin, args, { cwd: project, env, maxBuffer: 1 << 26 });
+            return { args, status: 0, stdout, stderr };
+          } catch (error) {
+            if (typeof error.code !== 'number') throw error;
+            return { args, status: error.code, stdout: error.stdout, stderr: error.stderr };
+          } finally {
+            active -= 1;
+            waiting.shift()?.();
+          }
+        })());
+      }
+      return invocations.get(key);
+    };
+    const withMode = (args, mode) => [...args, ...outputModes[mode]];
+    const matrix = discoveryCases.flatMap((entry) => Object.keys(outputModes).map((mode) => ({ ...entry, mode, pending: muxui(withMode(entry.args, mode)) })));
+    const fixtures = detailLevels.flatMap((detail) => Object.entries(budgetFixtureArguments).map(([command, args]) => ({ command, detail, pending: muxui([command, ...args, '--detail', detail, '--dense']) })));
+    const listAll = muxui(['list', 'component', '--platform', 'web.react', '--limit', '100', '--detail', 'brief', '--json']);
+    const invalid = invalidRequests.map((entry) => ({ ...entry, pending: muxui([...entry.args, '--json']) }));
+    const missing = invalidRequests.at(-1);
+    const missingRenderings = { human: muxui(missing.args), dense: muxui([...missing.args, '--dense']) };
+    const refusals = unavailableCommandNames.map((name) => ({ name, pending: muxui([name, '--json']) }));
+    for (const entry of [...matrix, ...fixtures, ...invalid, ...refusals]) entry.result = await entry.pending;
+    const listedAll = await listAll;
+    const missingResults = { human: await missingRenderings.human, dense: await missingRenderings.dense };
+
+    const cases = Object.fromEntries(matrix.filter(({ mode }) => mode === 'json').map((entry) => [`${entry.command}-${entry.detail}`, { ...entry, response: JSON.parse(entry.result.stdout) }]));
+    const descriptor = readJson('node_modules/@muxui/react/generated/renderer-descriptor.json');
+    const descriptorSha = sha256(readFileSync(join(project, 'node_modules/@muxui/react/generated/renderer-descriptor.json')));
+    const manifestDescriptor = manifest.descriptors.find(({ package: owner }) => owner === '@muxui/react');
+    const react = entryOf('@muxui/react');
+    const catalogEntry = entryOf('@muxui/catalog');
+    const responses = Object.values(cases).map(({ response }) => response);
+    const platformResponses = Object.values(cases).filter(({ command }) => command !== 'manifest').map(({ response }) => response);
+
+    check('release-identity', 'the catalog the bin reads is the release manifest\'s catalog (digest and version), and the installed React descriptor is the manifest\'s descriptor (digest, version, binding count)',
+      responses.every(({ meta }) => meta.catalogDigest === manifest.catalog.digest && meta.catalogVersion === manifest.catalog.version)
+      && descriptorSha === manifestDescriptor.digest && descriptor.version === react.version && Object.keys(descriptor.bindings).length === manifestDescriptor.bindings,
+      { catalogDigest: manifest.catalog.digest, catalogVersion: manifest.catalog.version, descriptor: { sha256: descriptorSha, version: descriptor.version, bindings: Object.keys(descriptor.bindings).length, manifestDigest: manifestDescriptor.digest } });
+
+    const componentIds = Object.keys(descriptor.bindings).map((binding) => binding.split('#')[0]).sort();
+    const listedIds = listedAll.status === 0 ? JSON.parse(listedAll.stdout).data.items.map(({ id }) => id).sort() : null;
+    const succeeded = matrix.every(({ result }) => result.status === 0 && result.stderr === '');
+    const oneValue = matrix.filter(({ mode }) => mode === 'json').every(({ result }) => result.stdout.trimEnd().split('\n').length === 1);
+    check('discovery-runs', 'manifest, list, search, and get succeed with empty stderr at every detail level in human, JSON, and dense output, and discover and retrieve the React tuple: every component binding the installed descriptor carries is listed for web.react, search finds Button first, and get returns it with a binding spec revision',
+      succeeded && oneValue && isDeepStrictEqual(listedIds, componentIds) && componentIds.includes(BUTTON) && cases['search-brief'].response.data.items[0].id === BUTTON
+      && detailLevels.every((detail) => cases[`get-${detail}`].response.data.artifact.id === BUTTON && cases[`get-${detail}`].response.meta.platform === 'web.react' && /^sha256:[0-9a-f]{64}$/u.test(cases[`get-${detail}`].response.meta.revisions.bindingSpec)),
+      { runs: matrix.length, allSucceededWithEmptyStderr: succeeded, jsonIsOneValue: oneValue, listedComponents: listedIds?.length ?? null, descriptorComponents: componentIds.length, searchBriefFirst: cases['search-brief'].response.data.items[0].id });
+
+    const targetPackages = { '@muxui/catalog': catalogEntry.version, '@muxui/react': react.version };
+    const resolutions = platformResponses.map(({ meta }) => ({ authority: meta.resolution.authority, catalogSource: meta.resolution.catalogSource, compatibility: meta.resolution.compatibility, targetPackages: meta.resolution.targetPackages }));
+    const specRevision = descriptor.bindings[`${BUTTON}#web.react`].specRevision;
+    check('installed-local-resolution', 'every platform response resolves from the installed project with exact compatibility over the installed catalog and React versions, and get\'s binding spec revision is the one in the installed React descriptor',
+      resolutions.every((resolution) => isDeepStrictEqual(resolution, { authority: 'installed-local', catalogSource: 'project', compatibility: 'exact', targetPackages }))
+      && detailLevels.every((detail) => cases[`get-${detail}`].response.meta.resolution.revisions.bindingSpec === specRevision),
+      { responses: resolutions.length, authority: 'installed-local', catalogSource: 'project', compatibility: 'exact', targetPackages, bindingSpecRevision: specRevision });
+
+    // Every rendering normalizes to one response, equal to the catalog API's for the same request, and dense output has a count.
+    const reference = inProject(project, env, REFERENCE, discoveryCases.map(({ command, request }) => ({ command, request })));
+    const renderings = [
+      ...matrix.map(({ mode, command, detail, result }) => ({ mode, text: result.stdout, command, detail })),
+      ...fixtures.map(({ command, detail, result }) => ({ mode: 'dense', text: result.stdout, command, detail })),
+    ];
+    const normalized = inProject(project, env, NORMALIZE, renderings);
+    const modeNames = Object.keys(outputModes);
+    const normalizedCases = discoveryCases.map((entry, index) => {
+      const { project: resolved, plain } = reference[index];
+      const equal = Object.fromEntries(modeNames.map((mode, offset) => [mode, isDeepStrictEqual(normalized.responses[index * modeNames.length + offset], resolved)]));
+      // Project resolution adds installed-tuple authority; the artifact record is the catalog's own.
+      const artifact = entry.command === 'get' && entry.detail === 'compact' ? isDeepStrictEqual(resolved.data.artifact, plain.data.artifact) : null;
+      return { case: `${entry.command}-${entry.detail}`, ...equal, ...(artifact === null ? {} : { artifactIsCatalogs: artifact }) };
+    });
+    check('modes-normalize', 'the human, JSON, and dense renderings of every case parse to the same response, equal to the one the installed catalog API and project resolver build for the same request', normalizedCases.every((entry) => Object.values(entry).every((value) => value === true || typeof value === 'string')), normalizedCases);
+
+    // Dense token counts against the installed registry's budgets; get --platform web.react at full detail has the amended ceiling.
+    const matrixCount = matrix.length;
+    const denseRows = [
+      ...matrix.flatMap((entry, index) => (entry.mode === 'dense' ? [{ entry, tokens: normalized.tokens[index] }] : [])).map(({ entry, tokens }) => ({ command: entry.command, detail: entry.detail, args: withMode(entry.args, 'dense'), set: entry.command === 'get' ? 'get-web.react' : 'discovery', ...tokens })),
+      ...fixtures.map((entry, index) => ({ command: entry.command, detail: entry.detail, args: [entry.command, ...budgetFixtureArguments[entry.command], '--detail', entry.detail, '--dense'], set: 'budget-fixture', ...normalized.tokens[matrixCount + index] })),
+    ].map((row) => ({ ...row, ceiling: row.set === 'get-web.react' && row.detail === 'full' ? ceiling : row.budget }));
+    const rowsOf = (set) => denseRows.filter((row) => row.set === set);
+    const within = ({ used, ceiling: limit }) => used > 0 && used <= limit;
+    const label = ({ args }) => args.slice(0, -1).join(' ');
+    const summarize = (rows) => (rows.every(within) ? 'all inside their budgets' : `over budget: ${rows.filter((row) => !within(row)).map((row) => `${label(row)} --dense ${row.used} of ${row.budget}`).join('; ')}`);
+    const getRows = rowsOf('get-web.react');
+    const denseGetSummary = `get --platform web.react --dense ${getRows.map(({ detail, used, budget, ceiling: limit }) => (limit === budget ? `${detail} ${used} of ${budget}` : `${detail} ${used} against the ${limit} ceiling (registry budget ${budget})`)).join(', ')}`;
+    const fixtureRows = rowsOf('budget-fixture');
+    const fixturesAgree = isDeepStrictEqual(normalized.budgetFixtures, { manifest: {}, list: { limit: 1 }, search: { query: 'button', limit: 1 }, get: { 'id-or-alias': BUTTON } });
+    const denseFixtureSummary = `${fixtureRows.length} fixture counts, ${summarize(fixtureRows)}`;
+    const rowFacts = (rows) => rows.map(({ args, used, budget, ceiling: limit }) => ({ args, used, budget, ceiling: limit }));
+    check('dense-get-react', `dense output of get --platform web.react is inside its token budget at brief and compact detail and inside the ${ceiling}-token ceiling at full detail, by the installed countTokens`, getRows.length === detailLevels.length && getRows.every(within), { rows: rowFacts(getRows) });
+    check('dense-budget-fixtures', 'dense output of the registry\'s budget fixtures is inside the installed registry\'s token budget at every detail level, by the installed countTokens, and the fixtures are the registry\'s own', fixturesAgree && fixtureRows.length === detailLevels.length * Object.keys(budgetFixtureArguments).length && fixtureRows.every(within), { budgetFixturesAreTheRegistrys: fixturesAgree, rows: rowFacts(fixtureRows) });
+    // The matrix's other dense outputs (limit 2, with a platform) have no recorded gate; their counts are kept for the record.
+    const otherDense = rowFacts(rowsOf('discovery'));
+
+    // An invalid request is a structured error, and one error's three renderings are one response.
+    const invalidProblems = invalid.flatMap(({ args, code, exitCode, ruleId, next, result }) => {
+      let response;
+      try { response = JSON.parse(result.stdout); } catch { return [{ args, problem: 'stdout is not JSON' }]; }
+      const got = { status: result.status, stderr: result.stderr, type: response.type, code: response.error?.code, ruleId: response.error?.ruleId, nextCommand: response.error?.nextCommand };
+      const want = { status: exitCode, stderr: '', type: 'error', code, ruleId, nextCommand: { command: next, effect: 'read-only', requiresConfirmation: false } };
+      return isDeepStrictEqual(got, want) ? [] : [{ args, got, want }];
+    });
+    const errorRenderings = inProject(project, env, NORMALIZE, [
+      { mode: 'human', text: missingResults.human.stderr },
+      { mode: 'json', text: invalid.at(-1).result.stdout },
+      { mode: 'dense', text: missingResults.dense.stdout },
+    ]).responses;
+    const errorRenderingsAgree = isDeepStrictEqual(errorRenderings[0], errorRenderings[1]) && isDeepStrictEqual(errorRenderings[2], errorRenderings[1])
+      && missingResults.human.stdout === '' && missingResults.human.status === missing.exitCode && missingResults.dense.status === missing.exitCode;
+    check('invalid-requests', 'each invalid request returns a structured error with a stable code, exit status, rule id, and a read-only nextCommand, and the human, JSON, and dense renderings of one error are one response', invalidProblems.length === 0 && errorRenderingsAgree,
+      { requests: invalid.map(({ args, code, exitCode, ruleId }) => ({ args, code, exitCode, ruleId })), problems: invalidProblems, errorRenderingsAgree });
+
+    // The commands P2.1 does not enable are unavailable in the manifest, and running one is the typed refusal.
+    const { cli, capabilities } = cases['manifest-full'].response.data;
+    const unavailable = Object.fromEntries(cli.unavailableCommands.map(({ name, capability }) => [name, capability.available]));
+    const refusalProblems = refusals.filter(({ result }) => { try { return result.status !== 2 || JSON.parse(result.stdout).error.ruleId !== 'cli.command.unknown'; } catch { return true; } }).map(({ name }) => name);
+    check('unavailable-commands', 'the manifest lists only manifest, list, search, and get as commands and every other command P2.1 does not enable as unavailable, its one capability is the query baseline, and running an unavailable command is the typed refusal',
+      isDeepStrictEqual(cli.commands.map(({ name }) => name), ['manifest', 'list', 'search', 'get']) && isDeepStrictEqual(unavailable, Object.fromEntries(unavailableCommandNames.map((name) => [name, false])))
+      && isDeepStrictEqual(capabilities.map(({ id, availability }) => [id, availability]), [['muxui:capability:query-baseline', 'available']]) && refusalProblems.length === 0,
+      { commands: cli.commands.map(({ name }) => name), unavailable, capabilities: capabilities.map(({ id, availability }) => [id, availability]), refusalsWithoutTypedError: refusalProblems });
+
+    // What the published tooling says its own version is, observed beside the version npm installed.
+    const toolingVersion = {
+      installed: entryOf('@muxui/tooling').version,
+      muxuiVersionInResponses: [...new Set(responses.map(({ meta }) => meta.muxuiVersion))].sort(),
+      cliVersionInManifest: cli.cli.version,
+    };
+    toolingVersion.reportsInstalledVersion = toolingVersion.muxuiVersionInResponses.length === 1 && toolingVersion.muxuiVersionInResponses[0] === toolingVersion.installed;
+    const declaration = grepAt(sourceRevision, 'const TOOLING_VERSION = ', ['packages/tooling/src/local-resolver.mjs'])[0] ?? null;
+    toolingVersion.source = declaration && { revision: sourceRevision, ...declaration };
+
+    // The sanitized text of every run, in the order it was first requested.
+    const runs = [...matrix, ...fixtures, { result: listedAll }, ...invalid, { result: missingResults.human }, { result: missingResults.dense }, ...refusals].map(({ result }) => result)
+      .filter((result, index, all) => all.findIndex((other) => isDeepStrictEqual(other.args, result.args)) === index);
+    // Beyond the shared rules, two public names the disclosure check reads as possible secrets are replaced; the raw digests below
+    // bind the original bytes. A manifest field named requestKey (the query field a CLI argument fills) has its value replaced, because a
+    // key ending in "key" with a plain value looks like a credential. A token id inside a longer string, such as the example command
+    // `muxui get muxui:token:<name>`, loses its name, because `token:<name>` looks like a credential value; a token id that is a whole
+    // quoted string is a public identifier the check allows, and stays.
+    const rewrites = { sharedRulesChangedLines: 0, requestKeyValues: 0, tokenIdsInsideLongerStrings: 0 };
+    const clean = (text) => text.replace(/\n$/u, '').split('\n').map((line) => {
+      const kept = sanitize(line);
+      if (kept !== line) rewrites.sharedRulesChangedLines += 1;
+      return kept
+        .replace(/"requestKey":"[^"]*"/gu, () => { rewrites.requestKeyValues += 1; return '"requestKey":"<public-id>"'; })
+        .replace(/(["']?)((?:muxui|core):token:[a-z0-9]+(?:-[a-z0-9]+)*)(["']?)/gu, (match, before, _id, after) => {
+          if (before !== '' && before === after) return match;
+          rewrites.tokenIdsInsideLongerStrings += 1;
+          return `${before}muxui:<public-token-id>${after}`;
+        });
+    }).join('\n');
+    const output = `${[
+      `# muxui ${toolingVersion.installed} (the installed bin) run in a clean project that installed ${release.packages.map(({ name, version }) => `${name}@${version}`).join(', ')} from ${registry}, at ${captureTimestamp}`,
+      ...runs.flatMap(({ args, status, stdout, stderr }) => [`$ muxui ${args.join(' ')}`, `exit ${status}`, ...(stdout === '' ? [] : ['stdout:', clean(stdout)]), ...(stderr === '' ? [] : ['stderr:', clean(stderr)])]),
+    ].join('\n')}\n`;
+
+    return {
+      output,
+      phase: {
+        captureTimestamp,
+        observed: 'installed from the public registry after the release, at capture time; only the four @muxui packages are bound to the release manifest',
+        tools: { node: process.version, pnpm: pnpm(['--version']).stdout.trim(), packageManager: publishedPackageManager, install: `pnpm install --ignore-scripts --no-frozen-lockfile --registry=${registry}`, config: 'empty npm user and global config' },
+        dependencies: exact,
+        checks,
+        runs: runs.map(({ args, status, stdout, stderr }) => ({ args, status, stdoutBytes: Buffer.byteLength(stdout), stderrBytes: Buffer.byteLength(stderr), stdoutSha256: sha256(stdout) })),
+        toolingVersion,
+        denseGetSummary,
+        denseFixtureSummary,
+        discoveryDenseCounts: otherDense,
+        sanitization: rewrites,
+      },
+    };
+  });
+}
+
+/** Runs an ES module `script` in `project`, so its bare imports resolve to the installed packages; it sees the JSON `input` and prints its result as JSON. */
+function inProject(project, env, script, input) {
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', `import { readFileSync } from 'node:fs';\nconst input = JSON.parse(readFileSync(0, 'utf8'));\n${script}`], {
+    cwd: project, env, input: JSON.stringify(input), encoding: 'utf8', maxBuffer: 1 << 26,
+  });
+  if (result.status !== 0) fail('P2_1_PUBLISHED_SCRIPT_FAILED', result.stderr.trim().slice(-800));
+  return JSON.parse(result.stdout.trim().split('\n').at(-1));
 }
 
 // ---------------------------------------------------------------------------
@@ -998,6 +1344,48 @@ function publishBlock(lines, label) {
 const resolverSource = ['packages/tooling/src', 'packages/catalog/src', 'packages/schema/src'];
 
 /**
+ * One CI job, read from its run's jobs and log. It must have succeeded, run its own tests (not reused an earlier pass), and run
+ * `group`. Returns the log, the commit the job checked out, and the lines and totals of the log that `cites` names.
+ */
+function readCiJob({ github, jobs, name, group, cites }) {
+  const job = jobs.find((candidate) => candidate.name === name);
+  if (job?.conclusion !== 'success') fail('P2_1_CI_RUN_INVALID', `job ${name} did not succeed`);
+  // A job that reused an earlier pass ran no tests; its steps would be skipped otherwise.
+  if (job.steps?.find((step) => step.name === 'Reuse earlier pass')?.conclusion !== 'skipped') fail('P2_1_CI_JOB_REUSED', `job ${name} reused an earlier pass, so it ran no tests`);
+  const raw = github.log(job.id);
+  const lines = raw.split('\n');
+  if (!lines.some((line) => content(line).startsWith(`[ci-impact] running group ${group} `))) fail('P2_1_CI_JOB_UNBOUND', `job ${name} did not run group ${group}`);
+  const checkedOut = lines.map((line, at) => (content(line).includes('git log -1 --format=%H') ? content(lines[at + 1] ?? '').trim() : null)).find(Boolean);
+  return { job, name, group, raw, lines, checkedOut, ...ciExcerpt(raw, cites) };
+}
+
+/** Retains the excerpt of a job read by `readCiJob`, headed by `heading`, and returns it with the job's record. */
+function retainCiJob(read, { heading, stage }) {
+  const { job, name, group, raw, lines, kept, totals } = read;
+  const text = `${[heading, ...kept.map(({ text: line }) => line)].join('\n')}\n`;
+  const ref = stage(`${root}/validation/${group}-${job.id}.txt`, text);
+  const excerpt = { ...ref, rawLines: kept.map(({ raw: at }) => at) };
+  return {
+    ref,
+    group,
+    // The retained lines, one-based as an excerpt is cited (index 0 is empty).
+    excerptLines: [''].concat(text.split('\n').slice(0, -1)),
+    phase: {
+      jobId: job.id,
+      job: name,
+      group,
+      conclusion: job.conclusion,
+      startedAt: job.started_at,
+      completedAt: job.completed_at,
+      commands: lines.map((line) => /^\[ci-impact\] command: (.+)$/u.exec(content(line))?.[1]).filter(Boolean).map(sanitize),
+      testTotals: totals,
+      rawLog: { bytes: Buffer.byteLength(raw), lines: lines.length, sha256: sha256(raw), retained: false },
+      excerpt,
+    },
+  };
+}
+
+/**
  * The pull request CI run, after the release commit, whose tooling job ran the test added after it. A pull request job
  * checks out the merge of the head into its base, so the job is bound by that merge's tree, which must be the head's,
  * and capture checks that the resolver source did not change between the release commit and the head.
@@ -1011,46 +1399,29 @@ function readLaterCi({ github, run, sourceRevision, cites, stage }) {
   }
   if (spawnSync('git', ['merge-base', '--is-ancestor', sourceRevision, head], { cwd: repositoryRoot }).status !== 0) fail('P2_1_LATER_CI_INVALID', `${head} is not a descendant of ${sourceRevision} in this checkout`);
   const jobs = github.attemptJobs(runId, attempt);
-  const name = 'run checks-tooling';
-  const job = jobs.find((candidate) => candidate.name === name);
   const aggregate = jobs.find((candidate) => candidate.name === 'check');
-  if (job?.conclusion !== 'success' || aggregate?.conclusion !== 'success') fail('P2_1_LATER_CI_INVALID', `job ${name} or the aggregate check of run ${runId} did not succeed`);
-  if (job.steps?.find((step) => step.name === 'Reuse earlier pass')?.conclusion !== 'skipped') fail('P2_1_CI_JOB_REUSED', `job ${name} reused an earlier pass, so it ran no tests`);
-  const raw = github.log(job.id);
-  const lines = raw.split('\n');
-  if (!lines.some((line) => content(line).startsWith('[ci-impact] running group checks-tooling '))) fail('P2_1_CI_JOB_UNBOUND', `job ${name} did not run group checks-tooling`);
-  const checkedOut = lines.map((line, at) => (content(line).includes('git log -1 --format=%H') ? content(lines[at + 1] ?? '').trim() : null)).find(Boolean);
-  const merge = github.commit(checkedOut);
+  if (aggregate?.conclusion !== 'success') fail('P2_1_LATER_CI_INVALID', `the aggregate check of run ${runId} did not succeed`);
+  const read = readCiJob({ github, jobs, name: 'run checks-tooling', group: 'checks-tooling', cites });
+  const merge = github.commit(read.checkedOut);
   const headTree = git('rev-parse', `${head}^{tree}`);
-  if (merge.parents.length !== 2 || merge.parents[1] !== head || merge.tree !== headTree) fail('P2_1_LATER_CI_UNBOUND', `the job checked out ${checkedOut}, which is not a merge of ${head} with the head's tree`);
+  if (merge.parents.length !== 2 || merge.parents[1] !== head || merge.tree !== headTree) fail('P2_1_LATER_CI_UNBOUND', `the job checked out ${read.checkedOut}, which is not a merge of ${head} with the head's tree`);
   const changed = git('diff', '--name-only', sourceRevision, head, '--', ...resolverSource).split('\n').filter(Boolean);
   if (changed.length > 0) fail('P2_1_LATER_RESOLVER_CHANGED', `the resolver source changed between ${sourceRevision} and ${head}: ${changed.join(', ')}`);
   // The test file gained tests and lost none, so every test cited from the release commit's run is still what it was.
   const [added, deleted] = git('diff', '--numstat', sourceRevision, head, '--', packedCli).split('\t');
   if (!(Number(added) > 0 && deleted === '0')) fail('P2_1_LATER_TEST_FILE', `${packedCli} did not only gain lines between ${sourceRevision} and ${head} (${added} added, ${deleted} deleted)`);
 
-  const { kept, totals } = ciExcerpt(raw, cites);
-  const text = `${[`# job: ${name} (job ${job.id}) of pull request CI run ${runId} attempt ${attempt} at head ${head}, which checked out merge ${checkedOut} of it into ${merge.parents[0]}, filtered to the group and commands it ran, the totals each node --test printed, and the passing lines this capture cites`, ...kept.map(({ text: line }) => line)].join('\n')}\n`;
-  const ref = stage(`${root}/validation/checks-tooling-${job.id}.txt`, text);
-  const excerpt = { ...ref, rawLines: kept.map(({ raw: at }) => at) };
+  const retained = retainCiJob(read, { stage, heading: `# job: ${read.name} (job ${read.job.id}) of pull request CI run ${runId} attempt ${attempt} at head ${head}, which checked out merge ${read.checkedOut} of it into ${merge.parents[0]}, filtered to the group and commands it ran, the totals each node --test printed, and the passing lines this capture cites` });
   return {
     head,
-    ref,
-    lines: [''].concat(text.split('\n').slice(0, -1)),
-    group: 'checks-tooling',
-    excerpt,
+    ...retained,
     phase: {
       execution: {
         repository, workflowPath: ciRun.path, event: ciRun.event, headBranch: ciRun.head_branch, pullRequests: (ciRun.pull_requests ?? []).map(({ number }) => number), runId: ciRun.id, runAttempt: ciRun.run_attempt, headRevision: head,
         startedAt: ciRun.run_started_at, conclusion: ciRun.conclusion, aggregateCheck: { jobId: aggregate.id, conclusion: aggregate.conclusion },
-        headInDefaultBranchHistory: spawnSync('git', ['merge-base', '--is-ancestor', head, 'origin/main'], { cwd: repositoryRoot }).status === 0,
       },
-      job: {
-        jobId: job.id, job: name, group: 'checks-tooling', conclusion: job.conclusion, startedAt: job.started_at, completedAt: job.completed_at,
-        commands: lines.map((line) => /^\[ci-impact\] command: (.+)$/u.exec(content(line))?.[1]).filter(Boolean).map(sanitize),
-        testTotals: totals, rawLog: { bytes: Buffer.byteLength(raw), lines: lines.length, sha256: sha256(raw), retained: false }, excerpt,
-      },
-      checkedOut: { ref: 'the pull request merge ref', commit: checkedOut, parents: merge.parents, tree: merge.tree, headTree },
+      job: retained.phase,
+      checkedOut: { ref: 'the pull request merge ref', commit: read.checkedOut, parents: merge.parents, tree: merge.tree, headTree },
       sinceRelease: { sourceRevision, head, resolverSource: { command: `git diff --name-only ${sourceRevision} ${head} -- ${resolverSource.join(' ')}`, changedPaths: changed }, testFile: { path: packedCli, linesAdded: Number(added), linesDeleted: Number(deleted) } },
     },
   };
@@ -1144,42 +1515,41 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     };
     const jobs = {};
     for (const [key, name] of Object.entries(groups)) {
-      const job = ciJobs.find((candidate) => candidate.name === name);
-      if (job?.conclusion !== 'success') fail('P2_1_CI_RUN_INVALID', `job ${name} of run ${mainCi.runId} did not succeed`);
-      // A job that reused an earlier pass ran no tests; its steps would be skipped otherwise.
-      if (job.steps?.find((step) => step.name === 'Reuse earlier pass')?.conclusion !== 'skipped') fail('P2_1_CI_JOB_REUSED', `job ${name} reused an earlier pass, so it ran no tests`);
-      const raw = github.log(job.id);
-      const lines = raw.split('\n');
-      const group = key === 'policy' ? 'checks-policy' : 'checks-tooling';
-      if (!lines.some((line) => content(line).startsWith(`[ci-impact] running group ${group} `))) fail('P2_1_CI_JOB_UNBOUND', `job ${name} did not run group ${group}`);
-      const revision = lines.map((line, at) => (content(line).includes('git log -1 --format=%H') ? content(lines[at + 1] ?? '').trim() : null)).find(Boolean);
-      if (revision !== sourceRevision) fail('P2_1_CI_JOB_UNBOUND', `job ${name} checked out ${revision}, not ${sourceRevision}`);
-      const { kept, totals } = ciExcerpt(raw, cited(key));
-      const text = `${[`# job: ${name} (job ${job.id}) of main CI run ${mainCi.runId} attempt ${mainCi.runAttempt}, filtered to the group and commands it ran, the totals each node --test printed, and the passing lines this capture cites`, ...kept.map(({ text: line }) => line)].join('\n')}\n`;
-      const ref = stage(`${root}/validation/${group}-${job.id}.txt`, text);
-      verification.retained[`ci${key}`] = ref;
-      const environment = (pattern) => lines.map((line) => pattern.exec(content(line))?.[1]).find(Boolean) ?? null;
+      const read = readCiJob({ github, jobs: ciJobs, name, group: `checks-${key}`, cites: cited(key) });
+      if (read.checkedOut !== sourceRevision) fail('P2_1_CI_JOB_UNBOUND', `job ${name} checked out ${read.checkedOut}, not ${sourceRevision}`);
+      const retained = retainCiJob(read, { stage, heading: `# job: ${name} (job ${read.job.id}) of main CI run ${mainCi.runId} attempt ${mainCi.runAttempt}, filtered to the group and commands it ran, the totals each node --test printed, and the passing lines this capture cites` });
+      verification.retained[`ci${key}`] = retained.ref;
+      const environment = (pattern) => read.lines.map((line) => pattern.exec(content(line))?.[1]).find(Boolean) ?? null;
       jobs[key] = {
-        jobId: job.id,
-        job: name,
-        group,
-        conclusion: job.conclusion,
-        startedAt: job.started_at,
-        completedAt: job.completed_at,
-        commands: lines.map((line) => /^\[ci-impact\] command: (.+)$/u.exec(content(line))?.[1]).filter(Boolean).map(sanitize),
-        testTotals: totals,
-        rawLog: { bytes: Buffer.byteLength(raw), lines: lines.length, sha256: sha256(raw), retained: false },
-        excerpt: { ...ref, rawLines: kept.map(({ raw: at }) => at) },
+        ...retained.phase,
         environmentLines: { node: environment(/Resolved \.node-version as (\S+)/u), runnerImage: environment(/^Image: (\S+)/u) },
+        lines: retained.excerptLines,
       };
-      jobs[key].lines = [''].concat(text.split('\n').slice(0, -1));
     }
     // The one test added after the release, from a later pull request run; every other citation stays with the release commit's run.
     const later = readLaterCi({ github, run: options.afterCiRun, sourceRevision, cites: cited('toolingAfter'), stage });
     verification.retained.ciToolingAfter = later.ref;
     const amendment = Object.values(claims).flatMap(({ parts }) => parts.flatMap(({ evidence }) => evidence)).find(({ kind }) => kind === 'roadmap-amendment');
     verification.amendedRoadmap = readAmendedRoadmap({ head: later.head, sourceRevision, rows: verification.rows, ceilingConstant: amendment.ceilingConstant });
-    claims['E-P2.1-02'].limits.push(`The installed-catalog tamper test and the amended Roadmap row came after the release: the test passed in pull request CI run ${later.phase.execution.runId} at head ${later.head}${later.phase.execution.headInDefaultBranchHistory ? '' : ', which is a pull request head not in the default branch\'s history at capture'}, over a merge whose tree is the head's. The resolver source (packages/tooling/src, packages/catalog/src, packages/schema/src) is unchanged between the release commit and that head. The release was prepared and published against the earlier wording of the row.`);
+    claims['E-P2.1-02'].limits.push(`The installed-catalog tamper test and the amended Roadmap row came after the release: the test passed in pull request CI run ${later.phase.execution.runId} at head ${later.head}, over a merge whose tree is the head's. The resolver source (packages/tooling/src, packages/catalog/src, packages/schema/src) is unchanged between the release commit and that head. The release was prepared and published against the earlier wording of the row.`);
+    // The released packages, installed from the registry and run through their own muxui bin; the parts that rest on it follow its checks.
+    const releaseManifest = JSON.parse(readFileSync(join(repositoryRoot, excerpts.manifest.path), 'utf8'));
+    const publishedRun = await observePublishedTuple({ release, manifest: releaseManifest, ceiling: verification.amendedRoadmap.ceiling.roadmap, sourceRevision, captureTimestamp: options.captureTimestamp });
+    const publishedOutput = stage(`${root}/validation/published-muxui-output.txt`, publishedRun.output);
+    verification.retained.publishedOutput = publishedOutput;
+    const published = { ...publishedRun.phase, output: publishedOutput };
+    for (const part of claims['E-P2.1-02'].parts) {
+      const failed = part.evidence.filter(({ kind }) => kind === 'published').flatMap(({ checks }) => checks).filter((id) => !published.checks.find((found) => found.id === id)?.passed);
+      const note = typeof part.note === 'function' ? part.note(published) : part.note;
+      Object.assign(part, { note: failed.length > 0 ? `${note ? `${note} ` : ''}Against the published tuple these checks did not pass: ${failed.join(', ')}.` : note, ...(failed.length > 0 ? { state: 'not-met' } : {}) });
+    }
+    const { toolingVersion } = published;
+    claims['E-P2.1-02'].limits.push(`The published-run phase installed the released packages from the public registry at capture time (${options.captureTimestamp}), after the release, not at publish time. Only the four @muxui packages are bound to the release manifest's integrity; their third-party dependencies resolved as the registry then served them. The goldens are not compared to the published output, and the descriptor and catalog tamper negatives are not repeated against the published install.`);
+    if (!toolingVersion.reportsInstalledVersion) {
+      const where = toolingVersion.source ? `${toolingVersion.source.path}:${toolingVersion.source.line} (\`${toolingVersion.source.text}\`)` : 'its source';
+      claims['E-P2.1-02'].limits.push(`The published @muxui/tooling@${toolingVersion.installed} reports muxuiVersion ${toolingVersion.muxuiVersionInResponses.join(', ')} in the meta of every response and ${toolingVersion.cliVersionInManifest} as the CLI version in its manifest, not its own version, because ${where} hard-codes it. Architecture "Version units and compatibility" says tooling reports the exact tuple in every response, and the goldens normalize the value. A separate change fixes it with tooling's next real release; it is not fixed in this release or here.`);
+      claims['E-P2.1-02'].nonClaims = [`This record does not claim that @muxui/tooling@${toolingVersion.installed} reports its own version: it reports ${toolingVersion.muxuiVersionInResponses.join(', ')} (see the limits), where Architecture "Version units and compatibility" says tooling reports the exact tuple. The catalog and renderer versions it reports are the installed ones.`];
+    }
     // The registry, read now: every package of the set against the manifest and the publish run.
     const readBack = [];
     for (const entry of release.packages) {
@@ -1248,20 +1618,26 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     // Retained route excerpts, by key, with their lines.
     const logs = { dryRun: excerpts.dryRunExcerpt, publish: excerpts.publishExcerpt, publishPrepare: excerpts.publishPrepareExcerpt };
     logs.dryRunCollect = logs.dryRun;
-    const sources = { ...jobs, toolingAfter: later };
+    const sources = { ...jobs, toolingAfter: { lines: later.excerptLines, group: later.group, excerpt: later.phase.job.excerpt } };
     const resolveItem = (item) => {
       if (item.kind === 'test') {
         const { lines, group, excerpt } = sources[item.job];
         const revision = item.job === 'toolingAfter' ? later.head : sourceRevision;
         const at = lines.findIndex((line) => testLine.exec(content(line))?.[1] === item.title);
         if (!hasTitle(gitShow(revision, item.file), item.title)) fail('P2_1_TEST_NOT_IN_FILE', `${item.file} at ${revision} has no test titled "${item.title}"`);
-        return { kind: 'test', job: group, file: item.file, title: item.title, excerpt: excerpt.path, line: at, ...(item.job === 'toolingAfter' ? { ciRun: later.phase.execution.runId, revision } : {}) };
+        return { kind: 'test', job: group, file: item.file, title: item.title, excerpt: excerpt.path, line: at, ...(item.scope ? { scope: item.scope } : {}), ...(item.job === 'toolingAfter' ? { ciRun: later.phase.execution.runId, revision } : {}) };
       }
       if (item.kind === 'roadmap-amendment') {
         const { rows: _rows, ...amended } = verification.amendedRoadmap;
         return { kind: 'roadmap-amendment', id: item.id, ...amended };
       }
       if (item.kind === 'source-absence') return toolingReaderSurface(sourceRevision);
+      if (item.kind === 'published') {
+        return { kind: 'published', output: published.output, checks: item.checks.map((id) => {
+          const found = published.checks.find((candidate) => candidate.id === id);
+          return found ?? fail('P2_1_CLAIM_UNKNOWN', `no published-run check ${id}`);
+        }) };
+      }
       if (item.kind === 'corpus') {
         // Every fixture of the corpus is a test, and each passes.
         const names = execFileSync('git', ['ls-tree', '--name-only', sourceRevision, `${item.fixtures}/`], { cwd: repositoryRoot, encoding: 'utf8' }).split('\n')
@@ -1333,6 +1709,7 @@ export async function capture(options, github = createGitHub(), observe = viewPa
       ...Object.values(jobs).flatMap(({ job, commands }) => commands.filter((command) => /^pnpm --filter @muxui\//u.test(command)).map((command) => `${job}: ${command}`)),
       'npm-publish.yml dry run (main CI reused): pnpm generate && pnpm generate:check && node tooling/audits/repository-policy/src/release-prepare.mjs',
       'npm-publish.yml mode=publish: promote the dry run\'s npm-candidate artifact, then publish the set in order (npm-publication.mjs publish-set)',
+      `published tuple (E-P2.1-02): ${published.tools.install} in a clean project, then the installed muxui bin`,
     ];
     for (const job of Object.values(jobs)) delete job.lines;
 
@@ -1345,6 +1722,7 @@ export async function capture(options, github = createGitHub(), observe = viewPa
         later: later.phase,
         environment: { runnerImage: jobs.policy.environmentLines.runnerImage, node: jobs.policy.environmentLines.node, preparation: dryRun.environment },
       },
+      published,
       registry: {
         captureTimestamp: options.captureTimestamp,
         readBack: { artifact: observation, packages: readBack.map(({ name, version, integrity, distTags, provenance, latest, otherVersions }) => ({ name, version, integrity, distTags, provenance: provenance.predicateType, latest, otherVersions })) },
