@@ -3615,6 +3615,12 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.equal(p2.outcomeOf([{ state: 'not-applicable' }]), 'unmet', 'a record with nothing shown is not a pass');
   });
 
+  test('a P2.1 dense budget count leaves out the -rc.N suffix of a version and nothing else', () => {
+    assert.equal(p2.withoutRcSuffixes('catalogVersion="2.1.0-rc.1" {"@muxui/react":"0.1.0-rc.5"} 10.20.30-rc.40'), 'catalogVersion="2.1.0" {"@muxui/react":"0.1.0"} 10.20.30');
+    // Other text that mentions rc, or another prerelease, still counts.
+    for (const text of ['src/rc.mjs', 'rc 1', '-rc.1', '2.1-rc.1', '2.1.0-rc', '2.1.0-rc.', '2.1.0-rcx.1', '0.1.0-alpha.0', '2.1.0-beta.1', '2.1.0+rc.1', 'a rc.1 build']) assert.equal(p2.withoutRcSuffixes(text), text, text);
+  });
+
   test('P2.1 retained evidence rebuilds from its verification.json and every citation points at the line it names', async () => {
     const route = 'tests/evidence/p2.1';
     const text = (relative) => readFileSync(join(repositoryRoot, relative), 'utf8');

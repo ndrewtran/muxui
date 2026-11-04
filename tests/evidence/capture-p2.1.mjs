@@ -59,6 +59,11 @@ const timestamped = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z /u;
 const content = (line) => line.replace(timestamped, '');
 const sha256 = (value) => `sha256:${createHash('sha256').update(value).digest('hex')}`;
 
+// The only text excluded from a dense budget count: the `-rc.N` suffix of an `X.Y.Z-rc.N` version, while a package is a prerelease
+// (Roadmap E-P2.1-02, amended after the release). Any other text, including other uses of `rc`, still counts.
+const rcSuffix = /(\d+\.\d+\.\d+)-rc\.\d+/gu;
+export const withoutRcSuffixes = (text) => text.replace(rcSuffix, '$1');
+
 export class P2CaptureError extends Error {
   constructor(code, message) {
     super(`${code}: ${message}`);
@@ -183,9 +188,9 @@ function claimsFor(release) {
           ],
         },
         {
-          part: 'Full-detail `get --platform web.react --dense` is inside its 3072-token ceiling, and its brief and compact detail inside their budgets.',
+          part: 'Full-detail `get --platform web.react --dense` is inside its 3072-token ceiling, and its brief and compact detail inside their budgets, counted without the tokens of `-rc.N` version suffixes while a package is a prerelease.',
           state: 'shown',
-          note: (phase) => `Judged against the row as amended after the release (Decision 0032, "Amendment"); the row at the source revision named only "its token budget". Measured on the published tuple with the installed countTokens and the installed registry's budgets: ${phase.denseGetSummary}. The test at the source revision pins the same ceiling and passed in the release commit's CI.`,
+          note: (phase) => `Judged against the row as amended after the release (Decision 0032, "Amendment"), which names the 3072-token ceiling and leaves \`-rc.N\` suffix tokens out of budget counts while a package is a prerelease; the row at the source revision named only "its token budget". Measured on the published tuple with the installed countTokens and the installed registry's budgets, raw and without the suffixes: ${phase.denseGetSummary}. The test at the source revision pins the same ceiling and passed in the release commit's CI.`,
           evidence: [
             publishedChecks('dense-get-react'),
             sourceVersion('tooling', packedCli, 'E-P2.1-02 dense output stays inside every locked token budget'),
@@ -193,9 +198,9 @@ function claimsFor(release) {
           ],
         },
         {
-          part: 'Dense output is inside its token budget for the registry\'s budget fixtures (manifest, list, search, and get) at every detail level.',
+          part: 'Dense output is inside its token budget for the registry\'s budget fixtures (manifest, list, search, and get) at every detail level, counted without the tokens of `-rc.N` version suffixes while a package is a prerelease.',
           state: 'shown',
-          note: (phase) => `Measured on the published tuple with the installed countTokens and the installed registry's budgets: ${phase.denseFixtureSummary}. The source-version test passed in the release commit's CI against the source-version tuple.`,
+          note: (phase) => `Measured on the published tuple with the installed countTokens and the installed registry's budgets, raw and without the suffixes: ${phase.denseFixtureSummary}. ${phase.rawOverBudget === '' ? 'The exclusion of `-rc.N` suffix tokens was added to the Roadmap row after the release.' : `The exclusion of \`-rc.N\` suffix tokens was added to the Roadmap row after the release, because the published rc exceeded a budget as the row first wrote it (${phase.rawOverBudget}).`} The source-version test passed in the release commit's CI against the source-version tuple, where the versions carry no \`-rc.N\` suffix.`,
           evidence: [
             publishedChecks('dense-budget-fixtures'),
             sourceVersion('tooling', packedCli, 'E-P2.1-02 dense output stays inside every locked token budget'),
@@ -772,7 +777,7 @@ A cited test is a passing line in the sanitized excerpt of the CI job that ran i
 commit; capture fails if a cited line is missing. \`limits\` lists what the retained
 evidence does not show.${later ? `
 
-One test, added after the release, ran in pull request CI run ${later.execution.runId} (attempt ${later.execution.runAttempt}) at head \`${later.execution.headRevision}\`: the job checked out the merge \`${later.checkedOut.commit}\`, whose tree is the head's. The resolver source (\`packages/tooling/src\`, \`packages/catalog/src\`, \`packages/schema/src\`) is unchanged between the release commit and that head. The \`E-P2.1-02\` row of the Roadmap was amended after the release to name the dense-output ceiling; that record is judged against the amended row.` : ''}
+One test, added after the release, ran in pull request CI run ${later.execution.runId} (attempt ${later.execution.runAttempt}) at head \`${later.execution.headRevision}\`: the job checked out the merge \`${later.checkedOut.commit}\`, whose tree is the head's. The resolver source (\`packages/tooling/src\`, \`packages/catalog/src\`, \`packages/schema/src\`) is unchanged between the release commit and that head. The \`E-P2.1-02\` row of the Roadmap was amended after the release, to name the dense-output ceiling and to leave \`-rc.N\` suffix tokens out of budget counts while a package is a prerelease; that record is judged against the amended row and keeps the raw and the counted numbers.` : ''}
 
 ${published ? `\`E-P2.1-02\` also rests on a published-run phase: at ${published.captureTimestamp} the four released packages were installed from the public registry into a clean project outside the checkout, and the installed \`muxui\` bin was run through the discovery matrix, the budget fixtures, an invalid-request corpus, and the commands P2.1 does not enable (\`${published.output.path}\`). ${published.checks.filter(({ passed }) => passed).length} of ${published.checks.length} checks passed. The packed-CLI tests of the release commit pack the source manifests' versions, and the records cite them as source-version supporting evidence.\n\n` : ''}\`artifacts/\` holds the registry read-back of all four packages${review ? ' and the independent review' : ''}; \`validation/\` holds the CI job
 excerpts; \`verification.json\` binds them to the unsanitized log digests. The raw logs and
@@ -780,7 +785,7 @@ tarballs are not retained.
 
 ${review
     ? `The independent release-integrity review is retained as \`${review.artifact.path}\`, read by ${review.reviewer} at \`${review.reviewedRevision}\`. It is ${review.passes ? 'a pass' : 'not a pass'}.`
-    : `The independent release-integrity review is pending: a reviewer of a different model and harness from the authoring agents reviews the evidence and the release, and \`--review=<file> --review-revision=<sha>\` retains it and rebuilds the records with it.`}
+    : `No independent release-integrity review is retained: it is pending, and these records claim no outcome of it. A reviewer of a different model and harness from the authoring agents reads the evidence and the release, and \`--review=<file> --review-revision=<sha>\` retains the review and rebuilds the records with it.`}
 
 ${(verification.phases.registry?.placeholders ?? []).length === 0 ? '' : `The read-back lists every version of each package. ${joinNames(verification.phases.registry.placeholders.map(({ name }) => `\`${name}\``))} each also list a \`${placeholderVersion}\` placeholder version, observed in \`E-P2.1-06\` and not part of the release tuple; its origin is inferred, not proved.\n\n`}The exact authorization to publish was given in chat and is recorded in \`E-P2.1-06\` as
 reported by the capture operator; the \`npm-publish\` environment had no required reviewer
@@ -990,8 +995,8 @@ const NORMALIZE = `
   const parse = { json: JSON.parse, dense: parseDense, human: parseHuman };
   console.log(JSON.stringify({
     responses: input.map(({ mode, text }) => parse[mode](text)),
-    tokens: input.map(({ mode, text, command, detail }) => (mode === 'dense' && command
-      ? { used: countTokens(text), budget: tokenBudgetFor(commandRegistry, command, detail) }
+    tokens: input.map(({ mode, text, countedText, command, detail }) => (mode === 'dense' && command
+      ? { used: countTokens(text), counted: countTokens(countedText), budget: tokenBudgetFor(commandRegistry, command, detail) }
       : null)),
     budgetFixtures: Object.fromEntries(commandRegistry.commands.map(({ name, budgetFixture }) => [name, budgetFixture])),
   }));
@@ -1132,8 +1137,8 @@ async function observePublishedTuple({ release, manifest, ceiling, sourceRevisio
     // Every rendering normalizes to one response, equal to the catalog API's for the same request, and dense output has a count.
     const reference = inProject(project, env, REFERENCE, discoveryCases.map(({ command, request }) => ({ command, request })));
     const renderings = [
-      ...matrix.map(({ mode, command, detail, result }) => ({ mode, text: result.stdout, command, detail })),
-      ...fixtures.map(({ command, detail, result }) => ({ mode: 'dense', text: result.stdout, command, detail })),
+      ...matrix.map(({ mode, command, detail, result }) => ({ mode, text: result.stdout, countedText: withoutRcSuffixes(result.stdout), command, detail })),
+      ...fixtures.map(({ command, detail, result }) => ({ mode: 'dense', text: result.stdout, countedText: withoutRcSuffixes(result.stdout), command, detail })),
     ];
     const normalized = inProject(project, env, NORMALIZE, renderings);
     const modeNames = Object.keys(outputModes);
@@ -1153,17 +1158,21 @@ async function observePublishedTuple({ release, manifest, ceiling, sourceRevisio
       ...fixtures.map((entry, index) => ({ command: entry.command, detail: entry.detail, args: [entry.command, ...budgetFixtureArguments[entry.command], '--detail', entry.detail, '--dense'], set: 'budget-fixture', ...normalized.tokens[matrixCount + index] })),
     ].map((row) => ({ ...row, ceiling: row.set === 'get-web.react' && row.detail === 'full' ? ceiling : row.budget }));
     const rowsOf = (set) => denseRows.filter((row) => row.set === set);
-    const within = ({ used, ceiling: limit }) => used > 0 && used <= limit;
+    // A count is the installed countTokens' on the output without its `-rc.N` version suffixes; the raw count is kept beside it.
+    const within = ({ counted, ceiling: limit }) => counted > 0 && counted <= limit;
     const label = ({ args }) => args.slice(0, -1).join(' ');
-    const summarize = (rows) => (rows.every(within) ? 'all inside their budgets' : `over budget: ${rows.filter((row) => !within(row)).map((row) => `${label(row)} --dense ${row.used} of ${row.budget}`).join('; ')}`);
+    const figures = ({ used, counted }) => `raw ${used}, counted ${counted}`;
+    const rawOver = denseRows.filter(({ set, used, ceiling: limit }) => set !== 'discovery' && used > limit);
+    const rawOverSummary = rawOver.map((row) => `${label(row)} --dense ${figures(row)}, budget ${row.budget}`).join('; ');
+    const summarize = (rows) => (rows.every(within) ? 'all inside their budgets' : `over budget: ${rows.filter((row) => !within(row)).map((row) => `${label(row)} --dense ${figures(row)}, budget ${row.budget}`).join('; ')}`);
     const getRows = rowsOf('get-web.react');
-    const denseGetSummary = `get --platform web.react --dense ${getRows.map(({ detail, used, budget, ceiling: limit }) => (limit === budget ? `${detail} ${used} of ${budget}` : `${detail} ${used} against the ${limit} ceiling (registry budget ${budget})`)).join(', ')}`;
+    const denseGetSummary = `get --platform web.react --dense ${getRows.map((row) => `${row.detail} ${figures(row)} ${row.ceiling === row.budget ? `of ${row.budget}` : `against the ${row.ceiling} ceiling (registry budget ${row.budget})`}`).join(', ')}`;
     const fixtureRows = rowsOf('budget-fixture');
     const fixturesAgree = isDeepStrictEqual(normalized.budgetFixtures, { manifest: {}, list: { limit: 1 }, search: { query: 'button', limit: 1 }, get: { 'id-or-alias': BUTTON } });
     const denseFixtureSummary = `${fixtureRows.length} fixture counts, ${summarize(fixtureRows)}`;
-    const rowFacts = (rows) => rows.map(({ args, used, budget, ceiling: limit }) => ({ args, used, budget, ceiling: limit }));
-    check('dense-get-react', `dense output of get --platform web.react is inside its token budget at brief and compact detail and inside the ${ceiling}-token ceiling at full detail, by the installed countTokens`, getRows.length === detailLevels.length && getRows.every(within), { rows: rowFacts(getRows) });
-    check('dense-budget-fixtures', 'dense output of the registry\'s budget fixtures is inside the installed registry\'s token budget at every detail level, by the installed countTokens, and the fixtures are the registry\'s own', fixturesAgree && fixtureRows.length === detailLevels.length * Object.keys(budgetFixtureArguments).length && fixtureRows.every(within), { budgetFixturesAreTheRegistrys: fixturesAgree, rows: rowFacts(fixtureRows) });
+    const rowFacts = (rows) => rows.map(({ args, used, counted, budget, ceiling: limit }) => ({ args, used, counted, budget, ceiling: limit }));
+    check('dense-get-react', `dense output of get --platform web.react is inside its token budget at brief and compact detail and inside the ${ceiling}-token ceiling at full detail, counted by the installed countTokens without the tokens of -rc.N version suffixes (the Roadmap row as amended after the release)`, getRows.length === detailLevels.length && getRows.every(within), { rows: rowFacts(getRows) });
+    check('dense-budget-fixtures', 'dense output of the registry\'s budget fixtures is inside the installed registry\'s token budget at every detail level, counted by the installed countTokens without the tokens of -rc.N version suffixes (the Roadmap row as amended after the release), and the fixtures are the registry\'s own', fixturesAgree && fixtureRows.length === detailLevels.length * Object.keys(budgetFixtureArguments).length && fixtureRows.every(within), { budgetFixturesAreTheRegistrys: fixturesAgree, rows: rowFacts(fixtureRows) });
     // The matrix's other dense outputs (limit 2, with a platform) have no recorded gate; their counts are kept for the record.
     const otherDense = rowFacts(rowsOf('discovery'));
 
@@ -1239,8 +1248,10 @@ async function observePublishedTuple({ release, manifest, ceiling, sourceRevisio
         checks,
         runs: runs.map(({ args, status, stdout, stderr }) => ({ args, status, stdoutBytes: Buffer.byteLength(stdout), stderrBytes: Buffer.byteLength(stderr), stdoutSha256: sha256(stdout) })),
         toolingVersion,
+        countRule: { excludes: 'the -rc.N suffix of X.Y.Z-rc.N versions in the dense output, before the installed countTokens counts it', pattern: rcSuffix.source, replacement: '$1', roadmap: 'E-P2.1-02, amended after the release' },
         denseGetSummary,
         denseFixtureSummary,
+        rawOverBudget: rawOverSummary,
         discoveryDenseCounts: otherDense,
         sanitization: rewrites,
       },
@@ -1429,18 +1440,35 @@ function readLaterCi({ github, run, sourceRevision, cites, stage }) {
   };
 }
 
-/** The Roadmap as amended after the release: the rows, the one that changed, and the ceiling its dense clause names. */
-function readAmendedRoadmap({ head, sourceRevision, rows, ceilingConstant }) {
-  const amendedRows = roadmapRows(gitShow(head, roadmap));
+/**
+ * The Roadmap as amended after the release, read at HEAD: only E-P2.1-02's assertion differs from the source revision's, and its
+ * dense clause names the ceiling the test pins and the prerelease-suffix rule the counts apply. The amending commits follow the
+ * release commit, and the later CI run's head is among their ancestors.
+ */
+function readAmendedRoadmap({ laterHead, sourceRevision, rows, ceilingConstant }) {
+  const amendedRows = roadmapRows(gitShow('HEAD', roadmap));
   const changedIds = assertionIds.filter((id) => JSON.stringify(amendedRows[id]) !== JSON.stringify(rows[id]));
-  if (JSON.stringify(changedIds) !== JSON.stringify(['E-P2.1-02']) || amendedRows['E-P2.1-02'].requiredEvidence !== rows['E-P2.1-02'].requiredEvidence) fail('P2_1_AMENDED_ROADMAP_ROWS', `the rows changed between ${sourceRevision} and ${head} are ${changedIds.join(', ') || 'none'}, not E-P2.1-02's assertion alone`);
-  if (git('rev-parse', `HEAD:${roadmap}`) !== git('rev-parse', `${head}:${roadmap}`)) fail('P2_1_AMENDED_ROADMAP_CHANGED', `${roadmap} at HEAD is not the one at ${head}`);
-  const commit = git('log', '-1', '--format=%H', head, '--', roadmap);
-  if (spawnSync('git', ['merge-base', '--is-ancestor', commit, sourceRevision], { cwd: repositoryRoot }).status === 0) fail('P2_1_AMENDED_ROADMAP_CHANGED', `${commit} is not after the release commit`);
-  const fromRoadmap = /full-detail `get --platform web\.react --dense` has a (\d+)-token ceiling/u.exec(amendedRows['E-P2.1-02'].assertion)?.[1];
+  if (JSON.stringify(changedIds) !== JSON.stringify(['E-P2.1-02']) || amendedRows['E-P2.1-02'].requiredEvidence !== rows['E-P2.1-02'].requiredEvidence) fail('P2_1_AMENDED_ROADMAP_ROWS', `the rows changed between ${sourceRevision} and HEAD are ${changedIds.join(', ') || 'none'}, not E-P2.1-02's assertion alone`);
+  if (spawnSync('git', ['merge-base', '--is-ancestor', laterHead, 'HEAD'], { cwd: repositoryRoot }).status !== 0) fail('P2_1_AMENDED_ROADMAP_CHANGED', `HEAD does not descend from the later CI run's head ${laterHead}`);
+  // The commits after the release that changed the row (others change the Roadmap elsewhere).
+  const rowAt = (revision) => JSON.stringify(roadmapRows(gitShow(revision, roadmap))['E-P2.1-02']);
+  const commits = git('log', '--reverse', '--format=%H', `${sourceRevision}..HEAD`, '--', roadmap).split('\n').filter((commit) => commit && rowAt(commit) !== rowAt(`${commit}^`));
+  if (commits.length === 0) fail('P2_1_AMENDED_ROADMAP_CHANGED', `no commit after ${sourceRevision} changes the E-P2.1-02 row`);
+  const assertion = amendedRows['E-P2.1-02'].assertion;
+  const fromRoadmap = /full-detail `get --platform web\.react --dense` has a (\d+)-token ceiling/u.exec(assertion)?.[1];
   const fromTest = new RegExp(`const ${ceilingConstant.name} = (\\d+);`, 'u').exec(gitShow(sourceRevision, ceilingConstant.file))?.[1];
   if (!fromRoadmap || fromRoadmap !== fromTest) fail('P2_1_CEILING_MISMATCH', `the amended row names a ceiling of ${fromRoadmap}; the test at ${sourceRevision} pins ${fromTest}`);
-  return { path: roadmap, revision: head, blob: git('rev-parse', `${head}:${roadmap}`), commit, ceiling: { roadmap: Number(fromRoadmap), test: { file: ceilingConstant.file, constant: ceilingConstant.name, value: Number(fromTest), revision: sourceRevision } }, rows: { 'E-P2.1-02': amendedRows['E-P2.1-02'] } };
+  const suffixClause = 'while a package is a prerelease the budget counts exclude the tokens of its `-rc.N` version suffixes';
+  if (!assertion.includes(suffixClause) || rows['E-P2.1-02'].assertion.includes('-rc.N')) fail('P2_1_RC_RULE_MISSING', `the amended row must say "${suffixClause}", and the row at ${sourceRevision} must not`);
+  return {
+    path: roadmap,
+    revision: commits.at(-1),
+    commits,
+    blob: git('rev-parse', `HEAD:${roadmap}`),
+    ceiling: { roadmap: Number(fromRoadmap), test: { file: ceilingConstant.file, constant: ceilingConstant.name, value: Number(fromTest), revision: sourceRevision } },
+    prereleaseSuffixes: { clause: suffixClause, pattern: rcSuffix.source },
+    rows: { 'E-P2.1-02': amendedRows['E-P2.1-02'] },
+  };
 }
 
 export async function capture(options, github = createGitHub(), observe = viewPackage) {
@@ -1532,8 +1560,8 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     const later = readLaterCi({ github, run: options.afterCiRun, sourceRevision, cites: cited('toolingAfter'), stage });
     verification.retained.ciToolingAfter = later.ref;
     const amendment = Object.values(claims).flatMap(({ parts }) => parts.flatMap(({ evidence }) => evidence)).find(({ kind }) => kind === 'roadmap-amendment');
-    verification.amendedRoadmap = readAmendedRoadmap({ head: later.head, sourceRevision, rows: verification.rows, ceilingConstant: amendment.ceilingConstant });
-    claims['E-P2.1-02'].limits.push(`The installed-catalog tamper test and the amended Roadmap row came after the release: the test passed in pull request CI run ${later.phase.execution.runId} at head ${later.head}, over a merge whose tree is the head's. The resolver source (packages/tooling/src, packages/catalog/src, packages/schema/src) is unchanged between the release commit and that head. The release was prepared and published against the earlier wording of the row.`);
+    verification.amendedRoadmap = readAmendedRoadmap({ laterHead: later.head, sourceRevision, rows: verification.rows, ceilingConstant: amendment.ceilingConstant });
+    claims['E-P2.1-02'].limits.push(`The installed-catalog tamper test came after the release: it passed in pull request CI run ${later.phase.execution.runId} at head ${later.head}, over a merge whose tree is the head's. The resolver source (packages/tooling/src, packages/catalog/src, packages/schema/src) is unchanged between the release commit and that head. The Roadmap row was amended after the release too, by ${verification.amendedRoadmap.commits.length} commit${verification.amendedRoadmap.commits.length === 1 ? '' : 's'} (${verification.amendedRoadmap.commits.join(', ')}); the release was prepared and published against the earlier wording of the row.`);
     // The released packages, installed from the registry and run through their own muxui bin; the parts that rest on it follow its checks.
     const releaseManifest = JSON.parse(readFileSync(join(repositoryRoot, excerpts.manifest.path), 'utf8'));
     const publishedRun = await observePublishedTuple({ release, manifest: releaseManifest, ceiling: verification.amendedRoadmap.ceiling.roadmap, sourceRevision, captureTimestamp: options.captureTimestamp });
@@ -1547,6 +1575,7 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     }
     const { toolingVersion } = published;
     claims['E-P2.1-02'].limits.push(`The published-run phase installed the released packages from the public registry at capture time (${options.captureTimestamp}), after the release, not at publish time. Only the four @muxui packages are bound to the release manifest's integrity; their third-party dependencies resolved as the registry then served them. The goldens are not compared to the published output, and the descriptor and catalog tamper negatives are not repeated against the published install.`);
+    claims['E-P2.1-02'].limits.push(`Dense budget counts exclude the tokens of \`-rc.N\` version suffixes (the pattern ${published.countRule.pattern}, nothing wider), by the Roadmap row as amended after the release. ${published.rawOverBudget === '' ? 'No raw count exceeds a budget.' : `The published rc exceeded a budget as the row first wrote it: ${published.rawOverBudget}.`} Raw and counted numbers are kept for every fixture and get case; at a stable release the suffix is absent and the two are equal.`);
     if (!toolingVersion.reportsInstalledVersion) {
       const where = toolingVersion.source ? `${toolingVersion.source.path}:${toolingVersion.source.line} (\`${toolingVersion.source.text}\`)` : 'its source';
       claims['E-P2.1-02'].limits.push(`The published @muxui/tooling@${toolingVersion.installed} reports muxuiVersion ${toolingVersion.muxuiVersionInResponses.join(', ')} in the meta of every response and ${toolingVersion.cliVersionInManifest} as the CLI version in its manifest, not its own version, because ${where} hard-codes it. Architecture "Version units and compatibility" says tooling reports the exact tuple in every response, and the goldens normalize the value. A separate change fixes it with tooling's next real release; it is not fixed in this release or here.`);
