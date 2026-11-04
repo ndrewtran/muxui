@@ -346,6 +346,8 @@ Preparation (`src/release-prepare.mjs`, with `planReuse` in `src/release-effects
 - fetches each reused tarball from the public registry by its exact version before packing
   anything and verifies it (`verifyReused`, `fetchReusedTarball`, below). A reused package is
   never repacked;
+- then verifies their signatures with `npm audit signatures` (`verifyReusedSignatures` in
+  `src/release-proof.mjs`, below). It runs only when something is reused;
 - takes the reused packages' versions as their recorded ones, so the version check
   (`E-P2.1-04`) reads a reused package as proposing its prior version. An unchanged package
   at its version passes. A changed package at its version is refused (`P2_1_VERSION_NOT_AHEAD`
@@ -384,15 +386,38 @@ all of this holds:
   every reused package in its whole-set preflight, before any publish, and again before each
   publish with the same drift rule it has for a published package.
 
-Limits. The Sigstore signature and certificate chain of the attestation, and the registry's
-signature over the version document, are not verified here: the statement is read from the
-public registry over TLS, which accepts an attestation only for a publish its own verification
-passed. A consumer install with `npm audit signatures` verifies both; the React evidence
-captures run it, and a release does not. The run is only required to be a run of the
-repository: the manifest does not record the publish run, so it is not matched to a recorded
-one. The index of a route lists the digest of a file in the same commit, so it ties a manifest
-to retained evidence a reviewer saw; it does not defend against a change that updates both,
-and the attestation is what holds then.
+Signatures. The statement above is read from the registry, which proves nothing about who
+signed it. So the dry run's preparation also runs `verifyReusedSignatures`, once every reused
+tarball is verified and before anything is packed. It installs the reused packages into a new
+project outside the checkout, at exactly their recorded versions, with scripts ignored
+(`npm install --ignore-scripts --no-audit --no-fund --legacy-peer-deps`), where the npm
+configuration is empty but for `registry=https://registry.npmjs.org/`, then runs
+`npm audit signatures --json --include-attestations` with the npm bundled with the running
+Node (at least 11.5.1, the publish job's minimum). It stops the release unless the command
+exits 0, its JSON reports no `invalid` and no `missing` package, and its `verified` list (the
+packages whose attestation npm verified: the Sigstore signature, certificate chain and log
+entry of the bundle, and a subject that is the package and its integrity; npm also checks the
+registry's signature over the version) holds every reused package as a direct dependency from
+the public registry. Output it cannot read, a nonzero exit, or a package it did not cover stops
+the release too. `judgeAttestation` is then run on the bundles from that `verified` list, so the
+statement whose signature was verified is the one bound to the recorded bytes and commit and to
+this repository's publish workflow. The step logs one line saying what was verified, for the dry
+run's excerpt. A release that reuses nothing runs none of this.
+
+Limits.
+
+- Only the dry run's preparation runs `npm audit signatures`. The promotion (`candidate`) and
+  the publish job fetch the reused packages again and check the statement, the bytes, and
+  `next` as above, and rely on the dry run for the signatures; the reused versions are
+  immutable on the registry.
+- npm verifies that the bundle is validly signed and logged and that its subject is the
+  package. It does not match the signing certificate's identity to this repository, and
+  neither does the release: the repository, workflow, commit and run are read from the signed
+  statement. The run is only required to be a run of the repository, and is not matched to a
+  recorded one, because the manifest does not record the publish run.
+- The index of a route lists the digest of a file in the same commit, so it ties a manifest to
+  retained evidence a reviewer saw; it does not defend against a change that updates both, and
+  the attestation is what holds then.
 
 The untagged `0.0.0-stage` version npm lists beside each new package's first release is no
 release candidate; reuse reads exact versions and the publish preflight reads `latest` and
