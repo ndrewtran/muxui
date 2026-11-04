@@ -3581,4 +3581,89 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     for (const state of ['limited', 'not-met', 'not-shown']) assert.equal(p2.outcomeOf([{ state: 'shown' }, { state }]), 'partial', state);
     assert.equal(p2.outcomeOf([{ state: 'not-met' }, { state: 'not-shown' }]), 'unmet');
   });
+
+  test('P2.1 retained evidence rebuilds from its verification.json and every citation points at the line it names', async () => {
+    const route = 'tests/evidence/p2.1';
+    const text = (relative) => readFileSync(join(repositoryRoot, relative), 'utf8');
+    const verification = JSON.parse(text(`${route}/verification.json`));
+    const files = p2.assembleRoute(verification);
+    assert.deepEqual([...files.keys()].sort(), ['README.md', 'index.json', ...['01', '02', '03', '04', '05', '06'].map((id) => `records/E-P2.1-${id}.json`), 'verification.json'].map((file) => `${route}/${file}`));
+    for (const [relative, body] of files) assert.equal(body, text(relative), `${relative} is what the tool rebuilds`);
+
+    const index = JSON.parse(text(`${route}/index.json`));
+    const r1 = JSON.parse(text(`${verification.release.route}/verification.json`));
+    assert.deepEqual([index.sourceRevision, index.sourceTree], [r1.sourceRevision, r1.sourceTree], 'the records bind the revision the R1 exit route of the candidate binds');
+    for (const [relative, ref] of Object.entries(r1.retained)) assert.equal(digest(text(ref.path)), ref.sha256, relative);
+    assert.equal(index.artifacts.length, Object.keys(verification.retained).length);
+    assert.equal(verification.proofTool.path, 'tests/evidence/capture-p2.1.mjs');
+    assert.match(verification.proofTool.revision, /^[0-9a-f]{40}$/u, 'a real capture binds a committed tool');
+    assert.equal(verification.rehearsal, undefined);
+
+    // The reviewed outcomes: a change here is a deliberate evidence change.
+    const expected = { 'E-P2.1-01': 'pass', 'E-P2.1-02': 'partial', 'E-P2.1-03': 'pass', 'E-P2.1-04': 'pass', 'E-P2.1-05': 'partial', 'E-P2.1-06': 'pass' };
+    assert.deepEqual(index.records.map(({ assertionId }) => assertionId), Object.keys(expected));
+    const excerptLines = (path) => ['', ...text(path).split('\n')];
+    const contentOf = (line) => line.replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z /u, '');
+    for (const { assertionId, path } of index.records) {
+      const record = JSON.parse(text(path));
+      assert.equal(record.outcome, expected[assertionId], assertionId);
+      assert.equal(record.outcome, p2.outcomeOf(record.parts), assertionId);
+      assert.deepEqual([record.sourceRevision, record.executedRevision, record.executedTree], [index.sourceRevision, index.sourceRevision, index.sourceTree]);
+      assert.equal(record.disclosureClass, 'public-sanitized');
+      assert.equal(record.owner, 'ndrewtran');
+      assert.match(record.assertion, /\S/u);
+      assert.ok(record.parts.every(({ state }) => ['shown', 'limited', 'not-met', 'not-shown'].includes(state)), assertionId);
+      // No claim beyond what the Roadmap lets P2.1 claim.
+      assert.ok(record.nonClaims.some((claim) => /^P2\.1 is not claimed complete/u.test(claim)) && record.nonClaims.some((claim) => /^No stable release, support, or assistive-technology claim/u.test(claim)), assertionId);
+      assert.ok(record.nonClaims.some((claim) => /^The trusted publishers of @muxui\/schema, @muxui\/catalog, and @muxui\/tooling are not yet set up and tokenless publishing is unproved for them; the provenance of their token publish proves neither/u.test(claim)), assertionId);
+      assert.ok(record.nonClaims.some((claim) => /0\.0\.0-stage placeholder version\. It is no part of the release tuple, carries no provenance/u.test(claim)), assertionId);
+      for (const item of record.parts.flatMap(({ evidence }) => evidence)) {
+        if (item.kind === 'test') {
+          const line = excerptLines(item.excerpt)[item.line];
+          assert.equal(contentOf(line).startsWith(`✔ ${item.title} (`), true, `${assertionId} cites ${item.excerpt}:${item.line}`);
+          assert.ok(readAt(index.sourceRevision, item.file).toString('utf8').includes(item.title.replaceAll("'", "\\'")) || readAt(index.sourceRevision, item.file).toString('utf8').includes(item.title), `${item.file} has "${item.title}"`);
+        } else if (item.kind === 'log') {
+          assert.equal(contentOf(excerptLines(item.excerpt)[item.line]), item.text, `${assertionId} cites ${item.excerpt}:${item.line}`);
+        } else if (item.kind === 'corpus') {
+          const lines = excerptLines(item.excerpt);
+          assert.equal(lines.filter((line) => contentOf(line).startsWith('✔ version effects: ')).length, item.cases);
+          const fixtures = gitIn(repositoryRoot, 'ls-tree', '--name-only', index.sourceRevision, `${item.fixtures}/`).split('\n').filter((name) => /\/\d\d-.+\.json$/u.test(name));
+          assert.equal(fixtures.length, item.cases, 'every fixture of the SemVer corpus at the source revision is a passing test');
+        }
+      }
+    }
+
+    // E-P2.1-02: the dense-output clause is not met as the Roadmap writes it, and the record says so.
+    const dense = JSON.parse(text(`${route}/records/E-P2.1-02.json`)).parts.find(({ part }) => part === 'Dense output is inside its token budget.');
+    assert.equal(dense.state, 'not-met');
+    assert.match(dense.note, /3072/u);
+    assert.match(dense.note, /2048/u);
+
+    // E-P2.1-06: the read-back lists every version, the placeholder is observed and not part of the tuple, and nothing claims latest.
+    const publication = JSON.parse(text(`${route}/records/E-P2.1-06.json`));
+    const readBack = JSON.parse(text(index.artifacts.find(({ path }) => path.endsWith('registry-read-back.json')).path));
+    assert.deepEqual(readBack.packages.map(({ name, version }) => `${name}@${version}`), verification.release.packages.map(({ name, version }) => `${name}@${version}`));
+    for (const entry of readBack.packages) {
+      assert.equal(entry.latest.claimed, false);
+      assert.equal(entry.latest.promoted, false);
+      // A new package lists only the placeholder beside its rc; @muxui/react lists its earlier rcs, which are not described as provenance-free.
+      const named = entry.otherVersions.map(({ version }) => version);
+      assert.ok(named.every((version) => version === p2.placeholderVersion) || entry.name === '@muxui/react', `${entry.name} lists only the placeholder beside its rc`);
+      for (const other of entry.otherVersions) assert.equal(other.provenance, other.version === p2.placeholderVersion ? 'none' : undefined, `${entry.name}@${other.version}`);
+    }
+    assert.deepEqual(readBack.packages.filter(({ otherVersions }) => otherVersions.some(({ version }) => version === p2.placeholderVersion)).map(({ name }) => name), ['@muxui/schema', '@muxui/catalog', '@muxui/tooling']);
+    assert.equal(readBack.placeholderOrigin.status, 'inferred');
+    assert.equal(readBack.placeholderOrigin.proved, false);
+    assert.equal(publication.publishApproval.approvalsRecordedByThePublishRun.length, 0, 'Decision 0033: no environment approval');
+    assert.match(publication.publishApproval.source, /not observable from hosted data/u);
+
+    // The independent review is either pending, with the command that retains it, or retained and bound to its digest.
+    const { independentReview } = JSON.parse(text(`${route}/records/E-P2.1-01.json`));
+    if (independentReview.status === 'pending') assert.match(independentReview.retainedBy, /--review=<file> --review-revision=<sha>/u);
+    else {
+      assert.equal(digest(text(independentReview.artifact.path)), independentReview.artifact.sha256);
+      assert.match(independentReview.reviewedRevision, /^[0-9a-f]{40}$/u);
+      assert.ok(index.artifacts.some(({ path }) => path === independentReview.artifact.path));
+    }
+  });
 }
