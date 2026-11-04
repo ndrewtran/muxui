@@ -3578,6 +3578,22 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.throws(() => r1Exit.bindDryRun(fixture.dryRunInput()), (error) => error.code === 'R1_EXIT_TUPLE_MISMATCH'
       && /does not publish @muxui\/react: it reuses 0\.1\.0-rc\.5, so this release has no React candidate and no R1 exit route, and 0\.1\.0-rc\.5's own route stays that candidate's evidence/u.test(error.message));
   });
+
+  // The P2.1 capture binds such a release's runs with the package it publishes as the candidate.
+  test('a release that reuses React binds its dry run and publish run with the package it publishes as the candidate', async () => {
+    const fixture = portfolioFixture({ reuse: [schema, catalog, react], existing: [tooling], versions: { [tooling]: '1.1.0-rc.2' } });
+    const dryRun = { ...r1Exit.bindDryRun(fixture.dryRunInput({ candidate: tooling })), manifest: fixture.manifest };
+    assert.deepEqual([dryRun.candidate.name, dryRun.candidate.version, dryRun.candidate.tarball.integrity], [tooling, '1.1.0-rc.2', fixture.integrityOf(tooling)]);
+    assert.equal(dryRun.portfolio.react, undefined, 'the React block describes a React candidate');
+    assert.deepEqual(dryRun.portfolio.published.map(({ name }) => name), [tooling]);
+    assert.throws(() => r1Exit.bindDryRun(fixture.dryRunInput({ candidate: schema })), (error) => error.code === 'R1_EXIT_TUPLE_MISMATCH' && /does not publish @muxui\/schema: it reuses 0\.6\.0-rc\.1/u.test(error.message), 'a reused package is no candidate');
+    const publish = r1Exit.bindPublish({ dryRun, run: fixture.run(2), jobs: fixture.publishRunJobs(), prepareLog: fixture.promotedLog(), publishLog: await fixture.publishLog() });
+    assert.equal(publish.observed.published, `${tooling}@1.1.0-rc.2`);
+    assert.deepEqual(publish.portfolio.packages.map(({ name, state, authentication }) => [name, state, authentication]), [[tooling, 'verified', 'trusted publishing (OIDC)']]);
+    assert.deepEqual(publish.portfolio.reused.map(({ name }) => name), [schema, catalog, react]);
+    // The default candidate is still React: the same release without `candidate` has none.
+    assert.throws(() => r1Exit.bindDryRun(fixture.dryRunInput()), code('R1_EXIT_TUPLE_MISMATCH'));
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -3654,6 +3670,9 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     });
     assert.equal(later().latest.observed, '0.1.0-rc.1');
     assert.throws(() => later({ priorLatest: '0.1.0-rc.2' }), code('P2_1_REGISTRY_TAGS_UNEXPECTED'));
+    // A reused package is read against the first release's commit and run, and its latest has not moved since that release's read-back.
+    assert.match(later({ reused: true }).latest.basis, /^unchanged: this release did not publish the package, and the first release's read-back recorded 0\.1\.0-rc\.1$/u);
+    assert.throws(() => later({ reused: true, publishRunId: 8 }), code('P2_1_REGISTRY_PROVENANCE_MISMATCH'));
   });
 
   const reviewText = (revision, { reviewer = '**Reviewer:** GPT-6.1 Sol, Codex', verdict = '## Overall verdict\n\n**Pass.** The evidence holds.\n' } = {}) => `# Review of ${revision.slice(0, 8)}\n\n${reviewer}\n\n${verdict}`;

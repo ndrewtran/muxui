@@ -473,14 +473,15 @@ const preparedSet = /^Prepared candidate set (.+); release manifest (sha256:[0-9
 const preparedPublished = /^Prepared candidate set (.+); release manifest (sha256:[0-9a-f]{64}); published (@muxui\/\S+@\S+ sha512-\S+(?:, @muxui\/\S+@\S+ sha512-\S+)*)$/u;
 
 // A portfolio manifest's digest covers everything except the digest itself and how the checks ran.
-const portfolioDigest = ({ digest: _digest, preparation: _preparation, ...body }) => sha256(canonicalJson(body));
+export const portfolioDigest = ({ digest: _digest, preparation: _preparation, ...body }) => sha256(canonicalJson(body));
 
 /**
  * Binds the portfolio dry run: its manifest (digest recomputed, source commit and tree), one tarball per package of the set
  * in the manifest's order with the recorded bytes, and the log's own `prepared` line. The candidate is @muxui/react, whose
- * facts the R1 exit records carry; every package's facts ride along under `portfolio`. Pure: every input is already fetched.
+ * facts the R1 exit records carry, unless `candidate` names another published package (a release that reuses React, as the
+ * P2.1 capture binds); every package's facts ride along under `portfolio`. Pure: every input is already fetched.
  */
-function bindPortfolioDryRun({ run, jobs, prepareLog, artifact, sourceTree, mainCi, artifacts, rehearsal = false }) {
+function bindPortfolioDryRun({ run, jobs, prepareLog, artifact, sourceTree, mainCi, artifacts, candidate = reactName, rehearsal = false }) {
   const execution = assertRun(run, { mode: 'dry-run', rehearsal });
   const job = successfulJob(jobs, 'prepare', run.id);
   const prepareJob = jobs.find((candidate) => candidate.name === 'prepare');
@@ -517,9 +518,9 @@ function bindPortfolioDryRun({ run, jobs, prepareLog, artifact, sourceTree, main
     return { name: record.name, version: record.version, role: record.role, file: record.file, ...facts, packageJson: packed, entries: tarball?.entries };
   });
   if (problems.length > 0) fail('R1_EXIT_TUPLE_MISMATCH', `the portfolio candidate disagrees with its manifest: ${problems.join('; ')}`);
-  const react = packages.find(({ name }) => name === reactName);
+  const react = packages.find(({ name }) => name === candidate);
   if (react?.role !== 'published') {
-    fail('R1_EXIT_TUPLE_MISMATCH', `the portfolio release does not publish ${reactName}${react?.role === 'reused' ? `: it reuses ${react.version}, so this release has no React candidate and no R1 exit route, and ${react.version}'s own route stays that candidate's evidence` : ''}`);
+    fail('R1_EXIT_TUPLE_MISMATCH', `the portfolio release does not publish ${candidate}${react?.role === 'reused' ? `: it reuses ${react.version}, so this release has no React candidate and no R1 exit route, and ${react.version}'s own route stays that candidate's evidence` : ''}`);
   }
   const published = packages.filter(({ role }) => role === 'published');
   if (canonicalJson(manifest.publication?.order) !== canonicalJson(published.map(({ name }) => name))) {
@@ -554,7 +555,7 @@ function bindPortfolioDryRun({ run, jobs, prepareLog, artifact, sourceTree, main
     candidateArtifact,
     excerpt,
     candidate: {
-      name: reactName,
+      name: candidate,
       version: react.version,
       tarball: { file: react.file, bytes: reactFacts.bytes, files: reactFacts.files, integrity: reactFacts.integrity, sha256: reactFacts.sha256, shasum: reactFacts.shasum, retained: false },
       manifest: { file: artifact.manifest.file, bytes: artifact.manifest.bytes.length, sha256: sha256(artifact.manifest.bytes) },
@@ -567,14 +568,16 @@ function bindPortfolioDryRun({ run, jobs, prepareLog, artifact, sourceTree, main
       published: published.map(({ name, version, integrity }) => ({ name, version, integrity })),
       preflightChecks,
       // What the retained facts of the R1 exit records come from: the React tarball, and the consumer proofs of the dry run.
-      react: {
-        exports: reactJson.exports,
-        dependencies: reactJson.dependencies,
-        peerDependencies: reactJson.peerDependencies,
-        files: reactEntries.length,
-        onlineConsumerMatrix: verification?.reactOnlineMatrix ?? [],
-        consumerWarnings: { duplicateDependencyVersions: verification?.warnings?.duplicateDependencyVersions ?? [] },
-      },
+      ...(candidate === reactName ? {
+        react: {
+          exports: reactJson.exports,
+          dependencies: reactJson.dependencies,
+          peerDependencies: reactJson.peerDependencies,
+          files: reactEntries.length,
+          onlineConsumerMatrix: verification?.reactOnlineMatrix ?? [],
+          consumerWarnings: { duplicateDependencyVersions: verification?.warnings?.duplicateDependencyVersions ?? [] },
+        },
+      } : {}),
     },
   };
 }
@@ -910,7 +913,7 @@ function bindPortfolioPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal 
   if (stepOf(publishJob, 'Re-verify candidate')?.conclusion !== 'success') fail('R1_EXIT_RUN_INVALID', `run ${run.id} step "Re-verify candidate" did not succeed`);
   const lines = publishLog.split('\n');
   const { packages, published } = dryRun.portfolio;
-  const react = packages.find(({ name }) => name === reactName);
+  const react = packages.find(({ name }) => name === dryRun.candidate.name);
   // The authorization is the integrity of each published tarball, any order; the first release's input held the React digest alone.
   const authorized = envValue(lines, 'EXPECTED_SHA512');
   const authorizedSet = new Set((authorized ?? '').split(',').map((entry) => entry.trim()).filter(Boolean));
@@ -937,7 +940,7 @@ function bindPortfolioPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal 
 
 // The React package's part of the observation, in the shape the R1 exit records carry.
 function reactObserved({ observed, react }) {
-  const { preflight, recheck, packed, transparencyLog } = observed.find(({ name }) => name === reactName);
+  const { preflight, recheck, packed, transparencyLog } = observed.find(({ name }) => name === react.name);
   return { inputDigest: react.integrity, shasum: react.shasum, preflight: { ...preflight, recheck: recheck ?? null }, packed, transparencyLog: transparencyLog ?? null };
 }
 
@@ -954,10 +957,10 @@ function bindPortfolioPublish({ dryRun, run, jobs, prepareLog, publishLog, appro
   const promotion = promotesDryRun(prepareLines) ? bindPromotion({ lines: prepareLines, dryRun, runId: run.id }) : undefined;
   const publishStep = stepOf(publishJob, 'Publish the set in order');
   const rows = observed.map(({ packedMatches: _matches, ...entry }) => entry);
-  const reactRow = observed.find(({ name }) => name === reactName);
+  const reactRow = observed.find(({ name }) => name === dryRun.candidate.name);
   if (prior) {
     if (publishStep?.conclusion !== 'failure' || ['verified', 'read-back-failed'].includes(reactRow.state)) {
-      fail('R1_EXIT_PRIOR_ATTEMPT_INVALID', `run ${run.id} is not a failed publish attempt that published no ${reactName}`);
+      fail('R1_EXIT_PRIOR_ATTEMPT_INVALID', `run ${run.id} is not a failed publish attempt that published no ${dryRun.candidate.name}`);
     }
     return {
       execution: attempt.execution,
@@ -999,7 +1002,7 @@ function bindPortfolioPublish({ dryRun, run, jobs, prepareLog, publishLog, appro
     excerpts: { prepare: stepExcerpt(prepareLines, promotionSteps), publish: stepExcerpt(lines, portfolioPublishSteps) },
     observed: {
       ...reactObserved(attempt),
-      published: `${reactName}@${dryRun.candidate.version}`,
+      published: `${dryRun.candidate.name}@${dryRun.candidate.version}`,
       publishStepCompletedAt: publishStep.completed_at,
       // An observation of the workflow, not registry proof (see --registry).
       workflowReadBack: {

@@ -43,9 +43,10 @@ let sequence = 0;
  * the first one: the candidate then holds the tarballs of the others, and the registry holds the reused ones. `legacy` writes the
  * lines the workflow printed before packages could be reused (a React-only tarball-sha512 and the React-only prepared and promoted
  * lines), which a retained run keeps. The candidate files are written once into a directory the fixture removes at the end of
- * the test run.
+ * the test run. `existing` names published packages besides React that the first release already put on the registry (a later
+ * release that publishes tooling alone), so their publish is a later one.
  */
-export function portfolioFixture({ versions = {}, react: editReact, preparation, reuse = [], legacy = false } = {}) {
+export function portfolioFixture({ versions = {}, react: editReact, preparation, reuse = [], existing = [], legacy = false } = {}) {
   const first = reuse.length > 0 ? firstReleaseFixture() : null;
   const head = first ? secondCommit : commit;
   const sourceTree = first ? secondTree : tree;
@@ -143,6 +144,10 @@ export function portfolioFixture({ versions = {}, react: editReact, preparation,
       seed: {
         [react]: { versions: Object.fromEntries(Array.from({ length: reactRc - 1 }, (_, index) => [`0.1.0-rc.${index + 1}`, `sha512-${String(index + 1).repeat(86)}==`])), tags: { latest: '0.1.0-rc.1', next: `0.1.0-rc.${reactRc - 1}` } },
         ...Object.fromEntries(reuse.map((name) => [name, { versions: { '0.0.0-stage': `sha512-${'s'.repeat(86)}==` }, tarballs: { [versionOf(name)]: artifacts.get(name) }, tags: { latest: versionOf(name), next: versionOf(name) }, commit: first.manifest.source.revision }])),
+        ...Object.fromEntries(existing.map((name) => {
+          const prior = first.manifest.packages.find((record) => record.name === name).version;
+          return [name, { versions: { [prior]: `sha512-${'p'.repeat(86)}==` }, tags: { latest: prior, next: prior } }];
+        })),
       },
       faults,
     });
