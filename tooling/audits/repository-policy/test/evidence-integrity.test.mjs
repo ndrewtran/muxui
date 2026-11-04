@@ -3128,6 +3128,8 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
   // dry run and a publish run of the workflow that carries the whole publish set. The earlier formats keep their tests in
   // evidence-integrity.test.mjs, which rebuilds every committed route byte for byte.
   const code = (expected) => (error) => error?.code === expected;
+  const latestNonClaim = 'For a package this release published for the first time, latest points at its rc on the registry; it is observed, not claimed or promoted (Decision 0023).';
+  const tokenlessNonClaim = `The trusted publishers of ${schema}, ${catalog}, and ${tooling} are not yet set up and tokenless publishing is unproved for them; the provenance of their token publish proves neither (Decision 0032 item 10).`;
   const rejectsWith = (expected, change) => assert.throws(change, code(expected), expected);
   const manifestInput = (fixture, change) => {
     const manifest = structuredClone(fixture.manifest);
@@ -3324,6 +3326,10 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
       assert.deepEqual(first.portfolio.packages.map(({ name }) => name), names);
       assert.equal(first.portfolio.manifestDigest, fixture.manifest.digest);
       assert.deepEqual(first.observed.exports, ['.', './markdown', './styles.css']);
+      // Decision 0032 item 10: the packages that published with the temporary token carry the trusted-publisher non-claim.
+      assert.ok(first.nonClaims.includes(tokenlessNonClaim), 'the records say tokenless publishing is unproved for schema, catalog, and tooling');
+      // It does not say who set latest, or that the rc is the only version a package has.
+      assert.ok(first.nonClaims.includes(latestNonClaim));
       const second = await record('E-R1-EXIT-02');
       assert.equal(second.outcome, 'partial', 'the registry read-back is the proof, and it is a later phase');
       assert.equal(second.postPublication.portfolio.packages.length, 4);
@@ -3332,6 +3338,12 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
       assert.match(readme, /# R1 exit retained publication evidence for 0\.1\.0-rc\.5/u);
       assert.match(readme, /came from the portfolio workflow \(Decision 0032\)[^\n]*@muxui\/schema@0\.6\.0-rc\.1/u);
       assert.match(readme, /The publish run published the set in order/u);
+      // Decision 0033: the publish run had no environment approval, and the README says that is expected.
+      assert.deepEqual(second.postPublication.environmentApprovals, []);
+      assert.match(readme, /The publish run had no environment approval \(Decision 0033\)/u);
+      assert.match(readme, /trusted publishers of @muxui\/schema, @muxui\/catalog, and @muxui\/tooling are not yet set up/u);
+      assert.match(readme, /On the registry, `latest` points at the rc of each of them; it is observed, not claimed\./u);
+      assert.doesNotMatch(readme, /registry set `latest`/u);
       // The retained manifest is the portfolio manifest, sanitized.
       const retained = JSON.parse(await readFile(join(out, 'artifacts/release-manifest.json'), 'utf8'));
       assert.equal(retained.schema, 'muxui-portfolio-release-v1');
@@ -3393,6 +3405,14 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.deepEqual(Object.keys(records), ['E-R1-EXIT-01', 'E-R1-EXIT-02', 'E-R1-EXIT-03', 'E-R1-EXIT-04']);
     assert.equal(records['E-R1-EXIT-02'].outcome, 'pass');
     assert.equal(records['E-R1-EXIT-02'].postPublication.portfolio.packages.length, 4);
+    for (const id of Object.keys(records)) assert.ok(records[id].nonClaims.includes(tokenlessNonClaim), `${id} states the trusted-publisher non-claim`);
+    // Once every package of a portfolio publishes through OIDC, no record carries it: the line follows the authentication the publish run printed.
+    const tokenless = structuredClone(publish);
+    for (const entry of tokenless.portfolio.packages) entry.authentication = 'trusted publishing (OIDC)';
+    const rebuilt = r1Exit.buildRoute({
+      phases: { dryRun: phase(dryRun), publish: phase(tokenless), registry: phase(registry) }, sourceRevision: fixture.head, sourceTree: fixture.tree, proofTool: {},
+    }, { validation: ref, manifest: ref, registry: ref });
+    for (const text of Object.values(rebuilt)) assert.ok(!JSON.parse(text).nonClaims.some((claim) => /trusted publishers of/u.test(claim)), 'no token publish, no non-claim');
     // latest is not moved by this publish; rollback comes from the portfolio manifest, prepared and not exercised.
     assert.equal(records['E-R1-EXIT-04'].distTags.latest.observed, '0.1.0-rc.1');
     assert.equal(records['E-R1-EXIT-04'].rollback.status, 'prepared-not-exercised');
