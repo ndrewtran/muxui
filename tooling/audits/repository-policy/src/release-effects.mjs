@@ -28,7 +28,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, posix, resolve } from 'node:path';
+import { join, posix, relative, resolve, sep } from 'node:path';
 import {
   SchemaValidationError,
   bindingSpecRevision,
@@ -39,7 +39,8 @@ import {
 import { compileTokenRequirementSet } from '@muxui/tokens';
 import { semanticDiff } from '@muxui/tooling/authoring';
 import { canonicalJson } from './canonical-json.mjs';
-import { PORTFOLIO_SCHEMA, caretAllows, releaseIdFor, sha256 } from './release-manifest.mjs';
+import { PORTFOLIO_SCHEMA, caretAllows, readIndexedArtifact, readRetainedManifests, releaseIdFor, sha256 } from './release-manifest.mjs';
+import { releaseVersions, reusedNames } from './release-set.mjs';
 
 const SCHEMA_PACKAGE = '@muxui/schema';
 const CATALOG_PACKAGE = '@muxui/catalog';
@@ -620,9 +621,10 @@ export function findPriorManifestProblems(manifest, publishSet) {
 
 /**
  * Problems (`{ code, detail }`) in the versions a release proposes against the effects the change requires. `versions`
- * maps each package of `publishSet` to its proposed version and `contracts` holds the current source's contract versions;
- * both are compared with `priorManifest`, the portfolio manifest of the prior release, which must inventory the whole set
- * and its edges. Every package must move forward when it changes version. A unit whose contract changed must move by at
+ * maps each package of `publishSet` to its proposed version, and a package the release reuses proposes the prior release's
+ * version (so reusing an unchanged package is no change, and reusing a changed one is refused as a repeated version);
+ * `contracts` holds the current source's contract versions; both are compared with `priorManifest`, the portfolio manifest
+ * of the prior release, which must inventory the whole set and its edges. Every package must move forward when it changes version. A unit whose contract changed must move by at
  * least its effect, and one whose contract did not change must not be released. A package whose shipped contract or
  * implementation changed must publish a new version. A package that stays at its prior version keeps the dependency
  * ranges its release recorded, so one of those ranges that does not admit a sibling's new version forces the package
@@ -833,7 +835,8 @@ function portfolioManifestsIn(revision, cwd) {
  * What a release compares with. It must say so: `MUXUI_PRIOR_RELEASE_MANIFEST` is the path of the prior portfolio
  * manifest, or `MUXUI_FIRST_PORTFOLIO_RELEASE=true` declares there is none, which holds only while no tracked file at
  * `revision` is a portfolio release manifest of any schema version. Neither, both, or a flag that contradicts the evidence
- * is refused, so a later release cannot skip the check by leaving the variable unset.
+ * is refused, so a later release cannot skip the check by leaving the variable unset. The prior manifest is the one
+ * committed at `revision`, listed with its digest by its evidence route's index (`readIndexedArtifact`).
  */
 export function resolvePriorRelease({ environment, revision, cwd }) {
   const path = environment[PRIOR_RELEASE_VARIABLE] ?? '';
@@ -848,11 +851,49 @@ export function resolvePriorRelease({ environment, revision, cwd }) {
     if (retained.length > 0) fail('P2_1_FIRST_RELEASE_CONTRADICTED', `${FIRST_RELEASE_VARIABLE}=true, but ${retained.join(', ')} is a portfolio release; give ${PRIOR_RELEASE_VARIABLE}`);
     return { first: true };
   }
+  // The prior manifest is the one the repository retains at the release commit, not whatever file the path names.
+  const retainedPath = relative(cwd, resolve(cwd, path)).split(sep).join(posix.sep);
   try {
-    return { first: false, priorManifest: JSON.parse(readFileSync(resolve(path), 'utf8')) };
+    return { first: false, priorManifest: JSON.parse(readIndexedArtifact({ path: retainedPath, revision, cwd }).toString('utf8')) };
   } catch (error) {
-    return fail('P2_1_PRIOR_RELEASE_UNAVAILABLE', `${PRIOR_RELEASE_VARIABLE} ${path} cannot be read (${error.message.split('\n')[0]})`);
+    return fail('P2_1_PRIOR_RELEASE_UNAVAILABLE', `${PRIOR_RELEASE_VARIABLE} ${path} cannot be read as retained evidence (${error.message.split('\n')[0]})`);
   }
+}
+
+/**
+ * The records a release reuses: for each package whose version input is empty (`names`), its record in the prior
+ * release's manifest, with the version, integrity, and provenance that release recorded. Reuse is only possible against
+ * a prior release (never the first), whose manifest inventories the whole set. The records are what
+ * `buildPortfolioManifest` keeps for a reused package. Whether the package really is unchanged is the version check
+ * (`findVersionEffectProblems`): a reused package stays at its prior version there, so a change to it is refused.
+ */
+export function reusedRecords({ names, priorRelease, publishSet }) {
+  if (names.length === 0) return new Map();
+  if (priorRelease.first) {
+    fail('P2_1_REUSE_NEEDS_PRIOR_RELEASE', `${names.join(', ')} ${names.length === 1 ? 'is' : 'are'} reused, and the first portfolio release has no prior release to reuse from`);
+  }
+  const unusable = findPriorManifestProblems(priorRelease.priorManifest, publishSet);
+  if (unusable.length > 0) fail('P2_1_PRIOR_RELEASE_INVALID', `the prior release manifest is unusable: ${unusable.join('; ')}`);
+  return new Map(names.map((name) => [name, priorRelease.priorManifest.packages.find((record) => record.name === name)]));
+}
+
+/**
+ * What a release that reuses packages is: the records it keeps (`reusedRecords`, for every member of the set the
+ * published versions `published` leave out), the manifests that published them (the prior release's, and for a package
+ * the prior release itself reused, the manifest of the release before, retained at `revision` as
+ * `tests/evidence/**\/release-manifest.json`; a reuse whose origin is not retained stops here), and the version of every
+ * member of the set. A release that reuses nothing needs no prior release.
+ */
+export function planReuse({ publishSet, published, priorRelease, revision, cwd, readRetained = readRetainedManifests }) {
+  const reused = reusedRecords({ names: reusedNames(publishSet, published), priorRelease, publishSet });
+  const priorManifests = readRetained({ ids: [...reused.values()].map(({ provenance }) => provenance?.releaseId), revision, cwd });
+  if (!priorRelease.first) priorManifests.set(priorRelease.priorManifest.id, priorRelease.priorManifest);
+  for (const [name, { version, provenance }] of reused) {
+    if (!priorManifests.has(provenance?.releaseId)) {
+      fail('P2_1_REUSE_ORIGIN_UNAVAILABLE', `${name}@${version} was published by ${provenance?.releaseId}, whose manifest is not retained as tests/evidence/**/release-manifest.json at ${revision}`);
+    }
+  }
+  return { reused, priorManifests, versions: releaseVersions(publishSet, published, reused) };
 }
 
 /**

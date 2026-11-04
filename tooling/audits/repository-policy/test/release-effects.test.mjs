@@ -18,8 +18,10 @@ import {
   findPriorManifestProblems,
   findVersionEffectProblems,
   movedEffect,
+  planReuse,
   readCommittedSide,
   resolvePriorRelease,
+  reusedRecords,
 } from '../src/release-effects.mjs';
 import { PORTFOLIO_SCHEMA, caretAllows, releaseIdFor, sha256 } from '../src/release-manifest.mjs';
 import { readPublishSet } from '../src/release-set.mjs';
@@ -426,6 +428,93 @@ test('a release commit is classified from its committed sources against the prio
   }
 });
 
+// Decision 0032 item 9 and E-P2.1-03: a later release publishes the packages whose version units changed and reuses the
+// rest. A reused package proposes the version the prior release recorded, so the version check needs no second path: an
+// unchanged package at its version is reused, a changed one at its version is refused, and a forced one cannot be reused.
+test('reusing a package is proposing its prior version: an unchanged package passes, a changed or forced one is refused', () => {
+  const reuse = (publish, units, changes = {}, manifest = priorManifest) => problemCodes({ units, publish, versions: proposed(changes, manifest), manifest });
+  // Nothing changed but tooling's implementation (the real first use): tooling alone takes a new version, the rest stay.
+  assert.deepEqual(reuse(['@muxui/tooling'], {}, { '@muxui/tooling': '1.1.0-rc.2' }), []);
+  // Reusing the changed package, whichever kind it is, is refused instead of silently carried over.
+  assert.deepEqual(reuse(['@muxui/tooling'], {}), ['P2_1_VERSION_PUBLICATION_MISSING']);
+  assert.deepEqual(reuse(['@muxui/schema'], {}), ['P2_1_VERSION_PUBLICATION_MISSING']);
+  assert.deepEqual(reuse(['@muxui/catalog'], { catalog: 'minor' }), ['P2_1_VERSION_NOT_AHEAD']);
+  assert.deepEqual(reuse(['@muxui/react'], { renderers: { '@muxui/react': 'patch' } }), ['P2_1_VERSION_NOT_AHEAD']);
+  // Publishing a package whose unit did not change is refused, so an input for an unchanged package cannot slip through.
+  assert.deepEqual(reuse([], {}, { '@muxui/react': '0.1.0-rc.6' }), ['P2_1_VERSION_UNIT_UNCHANGED']);
+  assert.deepEqual(reuse([], {}, { '@muxui/catalog': '2.1.0-rc.2', '@muxui/tooling': '1.1.0-rc.2' }), ['P2_1_VERSION_UNIT_UNCHANGED', 'P2_1_VERSION_UNIT_UNCHANGED']);
+  assert.deepEqual(reuse([], {}, { '@muxui/schema': '0.6.0-rc.2' }), ['P2_1_VERSION_UNIT_UNCHANGED']);
+  // A package whose recorded range no longer admits a sibling's new version is forced to publish: it cannot be reused.
+  assert.deepEqual(reuse(['@muxui/catalog'], { catalog: 'major' }, { '@muxui/catalog': '3.0.0-rc.1' }), ['P2_1_VERSION_RANGE_BROKEN']);
+  assert.deepEqual(reuse(['@muxui/catalog'], { catalog: 'major' }, { '@muxui/catalog': '3.0.0-rc.1', '@muxui/tooling': '1.1.0-rc.2' }), []);
+  // A prior release that itself reused packages judges them at the versions it recorded.
+  const reusedBefore = variant((manifest) => { manifest.packages[0].role = 'reused'; manifest.packages[3].role = 'reused'; return manifest; });
+  assert.deepEqual(reuse(['@muxui/tooling'], {}, { '@muxui/tooling': '1.1.0-rc.2' }, reusedBefore), []);
+});
+
+// The records a release keeps for what it reuses, and the retained manifests that vouch for them.
+test('a reuse takes its records from the prior release, which must exist, be usable, and have its origin retained', () => {
+  const originId = 'muxui-portfolio:origin';
+  const withProvenance = (manifest, releaseId = manifest.id, sourceCommit = manifest.source.revision) => seal({
+    ...manifest, packages: manifest.packages.map((record) => ({ ...record, provenance: { kind: 'release-commit', releaseId, sourceCommit } })),
+  });
+  const prior = withProvenance(priorManifest);
+  const names = ['@muxui/schema', '@muxui/catalog', '@muxui/react'];
+  const published = new Map([['@muxui/tooling', '1.1.0-rc.2']]);
+  const plan = (options = {}) => planReuse({ publishSet, published, priorRelease: { first: false, priorManifest: prior }, revision: 'f'.repeat(40), cwd: repositoryRoot, readRetained: () => new Map(), ...options });
+
+  const { reused, versions, priorManifests } = plan();
+  assert.deepEqual([...reused.keys()], names);
+  assert.deepEqual(reused.get('@muxui/react'), prior.packages[3], 'the whole record: version, file, digests, and provenance');
+  assert.deepEqual([...versions], [['@muxui/schema', '0.6.0-rc.1'], ['@muxui/catalog', '2.1.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.2'], ['@muxui/react', '0.1.0-rc.5']]);
+  assert.deepEqual([...priorManifests.keys()], [prior.id]);
+  assert.deepEqual([...reusedRecords({ names: [], priorRelease: { first: true }, publishSet })], []);
+  // Neither a first release, nor an unusable prior manifest, can be reused from.
+  assert.throws(() => plan({ priorRelease: { first: true } }), /P2_1_REUSE_NEEDS_PRIOR_RELEASE: @muxui\/schema, @muxui\/catalog, @muxui\/react are reused, and the first portfolio release has no prior release/u);
+  assert.throws(() => plan({ priorRelease: { first: false, priorManifest: { ...prior, packages: prior.packages.slice(0, 3) } } }), /P2_1_PRIOR_RELEASE_INVALID: the prior release manifest is unusable/u);
+  // A package the prior release reused is vouched for by the manifest of the release that published it, retained in the repository.
+  const second = withProvenance(priorManifest, originId, 'e'.repeat(40));
+  assert.throws(() => plan({ priorRelease: { first: false, priorManifest: second } }), /P2_1_REUSE_ORIGIN_UNAVAILABLE: @muxui\/schema@0\.6\.0-rc\.1 was published by muxui-portfolio:origin, whose manifest is not retained as tests\/evidence/u);
+  const retained = new Map([[originId, { id: originId }]]);
+  const chained = plan({ priorRelease: { first: false, priorManifest: second }, readRetained: ({ ids }) => new Map([...retained].filter(([id]) => ids.includes(id))) });
+  assert.deepEqual([...chained.priorManifests.keys()].sort(), [originId, second.id].sort());
+});
+
+test('the tooling-only release the first portfolio release needs: a real change to tooling publishes tooling and reuses the rest', () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'muxui-release-effects-test-'));
+  try {
+    const { commit } = scratchRepository(scratch);
+    const first = commit({ props: ['disabled'] });
+    const fixed = commit({ props: ['disabled'], cli: 'export const fixed = 1;\n' });
+    const atFirst = variant((manifest) => ({ ...manifest, source: { ...manifest.source, revision: first } }));
+    const prior = seal({ ...atFirst, packages: atFirst.packages.map((record) => ({ ...record, provenance: { kind: 'release-commit', releaseId: atFirst.id, sourceCommit: first } })) });
+    // The versions go through the plan the preparation takes, then the version check against the committed sources.
+    const check = (published) => {
+      const { versions } = planReuse({ publishSet, published: new Map(Object.entries(published)), priorRelease: { first: false, priorManifest: prior }, revision: fixed, cwd: scratch, readRetained: () => new Map() });
+      return assertVersionEffects({ priorManifest: prior, revision: fixed, cwd: scratch, versions, publishSet });
+    };
+    const message = (published) => {
+      try {
+        check(published);
+      } catch (error) {
+        return error.message;
+      }
+      return assert.fail('the release was accepted');
+    };
+
+    const checked = check({ '@muxui/tooling': '1.1.0-rc.2' });
+    assert.equal(checked.status, 'checked');
+    assert.deepEqual(checked.publish, ['@muxui/tooling'], 'only tooling changed');
+    assert.deepEqual(Object.values(checked.units.renderers), ['none']);
+    // Publishing what did not change is refused, and so is reusing what did.
+    assert.match(message({ '@muxui/tooling': '1.1.0-rc.2', '@muxui/react': '0.1.0-rc.6' }), /@muxui\/react moves 0\.1\.0-rc\.5 to 0\.1\.0-rc\.6, but its contract did not change \(P2_1_VERSION_UNIT_UNCHANGED\)/u);
+    assert.match(message({ '@muxui/tooling': '1.1.0-rc.2', '@muxui/schema': '0.6.0-rc.2' }), /@muxui\/schema moves 0\.6\.0-rc\.1 to 0\.6\.0-rc\.2, but nothing it ships changed \(P2_1_VERSION_UNIT_UNCHANGED\)/u);
+    assert.match(message({ '@muxui/schema': '0.6.0-rc.2' }), /@muxui\/tooling stays 1\.1\.0-rc\.1, but its shipped contract or implementation changed \(P2_1_VERSION_PUBLICATION_MISSING\)/u);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
 test('a package\'s implementation digest follows what it ships and what generates it, not an unpublished entry', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'muxui-release-effects-test-'));
   try {
@@ -473,6 +562,8 @@ test('a release names its prior release, or declares the first and agrees with t
     git('commit', '-q', '-m', 'unrelated evidence');
     assert.deepEqual(resolve({ [FIRST_RELEASE_VARIABLE]: 'true' }, git('rev-parse', 'HEAD')), { first: true });
     write('tests/evidence/p2-1/release.json', priorManifest);
+    const indexed = (bytes) => ({ schema: 'muxui-evidence-index-v1', artifacts: [{ path: 'tests/evidence/p2-1/release.json', sha256: sha256(Buffer.from(bytes)) }] });
+    write('tests/evidence/p2-1/index.json', indexed(`${JSON.stringify(priorManifest)}\n`));
     git('add', '-A');
     git('commit', '-q', '-m', 'retain a portfolio release');
     const retained = git('rev-parse', 'HEAD');
@@ -491,9 +582,23 @@ test('a release names its prior release, or declares the first and agrees with t
       rmSync(join(scratch, path));
       assert.match(refusal({ [FIRST_RELEASE_VARIABLE]: 'true' }, revision), new RegExp(`P2_1_FIRST_RELEASE_CONTRADICTED: .*${path.replace(/[./]/gu, '\\$&')}`, 'u'), what);
     }
-    // The prior manifest's path is read as given.
+    // The prior manifest is read as committed, from the path given (absolute or relative to the repository).
     const path = join(scratch, 'tests/evidence/p2-1/release.json');
     assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, retained), { first: false, priorManifest });
+    assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: 'tests/evidence/p2-1/release.json' }, retained), { first: false, priorManifest });
+    // A forged prior manifest, self-consistent and in the working tree or tracked, is not retained evidence unless its route's index lists it.
+    const forged = { ...priorManifest, packages: priorManifest.packages.map((record, index) => (index === 0 ? { ...record, integrity: `sha512-${'f'.repeat(86)}==` } : record)) };
+    const forgedText = `${JSON.stringify(forged)}\n`;
+    write('tests/evidence/p2-1/release.json', forged);
+    assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, retained), { first: false, priorManifest }, 'an edit that is not committed is not read');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'a forged prior manifest, its index left alone');
+    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: path }, git('rev-parse', 'HEAD')), /P2_1_PRIOR_RELEASE_UNAVAILABLE: .* cannot be read as retained evidence \(P2_1_MANIFEST_EVIDENCE_UNINDEXED: tests\/evidence\/p2-1\/release\.json is not listed with its sha256/u);
+    write('tests/evidence/p2-1/index.json', indexed(forgedText));
+    git('add', '-A');
+    git('commit', '-q', '-m', 'its index updated');
+    assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, git('rev-parse', 'HEAD')), { first: false, priorManifest: forged }, 'the index alone is not the last defence: the registry attestation is');
+    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: join(tmpdir(), 'elsewhere.json') }, retained), /cannot be read as retained evidence/u, 'a path outside the repository');
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }

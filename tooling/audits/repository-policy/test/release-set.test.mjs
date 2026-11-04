@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
@@ -21,6 +22,8 @@ import {
   parseReleaseVersions,
   readPublishSet,
   readSourceVersions,
+  releaseVersions,
+  reusedNames,
   tarballFileName,
   validatePublishSet,
 } from '../src/release-set.mjs';
@@ -78,7 +81,30 @@ test('a release gives every member of the set an rc of its source version, or de
   assert.equal(nextCandidateVersion('2.1.0-rc.12'), '2.1.0-rc.13');
 });
 
-test('a candidate holds one tarball per package in publish order and the portfolio manifest', () => {
+test('an empty version reuses a package, which only a later release can do, and a release publishes at least one', () => {
+  const tooling = '@muxui/schema=,@muxui/catalog=,@muxui/tooling=1.1.0-rc.2,@muxui/react=';
+  const published = parseReleaseVersions(tooling, publishSet, sourceVersions);
+  assert.deepEqual([...published], [['@muxui/tooling', '1.1.0-rc.2']], 'the Map holds the published packages');
+  assert.deepEqual(reusedNames(publishSet, published), ['@muxui/schema', '@muxui/catalog', '@muxui/react']);
+  assert.deepEqual(reusedNames(publishSet, parseReleaseVersions(firstRelease, publishSet, sourceVersions)), []);
+  // A reused package takes the version its record gives; a published one the version given.
+  const records = new Map([['@muxui/schema', { version: '0.6.0-rc.1' }], ['@muxui/catalog', { version: '2.1.0-rc.1' }], ['@muxui/react', { version: '0.1.0-rc.5' }]]);
+  assert.deepEqual([...releaseVersions(publishSet, published, records)], [['@muxui/schema', '0.6.0-rc.1'], ['@muxui/catalog', '2.1.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.2'], ['@muxui/react', '0.1.0-rc.5']]);
+  // Leaving a package out of the text is not reusing it: reuse is said, as an empty version.
+  assert.throws(() => parseReleaseVersions('@muxui/schema=,@muxui/catalog=,@muxui/tooling=1.1.0-rc.2', publishSet, sourceVersions), /@muxui\/react needs a version, or `@muxui\/react=` to reuse the package of the prior release/u);
+  assert.throws(() => parseReleaseVersions('@muxui/schema=,@muxui/catalog=,@muxui/tooling=,@muxui/react=', publishSet, sourceVersions), /a release publishes at least one package/u);
+  assert.throws(() => parseReleaseVersions(tooling.replace('1.1.0-rc.2', '2.0.0-rc.1'), publishSet, sourceVersions), /@muxui\/tooling: 2\.0\.0-rc\.1 is not a prerelease of the source version 1\.1\.0/u);
+  assert.throws(() => parseReleaseVersions(`${tooling},@muxui/tooling=`, publishSet, sourceVersions), /@muxui\/tooling is listed twice/u);
+  // The same check runs in seconds ahead of the preparation, and the first portfolio release reuses nothing.
+  const run = (environment) => spawnSync(process.execPath, [resolve(import.meta.dirname, '../src/release-set.mjs'), 'validate-versions'], { encoding: 'utf8', env: { PATH: process.env.PATH, ...environment } });
+  const accepted = run({ MUXUI_RELEASE_VERSIONS: tooling });
+  assert.equal(accepted.status, 0);
+  assert.equal(accepted.stdout, '@muxui/schema reused\n@muxui/catalog reused\n@muxui/tooling 1.1.0-rc.2\n@muxui/react reused\n');
+  assert.match(run({ MUXUI_RELEASE_VERSIONS: tooling, MUXUI_FIRST_PORTFOLIO_RELEASE: 'true' }).stdout, /P2_1_REUSE_NEEDS_PRIOR_RELEASE: @muxui\/schema, @muxui\/catalog, @muxui\/react are reused, and the first portfolio release has no prior release to reuse from/u);
+  assert.equal(run({ MUXUI_RELEASE_VERSIONS: firstRelease, MUXUI_FIRST_PORTFOLIO_RELEASE: 'true' }).status, 0);
+});
+
+test('a candidate holds one tarball per published package in publish order and the portfolio manifest', () => {
   const versions = parseReleaseVersions(firstRelease, publishSet, sourceVersions);
   assert.deepEqual(candidateFileNames(publishSet, versions), [
     'muxui-schema-0.6.0-rc.1.tgz',
@@ -87,6 +113,8 @@ test('a candidate holds one tarball per package in publish order and the portfol
     'muxui-react-0.1.0-rc.5.tgz',
     'muxui-portfolio.release-manifest.json',
   ]);
+  // A reused package has no tarball in the candidate.
+  assert.deepEqual(candidateFileNames(publishSet, new Map([['@muxui/tooling', '1.1.0-rc.2']])), ['muxui-tooling-1.1.0-rc.2.tgz', 'muxui-portfolio.release-manifest.json']);
   assert.equal(tarballFileName('@muxui/react', '0.1.0-rc.5'), 'muxui-react-0.1.0-rc.5.tgz');
 });
 

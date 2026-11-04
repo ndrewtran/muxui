@@ -38,6 +38,13 @@
 // packages' facts ride along under `portfolio`. An older run keeps the binding it
 // was captured with.
 //
+// A later portfolio release may reuse packages (Decision 0032 item 9): its candidate
+// holds only the published tarballs, and the manifest records the others as `reused`,
+// which ride along without a tarball. It is still the R1 exit evidence of a published
+// @muxui/react candidate. A release that reuses @muxui/react publishes no React
+// candidate, so it has no R1 exit route and this tool refuses it: the earlier rc's
+// route stays the evidence of that candidate.
+//
 // Options: --out=<dir> writes the route elsewhere (default: the version's route).
 // --rehearsal accepts a non-main run and an uncommitted tool for development
 // captures, marks every record as a rehearsal, and refuses the default route.
@@ -297,7 +304,10 @@ const mainCiReused = /^Main CI proof: reusing run (\d+) attempt (\d+) \(/u;
 const mainCiFallback = /^Main CI proof: not reused \((.+)\); running the full release:prepare$/u;
 const verifiedDryRun = /^Dry run (\d+) attempt (\d+) succeeded at ([0-9a-f]{40}); npm-candidate artifact (\d+) \((\d+) bytes, (sha256:[0-9a-f]{64})\)$/u;
 const fetchedCandidate = /^Fetched npm-candidate artifact (\d+) \((\d+) bytes, (sha256:[0-9a-f]{64})\) from dry run (\d+) attempt (\d+)$/u;
-const promotedCandidate = /^Promoted candidate (\S+) (sha512-\S+) from dry run (\d+) attempt (\d+)$/u;
+// Since packages can be reused the line lists each published tarball as `name@version integrity`; before that it named only
+// the React candidate. A retained run keeps the binding it was captured with.
+const promotedCandidate = /^Promoted candidate (\d\S*) (sha512-\S+) from dry run (\d+) attempt (\d+)$/u;
+const promotedTarballs = /^Promoted candidate (@muxui\/\S+@\S+ sha512-\S+(?:, @muxui\/\S+@\S+ sha512-\S+)*) from dry run (\d+) attempt (\d+)$/u;
 const promotesDryRun = (lines) => lines.some((line) => line.includes('##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs dry-run'));
 
 // How the dry run's checks ran, from its log and the manifest it uploaded, which must agree.
@@ -344,12 +354,20 @@ function bindPromotion({ lines, dryRun, runId }) {
   const read = (pattern) => lines.map((line) => content(line).match(pattern)).find(Boolean);
   const verified = read(verifiedDryRun);
   const fetched = read(fetchedCandidate);
-  const promoted = read(promotedCandidate);
+  const candidateOnly = read(promotedCandidate);
+  const promotedSet = candidateOnly ? null : read(promotedTarballs);
+  const promoted = candidateOnly ?? promotedSet;
   if (!verified || !fetched || !promoted) fail('R1_EXIT_PROMOTION_MISSING', `run ${runId} prepare log lacks its ${[['verify', verified], ['fetch', fetched], ['promoted-candidate', promoted]].filter(([, line]) => !line).map(([name]) => name).join(', ')} line`);
   const { runId: dryRunId, runAttempt, headRevision } = dryRun.execution;
   const [, verifiedRun, verifiedAttempt, verifiedSha, artifactId, size, artifactDigest] = verified;
   const [, fetchedId, fetchedSize, fetchedDigest, fetchedRun, fetchedAttempt] = fetched;
-  const [, version, integrity, promotedRun, promotedAttempt] = promoted;
+  const [promotedRun, promotedAttempt] = candidateOnly ? candidateOnly.slice(3) : promotedSet.slice(2);
+  // The line names the React candidate alone (earlier runs), or every published tarball, which must be the dry run's.
+  const publishedNow = (dryRun.portfolio?.published ?? []).map((entry) => `${entry.name}@${entry.version} ${entry.integrity}`).join(', ');
+  if (promotedSet && promotedSet[1] !== publishedNow) {
+    fail('R1_EXIT_DIGEST_MISMATCH', `run ${runId} promoted ${promotedSet[1]}; the dry run published ${publishedNow}`);
+  }
+  const [version, integrity] = candidateOnly ? candidateOnly.slice(1, 3) : [dryRun.candidate.version, dryRun.candidate.tarball.integrity];
   // Every line names the captured dry run at the captured attempt, so a rerun or another run cannot stand in.
   const named = [[verifiedRun, verifiedAttempt], [fetchedRun, fetchedAttempt], [promotedRun, promotedAttempt]];
   if (named.some(([id, attempt]) => Number(id) !== dryRunId || Number(attempt) !== runAttempt) || verifiedSha !== headRevision) {
@@ -449,7 +467,10 @@ export function bindDryRun(input) {
 
 const portfolioSchema = 'muxui-portfolio-release-v1';
 const reactName = '@muxui/react';
+// The dry run's own check of the candidate: the whole set, the manifest digest, and then either the React digest alone (earlier
+// runs) or the published tarballs, `name@version integrity` for each (since packages can be reused).
 const preparedSet = /^Prepared candidate set (.+); release manifest (sha256:[0-9a-f]{64}); @muxui\/react (sha512-\S+)$/u;
+const preparedPublished = /^Prepared candidate set (.+); release manifest (sha256:[0-9a-f]{64}); published (@muxui\/\S+@\S+ sha512-\S+(?:, @muxui\/\S+@\S+ sha512-\S+)*)$/u;
 
 // A portfolio manifest's digest covers everything except the digest itself and how the checks ran.
 const portfolioDigest = ({ digest: _digest, preparation: _preparation, ...body }) => sha256(canonicalJson(body));
@@ -480,10 +501,13 @@ function bindPortfolioDryRun({ run, jobs, prepareLog, artifact, sourceTree, main
   }
   if (manifest.source?.tree !== sourceTree) fail('R1_EXIT_SOURCE_REVISION_MISMATCH', `manifest source tree ${manifest.source?.tree} differs from ${sourceTree}`);
   const records = manifest.packages ?? [];
-  if (records.length === 0 || records.length !== artifact.packages.length) problems.push(`${records.length} package records for ${artifact.packages.length} tarballs`);
-  // Each tarball is the recorded bytes of the package the manifest lists at its position.
-  const packages = records.map((record, index) => {
-    const tarball = artifact.packages[index];
+  // The candidate holds a tarball for each published package, in the manifest's order; a reused package stays on the registry.
+  const publishedRecords = records.filter(({ role }) => role !== 'reused');
+  if (records.length === 0 || publishedRecords.length !== artifact.packages.length) problems.push(`${publishedRecords.length} published package records for ${artifact.packages.length} tarballs`);
+  // Each tarball is the recorded bytes of the published package the manifest lists at its position.
+  const packages = records.map((record) => {
+    if (record.role === 'reused') return { name: record.name, version: record.version, role: record.role, file: record.file, integrity: record.integrity, sha256: record.sha256 };
+    const tarball = artifact.packages[publishedRecords.indexOf(record)];
     const facts = tarball ? tarballFacts(tarball.bytes, tarball.entries) : {};
     const packed = tarball?.packageJson ?? {};
     if (!tarball || tarball.file !== record.file || facts.integrity !== record.integrity || facts.sha256 !== record.sha256
@@ -494,17 +518,21 @@ function bindPortfolioDryRun({ run, jobs, prepareLog, artifact, sourceTree, main
   });
   if (problems.length > 0) fail('R1_EXIT_TUPLE_MISMATCH', `the portfolio candidate disagrees with its manifest: ${problems.join('; ')}`);
   const react = packages.find(({ name }) => name === reactName);
-  if (react?.role !== 'published') fail('R1_EXIT_TUPLE_MISMATCH', `the portfolio release does not publish ${reactName}`);
+  if (react?.role !== 'published') {
+    fail('R1_EXIT_TUPLE_MISMATCH', `the portfolio release does not publish ${reactName}${react?.role === 'reused' ? `: it reuses ${react.version}, so this release has no React candidate and no R1 exit route, and ${react.version}'s own route stays that candidate's evidence` : ''}`);
+  }
   const published = packages.filter(({ role }) => role === 'published');
   if (canonicalJson(manifest.publication?.order) !== canonicalJson(published.map(({ name }) => name))) {
     fail('R1_EXIT_TUPLE_MISMATCH', 'the manifest publication order is not its published packages in order');
   }
   // The dry run's own check of the candidate prints the set, the manifest digest, and the React digest.
-  const prepared = lines.map((line) => content(line).match(preparedSet)).find(Boolean);
-  if (!prepared || prepared[2] !== manifest.digest || prepared[3] !== react.integrity
-    || prepared[1] !== packages.map(({ name, version }) => `${name}@${version}`).join(', ')) {
-    fail('R1_EXIT_DIGEST_MISMATCH', 'the log\'s prepared candidate set differs from the portfolio manifest and tarballs');
-  }
+  const setLine = packages.map(({ name, version }) => `${name}@${version}`).join(', ');
+  const reactOnlyLine = lines.map((line) => content(line).match(preparedSet)).find(Boolean);
+  const publishedLine = lines.map((line) => content(line).match(preparedPublished)).find(Boolean);
+  const matches = reactOnlyLine
+    ? reactOnlyLine[1] === setLine && reactOnlyLine[2] === manifest.digest && reactOnlyLine[3] === react.integrity
+    : publishedLine?.[1] === setLine && publishedLine[2] === manifest.digest && publishedLine[3] === published.map(({ name, version, integrity }) => `${name}@${version} ${integrity}`).join(', ');
+  if (!matches) fail('R1_EXIT_DIGEST_MISMATCH', 'the log\'s prepared candidate set differs from the portfolio manifest and tarballs');
   // Every published package's rehearsed `npm publish --dry-run` reported its version.
   const [rehearseStart, rehearseEnd] = findStep(lines, 'Rehearse npm publish (dry run)', '--dry-run');
   const rehearsed = lines.slice(rehearseStart, rehearseEnd).map(content);
@@ -883,9 +911,16 @@ function bindPortfolioPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal 
   const lines = publishLog.split('\n');
   const { packages, published } = dryRun.portfolio;
   const react = packages.find(({ name }) => name === reactName);
-  if (envValue(lines, 'EXPECTED_SHA512') !== react.integrity) fail('R1_EXIT_DIGEST_MISMATCH', `run ${run.id} tarball-sha512 input differs from the dry-run digest ${react.integrity}`);
-  if (envValue(lines, 'MUXUI_RELEASE_VERSIONS') !== packages.map(({ name, version }) => `${name}=${version}`).join(',')) {
-    fail('R1_EXIT_TUPLE_MISMATCH', `run ${run.id} version inputs differ from the dry run's ${packages.map(({ name, version }) => `${name}=${version}`).join(',')}`);
+  // The authorization is the integrity of each published tarball, any order; the first release's input held the React digest alone.
+  const authorized = envValue(lines, 'EXPECTED_SHA512');
+  const authorizedSet = new Set((authorized ?? '').split(',').map((entry) => entry.trim()).filter(Boolean));
+  if (authorized !== react.integrity && (authorizedSet.size !== published.length || published.some(({ integrity }) => !authorizedSet.has(integrity)))) {
+    fail('R1_EXIT_DIGEST_MISMATCH', `run ${run.id} tarball-sha512 input differs from the dry-run digests ${published.map(({ integrity }) => integrity).join(',')}`);
+  }
+  // A package the release reuses has an empty version input.
+  const versionInputs = packages.map(({ name, version, role }) => `${name}=${role === 'reused' ? '' : version}`).join(',');
+  if (envValue(lines, 'MUXUI_RELEASE_VERSIONS') !== versionInputs) {
+    fail('R1_EXIT_TUPLE_MISMATCH', `run ${run.id} version inputs differ from the dry run's ${versionInputs}`);
   }
   // The job verified exactly the dry run's published bytes before it published anything.
   const verified = lines.map((line) => content(line).match(/^Candidate verified: (.+)$/u)?.[1]).find(Boolean);
@@ -951,6 +986,10 @@ function bindPortfolioPublish({ dryRun, run, jobs, prepareLog, publishLog, appro
   if (mismatched.length > 0) fail('R1_EXIT_DIGEST_MISMATCH', `run ${run.id} published ${mismatched.join(', ')} other than the dry-run candidate, or without a drift recheck, provenance, or next`);
   const executed = executedRevision(prepareLines, attempt.execution.headRevision, `run ${run.id} prepare`);
   if (!promotion) fail('R1_EXIT_PROMOTION_MISSING', `run ${run.id} prepare log lacks its promotion lines`);
+  // Each reused package was read from the registry, at its recorded integrity, before anything published.
+  const reused = dryRun.portfolio.packages.filter(({ role }) => role === 'reused').map(({ name, version, integrity }) => ({ name, version, integrity }));
+  const unchecked = reused.filter(({ name, version, integrity }) => !lines.some((line) => content(line) === `${name}@${version}: reused, on the registry with ${integrity}`));
+  if (unchecked.length > 0) fail('R1_EXIT_RUN_INVALID', `run ${run.id} did not check ${unchecked.map(({ name, version }) => `${name}@${version}`).join(', ')} on the registry before publishing`);
   return {
     execution: { ...attempt.execution, executedRevision: executed, executedTree: dryRun.execution.executedTree },
     environment: environmentFrom(lines),
@@ -971,7 +1010,7 @@ function bindPortfolioPublish({ dryRun, run, jobs, prepareLog, publishLog, appro
         distTags: reactRow.readBack.distTags,
       },
     },
-    portfolio: { manifestDigest: dryRun.portfolio.digest, published: dryRun.portfolio.published, packages: rows },
+    portfolio: { manifestDigest: dryRun.portfolio.digest, published: dryRun.portfolio.published, ...(reused.length > 0 ? { reused } : {}), packages: rows },
   };
 }
 

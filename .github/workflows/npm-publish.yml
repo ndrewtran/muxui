@@ -3,10 +3,32 @@ name: npm publish
 # Manual npm publication of an exact release candidate. It never runs on push or
 # merge. A release is the declared publish set (tooling/audits/repository-policy/
 # publish-set.json: @muxui/schema, @muxui/catalog, @muxui/tooling, @muxui/react;
-# Decision 0032), each package with its own rc version: the three version inputs
-# below, and `version` for @muxui/react, which must be 0.1.0-rc.N (Roadmap R1
-# exit, Decision 0023 amendment 01). The others are an rc of their source
-# version, <source version>-rc.N.
+# Decision 0032), each package with its own rc version: the version inputs
+# below, `version` for @muxui/react, which must be 0.1.0-rc.N (Roadmap R1
+# exit, Decision 0023 amendment 01), and one for each of the others, an rc of
+# its source version, <source version>-rc.N.
+#
+# A release publishes only the packages whose version units changed (Decision
+# 0032 item 9). A package whose version input is empty is reused: it keeps the
+# version, bytes, and provenance of the prior release, which `prior-release`
+# names, so a release that reuses anything needs it and cannot be the first.
+# The dry run fetches each reused package from the public registry by its exact
+# version, never following a redirect, and holds it to the integrity that
+# release recorded and to the attestation the registry holds for it: the SLSA
+# statement must name those bytes, the recorded commit, and this repository's
+# publish workflow on main. `next` must still be that version. The dry run also
+# runs `npm audit signatures` on them in a project outside the checkout, which
+# verifies the attestation's Sigstore signature and the registry's signature.
+# The prior release manifest, and the manifest of any release it reused from,
+# must be retained evidence, listed with its digest by the index.json of its
+# tests/evidence route.
+# The dry run never repacks a reused package and checks the whole tuple with it;
+# an unchanged package given a version, or a changed one left empty, is refused
+# by the version check. At least one package is published. The candidate
+# artifact holds the published tarballs, in publish order, and the manifest. The
+# publish job publishes only those, and before the first publish and again
+# before each one checks every reused package's version document, attestation
+# statement, and `next` against the registry; the signatures are the dry run's.
 #
 # - mode=dry-run (default): `prepare` builds the candidate set for the input
 #   versions on the dispatched commit, rehearses `npm publish --dry-run` for
@@ -15,19 +37,25 @@ name: npm publish
 #   push CI already passed the full plan for this exact commit, it runs only
 #   `generate:check` and `release-prepare.mjs`; otherwise it runs the full
 #   `pnpm release:prepare` (Decision 0030). No environment or secret.
-#   tarball-sha512 (the @muxui/react tarball) may be empty here; when given it
-#   must match.
+#   tarball-sha512 (the sha512 integrity of each published tarball, comma
+#   separated; the dry run's summary lists them) may be empty here; when given
+#   it must be exactly those.
 #   The dry run also says which release it compares with: `prior-release` names
 #   the prior portfolio release manifest (a tracked tests/evidence path), or
 #   `first-portfolio-release` declares the first one (E-P2.1-04). Exactly one of
 #   them; the preparation rejects versions too small for the change, behind the
-#   prior release, or releasing an unchanged unit, and records the outcome in the
-#   manifest as preparation.verification.versionEffects.
+#   prior release, releasing an unchanged unit, or reusing a changed one, and
+#   records the outcome in the manifest as
+#   preparation.verification.versionEffects.
 # - mode=publish (main only): `prepare` promotes the dry run named by dry-run-id
 #   (verifies it, downloads its artifact by id, and checks the candidate set
 #   against the commit and the inputs) without building anything, so the prior
 #   release setting is the dry run's, recorded in its manifest and never
-#   re-derived from these inputs. Then one `publish` job, in the `npm-publish`
+#   re-derived from these inputs. The version inputs and tarball-sha512 must be
+#   the dry run's: a package is published exactly when its version input is not
+#   empty, and the authorization lists exactly the published tarballs. A reused
+#   package is fetched again from the registry, checked against the retained
+#   manifest of the release that published it and its attestation. Then one `publish` job, in the `npm-publish`
 #   environment (main only, no required reviewer; Decision 0033), publishes the
 #   set to `next` in publish order. It is the only job with `id-token: write`.
 #   A package that exists on npm publishes through trusted publishing: its
@@ -42,14 +70,14 @@ name: npm publish
 #   trusted publisher is set up just before its next real release, since npm
 #   expires one after 2 days without a publish; until then a publish of that
 #   existing package stops on authentication and never falls back to a token.
-#   Per package the publish job preflights
+#   Per published package the publish job preflights
 #   the registry, rechecks for drift, publishes with provenance, and reads back
 #   the version, integrity, provenance attestation, and `next`; it stops at the
 #   first failure and never continues to a later package. A failure prints a
 #   recovery plan (Decision 0023 amendment 01) and executes none of it.
 # - mode=registry-preflight: the publish preflight alone for every version
-#   input, read-only against the public registry, with no environment or
-#   credentials.
+#   input that is not empty, read-only against the public registry, with no
+#   environment or credentials.
 #
 # Preflight, per package: the version must be absent from the registry. A first
 # publish (package absent) must be its rc.1. Otherwise the dist-tags must be
@@ -68,36 +96,37 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "@muxui/react candidate version, 0.1.0-rc.N (e.g. 0.1.0-rc.2)"
-        required: true
+        description: "@muxui/react candidate version, 0.1.0-rc.N (e.g. 0.1.0-rc.2); empty reuses the prior release's @muxui/react"
+        required: false
         type: string
+        default: ''
       schema-version:
-        description: "@muxui/schema candidate version, <source version>-rc.N (e.g. 0.6.0-rc.1); every mode"
+        description: "@muxui/schema candidate version, <source version>-rc.N (e.g. 0.6.0-rc.1); empty reuses the prior release's; every mode"
         required: false
         type: string
         default: ''
       catalog-version:
-        description: "@muxui/catalog candidate version, <source version>-rc.N (e.g. 2.1.0-rc.1); every mode"
+        description: "@muxui/catalog candidate version, <source version>-rc.N (e.g. 2.1.0-rc.1); empty reuses the prior release's; every mode"
         required: false
         type: string
         default: ''
       tooling-version:
-        description: "@muxui/tooling candidate version, <source version>-rc.N (e.g. 1.1.0-rc.1); every mode"
+        description: "@muxui/tooling candidate version, <source version>-rc.N (e.g. 1.1.0-rc.1); empty reuses the prior release's; every mode"
         required: false
         type: string
         default: ''
       prior-release:
-        description: "Prior portfolio release manifest, a tracked path under tests/evidence/ ending .json; dry-run needs this or first-portfolio-release"
+        description: "Prior portfolio release manifest, a tracked path under tests/evidence/ ending .json; dry-run needs this or first-portfolio-release, and a release that reuses a package needs this"
         required: false
         type: string
         default: ''
       first-portfolio-release:
-        description: "This is the first portfolio release, so no prior manifest is tracked; dry-run needs this or prior-release"
+        description: "This is the first portfolio release, so no prior manifest is tracked and nothing is reused; dry-run needs this or prior-release"
         required: false
         type: boolean
         default: false
       tarball-sha512:
-        description: "@muxui/react tarball integrity (sha512-...) from a dry run of this workflow; optional for dry-run"
+        description: "Integrity (sha512-...) of each tarball this release publishes, comma separated, from a dry run of this workflow; optional for dry-run"
         required: false
         type: string
         default: ''
@@ -116,8 +145,8 @@ on:
 permissions:
   contents: read
 
-# One version for every member of the publish set, as release-set.mjs, release-lineage.mjs, and
-# npm-publication.mjs read them. Inputs reach scripts only through the environment.
+# One entry for every member of the publish set, as release-set.mjs, release-lineage.mjs, and
+# npm-publication.mjs read them: its version, or empty to reuse it. Inputs reach scripts only through the environment.
 env:
   MUXUI_RELEASE_VERSIONS: '@muxui/schema=${{ inputs.schema-version }},@muxui/catalog=${{ inputs.catalog-version }},@muxui/tooling=${{ inputs.tooling-version }},@muxui/react=${{ inputs.version }}'
 
@@ -178,14 +207,18 @@ jobs:
         with:
           node-version-file: .node-version
 
-      # Fails in seconds, before the long release preparation.
+      # Fails in seconds, before the long release preparation. An empty version reuses @muxui/react.
       - name: Validate version input
+        if: inputs.version != ''
         env:
           VERSION: ${{ inputs.version }}
         run: node tooling/audits/repository-policy/src/npm-publication.mjs validate-version
 
-      # Every member of the set needs an rc of its source version; this fails before the long preparation too.
+      # Every package that is published needs an rc of its source version, at least one is published, and the first
+      # portfolio release reuses nothing; this fails before the long preparation too.
       - name: Validate release versions
+        env:
+          MUXUI_FIRST_PORTFOLIO_RELEASE: ${{ inputs.first-portfolio-release && 'true' || '' }}
         run: node tooling/audits/repository-policy/src/release-set.mjs validate-versions
 
       # E-P2.1-04: a dry run must say which release it compares with, and fails in seconds when it does not.

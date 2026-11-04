@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -35,7 +35,9 @@ import {
   readRetainedEvidence,
   readRetainedReviewEvidence,
   replaceVersions,
+  verifyReusedSignatures,
 } from '../src/release-proof.mjs';
+import { attestationDocument, statementOf } from './registry-fake.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -498,6 +500,81 @@ test('clean-consumer installs send no host registry auth', async () => {
     server.close();
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+// The signatures of reused packages are checked with `npm audit signatures` in a project outside the checkout. The command is
+// injected, so these tests touch no network; the npm output they feed it is the shape the real command prints.
+test('reused packages are installed in an isolated project and must be covered by a clean npm audit signatures', () => {
+  const commit = 'a'.repeat(40);
+  const record = (name, version, character) => ({ name, version, integrity: `sha512-${character.repeat(86)}==`, provenance: { sourceCommit: commit } });
+  const reused = new Map([record('@muxui/schema', '0.6.0-rc.1', 'x'), record('@muxui/react', '0.1.0-rc.5', 'y')].map((entry) => [entry.name, entry]));
+  const verifiedEntry = ({ name, version, integrity }, change = (statement) => statement) => ({
+    name,
+    version,
+    location: `node_modules/${name}`,
+    registry: 'https://registry.npmjs.org/',
+    attestations: { url: `https://registry.npmjs.org/-/npm/v1/attestations/${name.replace('/', '%2f')}@${version}`, provenance: { predicateType: 'https://slsa.dev/provenance/v1' } },
+    attestationBundles: attestationDocument(change(statementOf({ name, version, integrity, commit }))).attestations,
+  });
+  const clean = () => ({ invalid: [], missing: [], verified: [...reused.values()].map((entry) => verifiedEntry(entry)) });
+  const result = (status, stdout, stderr = '') => ({ status, stdout, stderr });
+  // Every call is recorded with the project it ran in; `audit` is what `npm audit signatures --json --include-attestations` printed.
+  const attempt = ({ audit = result(0, JSON.stringify(clean())), install = result(0, ''), npm = result(0, '11.17.0\n') } = {}) => {
+    const calls = [];
+    const lines = [];
+    const project = {};
+    const run = (args, { cwd, env }) => {
+      calls.push({ args, cwd });
+      if (args[0] === 'install') Object.assign(project, { packageJson: JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf8')), npmrc: readFileSync(join(cwd, '.npmrc'), 'utf8'), env });
+      return { '--version': npm, install, audit }[args[0]];
+    };
+    const verify = () => verifyReusedSignatures({ reused, environment: { PATH: '/usr/bin', npm_config_registry: 'https://example.com/', NODE_AUTH_TOKEN: 'secret' }, run, log: (line) => lines.push(line) });
+    return { calls, lines, project, verify };
+  };
+
+  const ok = attempt();
+  assert.deepEqual(ok.verify(), { npm: '11.17.0', covered: ['@muxui/schema', '@muxui/react'], attested: 2 });
+  assert.deepEqual(ok.calls.map(({ args }) => args), [
+    ['--version'],
+    ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--legacy-peer-deps'],
+    ['audit', 'signatures', '--json', '--include-attestations'],
+  ]);
+  // A new project outside the checkout, at the exact recorded versions, with the public registry and no other npm configuration.
+  assert.ok(ok.calls.every(({ cwd }) => cwd === ok.calls[0].cwd && !cwd.startsWith(repositoryRoot)));
+  assert.deepEqual(ok.project.packageJson.dependencies, { '@muxui/schema': '0.6.0-rc.1', '@muxui/react': '0.1.0-rc.5' });
+  assert.equal(ok.project.npmrc, 'registry=https://registry.npmjs.org/\n');
+  assert.equal(ok.project.env.npm_config_registry, undefined, 'the host registry setting is dropped');
+  assert.ok(ok.project.env.npm_config_userconfig.startsWith(ok.calls[0].cwd) && ok.project.env.npm_config_globalconfig.startsWith(ok.calls[0].cwd));
+  assert.equal(existsSync(ok.calls[0].cwd), false, 'the project is removed');
+  assert.equal(ok.lines.length, 1);
+  assert.match(ok.lines[0], /^P2\.1 npm audit signatures \(npm 11\.17\.0\) verified the registry signature and the Sigstore attestation of @muxui\/schema@0\.6\.0-rc\.1, @muxui\/react@0\.1\.0-rc\.5: 0 invalid, 0 missing, 2 attested packages/u);
+
+  // Nothing reused, nothing run.
+  const none = attempt();
+  assert.equal(verifyReusedSignatures({ reused: new Map(), run: none.verify }), null);
+  assert.deepEqual(none.calls, []);
+
+  // Each way the check can fail stops the release.
+  const refuses = (options, pattern, message) => assert.throws(attempt(options).verify, pattern, message);
+  refuses({ npm: result(0, '11.4.0\n') }, /P2_1_REUSE_SIGNATURES_NPM_TOO_OLD: .* npm 11\.5\.1 or later; found 11\.4\.0/u, 'an npm too old for trusted publishing');
+  refuses({ install: result(1, '', 'npm error 404 Not Found') }, /P2_1_REUSE_SIGNATURES_INSTALL_FAILED: .*404 Not Found/u, 'install');
+  refuses({ audit: result(1, JSON.stringify(clean())) }, /P2_1_REUSE_SIGNATURES_FAILED: npm audit signatures exited 1/u, 'a nonzero exit with a clean report');
+  refuses({ audit: result(1, '', 'npm error found no dependencies to audit') }, /P2_1_REUSE_SIGNATURES_UNREADABLE: .*found no dependencies to audit/u, 'a nonzero exit and no report');
+  refuses({ audit: result(0, 'audited 3 packages in 1s') }, /P2_1_REUSE_SIGNATURES_UNREADABLE: .*not JSON/u, 'output that is not JSON');
+  refuses({ audit: result(0, JSON.stringify({ invalid: [], missing: [] })) }, /P2_1_REUSE_SIGNATURES_UNREADABLE: .*invalid, missing, and verified/u, 'a report without the verified list');
+  refuses({ audit: result(0, JSON.stringify({ ...clean(), invalid: [{ name: '@muxui/schema', version: '0.6.0-rc.1', code: 'EATTESTATIONVERIFY' }] })) }, /P2_1_REUSE_SIGNATURES_INVALID: .*@muxui\/schema@0\.6\.0-rc\.1/u, 'an invalid attestation, whatever the exit code');
+  refuses({ audit: result(0, JSON.stringify({ ...clean(), missing: [{ name: '@muxui/react', version: '0.1.0-rc.5' }] })) }, /P2_1_REUSE_SIGNATURES_MISSING: .*@muxui\/react@0\.1\.0-rc\.5/u, 'a missing registry signature, whatever the exit code');
+  // A clean report that does not cover every reused package: absent, another version, nested, or from another registry.
+  const without = (change) => result(0, JSON.stringify({ ...clean(), verified: clean().verified.map(change).filter(Boolean) }));
+  refuses({ audit: without((entry) => (entry.name === '@muxui/react' ? null : entry)) }, /P2_1_REUSE_SIGNATURES_NOT_COVERED: .*@muxui\/react@0\.1\.0-rc\.5/u, 'a package it did not verify');
+  refuses({ audit: without((entry) => ({ ...entry, version: '9.9.9' })) }, /NOT_COVERED: .*@muxui\/schema@0\.6\.0-rc\.1/u, 'another version');
+  refuses({ audit: without((entry) => ({ ...entry, location: `node_modules/x/${entry.location}` })) }, /NOT_COVERED/u, 'a nested copy');
+  refuses({ audit: without((entry) => ({ ...entry, registry: 'https://example.com/' })) }, /NOT_COVERED/u, 'another registry');
+  // The statement npm verified is the one judged: it must name the recorded bytes and commit, and this repository's workflow.
+  const judged = (change) => result(0, JSON.stringify({ ...clean(), verified: [...reused.values()].map((entry) => verifiedEntry(entry, (statement) => { change(statement, entry); return statement; })) }));
+  refuses({ audit: judged((statement) => { statement.subject[0].digest.sha512 = '0'.repeat(128); }) }, /Provenance mismatch|wrong the subject sha512/u, 'bytes other than the record');
+  refuses({ audit: judged((statement) => { statement.predicate.buildDefinition.resolvedDependencies[0].digest.gitCommit = 'b'.repeat(40); }) }, /wrong the source commit/u, 'another commit');
+  refuses({ audit: judged((statement) => { statement.predicate.buildDefinition.externalParameters.workflow.path = '.github/workflows/ci.yml'; }) }, /wrong the workflow/u, 'another workflow');
 });
 
 test('a matrix consumer must install the exact packed candidate', () => {

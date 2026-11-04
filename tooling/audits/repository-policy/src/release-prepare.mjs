@@ -30,10 +30,11 @@ import {
   readRetainedReviewEvidence,
   replaceVersions,
   summarizeBundleModules,
+  verifyReusedSignatures,
 } from './release-proof.mjs';
 import { canonicalJson } from './canonical-json.mjs';
 import { deterministicArchive, readArchive } from './release-archive.mjs';
-import { assertVersionEffects, findCandidateSetProblems, resolvePriorRelease } from './release-effects.mjs';
+import { assertVersionEffects, findCandidateSetProblems, planReuse, resolvePriorRelease } from './release-effects.mjs';
 import { RETAINED_EVIDENCE_MILESTONES, buildPortfolioManifest, committedFileReader, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
 import {
   CANDIDATE_PUBLISH_CONFIG,
@@ -48,7 +49,7 @@ import { discoverWorkspacePackages } from './workspace-packages.mjs';
 import { assertPatternVariantMarkup } from './pattern-variant-markup.mjs';
 import { patternVariantExamples } from './pattern-variants.mjs';
 import { resolvePinnedTool as resolvePinnedToolIn } from './pinned-tool.mjs';
-import { fixForwardVersion, parseCandidateVersion } from './npm-publication.mjs';
+import { fetchReusedTarball, fixForwardVersion, parseCandidateVersion } from './npm-publication.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -56,9 +57,23 @@ const packages = await discoverWorkspacePackages(repositoryRoot);
 const reactVersionPattern = /^0\.1\.0-alpha\.(?:0|[1-9]\d*)$/u;
 // Release preparation packs the declared publish set (Decision 0032): one rc version for each member, given as
 // `MUXUI_RELEASE_VERSIONS=<name>=<version>,...` (the npm-publish workflow's version inputs). Without it each member
-// takes the first rc of its source version, so a local `pnpm release:prepare` runs as it always has.
+// takes the first rc of its source version, so a local `pnpm release:prepare` runs as it always has. A member given an
+// empty version (`<name>=`) is reused (Decision 0032 item 9): it keeps the version, bytes, and provenance the prior
+// release recorded, so the release packs and publishes only the others.
 const publishSet = readPublishSet(repositoryRoot);
-const versions = parseReleaseVersions(process.env.MUXUI_RELEASE_VERSIONS, publishSet, readSourceVersions(publishSet, repositoryRoot));
+const publishedVersions = parseReleaseVersions(process.env.MUXUI_RELEASE_VERSIONS, publishSet, readSourceVersions(publishSet, repositoryRoot));
+// One commit and these exact versions name the release. The worktree must be that commit, whole.
+const sourceIdentity = readSourceIdentity();
+if (sourceIdentity.status !== '') {
+  fail('R1_EXIT_DIRTY_WORKTREE', 'commit the complete candidate before creating its exact release artifact');
+}
+const sourceRevision = sourceIdentity.revision;
+// E-P2.1-04: a release compares its versions with the prior portfolio release, so it must say which. MUXUI_PRIOR_RELEASE_MANIFEST is the
+// prior portfolio manifest's path; MUXUI_FIRST_PORTFOLIO_RELEASE=true declares the first one (Decision 0032 item 9), and is
+// refused if the tree retains a portfolio manifest. Neither is refused too, so an unset variable cannot skip the check.
+const priorRelease = resolvePriorRelease({ environment: process.env, revision: sourceRevision, cwd: repositoryRoot });
+// What the release reuses, the retained manifests that published it, and every package's version (a reused one keeps its recorded version).
+const { reused, priorManifests, versions } = planReuse({ publishSet, published: publishedVersions, priorRelease, revision: sourceRevision, cwd: repositoryRoot });
 const candidateVersion = versions.get('@muxui/react');
 try {
   parseCandidateVersion(candidateVersion);
@@ -406,26 +421,19 @@ if (publicationGuard.status === 0 || !publicationGuard.stderr.includes('MUXUI_RE
   fail('R1_EXIT_PUBLICATION_GUARD_INVALID', 'direct publication must remain fail-closed');
 }
 
-const sourceIdentity = readSourceIdentity();
-if (sourceIdentity.status !== '') {
-  fail('R1_EXIT_DIRTY_WORKTREE', 'commit the complete candidate before creating its exact release artifact');
-}
-const sourceRevision = sourceIdentity.revision;
 const trackedAssetEntries = trackedPackageEntries(sourceRevision, 'packages/react/assets');
 const trackedLicenseEntries = trackedPackageEntries(sourceRevision, 'packages/react/licenses');
 const requiredAssetAndLicenseEntries = [...trackedAssetEntries, ...trackedLicenseEntries];
 const sourceTreeResult = spawnSync('git', ['rev-parse', `${sourceRevision}^{tree}`], { cwd: repositoryRoot, encoding: 'utf8' });
 if (sourceTreeResult.status !== 0) fail('R1_EXIT_SOURCE_IDENTITY_UNAVAILABLE', sourceTreeResult.stderr);
 const sourceTree = sourceTreeResult.stdout.trim();
-// One commit and these exact versions name the release; the React descriptor records it at pack time.
+// The release is named by its commit and the versions it publishes; the React descriptor records it at pack time.
 const releaseId = releaseIdFor({
   revision: sourceRevision,
-  published: publishSet.packages.map(({ name }) => ({ name, version: versions.get(name) })),
+  published: publishSet.packages.filter(({ name }) => !reused.has(name)).map(({ name }) => ({ name, version: versions.get(name) })),
 });
-// E-P2.1-04: a release compares its versions with the prior release, so it must say which. MUXUI_PRIOR_RELEASE_MANIFEST is the
-// prior portfolio manifest's path; MUXUI_FIRST_PORTFOLIO_RELEASE=true declares the first one (Decision 0032 item 9), and is
-// refused if the tree retains a portfolio manifest. Neither is refused too, so an unset variable cannot skip the check.
-const priorRelease = resolvePriorRelease({ environment: process.env, revision: sourceRevision, cwd: repositoryRoot });
+// Where a package was built: this release and commit, or for a reused package the release that published it.
+const provenanceOf = (name) => reused.get(name)?.provenance ?? { releaseId, sourceCommit: sourceRevision };
 const versionEffects = priorRelease.first
   ? { status: 'first-portfolio-release' }
   : assertVersionEffects({
@@ -436,7 +444,7 @@ const versionEffects = priorRelease.first
     publishSet,
   });
 console.log(versionEffects.status === 'checked'
-  ? `P2.1 version effects match the change since ${versionEffects.priorRelease}; publishing ${versionEffects.publish.join(', ') || 'nothing'}`
+  ? `P2.1 version effects match the change since ${versionEffects.priorRelease}; changed and publishing ${versionEffects.publish.join(', ') || 'nothing'}; publishing ${[...publishedVersions.keys()].join(', ')}${reused.size > 0 ? `; reusing ${[...reused.values()].map(({ name, version }) => `${name}@${version}`).join(', ')}` : ''}`
   : 'P2.1 first portfolio release: no prior release to compare versions with');
 
 // The catalog's generated files embed its package version (`catalogVersion`, ids, digest, release record), so the
@@ -491,114 +499,153 @@ function packSupportPackage(entry, destination) {
   return { entry, archive, archiveBytes, candidateRoot: candidatePackage };
 }
 
+// A reused package is the earlier release's tarball, taken from the public registry by exact version and held to the integrity
+// that release recorded; it is extracted for the same proofs a packed candidate gets and never repacked.
+function unpackReused(entry, archiveBytes, destination) {
+  const archive = join(destination, tarballFileName(entry.name, versions.get(entry.name)));
+  writeFileSync(archive, archiveBytes);
+  const extractedRoot = join(destination, `reused-${basename(entry.path)}`);
+  mkdirSync(extractedRoot);
+  const unpacked = spawnSync('tar', ['-xzf', archive, '-C', extractedRoot], { encoding: 'utf8' });
+  if (unpacked.status !== 0) fail('P2_1_PACK_ARCHIVE_MISSING', `${entry.name}: ${unpacked.stderr}`);
+  return { entry, archive, archiveBytes, candidateRoot: join(extractedRoot, 'package') };
+}
+
+// Fetched before any packing, so a package missing from the registry, or with other bytes than recorded, stops the release first.
+const reusedTarballs = new Map();
+for (const [name, record] of reused) reusedTarballs.set(name, await fetchReusedTarball(record));
+// Then their signatures: the registry's, and the Sigstore signature and certificate chain of each attestation. Nothing runs when nothing is reused.
+verifyReusedSignatures({ reused });
+
 const temp = mkdtempSync(join(tmpdir(), 'muxui-r1-5-release-'));
 try {
-  const supportPackages = publishSet.packages.filter(({ name }) => name !== '@muxui/react').map((entry) => packSupportPackage(entry, temp));
+  const supportPackages = publishSet.packages.filter(({ name }) => name !== '@muxui/react')
+    .map((entry) => (reused.has(entry.name) ? unpackReused(entry, reusedTarballs.get(entry.name), temp) : packSupportPackage(entry, temp)));
   assertSourceIdentity(sourceRevision, 'after packing schema, catalog, and tooling');
-  console.log(`P2.1 packed and audited ${supportPackages.map(({ entry }) => `${entry.name}@${versions.get(entry.name)}`).join(', ')}`);
+  const packedSupport = supportPackages.filter(({ entry }) => !reused.has(entry.name));
+  console.log(`P2.1 packed and audited ${packedSupport.map(({ entry }) => `${entry.name}@${versions.get(entry.name)}`).join(', ') || 'no support package'}`);
+  const reusedSupport = supportPackages.filter(({ entry }) => reused.has(entry.name));
+  if (reusedSupport.length > 0) console.log(`P2.1 reused ${reusedSupport.map(({ entry }) => `${entry.name}@${versions.get(entry.name)}`).join(', ')} from the registry at the recorded bytes`);
 
-  const packed = spawnSync('pnpm', ['pack', '--pack-destination', temp], {
-    cwd: reactPackageRoot,
-    encoding: 'utf8',
-    stdio: 'pipe',
-    env: { ...process.env, npm_config_engine_strict: 'false' },
-  });
-  if (packed.status !== 0) fail('R1.5_PACK_FAILED', packed.stderr);
-  const sourceArchive = join(temp, `muxui-react-${manifest.version}.tgz`);
-  const sourceListing = spawnSync('tar', ['-tzf', sourceArchive], { encoding: 'utf8' });
-  if (sourceListing.status !== 0) fail('R1.5_PACK_ARCHIVE_MISSING', sourceListing.stderr);
-  const sourceEntries = sourceListing.stdout.trim().split('\n').filter((entry) => entry && !entry.endsWith('/')).sort();
-  assertSourceIdentity(sourceRevision, 'after prepack');
-  const rendererCheck = spawnSync(process.execPath, ['src/generate.mjs', '--check'], {
-    cwd: reactPackageRoot,
-    encoding: 'utf8',
-  });
-  if (rendererCheck.status !== 0) fail('R1_EXIT_GENERATION_IDENTITY_INVALID', rendererCheck.stderr || rendererCheck.stdout);
-  assertSourceIdentity(sourceRevision, 'after renderer generation check');
-  const generatedOutputs = readGeneratedOutputNames(reactPackageRoot);
-  const expectedGeneratedEntries = generatedOutputs.map((name) => `package/generated/${name}`);
-  const expectedPackageEntries = deriveExpectedPackageEntries({
-    generatedOutputs,
-    fixedEntries: fixedPackageEntries,
-    trackedEntries: requiredAssetAndLicenseEntries,
-  });
-  assertExactArchiveEntries(sourceEntries, expectedPackageEntries);
-  assertPackedFileBoundary({
-    entries: sourceEntries,
-    manifestFiles: manifest.files,
-    requiredEntries: requiredAssetAndLicenseEntries,
-  });
   const candidateRoot = join(temp, 'candidate');
   mkdirSync(candidateRoot);
-  const extracted = spawnSync('tar', ['-xzf', sourceArchive, '-C', candidateRoot], { encoding: 'utf8' });
-  if (extracted.status !== 0) fail('R1.5_PACK_ARCHIVE_MISSING', extracted.stderr);
   const candidatePackage = join(candidateRoot, 'package');
-  const candidateManifest = rewritePackedManifest({
-    packed: JSON.parse(readFileSync(join(candidatePackage, 'package.json'), 'utf8')),
-    entry: reactEntry,
-    versions,
-    sourceRevision,
-  });
-  writeFileSync(join(candidatePackage, 'package.json'), `${JSON.stringify(sortedJsonValue(candidateManifest), null, 2)}\n`);
-  // The source alpha becomes the candidate; the generator's declared candidate
-  // and fix-forward become the input candidate and its fix-forward.
-  const versionRewrites = new Map([[manifest.version, candidateVersion], ...candidateVersionRewrites]);
-  const readmePath = join(candidatePackage, 'README.md');
-  writeFileSync(readmePath, rewriteGeneratedVersion(readFileSync(readmePath, 'utf8'), candidateVersionRewrites));
-  for (const entry of expectedGeneratedEntries) {
-    const relative = entry.slice('package/'.length);
-    if (relative.endsWith('.provenance')) continue;
-    const path = join(candidatePackage, relative);
-    const original = readFileSync(path, 'utf8');
-    let rewritten = rewriteGeneratedVersion(original, versionRewrites);
-    if (relative === 'generated/release.json') {
-      const releaseValue = JSON.parse(rewritten);
-      rewritten = `${JSON.stringify({
-        ...releaseValue,
-        packagePrivate: false,
-        publication: { ...releaseValue.publication, status: 'prepared', mutationPerformed: false },
-        publicationPreparation: {
-          ...releaseValue.publicationPreparation,
-          status: 'prepared',
-          authorization: 'required-external-human-authorization',
-          mutationPerformed: false,
-        },
-      })}\n`;
-    } else if (relative === 'generated/r1-5-closure.json') {
-      rewritten = rewriteGeneratedJson(rewritten, (value) => ({
-        ...value,
-        publication: {
-          ...value.publication,
-          private: false,
-          status: 'prepared',
-          mutationPerformed: false,
-        },
-        families: value.families.map((family) => ({ ...family, packed: { ...family.packed, private: false } })),
-      }));
-    } else if (relative === 'generated/renderer-descriptor.json') {
-      // The renderer descriptor records the release and commit it was packed for (read, never compared, by the resolver).
-      rewritten = stampDescriptorProvenance(rewritten, { releaseId, sourceCommit: sourceRevision });
-    } else if (relative === 'generated/compatibility.mjs') {
-      rewritten = rewriteGeneratedBody(rewritten, (body) => {
-        const publication = `"publication":{"candidateVersion":"${candidateVersion}","private":true,"requires":["explicit external publish authorization"],"status":"disabled"}`;
-        const preparedPublication = `"publication":{"candidateVersion":"${candidateVersion}","private":false,"requires":["explicit external publish authorization"],"status":"prepared","mutationPerformed":false}`;
-        const prepared = body.replace(publication, preparedPublication);
-        if (prepared === body) fail('R1_EXIT_PACK_RELEASE_METADATA_INVALID', 'compatibility publication metadata was not transformed');
-        return prepared;
-      });
-    }
-    writeFileSync(path, rewritten);
-  }
-  for (const entry of expectedGeneratedEntries.filter((value) => value.endsWith('.provenance'))) {
-    const relative = entry.slice('package/'.length);
-    const path = join(candidatePackage, relative);
-    const target = readFileSync(join(candidatePackage, relative.replace(/\.provenance$/u, '')), 'utf8');
-    const original = readFileSync(path, 'utf8');
-    writeFileSync(path, rewriteProvenance(original, target, versionRewrites));
-  }
   const archive = join(temp, candidateArchiveName);
-  const archiveBytes = deterministicArchive(candidatePackage);
-  writeFileSync(archive, archiveBytes);
+  let archiveBytes;
+  let expectedPackageEntries;
+  if (reused.has('@muxui/react')) {
+    // A reused React package is the tarball its earlier release published, never repacked: the audits and consumer proofs
+    // below run on those bytes, against the current sources and the rest of the tuple.
+    archiveBytes = reusedTarballs.get('@muxui/react');
+    writeFileSync(archive, archiveBytes);
+    const extracted = spawnSync('tar', ['-xzf', archive, '-C', candidateRoot], { encoding: 'utf8' });
+    if (extracted.status !== 0) fail('R1.5_PACK_ARCHIVE_MISSING', extracted.stderr);
+    expectedPackageEntries = deriveExpectedPackageEntries({
+      generatedOutputs: readGeneratedOutputNames(reactPackageRoot),
+      fixedEntries: fixedPackageEntries,
+      trackedEntries: requiredAssetAndLicenseEntries,
+    });
+    console.log(`P2.1 reused ${reactEntry.name}@${candidateVersion} from ${provenanceOf(reactEntry.name).releaseId}, the bytes ${reused.get(reactEntry.name).integrity}`);
+  } else {
+    const packed = spawnSync('pnpm', ['pack', '--pack-destination', temp], {
+      cwd: reactPackageRoot,
+      encoding: 'utf8',
+      stdio: 'pipe',
+      env: { ...process.env, npm_config_engine_strict: 'false' },
+    });
+    if (packed.status !== 0) fail('R1.5_PACK_FAILED', packed.stderr);
+    const sourceArchive = join(temp, `muxui-react-${manifest.version}.tgz`);
+    const sourceListing = spawnSync('tar', ['-tzf', sourceArchive], { encoding: 'utf8' });
+    if (sourceListing.status !== 0) fail('R1.5_PACK_ARCHIVE_MISSING', sourceListing.stderr);
+    const sourceEntries = sourceListing.stdout.trim().split('\n').filter((entry) => entry && !entry.endsWith('/')).sort();
+    assertSourceIdentity(sourceRevision, 'after prepack');
+    const rendererCheck = spawnSync(process.execPath, ['src/generate.mjs', '--check'], {
+      cwd: reactPackageRoot,
+      encoding: 'utf8',
+    });
+    if (rendererCheck.status !== 0) fail('R1_EXIT_GENERATION_IDENTITY_INVALID', rendererCheck.stderr || rendererCheck.stdout);
+    assertSourceIdentity(sourceRevision, 'after renderer generation check');
+    const generatedOutputs = readGeneratedOutputNames(reactPackageRoot);
+    const expectedGeneratedEntries = generatedOutputs.map((name) => `package/generated/${name}`);
+    expectedPackageEntries = deriveExpectedPackageEntries({
+      generatedOutputs,
+      fixedEntries: fixedPackageEntries,
+      trackedEntries: requiredAssetAndLicenseEntries,
+    });
+    assertExactArchiveEntries(sourceEntries, expectedPackageEntries);
+    assertPackedFileBoundary({
+      entries: sourceEntries,
+      manifestFiles: manifest.files,
+      requiredEntries: requiredAssetAndLicenseEntries,
+    });
+    const extracted = spawnSync('tar', ['-xzf', sourceArchive, '-C', candidateRoot], { encoding: 'utf8' });
+    if (extracted.status !== 0) fail('R1.5_PACK_ARCHIVE_MISSING', extracted.stderr);
+    const candidateManifest = rewritePackedManifest({
+      packed: JSON.parse(readFileSync(join(candidatePackage, 'package.json'), 'utf8')),
+      entry: reactEntry,
+      versions,
+      sourceRevision,
+    });
+    writeFileSync(join(candidatePackage, 'package.json'), `${JSON.stringify(sortedJsonValue(candidateManifest), null, 2)}\n`);
+    // The source alpha becomes the candidate; the generator's declared candidate
+    // and fix-forward become the input candidate and its fix-forward.
+    const versionRewrites = new Map([[manifest.version, candidateVersion], ...candidateVersionRewrites]);
+    const readmePath = join(candidatePackage, 'README.md');
+    writeFileSync(readmePath, rewriteGeneratedVersion(readFileSync(readmePath, 'utf8'), candidateVersionRewrites));
+    for (const entry of expectedGeneratedEntries) {
+      const relative = entry.slice('package/'.length);
+      if (relative.endsWith('.provenance')) continue;
+      const path = join(candidatePackage, relative);
+      const original = readFileSync(path, 'utf8');
+      let rewritten = rewriteGeneratedVersion(original, versionRewrites);
+      if (relative === 'generated/release.json') {
+        const releaseValue = JSON.parse(rewritten);
+        rewritten = `${JSON.stringify({
+          ...releaseValue,
+          packagePrivate: false,
+          publication: { ...releaseValue.publication, status: 'prepared', mutationPerformed: false },
+          publicationPreparation: {
+            ...releaseValue.publicationPreparation,
+            status: 'prepared',
+            authorization: 'required-external-human-authorization',
+            mutationPerformed: false,
+          },
+        })}\n`;
+      } else if (relative === 'generated/r1-5-closure.json') {
+        rewritten = rewriteGeneratedJson(rewritten, (value) => ({
+          ...value,
+          publication: {
+            ...value.publication,
+            private: false,
+            status: 'prepared',
+            mutationPerformed: false,
+          },
+          families: value.families.map((family) => ({ ...family, packed: { ...family.packed, private: false } })),
+        }));
+      } else if (relative === 'generated/renderer-descriptor.json') {
+        // The renderer descriptor records the release and commit it was packed for (read, never compared, by the resolver).
+        rewritten = stampDescriptorProvenance(rewritten, { releaseId, sourceCommit: sourceRevision });
+      } else if (relative === 'generated/compatibility.mjs') {
+        rewritten = rewriteGeneratedBody(rewritten, (body) => {
+          const publication = `"publication":{"candidateVersion":"${candidateVersion}","private":true,"requires":["explicit external publish authorization"],"status":"disabled"}`;
+          const preparedPublication = `"publication":{"candidateVersion":"${candidateVersion}","private":false,"requires":["explicit external publish authorization"],"status":"prepared","mutationPerformed":false}`;
+          const prepared = body.replace(publication, preparedPublication);
+          if (prepared === body) fail('R1_EXIT_PACK_RELEASE_METADATA_INVALID', 'compatibility publication metadata was not transformed');
+          return prepared;
+        });
+      }
+      writeFileSync(path, rewritten);
+    }
+    for (const entry of expectedGeneratedEntries.filter((value) => value.endsWith('.provenance'))) {
+      const relative = entry.slice('package/'.length);
+      const path = join(candidatePackage, relative);
+      const target = readFileSync(join(candidatePackage, relative.replace(/\.provenance$/u, '')), 'utf8');
+      const original = readFileSync(path, 'utf8');
+      writeFileSync(path, rewriteProvenance(original, target, versionRewrites));
+    }
+    archiveBytes = deterministicArchive(candidatePackage);
+    writeFileSync(archive, archiveBytes);
+  }
   const listing = spawnSync('tar', ['-tzf', archive], { encoding: 'utf8' });
   if (listing.status !== 0) fail('R1.5_PACK_ARCHIVE_MISSING', listing.stderr);
   const entries = listing.stdout.trim().split('\n').filter((entry) => !entry.endsWith('/')).sort();
@@ -630,7 +677,7 @@ try {
   for (const forbidden of ['workspace:', '@muxui/web']) {
     if (packedManifestText.includes(forbidden)) fail('R1.5_PACK_MANIFEST_INVALID', `forbidden package reference: ${forbidden}`);
   }
-  assertPackedPackage({ entry: reactEntry, source: manifest, packed: packedManifest, entries, versions, sourceRevision });
+  assertPackedPackage({ entry: reactEntry, source: manifest, packed: packedManifest, entries, versions, sourceRevision: provenanceOf(reactEntry.name).sourceCommit });
 
   const publicEntry = readArchiveFile(archive, 'package/generated/index.mjs');
   const publicTypes = readArchiveFile(archive, 'package/generated/index.d.ts');
@@ -1123,8 +1170,9 @@ try {
   const moduleExports = new Map(Object.entries(exportNames));
   const descriptorProblems = findDescriptorExportProblems(installedDescriptor, moduleExports, { packageName: '@muxui/react' });
   if (descriptorProblems.length !== 0) fail('P2_1_DESCRIPTOR_EXPORT_MISSING', descriptorProblems.join('; '));
-  if (installedDescriptor.provenance?.releaseId !== releaseId || installedDescriptor.provenance?.sourceCommit !== sourceRevision) {
-    fail('P2_1_DESCRIPTOR_PROVENANCE_INVALID', 'the packed descriptor does not record this release and commit');
+  const reactProvenance = provenanceOf(reactEntry.name);
+  if (installedDescriptor.provenance?.releaseId !== reactProvenance.releaseId || installedDescriptor.provenance?.sourceCommit !== reactProvenance.sourceCommit) {
+    fail('P2_1_DESCRIPTOR_PROVENANCE_INVALID', `the packed descriptor does not record ${reused.has(reactEntry.name) ? 'the release and commit that published it' : 'this release and commit'}`);
   }
   // The audit must stay able to fail: the right member under another subpath is not an export.
   const crossed = structuredClone(installedDescriptor);
@@ -1132,8 +1180,9 @@ try {
   if (findDescriptorExportProblems(crossed, moduleExports, { packageName: '@muxui/react' }).length !== 1) fail('P2_1_DESCRIPTOR_AUDIT_INERT', '@muxui/react/markdown#Button was accepted');
   console.log(`P2.1 set consumer: ${tuple.size} tarballs installed together, ${Object.keys(exportNames).length} entries imported and ${resolvedEntries.length} resolved, ${Object.keys(installedDescriptor.bindings).length} descriptor bindings export their members`);
 
-  // Rehearse the publish of every tarball in order; npm reports the exact tuple without lifecycle hooks or a registry write.
-  for (const [name, { archive: file }] of tuple) {
+  // Rehearse the publish of every tarball this release publishes, in order; npm reports the exact tuple without lifecycle hooks or a registry write.
+  const publishing = [...tuple].filter(([name]) => !reused.has(name));
+  for (const [name, { archive: file }] of publishing) {
     const publishDryRun = spawnSync('npm', ['publish', file, '--dry-run', '--registry=https://registry.npmjs.org'], {
       cwd: repositoryRoot,
       encoding: 'utf8',
@@ -1147,7 +1196,7 @@ try {
       fail('R1_EXIT_PACK_PUBLISH_DRY_RUN_FAILED', `npm did not report ${name}@${versions.get(name)}`);
     }
   }
-  console.log(`R1 exit npm publish dry-run passed for ${[...tuple.keys()].join(', ')} without lifecycle hooks or registry mutation`);
+  console.log(`R1 exit npm publish dry-run passed for ${publishing.map(([name]) => name).join(', ')} without lifecycle hooks or registry mutation`);
 
   // The retained evidence is validated as the checkout holds it (fail closed); the manifest binds it as committed.
   readRetainedEvidence(repositoryRoot, RETAINED_EVIDENCE_MILESTONES);
@@ -1157,6 +1206,7 @@ try {
   const releaseManifest = buildPortfolioManifest({
     publishSet,
     artifacts: new Map([...tuple].map(([name, { archiveBytes: bytes }]) => [name, bytes])),
+    reused,
     source: { revision: sourceRevision, tree: sourceTree },
     readCommitted,
     // Which checks stand behind this candidate, and what the consumer proofs saw (Decision 0030). Not part of the digest.
@@ -1174,19 +1224,24 @@ try {
   // The retained indexes and the lockfile were read from the worktree for validation; bind them to the commit.
   assertSourceIdentity(sourceRevision, 'after release correlation');
   const { react, evidence } = releaseManifest;
-  console.log(`R1 exit correlation: ${react.bindings.length} binding-spec revisions, ${react.generatedOutputs.entries.length} generated outputs, ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index, visual contract ${react.visualContract.digest}`);
+  // A reused React package keeps the correlation block of the release that published it, so this manifest has none.
+  console.log(react === undefined
+    ? `P2.1 correlation: ${reactEntry.name} is reused, so its generated outputs and visual contract stay those of ${provenanceOf(reactEntry.name).releaseId}; ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index`
+    : `R1 exit correlation: ${react.bindings.length} binding-spec revisions, ${react.generatedOutputs.entries.length} generated outputs, ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index, visual contract ${react.visualContract.digest}`);
   const outputDirectory = mkdtempSync(join(tmpdir(), 'muxui-r1-exit-output-'));
-  for (const [name, { archiveBytes: bytes }] of tuple) writeFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))), bytes);
+  // The candidate holds the published tarballs and the manifest; a reused package stays on the registry where it is.
+  for (const [name, { archiveBytes: bytes }] of publishing) writeFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))), bytes);
   writeFileSync(join(outputDirectory, PORTFOLIO_MANIFEST_FILE), `${canonicalJson(releaseManifest)}\n`);
   // What was written, read back, must verify as the release this commit prepares.
   verifyPortfolioRelease({
     manifest: JSON.parse(readFileSync(join(outputDirectory, PORTFOLIO_MANIFEST_FILE), 'utf8')),
-    artifacts: new Map(publishSet.packages.map(({ name }) => [name, readFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))))])),
+    artifacts: new Map(publishSet.packages.map(({ name }) => [name, reused.has(name) ? tuple.get(name).archiveBytes : readFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))))])),
     publishSet,
     expected: { revision: sourceRevision, tree: sourceTree },
     readCommitted,
+    priorManifests,
   });
-  for (const [name, { archiveBytes: bytes }] of tuple) {
+  for (const [name, { archiveBytes: bytes }] of publishing) {
     if (statSync(join(outputDirectory, tarballFileName(name, versions.get(name)))).size !== bytes.length) {
       fail('R1_EXIT_ARTIFACT_WRITE_FAILED', `${name} tarball size changed after persistence`);
     }

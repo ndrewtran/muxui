@@ -1,9 +1,11 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
-import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, dirname, join, posix } from 'node:path';
 import { canonicalJson } from './canonical-json.mjs';
+import { MINIMUM_NPM, REGISTRY, judgeAttestation, meetsMinimumNpm } from './npm-publication.mjs';
 import { deriveCatalogIdentity, digestFileSet } from './release-contract.mjs';
 
 export { deriveVisualContract, digestFileSet, readLockedIntegrity } from './release-contract.mjs';
@@ -544,6 +546,75 @@ export function nodeBundledCli(name, execPath = process.execPath) {
   const path = join(dirname(execPath), '..', 'lib', 'node_modules', relative);
   if (!existsSync(path)) fail('R1_EXIT_CONSUMER_MATRIX_UNAVAILABLE', `${name} is not bundled with ${execPath}`);
   return path;
+}
+
+/** `npm <args>` with the Node running this script and the npm it bundles. */
+function runBundledNpm(args, { cwd, env }) {
+  return spawnSync(process.execPath, [nodeBundledCli('npm'), ...args], {
+    cwd, env, encoding: 'utf8', stdio: 'pipe', maxBuffer: 64 * 1024 * 1024, timeout: 300_000,
+  });
+}
+
+/**
+ * Verifies the signatures behind the packages a release reuses (Decision 0032 item 9), with `npm audit signatures`. `reused`
+ * maps each reused package to its record in the manifest that published it. They are installed, at exactly their recorded
+ * versions and with scripts ignored, into a new project outside the checkout whose npm configuration is empty but for the
+ * public registry. Then `npm audit signatures --json --include-attestations` must exit 0 with no `invalid` and no `missing`
+ * package, and its `verified` list (the packages whose attestation it verified: the Sigstore signature and certificate chain
+ * of the bundle, and the registry's signature over the version) must hold every reused package as a direct dependency. That
+ * list is also where the statement is read from: `judgeAttestation` binds the statement npm verified, not another copy of
+ * it, to the recorded bytes and commit and to this repository's publish workflow. Fails closed on a nonzero exit, output it
+ * cannot read, or a package it did not cover. Nothing runs when nothing is reused. `run(args, { cwd, env })` is the npm
+ * command, injected by tests so they touch no network.
+ */
+export function verifyReusedSignatures({ reused, environment = process.env, run = runBundledNpm, log = console.log }) {
+  const records = [...reused.values()];
+  if (records.length === 0) return null;
+  const code = 'P2_1_REUSE_SIGNATURES';
+  const project = mkdtempSync(join(tmpdir(), 'muxui-reuse-signatures-'));
+  try {
+    writeFileSync(join(project, 'package.json'), `${JSON.stringify({
+      name: 'muxui-reuse-signatures', private: true, dependencies: Object.fromEntries(records.map(({ name, version }) => [name, version])),
+    }, null, 2)}\n`);
+    writeFileSync(join(project, '.npmrc'), `registry=${REGISTRY}/\n`);
+    writeFileSync(join(project, 'user.npmrc'), '');
+    writeFileSync(join(project, 'global.npmrc'), '');
+    const env = isolatedPackageManagerEnvironment(environment, { userConfig: join(project, 'user.npmrc'), globalConfig: join(project, 'global.npmrc') });
+    const npm = (args) => run(args, { cwd: project, env });
+    const output = (result) => (result.error?.message || result.stderr || result.stdout || `exited with ${result.signal ?? result.status}`).trim().slice(-2000);
+
+    const version = npm(['--version']);
+    if (version.status !== 0 || !meetsMinimumNpm(version.stdout)) {
+      fail(`${code}_NPM_TOO_OLD`, `signature verification needs npm ${MINIMUM_NPM} or later; found ${version.stdout?.trim() || output(version)}`);
+    }
+    const install = npm(['install', '--ignore-scripts', '--no-audit', '--no-fund', '--legacy-peer-deps']);
+    if (install.status !== 0) fail(`${code}_INSTALL_FAILED`, `the reused packages did not install from ${REGISTRY}: ${output(install)}`);
+    const audit = npm(['audit', 'signatures', '--json', '--include-attestations']);
+    let result;
+    try {
+      result = JSON.parse(audit.stdout);
+    } catch {
+      fail(`${code}_UNREADABLE`, `npm audit signatures printed output that is not JSON: ${output(audit)}`);
+    }
+    if (!Array.isArray(result?.invalid) || !Array.isArray(result.missing) || !Array.isArray(result.verified)) {
+      fail(`${code}_UNREADABLE`, 'npm audit signatures did not report invalid, missing, and verified packages');
+    }
+    const named = (entries) => entries.map(({ name, version: found }) => `${name}@${found}`).join(', ');
+    if (result.invalid.length > 0) fail(`${code}_INVALID`, `npm audit signatures found invalid signatures or attestations: ${named(result.invalid)}`);
+    if (result.missing.length > 0) fail(`${code}_MISSING`, `npm audit signatures found missing registry signatures: ${named(result.missing)}`);
+    if (audit.status !== 0) fail(`${code}_FAILED`, `npm audit signatures exited ${audit.status}: ${output(audit)}`);
+    for (const { name, version: recorded, integrity, provenance } of records) {
+      const covered = result.verified.find((entry) => entry.name === name && entry.version === recorded
+        && entry.location === `node_modules/${name}` && entry.registry === `${REGISTRY}/`);
+      if (covered === undefined) fail(`${code}_NOT_COVERED`, `npm audit signatures did not verify an attestation of ${name}@${recorded}`);
+      judgeAttestation({ name, version: recorded, integrity, sourceCommit: provenance?.sourceCommit, attestations: { attestations: covered.attestationBundles } });
+    }
+    const covers = records.map(({ name, version: recorded }) => `${name}@${recorded}`).join(', ');
+    log(`P2.1 npm audit signatures (npm ${version.stdout.trim()}) verified the registry signature and the Sigstore attestation of ${covers}: 0 invalid, 0 missing, ${result.verified.length} attested packages in the install; each reused attestation names its recorded bytes and commit`);
+    return { npm: version.stdout.trim(), covered: records.map(({ name }) => name), attested: result.verified.length };
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
 }
 
 const digest = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;

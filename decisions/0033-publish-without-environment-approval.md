@@ -35,7 +35,8 @@ repository's GitHub settings on 2 November 2026:
    policy, and records each deployment. Only the reviewer is removed.
 4. **Starting a publish stays a delivery stop.** An agent starts `mode=publish`
    only after Andrew's exact authorization for that release candidate, with
-   `tarball-sha512` where the release uses one. That authorization is a rule of
+   `tarball-sha512` (the sha512 of each tarball the release publishes, comma
+   separated) where the release uses one. That authorization is a rule of
    process. GitHub no longer enforces it.
 
 What stays unchanged:
