@@ -3783,13 +3783,26 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.equal(publication.publishApproval.approvalsRecordedByThePublishRun.length, 0, 'Decision 0033: no environment approval');
     assert.match(publication.publishApproval.source, /not observable from hosted data/u);
 
-    // The independent review is either pending, with the command that retains it, or retained and bound to its digest.
-    const { independentReview } = JSON.parse(text(`${route}/records/E-P2.1-01.json`));
-    if (independentReview.status === 'pending') assert.match(independentReview.retainedBy, /--review=<file> --review-revision=<sha>/u);
-    else {
-      assert.equal(digest(text(independentReview.artifact.path)), independentReview.artifact.sha256);
-      assert.match(independentReview.reviewedRevision, /^[0-9a-f]{40}$/u);
-      assert.ok(index.artifacts.some(({ path }) => path === independentReview.artifact.path));
+    // The independent review did not pass and is retained as written, bound to its digest and to the revision the reviewer read. The
+    // records keep its finding: E-P2.1-02 is partial, and P2.1 is not closed by them.
+    const review = JSON.parse(text(`${route}/records/E-P2.1-01.json`)).independentReview;
+    assert.deepEqual([review.status, review.reviewedRevision, review.reviewedRevisionIsSource, review.reviewer], ['retained-not-passing', 'cca758bc400317fb04b6a0d5f232d33a7b0845b5', false, 'GPT-6.1 Sol, Codex']);
+    assert.match(review.verdictText, /^\*\*Not passing\.\*\*/u);
+    assert.equal(digest(text(review.artifact.path)), review.artifact.sha256);
+    assert.ok(index.artifacts.some(({ path, sha256 }) => path === review.artifact.path && sha256 === review.artifact.sha256));
+    assert.deepEqual(index.independentReview, review, 'the index and every record carry the same review');
+    // What changed since the reviewed revision is listed, and includes the tool the records were rebuilt with.
+    assert.equal(review.changedSinceReviewed.truncated, false);
+    assert.equal(review.changedSinceReviewed.pathCount, review.changedSinceReviewed.paths.length);
+    assert.ok(review.changedSinceReviewed.captureToolChanged && review.changedSinceReviewed.paths.includes('tests/evidence/capture-p2.1.mjs'));
+    for (const { path } of index.records) {
+      const record = JSON.parse(text(path));
+      assert.deepEqual(record.independentReview, review, path);
+      assert.ok(record.nonClaims.some((claim) => /^The independent release-integrity review did not pass .* P2\.1 is not closed by them\.$/u.test(claim)), path);
     }
+    const readme = text(`${route}/README.md`);
+    assert.match(readme, /\*\*It did not pass\.\*\* `E-P2\.1-02` is `partial`, and P2\.1 is not closed by these records\./u);
+    assert.match(readme, /^\| `E-P2\.1-02` \| `partial` \|$/mu);
+    assert.doesNotMatch(readme, /review is pending/u);
   });
 }

@@ -37,11 +37,11 @@ One test, added after the release, ran in pull request CI run 41768320064 (attem
 
 `E-P2.1-02` also rests on a published-run phase: at 2026-11-04T04:53:06Z the four released packages were installed from the public registry into a clean project outside the checkout, and the installed `muxui` bin was run through the discovery matrix, the budget fixtures, an invalid-request corpus, and the commands P2.1 does not enable (`tests/evidence/p2.1/validation/published-muxui-output.txt`). 10 of 11 checks passed. The packed-CLI tests of the release commit pack the source manifests' versions, and the records cite them as source-version supporting evidence.
 
-`artifacts/` holds the registry read-back of all four packages; `validation/` holds the CI job
+`artifacts/` holds the registry read-back of all four packages and the independent review; `validation/` holds the CI job
 excerpts; `verification.json` binds them to the unsanitized log digests. The raw logs and
 tarballs are not retained.
 
-No independent release-integrity review is retained: it is pending, and these records claim no outcome of it. A reviewer of a different model and harness from the authoring agents reads the evidence and the release, and `--review=<file> --review-revision=<sha>` retains the review and rebuilds the records with it.
+The independent release-integrity review is retained as `tests/evidence/p2.1/artifacts/release-integrity-review.md`, read by GPT-6.1 Sol, Codex at `cca758bc400317fb04b6a0d5f232d33a7b0845b5`. **It did not pass.** `E-P2.1-02` is `partial`, and P2.1 is not closed by these records. The paths changed since the reviewed revision are listed in the records (`independentReview.changedSinceReviewed`).
 
 The read-back lists every version of each package. `@muxui/schema`, `@muxui/catalog`, and `@muxui/tooling` each also list a `0.0.0-stage` placeholder version, observed in `E-P2.1-06` and not part of the release tuple; its origin is inferred, not proved.
 
