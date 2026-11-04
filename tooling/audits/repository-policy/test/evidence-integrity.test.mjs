@@ -3479,3 +3479,106 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     rejectsPrior(rebuild({ ...stopped, blocks: [stopped.blocks[1], stopped.blocks[0], stopped.blocks[2]] }));
   });
 }
+
+// ---------------------------------------------------------------------------
+// P2.1 (Roadmap "P2.1 Public package graph and portfolio release"): the E-P2.1-01 to 06 records of the first portfolio release.
+{
+  const p2 = await import('../../../../tests/evidence/capture-p2.1.mjs');
+  const stamp = (index) => `2026-11-04T01:14:${String(index % 60).padStart(2, '0')}.0000000Z`;
+  const jobLog = (lines) => lines.map((line, index) => `${stamp(index)} ${line}`).join('\n');
+  const passing = (title) => `✔ ${title} (1.5ms)`;
+  const totals = ['ℹ tests 3', 'ℹ pass 3', 'ℹ fail 0', 'ℹ cancelled 0', 'ℹ skipped 0', 'ℹ todo 0'];
+  const code = (expected) => (error) => error?.code === expected;
+
+  test('P2.1 capture keeps the cited passing lines of a CI job, and refuses a log that does not show them once', () => {
+    const log = jobLog(['[ci-impact] running group checks-policy (3 command(s))', '[ci-impact] command: tar --version', passing('E-P2.1-01 cited'), passing('uncited neighbour'), passing('version effects: 01-a'), ...totals]);
+    const { kept, totals: counted } = p2.ciExcerpt(log, { titles: new Set(['E-P2.1-01 cited']), prefixes: ['version effects: '] });
+    assert.deepEqual(kept.map(({ text }) => text.slice(29)), ['[ci-impact] running group checks-policy (3 command(s))', passing('E-P2.1-01 cited'), passing('version effects: 01-a'), ...totals.slice(0, 6)]);
+    assert.deepEqual(counted, [{ tests: 3, pass: 3, fail: 0, cancelled: 0, skipped: 0, todo: 0 }]);
+    const rejects = (lines, expected, titles = new Set(['E-P2.1-01 cited'])) => assert.throws(() => p2.ciExcerpt(jobLog(lines), { titles }), code(expected), expected);
+    rejects([passing('another test'), ...totals], 'P2_1_CI_TEST_MISSING');
+    rejects([passing('E-P2.1-01 cited'), passing('E-P2.1-01 cited'), ...totals], 'P2_1_CI_TEST_AMBIGUOUS');
+    rejects([passing('E-P2.1-01 cited'), '✖ a failing test (2ms)', ...totals], 'P2_1_CI_TEST_FAILED');
+    rejects([passing('E-P2.1-01 cited'), 'ℹ tests 3', 'ℹ pass 2', 'ℹ fail 1'], 'P2_1_CI_TEST_TOTALS');
+    rejects([passing('E-P2.1-01 cited')], 'P2_1_CI_TEST_TOTALS');
+  });
+
+  const integrityOf = (seed) => `sha512-${Buffer.alloc(64, seed).toString('base64')}`;
+  const commit = 'a'.repeat(40);
+  const entryOf = (name, version, seed) => ({ name, version, integrity: integrityOf(seed), shasum: `${seed}`.repeat(40).slice(0, 40) });
+  const attestationFor = (entry, { revision = commit, runId = 7 } = {}) => ({
+    attestations: [{
+      predicateType: 'https://slsa.dev/provenance/v1',
+      bundle: { dsseEnvelope: { payload: Buffer.from(JSON.stringify({
+        subject: [{ name: `pkg:npm/${entry.name.replace('@', '%40')}@${entry.version}`, digest: { sha512: Buffer.from(entry.integrity.slice(7), 'base64').toString('hex') } }],
+        predicate: {
+          buildDefinition: { externalParameters: { workflow: { repository: 'https://github.com/ndrewtran/muxui', path: '.github/workflows/npm-publish.yml' } }, resolvedDependencies: [{ digest: { gitCommit: revision } }] },
+          runDetails: { metadata: { invocationId: `https://github.com/ndrewtran/muxui/actions/runs/${runId}/attempts/1` } },
+        },
+      })).toString('base64') } },
+    }],
+  });
+  const placeholder = { version: p2.placeholderVersion, description: 'Temporary package placeholder for staged publishing', fileCount: 2, unpackedSize: 335, integrity: integrityOf(9), shasum: '9'.repeat(40), publishedAt: '2026-11-04T01:29:48.766Z' };
+  const viewOf = (entry, change = {}) => ({
+    integrity: entry.integrity, shasum: entry.shasum, attestations: { url: 'https://registry.example/a', provenance: { predicateType: 'https://slsa.dev/provenance/v1' } },
+    distTags: { latest: entry.version, next: entry.version }, versions: [p2.placeholderVersion, entry.version], time: { [entry.version]: '2026-11-04T01:31:55.915Z' }, ...change,
+  });
+
+  test('P2.1 capture reads a package whose registry lists the placeholder beside its rc, and nothing else', () => {
+    const schemaEntry = entryOf('@muxui/schema', '0.6.0-rc.1', 1);
+    const bind = (input = {}) => p2.bindRegistryPackage({ entry: schemaEntry, view: viewOf(schemaEntry), attestations: attestationFor(schemaEntry), placeholders: [placeholder], publishRunId: 7, sourceRevision: commit, first: true, priorLatest: '', ...input });
+    const bound = bind();
+    assert.deepEqual(bound.otherVersions, [{ ...Object.fromEntries(Object.entries(placeholder).filter(([key]) => key !== 'attestations')), provenance: 'none' }]);
+    // An earlier rc is listed by version only: nothing here says what provenance it has.
+    const reactEntry = entryOf('@muxui/react', '0.1.0-rc.5', 4);
+    assert.deepEqual(p2.bindRegistryPackage({
+      entry: reactEntry, view: viewOf(reactEntry, { distTags: { latest: '0.1.0-rc.1', next: reactEntry.version }, versions: ['0.1.0-rc.1', reactEntry.version] }), attestations: attestationFor(reactEntry), publishRunId: 7, sourceRevision: commit, first: false, priorLatest: '0.1.0-rc.1',
+    }).otherVersions, [{ version: '0.1.0-rc.1' }]);
+    assert.equal(bound.latest.claimed, false);
+    assert.equal(bind({ view: viewOf(schemaEntry, { versions: [schemaEntry.version] }), placeholders: [] }).otherVersions.length, 0, 'a package with only its rc is still read');
+    const rejects = (expected, input) => assert.throws(() => bind(input), code(expected), expected);
+    // Any version beside the rc that is not the placeholder, a tagged placeholder, an attested one, and one the registry document does not describe.
+    rejects('P2_1_REGISTRY_TAGS_UNEXPECTED', { view: viewOf(schemaEntry, { versions: ['0.0.1', schemaEntry.version] }) });
+    rejects('P2_1_REGISTRY_TAGS_UNEXPECTED', { view: viewOf(schemaEntry, { distTags: { latest: p2.placeholderVersion, next: schemaEntry.version } }) });
+    rejects('P2_1_REGISTRY_PLACEHOLDER_UNEXPECTED', { placeholders: [{ ...placeholder, attestations: { url: 'https://registry.example/b' } }] });
+    rejects('P2_1_REGISTRY_PLACEHOLDER_UNEXPECTED', { placeholders: [] });
+    // The registry must hold the manifest's bytes, the rc on next, and provenance from this commit and this publish run.
+    rejects('P2_1_REGISTRY_DIGEST_MISMATCH', { view: viewOf(schemaEntry, { integrity: integrityOf(2) }) });
+    rejects('P2_1_REGISTRY_NEXT_MISMATCH', { view: viewOf(schemaEntry, { distTags: { latest: schemaEntry.version, next: '0.6.0-rc.2' } }) });
+    rejects('P2_1_REGISTRY_PROVENANCE_MISMATCH', { attestations: attestationFor(schemaEntry, { revision: 'b'.repeat(40) }) });
+    rejects('P2_1_REGISTRY_PROVENANCE_MISMATCH', { attestations: attestationFor(schemaEntry, { runId: 8 }) });
+    rejects('P2_1_REGISTRY_PROVENANCE_MISMATCH', { attestations: attestationFor(entryOf('@muxui/schema', '0.6.0-rc.1', 3)) });
+    // An existing package keeps the latest its preflight recorded.
+    const later = (input = {}) => p2.bindRegistryPackage({
+      entry: reactEntry, view: viewOf(reactEntry, { distTags: { latest: '0.1.0-rc.1', next: reactEntry.version }, versions: ['0.1.0-rc.1', reactEntry.version] }), attestations: attestationFor(reactEntry), publishRunId: 7, sourceRevision: commit, first: false, priorLatest: '0.1.0-rc.1', ...input,
+    });
+    assert.equal(later().latest.observed, '0.1.0-rc.1');
+    assert.throws(() => later({ priorLatest: '0.1.0-rc.2' }), code('P2_1_REGISTRY_TAGS_UNEXPECTED'));
+  });
+
+  const reviewText = (revision, { reviewer = '**Reviewer:** GPT-6.1 Sol, Codex', verdict = '## Overall verdict\n\n**Pass.** The evidence holds.\n' } = {}) => `# Review of ${revision.slice(0, 8)}\n\n${reviewer}\n\n${verdict}`;
+
+  test('P2.1 capture retains an independent review bound to the revision the reviewer read, and records one that does not pass', () => {
+    const head = gitIn(repositoryRoot, 'rev-parse', 'HEAD');
+    const bind = (text) => p2.bindReview({ text, reviewedRevision: head, sourceRevision: 'e8953dc6221306ea697739f1e4dea58ff49acc79' });
+    const bound = bind(reviewText(head));
+    assert.deepEqual([bound.reviewer, bound.reviewedRevision, bound.passes, bound.reviewedRevisionIsSource], ['GPT-6.1 Sol, Codex', head, true, false]);
+    assert.equal(bound.reviewedTree, gitIn(repositoryRoot, 'rev-parse', 'HEAD^{tree}'));
+    assert.equal(bound.artifact.sha256, digest(bound.text));
+    assert.equal(bind(reviewText(head, { verdict: '## Verdict\n\nFindings remain.\n' })).passes, false, 'a review without a pass is retained and recorded as not passing');
+    const rejects = (text, expected) => assert.throws(() => bind(text), code(expected), expected);
+    rejects(reviewText(head, { reviewer: '' }), 'P2_1_REVIEW_REVIEWER');
+    rejects(reviewText(head).replace(head.slice(0, 8), 'deadbeef'), 'P2_1_REVIEW_REVISION');
+    rejects(reviewText(head, { verdict: '## Notes\n\nNo verdict.\n' }), 'P2_1_REVIEW_VERDICT');
+    assert.throws(() => bind(`${reviewText(head)}\n## Verdict\n\n**Pass.**\n`), /verdict headings/u, 'two verdict headings are ambiguous');
+    assert.throws(() => p2.bindReview({ text: reviewText(head), reviewedRevision: head.slice(0, 12), sourceRevision: head }), code('P2_1_REVIEW_REVISION'));
+    assert.throws(() => p2.bindReview({ text: reviewText('f'.repeat(40)), reviewedRevision: 'f'.repeat(40), sourceRevision: head }), code('P2_1_REVIEW_REVISION'));
+    assert.equal(p2.bindReview({ text: reviewText(head), reviewedRevision: head, sourceRevision: head }).reviewedRevisionIsSource, true);
+  });
+
+  test('a P2.1 record passes only when every part of its assertion is shown', () => {
+    assert.equal(p2.outcomeOf([{ state: 'shown' }, { state: 'shown' }]), 'pass');
+    for (const state of ['limited', 'not-met', 'not-shown']) assert.equal(p2.outcomeOf([{ state: 'shown' }, { state }]), 'partial', state);
+    assert.equal(p2.outcomeOf([{ state: 'not-met' }, { state: 'not-shown' }]), 'unmet');
+  });
+}
