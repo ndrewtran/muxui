@@ -4,7 +4,7 @@
 - Decision owner: Andrew / `ndrewtran`
 - Decision: `muxui:decision:0032`
 - Amends: the Architecture, Roadmap, and Product Scope passages listed under "Authority effect"
-- Amended: 4 November 2026, item 10 only (trusted publishers move to each package's next real release); see "Amendment"
+- Amended: 4 November 2026, item 10 (trusted publishers move to each package's next real release) and the dense-output clause of `E-P2.1-02` (full-detail platform `get` has a 3,072-token ceiling); see "Amendment"
 - Effective: on merge
 
 ## Gap
@@ -377,3 +377,25 @@ It does not change the Acceptance above, which records what Andrew accepted on
 1 November 2026, nor any workflow logic or code. Rehearsal, read-back, the
 refusals, the partial-publication rehearsal, and per-release authorization stay
 in P2.1. This amendment publishes nothing and sets up no trusted publisher.
+
+### Dense-output ceiling of `E-P2.1-02`
+
+The Roadmap row required dense output "inside its token budget", and the packed
+CLI test holds every dense output to the registry budget of its command. Full
+detail of `get --platform web.react --dense` does not fit the 2,048-token
+budget. Andrew chose a 3,072-token ceiling for it on 2 November 2026, and the
+test has held that ceiling since; the choice was recorded only in the body of
+PR #418, not in the Roadmap, so the row and the test disagreed.
+
+Andrew's choice, in his words, on 4 November 2026 was "Write 3,072 into the
+Roadmap (Recommended)", whose option text was: "Amend E-P2.1-02 to say
+full-detail platform `get` has a 3,072 ceiling, as you already chose, then
+recapture so the record passes. Brief and compact stay inside 2,048."
+
+The amendment changes the dense-output clause of the `E-P2.1-02` row only, so
+full-detail `get --platform web.react --dense` has a 3072-token ceiling while
+its brief and compact detail and the registry budget fixtures keep their
+existing budgets. It moves no budget in the registry and changes no code. The
+amendment is made after the first portfolio release (`0.1.0-rc.5` of
+`@muxui/react`), so the release was prepared and published against the earlier
+wording.
