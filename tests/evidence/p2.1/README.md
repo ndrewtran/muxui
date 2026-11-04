@@ -15,11 +15,13 @@ registry observation, and this root cites them by path and digest.
 | Record | Outcome |
 | --- | --- |
 | `E-P2.1-01` | `pass` |
-| `E-P2.1-02` | `pass` |
+| `E-P2.1-02` | `partial` |
 | `E-P2.1-03` | `pass` |
 | `E-P2.1-04` | `pass` |
 | `E-P2.1-05` | `pass` |
 | `E-P2.1-06` | `pass` |
+
+`E-P2.1-02` is `partial` because `not-met`: The CLI reports its own version: the manifest gives the CLI version and every response gives muxuiVersion, each the installed tooling's version (Architecture "Self-describing manifest" requires the CLI name and version; "Version units and compatibility", the exact package tuple in every response). The installed tooling is 1.1.0-rc.1, but its manifest reports CLI version 1.0.0 and its responses report muxuiVersion 1.0.0. The source at the release commit fixes both as constants (the cited lines), not from the package version. The fix ships with tooling's next real release; this published version stays wrong. The catalog and renderer versions in the responses are the installed ones. Against the published tuple these checks did not pass: tooling-reports-version.
 
 `E-P2.1-05` passes with a part that does not apply: Hosted or latest data stays advisory. Tooling at the source revision has no reader of hosted or latest catalog data, so the clause has nothing to apply to and no test of it exists. The capture checks this from the source: the command registry lists only the commands and options retained here and refuses to load with any other, the resolver takes a catalog only from the installed project or an explicit local cache, the source holds no network client, and its only child process is `pnpm list`. Supporting context, not a test of the clause: a response read from the catalog package bundled with tooling, with no installed project, is labelled `authority: advisory` and `compatibility: unresolved`.
 
@@ -33,7 +35,7 @@ evidence does not show.
 
 One test, added after the release, ran in pull request CI run 41768320064 (attempt 1) at head `18fc6200bda898108467e11bd186e385e95af760`: the job checked out the merge `938c2f34a81c091eab00b1e2c6f7228d71aa56df`, whose tree is the head's. The resolver source (`packages/tooling/src`, `packages/catalog/src`, `packages/schema/src`) is unchanged between the release commit and that head. The `E-P2.1-02` row of the Roadmap was amended after the release, to name the dense-output ceiling and to leave `-rc.N` suffix tokens out of budget counts while a package is a prerelease; that record is judged against the amended row and keeps the raw and the counted numbers.
 
-`E-P2.1-02` also rests on a published-run phase: at 2026-11-04T04:34:56Z the four released packages were installed from the public registry into a clean project outside the checkout, and the installed `muxui` bin was run through the discovery matrix, the budget fixtures, an invalid-request corpus, and the commands P2.1 does not enable (`tests/evidence/p2.1/validation/published-muxui-output.txt`). 10 of 10 checks passed. The packed-CLI tests of the release commit pack the source manifests' versions, and the records cite them as source-version supporting evidence.
+`E-P2.1-02` also rests on a published-run phase: at 2026-11-04T04:53:06Z the four released packages were installed from the public registry into a clean project outside the checkout, and the installed `muxui` bin was run through the discovery matrix, the budget fixtures, an invalid-request corpus, and the commands P2.1 does not enable (`tests/evidence/p2.1/validation/published-muxui-output.txt`). 10 of 11 checks passed. The packed-CLI tests of the release commit pack the source manifests' versions, and the records cite them as source-version supporting evidence.
 
 `artifacts/` holds the registry read-back of all four packages; `validation/` holds the CI job
 excerpts; `verification.json` binds them to the unsanitized log digests. The raw logs and

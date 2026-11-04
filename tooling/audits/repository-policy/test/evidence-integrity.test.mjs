@@ -3642,7 +3642,7 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.equal(verification.rehearsal, undefined);
 
     // The reviewed outcomes: a change here is a deliberate evidence change.
-    const expected = { 'E-P2.1-01': 'pass', 'E-P2.1-02': 'pass', 'E-P2.1-03': 'pass', 'E-P2.1-04': 'pass', 'E-P2.1-05': 'pass', 'E-P2.1-06': 'pass' };
+    const expected = { 'E-P2.1-01': 'pass', 'E-P2.1-02': 'partial', 'E-P2.1-03': 'pass', 'E-P2.1-04': 'pass', 'E-P2.1-05': 'pass', 'E-P2.1-06': 'pass' };
     assert.deepEqual(index.records.map(({ assertionId }) => assertionId), Object.keys(expected));
     const excerptLines = (path) => ['', ...text(path).split('\n')];
     const contentOf = (line) => line.replace(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z /u, '');
@@ -3694,7 +3694,7 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     // kept as it came out, and a part follows its checks.
     const published = verification.phases.published;
     const checkNamed = (id) => published.checks.find((found) => found.id === id);
-    assert.deepEqual(published.checks.filter(({ passed }) => !passed).map(({ id }) => id), []);
+    assert.deepEqual(published.checks.filter(({ passed }) => !passed).map(({ id }) => id), ['tooling-reports-version']);
     assert.deepEqual(checkNamed('registry-install').observed.map(({ name, version, installedVersion, gitHead }) => [name, version, installedVersion, gitHead]),
       verification.release.packages.map(({ name, version }) => [name, version, version, index.sourceRevision]));
     for (const entry of checkNamed('registry-install').observed) {
@@ -3712,7 +3712,7 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     const fixtures = sourceRow.parts.find(({ part }) => part.startsWith('Dense output is inside its token budget for the registry'));
     assert.equal(fixtures.state, 'shown');
     assert.match(fixtures.note, /added to the Roadmap row after the release, because the published rc exceeded a budget as the row first wrote it \(manifest --detail brief --dense raw 257, counted 251, budget 256\)/u);
-    assert.deepEqual([published.countRule.pattern, published.countRule.replacement], ['(\\d+\\.\\d+\\.\\d+)-rc\\.\\d+', '$1']);
+    assert.deepEqual([published.countRule.pattern, published.countRule.replacement], ['(?<![\\d.])(\\d+\\.\\d+\\.\\d+)-rc\\.\\d+(?![\\w-]|\\.\\w)', '$1']);
     assert.ok(sourceRow.limits.some((limit) => /^Dense budget counts exclude the tokens of `-rc\.N` version suffixes/u.test(limit) && limit.includes('raw 257, counted 251, budget 256')));
     // The row was amended after the release by two commits: the ceiling (the later CI run's head) and then the suffix rule.
     assert.match(sourceRow.assertion, /while a package is a prerelease the budget counts exclude the tokens of its `-rc\.N` version suffixes/u);
@@ -3726,10 +3726,18 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.ok(published.runs.every(({ status }) => Number.isInteger(status)));
     // What is kept of the muxui output is public; the replaced values are counted, and the digests bind the originals.
     assert.deepEqual(Object.keys(published.sanitization), ['requestKeyValues', 'sharedRulesChangedLines', 'tokenIdsInsideLongerStrings']);
-    // Tooling reports 1.0.0 whatever version it is: a limit and a non-claim of the record, not a failed part.
-    assert.deepEqual([published.toolingVersion.installed, published.toolingVersion.muxuiVersionInResponses, published.toolingVersion.reportsInstalledVersion], ['1.1.0-rc.1', ['1.0.0'], false]);
-    assert.equal(published.toolingVersion.source.text, "const TOOLING_VERSION = '1.0.0';");
-    assert.match(readAt(index.sourceRevision, published.toolingVersion.source.path).toString('utf8').split('\n')[published.toolingVersion.source.line - 1], /const TOOLING_VERSION = '1\.0\.0';/u);
+    // The published tooling reports 1.0.0 whatever version it is. That part is not met, and it is the only one: the comparison is
+    // observed, so a later tooling rc that reports its own version would show it as shown.
+    assert.deepEqual([published.toolingVersion.installed, published.toolingVersion.muxuiVersionInResponses, published.toolingVersion.cliVersionInManifest, published.toolingVersion.reportsInstalledVersion], ['1.1.0-rc.1', ['1.0.0'], '1.0.0', false]);
+    const sourcesCited = [['packages/tooling/src/local-resolver.mjs', 24, "const TOOLING_VERSION = '1.0.0';"], ['packages/tooling/command-registry.json', 5, '"version": "1.0.0",']];
+    assert.deepEqual(published.toolingVersion.sources.map(({ file, line, text }) => [file, line, text]), sourcesCited);
+    for (const [file, line, lineText] of sourcesCited) assert.equal(readAt(index.sourceRevision, file).toString('utf8').split('\n')[line - 1].trim(), lineText, `${file}:${line} at the release commit`);
+    const versionPart = sourceRow.parts.find(({ part }) => part.startsWith('The CLI reports its own version'));
+    assert.equal(versionPart.state, 'not-met');
+    assert.match(versionPart.note, /this published version stays wrong/u);
+    assert.deepEqual(versionPart.evidence.filter(({ kind }) => kind === 'source-line').map(({ file, line, revision }) => [file, line, revision]), sourcesCited.map(([file, line]) => [file, line, index.sourceRevision]));
+    assert.deepEqual(versionPart.evidence.find(({ kind }) => kind === 'published').checks.map(({ id, passed }) => [id, passed]), [['tooling-reports-version', false]]);
+    assert.deepEqual(sourceRow.parts.filter(({ state }) => state !== 'shown').map(({ part }) => part.slice(0, 29)), ['The CLI reports its own versi'], 'the other parts stay as measured');
     assert.ok(sourceRow.limits.some((limit) => /reports muxuiVersion 1\.0\.0 in the meta of every response/u.test(limit)));
     assert.ok(sourceRow.nonClaims.some((claim) => /does not claim that @muxui\/tooling@1\.1\.0-rc\.1 reports its own version/u.test(claim)));
     // Source-version tests are cited as such, and only the published phase rests the installed-tarball parts.

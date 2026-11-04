@@ -1,4 +1,4 @@
-# muxui 1.1.0-rc.1 (the installed bin) run in a clean project that installed @muxui/schema@0.6.0-rc.1, @muxui/catalog@2.1.0-rc.1, @muxui/tooling@1.1.0-rc.1, @muxui/react@0.1.0-rc.5 from https://registry.npmjs.org/, at 2026-11-04T04:34:56Z
+# muxui 1.1.0-rc.1 (the installed bin) run in a clean project that installed @muxui/schema@0.6.0-rc.1, @muxui/catalog@2.1.0-rc.1, @muxui/tooling@1.1.0-rc.1, @muxui/react@0.1.0-rc.5 from https://registry.npmjs.org/, at 2026-11-04T04:53:06Z
 $ muxui manifest --detail brief
 exit 0
 stdout:
