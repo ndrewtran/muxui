@@ -3619,6 +3619,9 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.equal(p2.withoutRcSuffixes('catalogVersion="2.1.0-rc.1" {"@muxui/react":"0.1.0-rc.5"} 10.20.30-rc.40'), 'catalogVersion="2.1.0" {"@muxui/react":"0.1.0"} 10.20.30');
     // Other text that mentions rc, or another prerelease, still counts.
     for (const text of ['src/rc.mjs', 'rc 1', '-rc.1', '2.1-rc.1', '2.1.0-rc', '2.1.0-rc.', '2.1.0-rcx.1', '0.1.0-alpha.0', '2.1.0-beta.1', '2.1.0+rc.1', 'a rc.1 build']) assert.equal(p2.withoutRcSuffixes(text), text, text);
+    // Only a complete X.Y.Z-rc.N version: not part of a longer version or a longer prerelease identifier.
+    for (const text of ['packageVersion="1.2.3-rc.1.4"', '1.2.3-rc.1.beta', '1.2.3-rc.1-x', '1.2.3-rc.1a', '1.2.3-rc.10.4', '1.2.3.4-rc.1', '1.2.3-rc.1.2.3']) assert.equal(p2.withoutRcSuffixes(text), text, text);
+    assert.equal(p2.withoutRcSuffixes('Version 2.1.0-rc.1. Next: 0.1.0-rc.5, then (3.0.0-rc.12)'), 'Version 2.1.0. Next: 0.1.0, then (3.0.0)', 'a version at the end of a sentence, a list, or parentheses is complete');
   });
 
   test('P2.1 retained evidence rebuilds from its verification.json and every citation points at the line it names', async () => {

@@ -59,9 +59,10 @@ const timestamped = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z /u;
 const content = (line) => line.replace(timestamped, '');
 const sha256 = (value) => `sha256:${createHash('sha256').update(value).digest('hex')}`;
 
-// The only text excluded from a dense budget count: the `-rc.N` suffix of an `X.Y.Z-rc.N` version, while a package is a prerelease
-// (Roadmap E-P2.1-02, amended after the release). Any other text, including other uses of `rc`, still counts.
-const rcSuffix = /(\d+\.\d+\.\d+)-rc\.\d+/gu;
+// The only text excluded from a dense budget count: the `-rc.N` suffix of a complete `X.Y.Z-rc.N` version, while a package is a
+// prerelease (Roadmap E-P2.1-02, amended after the release). It is not part of a longer version (`1.2.3.4-rc.1`) or a longer
+// prerelease identifier (`1.2.3-rc.1.4`, `1.2.3-rc.1a`); any other text, including other uses of `rc`, still counts.
+const rcSuffix = /(?<![\d.])(\d+\.\d+\.\d+)-rc\.\d+(?![\w-]|\.\w)/gu;
 export const withoutRcSuffixes = (text) => text.replace(rcSuffix, '$1');
 
 export class P2CaptureError extends Error {
@@ -104,6 +105,21 @@ const publication = `${policy}/npm-publication.test.mjs`;
 const packedCli = `${tooling}/packed-cli.test.mjs`;
 const negotiation = `${tooling}/query-negotiation.test.mjs`;
 const resolverTests = `${tooling}/local-resolver.test.mjs`;
+
+// Where the tooling source fixes the version it reports: the resolver's response meta and the command registry's CLI entry.
+const toolingVersionSources = [
+  { file: 'packages/tooling/src/local-resolver.mjs', pattern: /^const TOOLING_VERSION = / },
+  { file: 'packages/tooling/command-registry.json', after: /"cli": \{/, pattern: /"version":/ },
+];
+
+/** The first line of `file` at `revision` matching `pattern` (after the first line matching `after`), as `{ file, line, text }`. */
+function sourceLine(revision, { file, after, pattern }) {
+  const lines = gitShow(revision, file).split('\n');
+  const from = after ? lines.findIndex((line) => after.test(line)) : 0;
+  const at = from < 0 ? -1 : lines.findIndex((line, index) => index >= from && pattern.test(line.trim()));
+  if (at < 0) fail('P2_1_SOURCE_LINE_MISSING', `${file} at ${revision} has no line matching ${pattern}`);
+  return { file, line: at + 1, text: lines[at].trim() };
+}
 
 /** The parts of every assertion; `release` holds the portfolio's package names, versions, and digests (see `claimsFor`). */
 function claimsFor(release) {
@@ -214,6 +230,14 @@ function claimsFor(release) {
             sourceVersion('tooling', packedCli, 'E-P2.1-02 invalid requests return structured errors with stable codes and a read-only nextCommand'),
             sourceVersion('tooling', packedCli, 'E-P2.1-02 the manifest reports the commands P2.1 does not enable as unavailable'),
           ],
+        },
+        {
+          part: 'The CLI reports its own version: the manifest gives the CLI version and every response gives muxuiVersion, each the installed tooling\'s version (Architecture "Self-describing manifest" requires the CLI name and version; "Version units and compatibility", the exact package tuple in every response).',
+          state: 'shown',
+          note: ({ toolingVersion: version }) => (version.reportsInstalledVersion
+            ? `The installed tooling is ${version.installed}, and the manifest's CLI version and every response's muxuiVersion agree with it.`
+            : `The installed tooling is ${version.installed}, but its manifest reports CLI version ${version.cliVersionInManifest} and its responses report muxuiVersion ${version.muxuiVersionInResponses.join(', ')}. The source at the release commit fixes both as constants (the cited lines), not from the package version. The fix ships with tooling's next real release; this published version stays wrong. The catalog and renderer versions in the responses are the installed ones.`),
+          evidence: [publishedChecks('tooling-reports-version'), ...toolingVersionSources.map((spec) => ({ kind: 'source-line', spec }))],
         },
         {
           part: 'A descriptor the resolver rejects makes get fail with its typed error.',
@@ -661,6 +685,7 @@ const nonClaims = (verification) => [
   ]),
   'Recovery is prepared, not exercised. The first portfolio release has no prior tuple; restoring a prior tuple stays owed by P2 exit.',
   'No consumer validation, clean-consumer offline proof, docs, explorer, or MCP evidence (P2.2 and P2.3).',
+  ...(verification.phases.review && !verification.phases.review.passes ? [`The independent release-integrity review did not pass (retained at ${verification.phases.review.artifact.path}, read at ${verification.phases.review.reviewedRevision}); these records keep its finding and P2.1 is not closed by them.`] : []),
 ];
 
 const independentReview = (verification) => {
@@ -675,6 +700,7 @@ const independentReview = (verification) => {
       reviewedRevisionIsSource: review.reviewedRevisionIsSource,
       changedSinceReviewed: review.changedSinceReviewed,
       verdictText: review.verdictText,
+      ...(review.passes ? {} : { effect: 'the review did not pass; the records keep its finding and P2.1 is not closed by them' }),
     }
     : {
       status: 'pending',
@@ -784,7 +810,9 @@ excerpts; \`verification.json\` binds them to the unsanitized log digests. The r
 tarballs are not retained.
 
 ${review
-    ? `The independent release-integrity review is retained as \`${review.artifact.path}\`, read by ${review.reviewer} at \`${review.reviewedRevision}\`. It is ${review.passes ? 'a pass' : 'not a pass'}.`
+    ? `The independent release-integrity review is retained as \`${review.artifact.path}\`, read by ${review.reviewer} at \`${review.reviewedRevision}\`. ${review.passes
+      ? 'It is a pass.'
+      : `**It did not pass.** ${parsed.filter((record) => record.outcome !== 'pass').map((record) => `\`${record.assertionId}\` is \`${record.outcome}\``).join(' and ') || 'No record is below pass'}, and P2.1 is not closed by these records. The paths changed since the reviewed revision are listed in the records (\`independentReview.changedSinceReviewed\`).`}`
     : `No independent release-integrity review is retained: it is pending, and these records claim no outcome of it. A reviewer of a different model and harness from the authoring agents reads the evidence and the release, and \`--review=<file> --review-revision=<sha>\` retains the review and rebuilds the records with it.`}
 
 ${(verification.phases.registry?.placeholders ?? []).length === 0 ? '' : `The read-back lists every version of each package. ${joinNames(verification.phases.registry.placeholders.map(({ name }) => `\`${name}\``))} each also list a \`${placeholderVersion}\` placeholder version, observed in \`E-P2.1-06\` and not part of the release tuple; its origin is inferred, not proved.\n\n`}The exact authorization to publish was given in chat and is recorded in \`E-P2.1-06\` as
@@ -1209,9 +1237,9 @@ async function observePublishedTuple({ release, manifest, ceiling, sourceRevisio
       muxuiVersionInResponses: [...new Set(responses.map(({ meta }) => meta.muxuiVersion))].sort(),
       cliVersionInManifest: cli.cli.version,
     };
-    toolingVersion.reportsInstalledVersion = toolingVersion.muxuiVersionInResponses.length === 1 && toolingVersion.muxuiVersionInResponses[0] === toolingVersion.installed;
-    const declaration = grepAt(sourceRevision, 'const TOOLING_VERSION = ', ['packages/tooling/src/local-resolver.mjs'])[0] ?? null;
-    toolingVersion.source = declaration && { revision: sourceRevision, ...declaration };
+    toolingVersion.reportsInstalledVersion = toolingVersion.muxuiVersionInResponses.length === 1 && toolingVersion.muxuiVersionInResponses[0] === toolingVersion.installed && toolingVersion.cliVersionInManifest === toolingVersion.installed;
+    toolingVersion.sources = toolingVersionSources.map((spec) => ({ revision: sourceRevision, ...sourceLine(sourceRevision, spec) }));
+    check('tooling-reports-version', 'the manifest\'s CLI version and the muxuiVersion in the meta of every response are the installed tooling version', toolingVersion.reportsInstalledVersion, { ...toolingVersion, responses: responses.length });
 
     // The sanitized text of every run, in the order it was first requested.
     const runs = [...matrix, ...fixtures, { result: listedAll }, ...invalid, { result: missingResults.human }, { result: missingResults.dense }, ...refusals].map(({ result }) => result)
@@ -1577,9 +1605,9 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     claims['E-P2.1-02'].limits.push(`The published-run phase installed the released packages from the public registry at capture time (${options.captureTimestamp}), after the release, not at publish time. Only the four @muxui packages are bound to the release manifest's integrity; their third-party dependencies resolved as the registry then served them. The goldens are not compared to the published output, and the descriptor and catalog tamper negatives are not repeated against the published install.`);
     claims['E-P2.1-02'].limits.push(`Dense budget counts exclude the tokens of \`-rc.N\` version suffixes (the pattern ${published.countRule.pattern}, nothing wider), by the Roadmap row as amended after the release. ${published.rawOverBudget === '' ? 'No raw count exceeds a budget.' : `The published rc exceeded a budget as the row first wrote it: ${published.rawOverBudget}.`} Raw and counted numbers are kept for every fixture and get case; at a stable release the suffix is absent and the two are equal.`);
     if (!toolingVersion.reportsInstalledVersion) {
-      const where = toolingVersion.source ? `${toolingVersion.source.path}:${toolingVersion.source.line} (\`${toolingVersion.source.text}\`)` : 'its source';
-      claims['E-P2.1-02'].limits.push(`The published @muxui/tooling@${toolingVersion.installed} reports muxuiVersion ${toolingVersion.muxuiVersionInResponses.join(', ')} in the meta of every response and ${toolingVersion.cliVersionInManifest} as the CLI version in its manifest, not its own version, because ${where} hard-codes it. Architecture "Version units and compatibility" says tooling reports the exact tuple in every response, and the goldens normalize the value. A separate change fixes it with tooling's next real release; it is not fixed in this release or here.`);
-      claims['E-P2.1-02'].nonClaims = [`This record does not claim that @muxui/tooling@${toolingVersion.installed} reports its own version: it reports ${toolingVersion.muxuiVersionInResponses.join(', ')} (see the limits), where Architecture "Version units and compatibility" says tooling reports the exact tuple. The catalog and renderer versions it reports are the installed ones.`];
+      const where = toolingVersion.sources.map(({ file, line, text }) => `${file}:${line} (\`${text}\`)`).join(' and ');
+      claims['E-P2.1-02'].limits.push(`The published @muxui/tooling@${toolingVersion.installed} reports muxuiVersion ${toolingVersion.muxuiVersionInResponses.join(', ')} in the meta of every response and ${toolingVersion.cliVersionInManifest} as the CLI version in its manifest, not its own version, because the source at the release commit hard-codes both: ${where}. Architecture "Self-describing manifest" requires the CLI version and "Version units and compatibility" the exact tuple in every response, so the part for the CLI's reported version is not met, and the goldens normalize the value. The fix ships with tooling's next real release; this published version stays wrong.`);
+      claims['E-P2.1-02'].nonClaims = [`This record does not claim that @muxui/tooling@${toolingVersion.installed} reports its own version: it reports ${toolingVersion.muxuiVersionInResponses.join(', ')} and ${toolingVersion.cliVersionInManifest} (see the limits). The catalog and renderer versions it reports are the installed ones.`];
     }
     // The registry, read now: every package of the set against the manifest and the publish run.
     const readBack = [];
@@ -1663,6 +1691,7 @@ export async function capture(options, github = createGitHub(), observe = viewPa
         return { kind: 'roadmap-amendment', id: item.id, ...amended };
       }
       if (item.kind === 'source-absence') return toolingReaderSurface(sourceRevision);
+      if (item.kind === 'source-line') return { kind: 'source-line', revision: sourceRevision, ...sourceLine(sourceRevision, item.spec) };
       if (item.kind === 'published') {
         return { kind: 'published', output: published.output, checks: item.checks.map((id) => {
           const found = published.checks.find((candidate) => candidate.id === id);
