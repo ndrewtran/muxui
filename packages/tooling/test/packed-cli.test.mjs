@@ -168,20 +168,23 @@ test('E-P2.1-02 the muxui bin and every package it reads are the installed tarba
 
 /** The tooling version `run` reports in response meta, in each manifest detail, and in the help title. */
 async function reportedVersions(run) {
-  const [brief, full, help] = await Promise.all([
-    run(['manifest', '--detail', 'brief', '--json']),
-    run(['manifest', '--json']),
+  const [brief, compact, full, help] = await Promise.all([
+    ...['brief', 'compact', 'full'].map((detail) => run(['manifest', '--detail', detail, '--json'])),
     run(['--help']),
   ]);
-  const [briefResponse, fullResponse] = [brief, full].map(({ stdout }) => JSON.parse(stdout));
+  const [briefResponse, compactResponse, fullResponse] = [brief, compact, full].map(({ stdout }) => JSON.parse(stdout));
   return {
-    meta: [briefResponse.meta.muxuiVersion, fullResponse.meta.muxuiVersion],
-    manifest: [briefResponse.data.cli.version, fullResponse.data.cli.cli.version],
+    meta: [briefResponse, compactResponse, fullResponse].map(({ meta }) => meta.muxuiVersion),
+    manifest: [briefResponse.data.cli.version, compactResponse.data.cli.cli.version, fullResponse.data.cli.cli.version],
     help: help.stdout.split('\n')[0],
   };
 }
 
-const reportedAs = (version) => ({ meta: [version, version], manifest: [version, version], help: `muxui ${version}` });
+const reportedAs = (version) => ({
+  meta: [version, version, version],
+  manifest: [version, version, version],
+  help: `muxui ${version}`,
+});
 
 test('E-P2.1-02 responses, the manifest, and help report the installed tooling version', async () => {
   const version = tuple.versions['@muxui/tooling'];

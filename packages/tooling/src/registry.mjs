@@ -16,8 +16,6 @@ const RESOLUTION_OPTIONS = ['catalog-digest', 'catalog-version', 'project'];
 const BASELINE_SELECTORS = ['cursor', 'detail', 'limit', 'platform', 'purpose', 'query-api-version', 'section', 'uses'];
 const UNAVAILABLE_COMMANDS = ['doctor', 'init', 'migrate', 'plan', 'validate'];
 const DETAILS = ['brief', 'compact', 'full'];
-// The authored registry names no release: the installed CLI reports its own package version (src/version.mjs).
-const CLI_VERSION_PLACEHOLDER = '0.0.0';
 const CATALOG_MANIFEST = getManifest({ detail: 'full' });
 const CATALOG_OPERATIONS = CATALOG_MANIFEST.data.operations;
 const CLI_AVAILABLE = CATALOG_MANIFEST.data.capabilities
@@ -71,14 +69,11 @@ function validateCommandRegistry(registry) {
   assertKeys(registry.tokenizer, ['id', 'description'], 'registry.tokenizer');
   assert(registry.cli?.name === 'muxui', 'CLI_REGISTRY_INVALID', 'CLI name must be muxui');
   assert(
-    registry.cli.version === CLI_VERSION_PLACEHOLDER,
+    typeof registry.cli.version === 'string'
+      && typeof registry.cli.description === 'string'
+      && registry.cli.description.length > 0,
     'CLI_REGISTRY_INVALID',
-    `CLI version must stay the ${CLI_VERSION_PLACEHOLDER} placeholder; the installed package reports the real one`,
-  );
-  assert(
-    typeof registry.cli.description === 'string' && registry.cli.description.length > 0,
-    'CLI_REGISTRY_INVALID',
-    'CLI description must be a non-empty string',
+    'CLI version and description must be non-empty strings',
   );
   assert(
     registry.tokenizer.id === 'muxui-lexeme-v1'

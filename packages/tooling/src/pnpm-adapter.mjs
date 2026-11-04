@@ -17,8 +17,9 @@ import { TOOLING_VERSION } from './version.mjs';
 const CATALOG_PACKAGE = '@muxui/catalog';
 
 /**
- * The catalog embeds the authored registry, whose `cli.version` is a placeholder. A project's manifest reports this
- * installed CLI's version instead: inline on brief, under `cli.cli` on compact and full.
+ * A project's manifest reports this installed CLI's version, inline on brief and under `cli.cli` on compact and full.
+ * The registry's `cli.version` is embedded in the published catalog and can only change with a real catalog release,
+ * so the CLI overrides it instead.
  */
 function withCliVersion(api) {
   return {
