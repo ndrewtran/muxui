@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { Link as StaticLink } from '../../src/components.ts';
+import { Breadcrumbs, Link as StaticLink } from '../../src/components.ts';
 import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 import { pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 
@@ -11,7 +11,8 @@ import { pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 // no focus stop or activation from the keyboard or the pointer. Each item holds
 // a Link and a Button; item `b` is disabled. Runs in every engine named by
 // MUXUI_BROWSER_ENGINES (see harness.mjs). A Link in server markup that no script
-// has hydrated takes the hover colour from :hover alone, in both colour schemes.
+// has hydrated takes the hover colour from :hover alone, in both colour schemes. The
+// same holds for a Breadcrumbs link, which also shows the hover colour once hydrated.
 
 const entry = `
 import React from 'react';
@@ -63,12 +64,48 @@ const staticPage = (scheme) => pageShell({
     React.createElement(StaticLink, { id: 'current', href: '#current', current: true }, 'Current'))),
 });
 
+// A Breadcrumbs trail in server markup, optionally hydrated by a script that marks the page ready once React has attached.
+const crumbItems = [{ id: 'home', label: 'Home', href: '#home' }, { id: 'docs', label: 'Docs', href: '#docs' }, { id: 'now', label: 'Now', href: '#now' }];
+const crumbsPage = (scheme, hydrate) => pageShell({
+  attributes: `data-muxui-color-scheme="${scheme}" data-muxui-motion="reduced"`,
+  head: '<link rel="stylesheet" href="/generated/styles.css">',
+  bodyAttributes: 'style="margin: 16px; background: var(--muxui-semantic-surface-canvas)"',
+  body: `<div id="root">${renderToString(React.createElement(Breadcrumbs, { 'aria-label': 'Trail', items: crumbItems }))}</div>`,
+  entry: hydrate ? '/crumbs-entry.mjs' : undefined,
+});
+const crumbsEntry = `
+import React from 'react';
+import { hydrateRoot } from 'react-dom/client';
+import { Breadcrumbs } from '/src/components.ts';
+
+const h = React.createElement;
+function Ready() {
+  React.useEffect(() => { document.documentElement.setAttribute('data-crumbs-ready', ''); }, []);
+  return null;
+}
+hydrateRoot(document.getElementById('root'), h(React.Fragment, null, h(Breadcrumbs, { 'aria-label': 'Trail', items: ${JSON.stringify(crumbItems)} }), h(Ready)));
+`;
+
+/** A semantic content colour as the page resolves it, so a test writes no colour down. */
+const contentToken = (page, role) => page.evaluate((name) => {
+  const probe = document.createElement('span');
+  probe.style.color = `var(--muxui-semantic-content-${name})`;
+  document.body.append(probe);
+  const color = getComputedStyle(probe).color;
+  probe.remove();
+  return color;
+}, role);
+
 for (const engine of browserEngines()) {
   test(`Link inside a disabled GridList item in ${engine}`, { timeout: 300_000 }, async (t) => {
     const { url, close } = await startServer({
       entries: ['src/collections.mjs', 'src/button.ts', 'src/components.ts'],
-      pages: { '/link.html': page, '/link-static.html': (requested) => staticPage(requested.searchParams.get('scheme')) },
-      modules: { '/link-entry.mjs': entry },
+      pages: {
+        '/link.html': page,
+        '/link-static.html': (requested) => staticPage(requested.searchParams.get('scheme')),
+        '/crumbs.html': (requested) => crumbsPage(requested.searchParams.get('scheme'), requested.searchParams.has('hydrate')),
+      },
+      modules: { '/link-entry.mjs': entry, '/crumbs-entry.mjs': crumbsEntry },
     });
     let browser;
     try {
@@ -175,15 +212,7 @@ for (const engine of browserEngines()) {
           await tab.locator('#plain').waitFor();
           await awaitFontsAndFrames(tab);
           await tab.mouse.move(0, 0);
-          // The token colours as this page resolves them, so the test writes no colour down.
-          const token = (role) => tab.evaluate((name) => {
-            const probe = document.createElement('span');
-            probe.style.color = `var(--muxui-semantic-content-${name})`;
-            document.body.append(probe);
-            const color = getComputedStyle(probe).color;
-            probe.remove();
-            return color;
-          }, role);
+          const token = (role) => contentToken(tab, role);
           const paint = (id) => tab.locator(id).evaluate((node) => getComputedStyle(node).color);
           const [rest, hover] = [await token('link'), await token('link-hover')];
           assert.notEqual(rest, hover, `${scheme}: the link and hover tokens differ`);
@@ -225,6 +254,61 @@ for (const engine of browserEngines()) {
             assert.deepEqual(await touchTab.evaluate(() => window.__events), [['link', 'a']], `${scheme}: the tap activated the Link`);
             assert.equal(await link.getAttribute('data-muxui-state-hovered'), null, `${scheme}: React Aria does not hover a Link on touch`);
             assert.equal(await paint(), rest, `${scheme}: the tap leaves the resting colour`);
+          }
+        } finally {
+          await touch.close();
+        }
+      });
+
+      // The Breadcrumbs link has scheme-scoped resting rules that tie with its hover rules, so each scheme is read.
+      await t.test('a Breadcrumbs link takes the hover colour in server markup and once hydrated, and the current item keeps its colour', async () => {
+        for (const scheme of ['light', 'dark']) {
+          for (const hydrate of [false, true]) {
+            const label = `${scheme} ${hydrate ? 'hydrated' : 'server'}`;
+            await tab.goto(`${url}/crumbs.html?scheme=${scheme}${hydrate ? '&hydrate' : ''}`, { waitUntil: 'load' });
+            await tab.locator('.muxui-breadcrumbs__link').first().waitFor();
+            if (hydrate) await tab.locator('html[data-crumbs-ready]').waitFor({ state: 'attached' });
+            await awaitFontsAndFrames(tab);
+            await tab.mouse.move(0, 0);
+            const link = tab.locator('.muxui-breadcrumbs__link').first();
+            const current = tab.locator('.muxui-breadcrumbs__current');
+            const look = (locator) => locator.evaluate((node) => ({ color: getComputedStyle(node).color, underline: getComputedStyle(node).textDecorationLine }));
+            const hover = await contentToken(tab, 'link-hover');
+            const rest = await look(link);
+            assert.notEqual(rest.color, hover, `${label}: the resting colour is not the hover colour`);
+
+            await link.hover();
+            await awaitFontsAndFrames(tab);
+            assert.equal(await link.getAttribute('data-muxui-state-hovered'), hydrate ? 'true' : null, `${label}: only hydrated markup is marked hovered`);
+            assert.deepEqual(await look(link), { color: hover, underline: 'underline' }, `${label}: hover paints the hover colour and underline`);
+
+            await tab.mouse.move(0, 0);
+            const resting = await look(current);
+            await current.hover();
+            await awaitFontsAndFrames(tab);
+            assert.deepEqual(await look(current), resting, `${label}: the current item keeps its colour under the pointer`);
+          }
+        }
+      });
+
+      // As for Link, a tap must not leave the hover colour behind where the browser keeps :hover matched.
+      await t.test('a tap on a hydrated Breadcrumbs link leaves its resting colour in light and dark', async () => {
+        const touch = await browser.newContext({ viewport: { width: 900, height: 700 }, locale: 'en-US', hasTouch: true });
+        try {
+          const touchTab = await touch.newPage();
+          touchTab.on('pageerror', (error) => errors.push(error.message));
+          for (const scheme of ['light', 'dark']) {
+            await touchTab.goto(`${url}/crumbs.html?scheme=${scheme}&hydrate`, { waitUntil: 'load' });
+            await touchTab.locator('html[data-crumbs-ready]').waitFor({ state: 'attached' });
+            await awaitFontsAndFrames(touchTab);
+            const link = touchTab.locator('.muxui-breadcrumbs__link').first();
+            const look = () => link.evaluate((node) => ({ color: getComputedStyle(node).color, underline: getComputedStyle(node).textDecorationLine }));
+            const rest = await look();
+            await link.tap();
+            await awaitFontsAndFrames(touchTab);
+            assert.equal(await touchTab.evaluate(() => location.hash), '#home', `${scheme}: the tap followed the link`);
+            assert.equal(await link.getAttribute('data-muxui-state-hovered'), null, `${scheme}: React Aria does not hover a link on touch`);
+            assert.deepEqual(await look(), rest, `${scheme}: the tap leaves the resting colour and no underline`);
           }
         } finally {
           await touch.close();
