@@ -5,6 +5,7 @@ import { renderToString } from 'react-dom/server';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { ToggleButtonGroupMotionFixture } from '../fixtures/toggle-button-group-motion-fixture.mjs';
 import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { assertCrossesSelected, assertEntersInPlace, assertFillClear, assertFollowsDirection, assertHiddenInForcedColors, assertIdle, assertJumped, assertLayerColor, assertParksWithoutFade, assertReentersFromFade, assertSkipsItem, assertTravelled, faded, pointOnto, settledOn, travel } from './hover-layer-probes.mjs';
 
 function documentHtml() {
   return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<link rel="stylesheet" href="/generated/styles.css"><style>
@@ -34,6 +35,7 @@ async function readGroup(page, selector) {
       const value = node?.getBoundingClientRect();
       return value ? { left: value.left, top: value.top, width: value.width, height: value.height } : null;
     };
+    const zIndex = (node) => (node ? Number.parseInt(getComputedStyle(node).zIndex, 10) : Number.NaN);
     return {
       selected: selected.map((button) => button.textContent.trim()),
       selectedRects: selected.map(rect),
@@ -44,6 +46,12 @@ async function readGroup(page, selector) {
       indicatorOpacity: indicator ? getComputedStyle(indicator).opacity : null,
       selectedBackground: selected[0] ? getComputedStyle(selected[0]).backgroundColor : null,
       selectedOpacity: selected[0] ? getComputedStyle(selected[0]).opacity : null,
+      zIndex: {
+        hover: zIndex(root.querySelector('.muxui-toggle-button-group__hover')),
+        button: zIndex(buttons[0]),
+        indicator: zIndex(indicator),
+        foreground: zIndex(root.querySelector('.muxui-toggle-button-group__motion-foreground')),
+      },
       foregroundCount: root.querySelectorAll('.muxui-toggle-button-group__motion-label').length,
       internalCount: root.querySelectorAll('[data-muxui-toggle-motion-internal]').length,
       ready: root.hasAttribute('data-muxui-toggle-motion-ready'),
@@ -73,6 +81,18 @@ function sampleTravel(selector) {
     indicator: rect(indicator),
     selectedRects: selected.map(rect),
   };
+}
+
+const STATE_DURATIONS = ['--muxui-semantic-motion-state-duration', '--muxui-semantic-motion-state-transition-duration', '--muxui-semantic-motion-state-transition-spring-visual-duration'];
+
+// The page's slow state motion keeps the selection travel observable; hover needs only a short one.
+function setStateDuration(page, duration) {
+  return page.evaluate(([properties, value]) => {
+    for (const property of properties) {
+      if (value) document.documentElement.style.setProperty(property, value);
+      else document.documentElement.style.removeProperty(property);
+    }
+  }, [STATE_DURATIONS, duration]);
 }
 
 async function waitForSelected(page, selector, text) {
@@ -118,20 +138,59 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     const initial = await readGroup(page, primary);
     assert.deepEqual(initial.selected, ['One']);
     assert.equal(initial.motion, 'single');
-    assert.equal(initial.internalCount, 2);
+    assert.equal(initial.internalCount, 3, 'hover layer, fill and label layer are internal');
     assert.equal(initial.foregroundCount, 3);
     assert.equal(initial.ready, true);
     assertRectsClose(initial.indicator, initial.selectedRects[0], 'initial fill should cover selected button');
+    const { hover: hoverLayer, button: buttonLayer, indicator: fillLayer, foreground: labelLayer } = initial.zIndex;
+    assert.ok(hoverLayer < buttonLayer && buttonLayer < fillLayer && fillLayer < labelLayer,
+      `hover layer paints under the buttons, the moving fill over their dividers, and the label copy over the fill: ${JSON.stringify(initial.zIndex)}`);
 
     await page.locator(`${primary} > .muxui-toggle-button`).first().hover();
     const selectedHover = await readGroup(page, primary);
     assert.notEqual(selectedHover.indicatorBackground, initial.indicatorBackground, 'selected hover should use the existing neutral90 fill token');
     await page.mouse.move(0, 0);
 
-    await page.locator(`${primary} > .muxui-toggle-button`).nth(1).hover();
-    await page.waitForFunction((selector) => getComputedStyle(document.querySelectorAll(`${selector} > .muxui-toggle-button`)[1]).backgroundColor !== 'rgba(0, 0, 0, 0)', primary);
-    const restingUnselectedHover = await readGroup(page, primary);
-    assert.notEqual(restingUnselectedHover.buttonBackgrounds[1], 'rgba(0, 0, 0, 0)', 'unselected hover should retain its resting background');
+    // An unselected button hands its hover fill to one layer that moves between buttons.
+    const single = { page, layer: `${primary} .muxui-toggle-button-group__hover`, items: `${primary} > .muxui-toggle-button` };
+    await setStateDuration(page, '160ms');
+    await pointOnto(single, 1);
+    await settledOn(single, 1);
+    await assertFillClear(single, 1, 'hovered unselected button leaves its fill to the hover layer');
+    await assertLayerColor(single, 'color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)', 'hover layer keeps the unselected hover colour');
+    const labelColors = await page.locator(single.items).evaluateAll((buttons) => buttons.map((button) => getComputedStyle(button).color));
+    assert.notEqual(labelColors[1], labelColors[2], 'hover text colour stays on the real button');
+    await page.evaluate(() => document.documentElement.setAttribute('data-muxui-color-scheme', 'dark'));
+    await assertFillClear(single, 1, 'the dark scheme hover rule leaves the fill to the layer too');
+    await page.evaluate(() => document.documentElement.setAttribute('data-muxui-color-scheme', 'light'));
+    assertTravelled(await travel(single, 1, 2), 'single-select hover');
+    await assertIdle(single, 'single-select hover');
+    await assertHiddenInForcedColors(single, 'forced colors hide the single-select hover layer');
+    await assertEntersInPlace(single, 2, 1, 'single-select hover entering the group');
+    await assertReentersFromFade(single, 1, 2, 'single-select hover re-entering during its fade');
+    // The layer rides under the fill: select the middle button, then sweep over it and out the other side.
+    await page.evaluate(() => window.__toggleSetPrimary('long'));
+    await waitForSelected(page, primary, 'Longer selection');
+    await waitForAlignment(page, primary);
+    await assertCrossesSelected(single, 0, 1, 2, 'single-select hover crossing the selected button');
+    await page.evaluate(() => window.__toggleSetPrimary('one'));
+    await waitForSelected(page, primary, 'One');
+    await waitForAlignment(page, primary);
+    await page.mouse.move(0, 0);
+    await faded(single);
+    await assertFollowsDirection(single, 0, 'single-select hover');
+    await assertParksWithoutFade(single, (duration) => setStateDuration(page, duration), 'single-select hover');
+    await setStateDuration(page, '160ms');
+
+    await page.evaluate(() => document.querySelector('#primary-toggle').setAttribute('data-muxui-motion', 'reduced'));
+    await page.waitForFunction((selector) => document.querySelector(selector)?.hasAttribute('data-muxui-hover-reduced'), single.layer);
+    assertJumped(await travel(single, 1, 2), 'reduced single-select hover');
+    await page.evaluate(() => document.querySelector('#primary-toggle').removeAttribute('data-muxui-motion'));
+    await page.waitForFunction((selector) => !document.querySelector(selector)?.hasAttribute('data-muxui-hover-reduced'), single.layer);
+    await setStateDuration(page);
+    // The flow below hovers the second button.
+    await pointOnto(single, 1);
+    await page.waitForFunction((selector) => document.querySelectorAll(`${selector} > .muxui-toggle-button`)[1]?.hasAttribute('data-muxui-state-hovered'), primary);
 
     const travelRecording = await recordFrames(page, sampleTravel, primary);
     await page.evaluate(() => window.__toggleSetPrimary('two'));
@@ -211,13 +270,32 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     const multiple = '#multiple-toggle';
     const multipleInitial = await readGroup(page, multiple);
     assert.equal(multipleInitial.motion, null);
-    assert.equal(multipleInitial.internalCount, 0);
+    assert.equal(multipleInitial.internalCount, 1, 'only the hover layer joins a multiple-selection group');
     assert.equal(multipleInitial.foregroundCount, 0);
     await page.evaluate(() => window.__toggleSetMultiple(['long']));
     await page.waitForFunction(() => document.querySelectorAll('#multiple-toggle > .muxui-toggle-button[data-muxui-state-selected]').length === 1);
     const multipleNext = await readGroup(page, multiple);
     assert.deepEqual(multipleNext.selected, ['Longer selection']);
     assert.equal(multipleNext.indicator, null);
+
+    // A multiple-selection group gets the same layer, over the same layering. It skips disabled buttons and rides under selected ones.
+    const many = { page, layer: `${multiple} .muxui-toggle-button-group__hover`, items: `${multiple} > .muxui-toggle-button` };
+    await setStateDuration(page, '160ms');
+    assertTravelled(await travel(many, 0, 2), 'multiple-selection hover');
+    await assertFillClear(many, 2, 'hovered unselected button leaves its fill to the hover layer');
+    const layering = await page.locator(multiple).evaluate((root) => ({
+      isolation: getComputedStyle(root).isolation,
+      hover: getComputedStyle(root.querySelector('.muxui-toggle-button-group__hover')).zIndex,
+      button: getComputedStyle(root.querySelector('.muxui-toggle-button')).zIndex,
+    }));
+    assert.deepEqual(layering, { isolation: 'isolate', hover: '0', button: '1' });
+    await assertSkipsItem(many, 2, 3, 'disabled button');
+    await assertCrossesSelected(many, 0, 1, 2, 'multiple-selection hover crossing the selected button');
+    await pointOnto(many, 1);
+    await settledOn(many, 1);
+    assert.notEqual(await page.locator(`${multiple} > .muxui-toggle-button`).nth(1).evaluate((button) => getComputedStyle(button).backgroundColor), 'rgba(0, 0, 0, 0)', 'selected button keeps its own fill');
+    await page.mouse.move(0, 0);
+    await setStateDuration(page);
 
     const required = '#required-toggle';
     await page.locator(`${required} > .muxui-toggle-button`).first().click();
@@ -271,6 +349,8 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     const systemReduced = await readGroup(page, primary);
     assert.equal(systemReduced.reduced, true);
     assert.equal(systemReduced.trailing, false);
+    await page.waitForFunction((selector) => document.querySelector(selector)?.hasAttribute('data-muxui-hover-reduced'), single.layer);
+    assertJumped(await travel(single, 1, 2), 'system reduced single-select hover');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.waitForFunction(() => !document.querySelector('#primary-toggle[data-muxui-toggle-motion-reduced]'));
 
