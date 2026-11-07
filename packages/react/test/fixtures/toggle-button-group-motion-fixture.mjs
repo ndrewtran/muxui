@@ -11,7 +11,7 @@ const choices = [
 ];
 
 function buttons(items = choices) {
-  return items.map((item) => h(ToggleButton, { key: item.id, id: item.id }, item.label));
+  return items.map((item) => h(ToggleButton, { key: item.id, id: item.id, disabled: item.disabled }, item.label));
 }
 
 export function ToggleButtonGroupMotionFixture() {
@@ -66,7 +66,7 @@ export function ToggleButtonGroupMotionFixture() {
         selectionMode: 'multiple',
         selectedIds: multiple,
         onSelectionChange: setMultiple,
-      }, buttons())),
+      }, buttons([...choices, { id: 'off', label: 'Unavailable', disabled: true }]))),
     h('section', { id: 'required-section', 'aria-label': 'Required selection' },
       h(ToggleButtonGroupCollection, {
         id: 'required-toggle',
