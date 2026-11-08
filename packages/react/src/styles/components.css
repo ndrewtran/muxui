@@ -675,6 +675,7 @@
 /* MuxUI component source: separator.css */
 .muxui-separator {
   display: block;
+  margin: 0;
   border: none;
   background-color: var(--muxui-semantic-color-neutral-20);
   width: 100%;

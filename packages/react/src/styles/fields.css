@@ -429,6 +429,9 @@
   font-weight: var(--muxui-semantic-typography-body-weight);
 }
 /* MuxUI component source: switch.css */
+/* SwitchField.Button and SwitchField.Thumb carry .muxui-switch and .muxui-switch__indicator too, so this block is the
+   switch of both families and a second copy of it would drift. The rules elsewhere that name .muxui-switch (disabled
+   opacity, forced colours, the hover wash and focus ring in this file) reach SwitchField the same way. */
 .muxui-switch {
   --muxui-component-switch-track-width: 2.5rem;
   --muxui-component-switch-track-height: 1.375rem;

@@ -12,7 +12,6 @@ import type {
   RefAttributes,
   RefObject,
 } from 'react';
-import { animate } from 'motion/react';
 import { CalendarHeightMotion } from './calendar-height-motion.mjs';
 import { Autocomplete as AriaAutocomplete, CalendarGrid as AriaCalendarGrid, CalendarGridBody as AriaCalendarGridBody, CalendarGridHeader as AriaCalendarGridHeader, CalendarHeaderCell as AriaCalendarHeaderCell, CalendarHeading as AriaCalendarHeading, Dialog as AriaDialog, FieldError as AriaFieldError, Form as AriaForm, InputContext as AriaInputContext, Label as AriaLabel, Text as AriaText } from 'react-aria-components';
 import { AriaCalendar, AriaCalendarCell, AriaCheckboxGroup, AriaDateField, AriaDateInput, AriaDatePicker, AriaDateRangePicker, AriaDateSegment, AriaGroup, AriaInput, AriaListBox, AriaListBoxItem, AriaNumberField, AriaRangeCalendar, AriaSearchField, AriaSwitchButton, AriaSwitchField, AriaTextField, AriaTimeField } from './substrate.ts';
@@ -26,9 +25,9 @@ import PlusIcon from 'lucide-react/dist/esm/icons/plus.mjs';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 import { DatePopoverMotion } from './date-popover-motion.mjs';
-import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { RangeSelectionMotion } from './range-selection-motion.mjs';
+import { SwitchMotionIndicator } from './switch-motion.ts';
 import { IconButton } from './supplemental/icon-button.ts';
 import type { IconButtonProps } from './supplemental/icon-button.ts';
 
@@ -517,7 +516,6 @@ type DiscardedDateRangeProps = DiscardedDateProps & { allowsNonContiguousRanges?
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
 const TIME_PLACEHOLDER = /*#__PURE__*/ parseTime('00:00');
-const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const MUX_RUNTIME_SCOPE_SELECTOR = /*#__PURE__*/ [
   '[data-muxui-color-scheme]',
   '[data-muxui-contrast]',
@@ -535,116 +533,6 @@ function autocompletePortalContainer(input: Element | null) {
 
 function classNames(base: string | undefined, className?: unknown) {
   return [base, className].filter(Boolean).join(' ');
-}
-
-function readTransform(node: Element) {
-  if (typeof window === 'undefined') return 'none';
-  return window.getComputedStyle(node).transform || 'none';
-}
-
-interface SwitchMotionIndicatorProps {
-  isSelected: boolean;
-  isPressed: boolean;
-  isDisabled: boolean;
-  isReadOnly: boolean;
-}
-
-function SwitchMotionIndicator({ isSelected, isPressed, isDisabled, isReadOnly }: SwitchMotionIndicatorProps) {
-  const indicatorRef = React.useRef<HTMLSpanElement>(null);
-  const controlsRef = React.useRef<ReturnType<typeof animate> | null>(null);
-  const settledTransformRef = React.useRef<string | null>(null);
-  const previousStateRef = React.useRef<{ isSelected: boolean; isPressed: boolean; blocked: boolean } | null>(null);
-  const [reduced, setReduced] = React.useState(false);
-  const blocked = isDisabled || isReadOnly;
-
-  useIsomorphicLayoutEffect(() => () => {
-    const controls = controlsRef.current;
-    controlsRef.current = null;
-    controls?.stop();
-    indicatorRef.current?.style.removeProperty('transform');
-  }, []);
-
-  React.useEffect(() => {
-    const node = indicatorRef.current;
-    if (!node) return undefined;
-    return observeReducedMotion(node, node.parentElement, (nextReduced) => {
-      setReduced(nextReduced);
-      if (!nextReduced) return;
-      const controls = controlsRef.current;
-      controlsRef.current = null;
-      controls?.cancel();
-      node.style.removeProperty('transform');
-      settledTransformRef.current = readTransform(node);
-    });
-  }, []);
-
-  useIsomorphicLayoutEffect(() => {
-    const node = indicatorRef.current;
-    if (!node) return undefined;
-    const nextState = {
-      isSelected: Boolean(isSelected),
-      isPressed: Boolean(isPressed),
-      blocked: Boolean(blocked),
-    };
-    const previousState = previousStateRef.current;
-    previousStateRef.current = nextState;
-    if (!previousState) {
-      settledTransformRef.current = readTransform(node);
-      return undefined;
-    }
-
-    const controls = controlsRef.current;
-    const interruptedTransform = controls ? readTransform(node) : settledTransformRef.current;
-    controlsRef.current = null;
-    controls?.stop();
-    node.style.removeProperty('transform');
-
-    if (reduced || blocked) {
-      settledTransformRef.current = readTransform(node);
-      return undefined;
-    }
-
-    const targetTransform = readTransform(node);
-    const fromTransform = interruptedTransform || targetTransform;
-    settledTransformRef.current = targetTransform;
-    if (fromTransform === targetTransform) return undefined;
-
-    const transition = resolvedMotionSpring(node, node.parentElement, 'state', 'interaction');
-    if (!transition) return undefined;
-
-    node.style.transform = fromTransform;
-    let active = true;
-    const complete = () => {
-      if (!active || controlsRef.current !== nextControls) return;
-      requestAnimationFrame(() => {
-        if (!active || controlsRef.current !== nextControls) return;
-        controlsRef.current = null;
-        node.style.removeProperty('transform');
-        settledTransformRef.current = targetTransform;
-      });
-    };
-    const nextControls = animate(node, { transform: [fromTransform, targetTransform] }, transition);
-    controlsRef.current = nextControls;
-    nextControls.then(() => {
-      complete();
-    });
-
-    return () => {
-      active = false;
-      if (controlsRef.current !== nextControls) return;
-      settledTransformRef.current = readTransform(node);
-      controlsRef.current = null;
-      nextControls.stop();
-    };
-  }, [blocked, isPressed, isSelected, reduced]);
-
-  return React.createElement('span', {
-    ref: indicatorRef,
-    className: 'muxui-switch__indicator',
-    'aria-hidden': 'true',
-    'data-muxui-state-selected': isSelected || undefined,
-    'data-muxui-motion-pressed': isPressed && !blocked && !reduced ? '' : undefined,
-  });
 }
 
 // TextField and SearchField own the field semantics and their serialized value.

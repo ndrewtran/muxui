@@ -1,8 +1,8 @@
 /* One isolated document per variant. It shares the docs layer contract so the
    Mux components render exactly as they do on the component pages. The whole order
-   comes first, ahead of the import, so the reset and the box-model restore rank below
-   Mux UI's layers. */
-@layer preview-reset, muxui-docs-component-defaults, muxui.tokens, muxui.components, muxui.utilities;
+   comes first, ahead of the import, so the reset ranks below Mux UI's layers. Mux UI
+   pins its own box model, so the reset's border-box does not reach a Mux UI part. */
+@layer preview-reset, muxui.tokens, muxui.components, muxui.utilities;
 @import '@muxui/react/styles.css';
 
 @layer preview-reset {
@@ -31,12 +31,6 @@
 	textarea,
 	select {
 		font: inherit;
-	}
-}
-
-@layer muxui-docs-component-defaults {
-	:where([class^='muxui-'], [class*=' muxui-']) {
-		box-sizing: revert;
 	}
 }
 

@@ -51,7 +51,7 @@ test('each context and the Sidebar shortcut state is declared in exactly one sup
   // Two are read by several families and live in a helper: ModalMotionContext (modal-parts) and InputAssociationContext (field-root).
   assert.deepEqual([...declaredIn.keys()].sort(), [
     'CheckboxFieldIndicatorContext', 'CommandPaletteContext', 'InputAssociationContext', 'ModalMotionContext', 'MultiSelectContext',
-    'PaymentInputContext', 'ProgressCircleContext', 'RadioFieldContext', 'SidebarAccountContext', 'SidebarContext', 'TagSelectContext',
+    'PaymentInputContext', 'ProgressCircleContext', 'RadioFieldContext', 'SidebarAccountContext', 'SidebarContext', 'SwitchFieldThumbContext', 'TagSelectContext',
   ]);
   for (const [name, owners] of declaredIn) assert.equal(owners.length, 1, `${name} is declared in ${owners.join(', ')}`);
   // The Set of shortcut owners and the mount counter are one shared state, so a second copy would split it.
