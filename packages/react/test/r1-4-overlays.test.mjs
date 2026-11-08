@@ -54,7 +54,7 @@ test('R1.4 families are SSR and hydration safe and reject missing accessible con
   const server = renderToString(closedOverlayTree());
   assert.match(server, /muxui-drop-zone/u);
   assert.match(server, /muxui-file-trigger/u);
-  assert.doesNotMatch(server, /muxui-dialog__backdrop|muxui-popover(?!__trigger)|muxui-preview-trigger|muxui-tooltip|muxui-toast/u);
+  assert.doesNotMatch(server, /muxui-dialog__backdrop|muxui-popover(?!__trigger)|muxui-preview-trigger|muxui-tooltip|muxui-toast(?!__motion-origin)/u);
   assert.throws(() => renderToString(React.createElement(Dialog, { title: ' ' })), /Dialog requires a title or accessible name/u);
   assert.throws(() => renderToString(React.createElement(Popover, { 'aria-label': ' ', trigger: React.createElement('button', null, 'Open') }, 'Body')), /Popover requires an accessible name/u);
   assert.throws(() => renderToString(React.createElement(PreviewTrigger, { trigger: React.createElement('button', null, 'Preview') }, 'Body')), /PreviewTrigger requires an accessible name/u);

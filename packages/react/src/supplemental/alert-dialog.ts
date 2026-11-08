@@ -103,7 +103,7 @@ const AlertDialogClose = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, Alert
     className: cx('muxui-alert-dialog__close', className),
   };
   return usesDefaultIcon
-    ? h(IconButton, { ...buttonProps, 'aria-label': props['aria-label'] ?? 'Close' }, h(XIcon, { size: 16, 'aria-hidden': true, focusable: 'false' }))
+    ? h(IconButton, { ...buttonProps, 'aria-label': props['aria-label'] ?? 'Close' }, h(XIcon, { className: 'muxui-alert-dialog__close-icon', size: 16, 'aria-hidden': true, focusable: 'false' }))
     : h(MuxUIButton, buttonProps, children);
 });
 

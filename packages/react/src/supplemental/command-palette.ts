@@ -309,7 +309,7 @@ const CommandPaletteClose = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, Co
   const handleActivate = (event: ButtonActivationEvent) => { pressHandler(onActivate)?.(event); setOpen(false); };
   const buttonProps = { ...props, ref, disabled, size: 'sm' as const, variant: 'ghost' as const, onActivate: handleActivate, className: cx('muxui-command-palette__close', className) };
   return children === null || children === undefined
-    ? h(IconButton, { ...buttonProps, 'aria-label': props['aria-label'] ?? 'Close' }, h(XIcon, { size: 16, 'aria-hidden': true, focusable: 'false' }))
+    ? h(IconButton, { ...buttonProps, 'aria-label': props['aria-label'] ?? 'Close' }, h(XIcon, { className: 'muxui-command-palette__close-icon', size: 16, 'aria-hidden': true, focusable: 'false' }))
     : h(MuxUIButton, buttonProps, children);
 });
 const CommandPaletteContent = /*#__PURE__*/ React.forwardRef<HTMLDivElement, CommandPaletteContentProps>(function CommandPaletteContent({ className, children, ...props }, ref) {
@@ -367,7 +367,7 @@ const CommandPaletteChip = /*#__PURE__*/ React.forwardRef<HTMLSpanElement, Comma
 const CommandPaletteChipRemove = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, CommandPaletteChipRemoveProps>(function CommandPaletteChipRemove({ disabled = false, children, ...props }, ref) {
   const buttonProps = { ...props, ref, type: 'button' as const, disabled, className: cx('muxui-command-palette__chip-remove', props.className) };
   return children === null || children === undefined
-    ? h(IconButton, { ...buttonProps, 'aria-label': props['aria-label'] ?? 'Remove chip' }, h(XIcon, { size: 14, 'aria-hidden': true, focusable: 'false' }))
+    ? h(IconButton, { ...buttonProps, 'aria-label': props['aria-label'] ?? 'Remove chip' }, h(XIcon, { className: 'muxui-command-palette__chip-remove-icon', size: 14, 'aria-hidden': true, focusable: 'false' }))
     : h('button', buttonProps, children);
 });
 

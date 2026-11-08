@@ -4,6 +4,7 @@ import { Button } from './button.ts';
 export function R1ButtonFixture({ disabled = false, pending = false, onPress }) {
   const [pressCount, setPressCount] = useState(0);
   return React.createElement('div', {
+    className: 'muxui-button__fixture',
     'aria-busy': pending || undefined,
     'data-muxui-fixture-state': disabled ? 'disabled' : pending ? 'pending' : 'idle',
     'data-muxui-press-count': pressCount,

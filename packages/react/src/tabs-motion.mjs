@@ -466,7 +466,7 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
       'aria-disabled': disabled || !edges.before || undefined,
       disabled: disabled || !edges.before,
       onActivate: () => scrollByRef.current?.(-1),
-    }, React.createElement(orientation === 'vertical' ? ChevronUpIcon : ChevronLeftIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))
+    }, React.createElement(orientation === 'vertical' ? ChevronUpIcon : ChevronLeftIcon, { className: 'muxui-tabs__scroll-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 }))
     : null;
   const afterButton = variant === 'overflow' && edges.overflow
     ? React.createElement(IconButton, {
@@ -477,7 +477,7 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
       'aria-disabled': disabled || !edges.after || undefined,
       disabled: disabled || !edges.after,
       onActivate: () => scrollByRef.current?.(1),
-    }, React.createElement(orientation === 'vertical' ? ChevronDownIcon : ChevronRightIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))
+    }, React.createElement(orientation === 'vertical' ? ChevronDownIcon : ChevronRightIcon, { className: 'muxui-tabs__scroll-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 }))
     : null;
 
   const hover = React.createElement('span', {

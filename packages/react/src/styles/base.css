@@ -160,14 +160,23 @@
   font: inherit;
 }
 
-/* A Mux UI part takes its text size, family and line height from Mux UI, never from the page it sits in. The body and every
-   Mux UI element whose parent is not a Mux UI element (the outermost part, a portaled part, a component inside consumer content
-   that is itself inside another Mux UI part) get the body defaults, and the parts below them inherit those. Zero specificity, and
-   after the form-control `font: inherit` resets so a Mux UI button or field takes the body defaults too: a family's rule, or a
-   `:where()` heading or text role later in this layer, still wins, and an inline part such as Link declares `inherit` itself.
-   So does a part that a component renders under one of its own unclassed wrappers (the Activity, Message and DataDiff parts
-   under a details, summary, li, div or tr): that wrapper is not a Mux UI element, so without `inherit` the part would take
-   the defaults and not its component's typography. */
+/* A Mux UI part takes its text size, family and line height from Mux UI, never from the page it sits in. Every Mux UI element
+   inherits them, so an element-type rule of the host (`li`, `tr`, `summary`, `span`, ...) cannot reach a part, whichever element a
+   component renders it with: that is why every element a component renders carries a Mux UI class. Zero specificity, so a family's
+   rule, or a `:where()` heading or text role later in this layer, still wins; it comes after the form-control `font: inherit` resets
+   and before the boundary rule below. */
+:where([class^='muxui-'], [class*=' muxui-']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* The boundary: the body and every Mux UI element whose parent is not a Mux UI element (the outermost part, a portaled part, a
+   component inside consumer content that is itself inside another Mux UI part) take the body defaults, and the parts below them
+   inherit those. After the rule above, so a boundary takes the defaults and not its parent's, and after the form-control resets so
+   a Mux UI button or field takes them too. The wrappers a library renders around a part without a className (a calendar's td, an
+   overlay's container) are such parents: the part below one takes the defaults, so a family that needs its own typography there
+   declares it. An inline part such as Link declares `inherit` itself. */
 :where(body),
 :where([class^='muxui-'], [class*=' muxui-']):not(:where([class^='muxui-'], [class*=' muxui-']) > *) {
   font-family: var(--muxui-semantic-typography-text-font-family);

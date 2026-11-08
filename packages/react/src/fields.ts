@@ -990,7 +990,7 @@ export const SearchField: ForwardRefExoticComponent<SearchFieldProps & RefAttrib
           ref: inputRef,
         }),
       }),
-      React.createElement(IconButton, { slot: 'clear', type: 'button', className: 'muxui-search-field__clear', 'aria-label': 'Clear search' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
+      React.createElement(IconButton, { slot: 'clear', type: 'button', className: 'muxui-search-field__clear', 'aria-label': 'Clear search' }, React.createElement(XIcon, { className: 'muxui-search-field__clear-icon', 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
   }));
 });
 
@@ -1042,9 +1042,9 @@ export const NumberField: ForwardRefExoticComponent<NumberFieldProps & RefAttrib
     description,
     errorMessage,
     input: React.createElement(AriaGroup, { className: 'muxui-number-field__control' },
-      React.createElement(StepperButton, { slot: 'decrement', type: 'button', className: 'muxui-number-field__stepper muxui-number-field__decrement' }, React.createElement(MinusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })),
+      React.createElement(StepperButton, { slot: 'decrement', type: 'button', className: 'muxui-number-field__stepper muxui-number-field__decrement' }, React.createElement(MinusIcon, { className: 'muxui-number-field__stepper-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 })),
       React.createElement(AriaInput, { className: 'muxui-field-input' }),
-      React.createElement(StepperButton, { slot: 'increment', type: 'button', className: 'muxui-number-field__stepper muxui-number-field__increment' }, React.createElement(PlusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
+      React.createElement(StepperButton, { slot: 'increment', type: 'button', className: 'muxui-number-field__stepper muxui-number-field__increment' }, React.createElement(PlusIcon, { className: 'muxui-number-field__stepper-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
   }));
 });
 
@@ -1300,7 +1300,7 @@ export const TimeField: ForwardRefExoticComponent<TimeFieldProps & RefAttributes
     input: dateInput(),
     children: React.createElement(React.Fragment, null,
       formResetAnchor(resetInputRef),
-      name ? React.createElement('input', { type: 'hidden', name, value: submittedValue ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
+      name ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name, value: submittedValue ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
   }));
 });
 
@@ -1463,8 +1463,8 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
       children: React.createElement(React.Fragment, null,
         rangeDatePopover(triggerRef),
         formResetAnchor(resetInputRef),
-        startName ? React.createElement('input', { type: 'hidden', name: startName, value: submittedValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
-        endName ? React.createElement('input', { type: 'hidden', name: endName, value: submittedValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
+        startName ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name: startName, value: submittedValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
+        endName ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name: endName, value: submittedValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
     }));
   });
   component.displayName = 'DateRangePicker';
@@ -1772,7 +1772,7 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
           if (event.key === 'ArrowDown') setIsOpen(!disabled);
         },
       }),
-      children: name ? React.createElement('input', { type: 'hidden', name, value: submittedValue, disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
+      children: name ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name, value: submittedValue, disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
     })),
     React.createElement(PopoverMotion, {
       ref: setPopoverRef,

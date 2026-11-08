@@ -5,8 +5,6 @@
   --muxui-activity-parent-resize-bounce: var(--muxui-semantic-motion-content-resize-transition-spring-bounce);
   box-sizing: border-box; min-inline-size: min(300px, 100%); max-inline-size: 100%; color: var(--muxui-semantic-content-default); font-family: var(--muxui-semantic-typography-text-font-family); font-size: var(--muxui-semantic-typography-text-s-font-size); line-height: 1.5;
 }
-/* These parts sit under the item's native details or summary, so base.css would give them the Mux UI defaults. They take the item's typography instead. */
-.muxui-activity__mark, .muxui-activity__item-label, .muxui-activity__item-metadata, .muxui-activity__item-chevron, .muxui-activity__details-host { font-family: inherit; font-size: inherit; line-height: inherit; }
 /* Match DisclosureGroup's component spring without retiming nested controls. */
 .muxui-activity__motion-panel, .muxui-activity__chevron, .muxui-activity__item-chevron {
   --muxui-semantic-motion-content-resize-transition-duration: var(--muxui-component-disclosuregroup-transition-duration);

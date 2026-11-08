@@ -2,15 +2,20 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test, { after, before } from 'node:test';
+import React from 'react';
+import * as M from '../../generated/index.mjs';
 import { renderCatalogExamples } from '../support/catalog-example-renders.mjs';
 import { classGrammar } from '../support/class-vocabulary.mjs';
+import { renderClientFixture } from '../support/render-client-fixture.mjs';
+import { clientFixtures } from '../support/styling-fixtures.mjs';
 import { readCatalog } from '../support/styling-inventory.mjs';
 import { launchBrowser, packageRoot, repositoryRoot } from './harness.mjs';
 
 // A Mux UI part takes its box sizing, margins and typography from Mux UI, never from the page it sits in. Every canonical React
 // example is server-rendered once and placed on two pages that differ only in the host's own CSS: `bare` has the package's
-// styles.css and themes.css; `reset` adds the host's CSS: the universal box-sizing and margin reset most sites ship, in a layer
-// ordered before Mux UI's layers, and body typography unlike the browser's and Mux UI's. For each element that carries a Mux UI
+// styles.css and themes.css; `reset` adds the host's CSS: the universal box-sizing and margin reset most sites ship, and foreign
+// typography on the bare element types a component renders with (`li`, `tr`, `summary`, `span`, ...), in a layer ordered before Mux
+// UI's layers, and body typography unlike the browser's and Mux UI's. For each element that carries a Mux UI
 // class, and its ::before and ::after when it renders one, the computed values must be equal on both pages: a difference is a value
 // the part left to the page (an inherited font, a browser-default margin, a content-box the host's reset turns into a border-box).
 //
@@ -23,6 +28,10 @@ import { launchBrowser, packageRoot, repositoryRoot } from './harness.mjs';
 // Mux UI's; on the bare page it carries none. A part whose parent is a consumer element is the edge of Mux UI's own markup, so it
 // must take Mux UI's typography and not the consumer's, whatever Mux UI element sits further up.
 //
+// Two states the examples never render are placed beside them, in the markup a client render ends in (support/render-client-fixture.mjs):
+// DataDiff with no rows, whose message sits under an extra tr, and PromptComposer with its suggestion menu open, whose labels sit under
+// a span. The server-rendered guard cannot reach them, and they are where a wrapper without a class let the host in.
+//
 // Chromium only, two pages, no server: the fixtures are static markup, so computed style needs neither script nor layout.
 const properties = ['box-sizing', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left', 'font-family', 'font-size', 'line-height'];
 
@@ -33,10 +42,14 @@ const inheritsByDesign = [
 ];
 
 // The reset layer sits before every Mux UI layer, so it loses to anything Mux UI declares and shows only what a part left undeclared.
+// The element types are the ones components render around their parts (and the ones a library renders without a class): a part that
+// declares no font of its own would take the host's here, instead of its parent's.
 // The body typography is the page's own unlayered CSS: Mux UI's body defaults (`:where(body)` in muxui.components) are meant to be
 // overridden by the page, and a layered body rule would lose to them, so no part could ever show a font taken from the host.
+const hostTypes = 'span, div, p, ul, ol, li, table, tr, td, th, details, summary';
 const hostCss = `@layer host-reset {
   *, *::before, *::after { box-sizing: border-box; margin: 0; }
+  ${hostTypes} { font: 30px/normal Impact, fantasy; }
 }
 body { font-family: Impact, fantasy; font-size: 18px; line-height: 2; }
 .host-wrap { font: 30px/normal Impact, fantasy; }`;
@@ -44,7 +57,7 @@ body { font-family: Impact, fantasy; font-size: 18px; line-height: 2; }
 /** The example markup on a page of the package's CSS; `host` adds the host's CSS before it. The figure has a default margin and no Mux UI class. */
 const documentOf = ({ examples, stylesheet, themes, host }) => '<!doctype html><html data-muxui-color-scheme="light"><head><meta charset="utf-8">'
   + (host ? `<style>@layer host-reset, muxui.tokens, muxui.components, muxui.utilities;</style><style>${hostCss}</style>` : '')
-  + `<style>${stylesheet}</style><style>${themes}</style></head><body><figure id="control">control</figure>`
+  + `<style>${stylesheet}</style><style>${themes}</style></head><body><figure id="control">control</figure><span id="control-type">control</span>`
   + examples.map(({ name, html }) => `<section data-example="${name}">${html}</section>`
     + `<section data-example="${name}#nested"><div class="muxui-card"><div class="host-wrap">${html}</div></div></section>`).join('')
   + '</body></html>';
@@ -71,8 +84,15 @@ function measure({ owned, properties: names }) {
   });
   const control = document.getElementById('control');
   const wrap = document.querySelector('.host-wrap');
-  return { rows, control: read(getComputedStyle(control), control), wrap: read(getComputedStyle(wrap), wrap) };
+  const type = document.getElementById('control-type');
+  return { rows, control: read(getComputedStyle(control), control), type: read(getComputedStyle(type), type), wrap: read(getComputedStyle(wrap), wrap) };
 }
+
+/** The states placed beside the examples, by the name they get on the page and the fixture that renders them. */
+const states = [
+  ['data-diff/no-rows', 'DataDiff with no rows'],
+  ['prompt-composer/open-suggestions', 'PromptComposer with suggestions'],
+];
 
 let browser;
 let pages;
@@ -84,6 +104,14 @@ before(async () => {
   ]);
   const slugs = [...catalog.anatomy.keys()];
   const examples = await renderCatalogExamples(slugs);
+  // Before the browser starts: a client render installs and removes a jsdom window on the globals.
+  const lib = { h: React.createElement, M };
+  for (const [name, fixtureName] of states) {
+    const fixture = clientFixtures.find((candidate) => candidate.name === fixtureName);
+    const { errors, html } = await renderClientFixture(fixture, lib);
+    assert.deepEqual(errors, [], fixtureName);
+    examples.push({ name, html });
+  }
   const isMuxClass = classGrammar(slugs);
   browser = await launchBrowser();
   const open = async (host) => {
@@ -139,14 +167,18 @@ test('the host CSS reaches the page, so a part that took a value from it would s
   const [bareBox, bareMargin, , , , , bareSize, bareLine] = pages.bare.control;
   const [resetBox, resetMargin, , , , , resetSize, resetLine] = pages.reset.control;
   const [, , , , , , wrapSize, wrapLine] = pages.reset.wrap;
+  const [, , , , , , typeSize, typeLine] = pages.reset.type;
   assert.notEqual(bareBox, resetBox, 'the reset sets box-sizing on an unclassed figure');
   assert.notEqual(bareMargin, resetMargin, 'the reset removes the figure margin');
   assert.deepEqual([resetSize, resetLine], ['18px', '36px'], 'the page typography applies to an unclassed figure');
+  assert.deepEqual([typeSize, typeLine], ['30px', 'normal'], 'the host\'s element-type rule reaches an unclassed span');
+  assert.deepEqual([pages.bare.type[6], pages.bare.type[7]], [bareSize, bareLine], 'and none on the bare page');
   assert.notEqual(bareSize, resetSize);
   assert.notEqual(bareLine, resetLine);
   assert.deepEqual([wrapSize, wrapLine], ['30px', 'normal'], 'the consumer element between a Mux UI container and the example carries its own typography');
   assert.deepEqual([pages.bare.wrap[6], pages.bare.wrap[7]], [bareSize, bareLine], 'and none on the bare page');
   assert.ok(pages.bare.rows.length > 1000, `${pages.bare.rows.length} Mux UI elements and pseudo-elements were measured`);
+  for (const [name] of states) assert.ok(pages.bare.rows.some((row) => row.example.startsWith(name)), `${name} is measured`);
 });
 
 test('no Mux UI part takes box sizing, margins or typography from the host page', () => {

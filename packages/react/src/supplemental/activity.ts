@@ -85,10 +85,10 @@ function ActivityDetails({ item, summary }: { item: ActivityItem; summary: React
     else event.currentTarget.open = true;
     setDetailsOpen(nativeOpen);
   }
-  return e('details', { open: physicalOpen, onToggle: syncNative }, e('summary', { ref: summaryRef, onClick: toggle, 'aria-expanded': detailsOpen, 'aria-controls': detailsId }, ...summary, e(ChevronDown, { ref: chevron, className: 'muxui-activity__item-chevron', size: 16, 'aria-hidden': true, focusable: 'false' })),
+  return e('details', { className: 'muxui-activity__item-details', open: physicalOpen, onToggle: syncNative }, e('summary', { ref: summaryRef, className: 'muxui-activity__item-summary', onClick: toggle, 'aria-expanded': detailsOpen, 'aria-controls': detailsId }, ...summary, e(ChevronDown, { ref: chevron, className: 'muxui-activity__item-chevron', size: 16, 'aria-hidden': true, focusable: 'false' })),
       e('div', { ref: detailsHost, className: 'muxui-activity__details-host', hidden: !detailsOpen ? 'until-found' : undefined },
         e(MotionHeight, { isOpen: detailsOpen, triggerRef: summaryRef, hostRef: detailsHost, id: detailsId, className: 'muxui-activity__motion-panel', contentClassName: 'muxui-activity__motion-content', grouped: true, onCloseComplete: () => setPhysicalOpen(false) },
-          e('div', { className: 'muxui-activity__details' }, item.context && e('div', { className: 'muxui-activity__context' }, item.context), item.details && e('div', null, item.details), actionsOf(item.actions, 'item')))));
+          e('div', { className: 'muxui-activity__details' }, item.context && e('div', { className: 'muxui-activity__context' }, item.context), item.details && e('div', { className: 'muxui-activity__details-content' }, item.details), actionsOf(item.actions, 'item')))));
 }
 // Named for the item it renders; the binding differs only from the exported ActivityItem type.
 const ActivityItemRow = function ActivityItem({ item, visible }: { item: ActivityItem; visible: boolean }) {
@@ -96,7 +96,7 @@ const ActivityItemRow = function ActivityItem({ item, visible }: { item: Activit
   const statusLabel = React.useRef<HTMLSpanElement | null>(null);
   useCandidateMotion(mark, item.status, { active: visible });
   useCandidateMotion(statusLabel, item.status, { active: visible });
-  const summary = [e('span', { key: 'mark', ref: mark, className: 'muxui-activity__mark', 'aria-hidden': true }, e(marks[item.status], { size: 20, 'aria-hidden': true, focusable: 'false' })), e('span', { key: 'label', className: 'muxui-activity__item-label' }, item.label),
+  const summary = [e('span', { key: 'mark', ref: mark, className: 'muxui-activity__mark', 'aria-hidden': true }, e(marks[item.status], { className: 'muxui-activity__mark-icon', size: 20, 'aria-hidden': true, focusable: 'false' })), e('span', { key: 'label', className: 'muxui-activity__item-label' }, item.label),
     e('span', { key: 'metadata', className: 'muxui-activity__item-metadata' }, item.meta && e('span', { className: 'muxui-activity__meta' }, item.meta), e('span', { className: 'muxui-activity__status-time' }, e('span', { ref: statusLabel, className: 'muxui-activity__status' }, labels[item.status]), item.time && e('span', { className: 'muxui-activity__time' }, ' in ', item.time)))];
   const hasDetails = item.details || item.context || item.actions?.length;
   return e('li', { className: 'muxui-activity__item', 'data-muxui-status': item.status }, hasDetails

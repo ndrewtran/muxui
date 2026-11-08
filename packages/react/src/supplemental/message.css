@@ -1,6 +1,4 @@
 .muxui-message { box-sizing: border-box; min-inline-size: 0; max-inline-size: 100%; color: var(--muxui-semantic-content-default); font-family: var(--muxui-semantic-typography-text-font-family); font-size: var(--muxui-semantic-typography-text-m-font-size); line-height: 1.6; overflow-wrap: anywhere; }
-/* These parts sit under a source's unclassed li or div, so base.css would give them the Mux UI defaults. They take the message's typography instead. */
-.muxui-message__source-index, .muxui-message__source-description { font-family: inherit; font-size: inherit; line-height: inherit; }
 .muxui-message__author { margin-block-end: var(--muxui-semantic-layout-content-gap); font-size: var(--muxui-semantic-typography-text-s-font-size); font-weight: var(--muxui-semantic-typography-text-font-weight); }
 .muxui-message__content > :first-child { margin-block-start: 0; }
 .muxui-message__content > :last-child { margin-block-end: 0; }

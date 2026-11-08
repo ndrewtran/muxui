@@ -9,88 +9,56 @@
 // a name built at run time (see styling-tokens.test.mjs for the same grammar on CSS and source), each against only the exemptions of
 // its own example (a runtime fixture has none). The canonical examples are held to the same standard as the fixtures: a React
 // warning or an exception while one renders fails.
+// The same renders prove the other half of the class rule: every native element a component renders carries a Mux UI class
+// (support/unclassed-elements.mjs). The examples' JSX and the fixtures' `h` mark the elements the caller creates, so an unmarked
+// element without a class is Mux UI's own or a library's, and the exceptions are listed there with their reasons. The fixtures cover
+// the states the examples do not render (an open menu, an empty table). A scan of the source (support/unclassed-sources.mjs) covers
+// the rest: every state of every call that creates a native element with a literal tag.
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
-import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import React from 'react';
 import { renderToString } from 'react-dom/server';
 import * as M from '../generated/index.mjs';
 import { Markdown } from '../generated/markdown.js';
 import { TextEditor } from '../generated/text-editor.js';
 import { captured, renderCatalogExamples } from './support/catalog-example-renders.mjs';
-import { emittedFindings, readAuthored, vocabularyFindings } from './support/class-vocabulary.mjs';
-import { createDom } from './support/dom.mjs';
+import { classGrammar, emittedFindings, readAuthored, vocabularyFindings } from './support/class-vocabulary.mjs';
+import { renderClientFixture } from './support/render-client-fixture.mjs';
 import { readCatalog } from './support/styling-inventory.mjs';
 import { callerElementFixtures, clientFixtures, hookOnlyFixtures } from './support/styling-fixtures.mjs';
 import { partRows, selectorOf } from './support/styling-parts.ts';
+import { markCaller, unclassableElements, unclassedElements } from './support/unclassed-elements.mjs';
+import { unclassedSites } from './support/unclassed-sources.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
 const catalog = await readCatalog(repositoryRoot);
 const slugs = [...catalog.anatomy.keys()];
-const lib = { h: React.createElement, M, TextEditor, Markdown };
-const sleep = (milliseconds) => new Promise((resolveSleep) => setTimeout(resolveSleep, milliseconds));
+const isClass = classGrammar(slugs);
+// `h` marks the elements a fixture creates as the caller's, as the examples' JSX is marked, so the markup tells them from Mux UI's own.
+const lib = { h: markCaller(React.createElement), M, TextEditor, Markdown };
 const rowKey = (row) => `${row.family}.${row.part}`;
 
 // Tier 1: every canonical example of every family, server-rendered (support/catalog-example-renders.mjs).
-const examples = await renderCatalogExamples(slugs);
+const examples = await renderCatalogExamples(slugs, { markCallerElements: true });
 const documentOf = (html) => new JSDOM(`<!doctype html><body>${html}`).window.document;
 const exampleDocuments = examples.map((example) => ({ ...example, document: documentOf(example.html) }));
 
-// Tiers 2 to 4: a fixture is client-rendered in a fresh jsdom window, driven by its steps, and the family's selectors are looked for
-// after the render and after each step (an overlay closes, a toast leaves). A console error is a failure, never a skipped row.
-/** jsdom has no layout: every element reports the size, and the observer reports it as soon as it observes a target. */
-function sizeLayout(window, { width, height }) {
-  for (const [name, value] of [['offsetHeight', height], ['offsetWidth', width], ['clientHeight', height], ['clientWidth', width], ['scrollHeight', height * 10]]) {
-    Object.defineProperty(window.HTMLElement.prototype, name, { configurable: true, get: () => value });
-  }
-  class SizedObserver {
-    constructor(callback) { this.callback = callback; }
-    // Asynchronous, so the virtualizer is not asked to flush inside the lifecycle that started the observation.
-    observe(target) { setTimeout(() => this.callback([{ target, contentRect: { width, height }, borderBoxSize: [{ inlineSize: width, blockSize: height }] }], this), 0); }
-    unobserve() {}
-    disconnect() {}
-  }
-  window.ResizeObserver = SizedObserver;
-  globalThis.ResizeObserver = SizedObserver;
-  window.HTMLElement.prototype.getBoundingClientRect = () => ({ x: 0, y: 0, top: 0, left: 0, right: width, bottom: height, width, height, toJSON() {} });
-}
-
-async function renderFixture({ element, steps = [], layout }, selectors) {
-  const { dom, restore } = createDom('<div id="root"></div>', { layoutStubs: true });
-  const { window } = dom;
-  const { document } = window;
-  const errors = [];
-  const consoleError = console.error;
-  console.error = (...messages) => errors.push(String(messages[0]).slice(0, 160));
+// Tiers 2 to 4: a fixture is client-rendered in a fresh jsdom window, driven by its steps (support/render-client-fixture.mjs), and the
+// family's selectors are looked for after the render and after each step (an overlay closes, a toast leaves). A console error is a
+// failure, never a skipped row.
+async function renderFixture(fixture, selectors) {
   const matched = new Set();
   const classes = new Set();
-  const observe = () => {
+  const unclassed = new Set();
+  const { errors } = await renderClientFixture(fixture, lib, (document) => {
     for (const selector of selectors) if (document.querySelector(selector) !== null) matched.add(selector);
     for (const node of document.querySelectorAll('[class]')) for (const name of node.classList) if (name.startsWith('muxui-')) classes.add(name);
-  };
-  if (layout) sizeLayout(window, layout);
-  const root = createRoot(document.getElementById('root'));
-  try {
-    await act(async () => root.render(element(lib)));
-    await act(async () => sleep(40));
-    observe();
-    for (const step of steps) {
-      await act(async () => { await step({ window, document, sleep }); });
-      await act(async () => sleep(60));
-      observe();
-    }
-  } catch (error) {
-    errors.push(`threw: ${String(error?.message ?? error).slice(0, 160)}`);
-  } finally {
-    console.error = consoleError;
-    try { await act(async () => root.unmount()); } catch { /* unmounting is not what is being proven */ }
-    await sleep(30);
-    restore();
-  }
-  return { matched, classes, errors };
+    for (const finding of unclassedElements(document.body, { isClass })) unclassed.add(finding);
+  });
+  return { matched, classes, unclassed, errors };
 }
 
 const rowsOf = (family) => partRows.filter((row) => row.family === family && row.disposition !== 'none');
@@ -200,6 +168,51 @@ test('every class a fixture renders is in the closed vocabulary and spelled by C
   const card = exampleDocuments.find(({ family }) => family === 'card');
   const injected = new Set([...classesOf(card.document), 'muxui-number-field-sizing-case']);
   assert.match(emittedFindings(injected, { spelled, slugs, owned: card.owned }).join(), /emitted muxui-number-field-sizing-case is not a valid class/u);
+});
+
+test('every element a component renders carries a Mux UI class, in each example and in each state a fixture shows', () => {
+  // One line per distinct element, with how many times it appears and where it first does.
+  const seen = new Map();
+  const note = (name, findings) => findings.forEach((finding) => seen.set(finding, { count: (seen.get(finding)?.count ?? 0) + 1, first: seen.get(finding)?.first ?? name }));
+  for (const { name, document } of exampleDocuments) note(name, unclassedElements(document.body, { isClass }));
+  for (const { name, unclassed } of fixtureRuns.concat(hookOnlyRuns)) note(name, [...unclassed]);
+  assert.deepEqual([...seen].map(([finding, { count, first }]) => `${finding} (${count}, first in ${first})`).sort(), []);
+});
+
+test('no source creates a native element without a className, in any state', async () => {
+  const { sources } = await readAuthored(packageRoot);
+  assert.deepEqual(unclassedSites(sources), []);
+  // The check sees a bare element, an element with props and no className, and an element of an aliased creator; it passes a classed
+  // element, an svg internal, and props it cannot read.
+  const mutant = `import { h } from './part-utils.ts';
+    const e = React.createElement;
+    e('li', null, 'a'); e('li', { key: 1 }, 'b'); h('span', { 'aria-hidden': true }); React.createElement(cond ? 'th' : 'td', { scope: 'row' });
+    e('li', { className: 'x' }); e('path', { d: 'M0' }); e('div', { ...props }); e('div', rootProps); e(Item, null);`;
+  assert.deepEqual(unclassedSites({ 'mutant.ts': mutant }), ['mutant.ts:3 <li>', 'mutant.ts:3 <li>', 'mutant.ts:3 <span>', 'mutant.ts:3 <th|td>']);
+});
+
+test('the rendered class check sees an unmarked unclassed element and a lost class, and excepts only a library\'s own wrappers', () => {
+  const check = (html, root = documentOf(html).body) => unclassedElements(root, { isClass });
+  const caller = '<p data-caller="">own</p>';
+  assert.deepEqual(check(`<div class="muxui-card">${caller}<ul class="muxui-card__list"><li class="muxui-card__item">a</li></ul></div>`), []);
+  assert.deepEqual(check('<div class="muxui-card"><ul class="muxui-card__list"><li>a</li></ul></div>'), ['<li> in <ul.muxui-card__list>']);
+  assert.deepEqual(check('<div class="muxui-card"><span class="not-mux">a</span></div>'), ['<span> in <div.muxui-card>']);
+  // An svg internal passes under a classed svg and fails under an unclassed one.
+  assert.deepEqual(check('<svg class="muxui-icon"><path d="M0"></path></svg>'), []);
+  assert.deepEqual(check('<svg><path d="M0"></path></svg>'), ['<svg> in <body>', '<path> in <svg>']);
+  // A hidden exception covers what is below it; a wrapper that holds parts or content is excepted by the library's signature only.
+  assert.deepEqual(check('<span hidden="" data-focus-scope-start="true"></span><template></template>'), []);
+  assert.deepEqual(check('<div style="border:0;clip-path:inset(50%)"><p>Heading</p></div>'), []);
+  assert.deepEqual(check('<table class="muxui-calendar__grid"><tbody class="muxui-calendar__grid-body"><tr><td><div class="muxui-calendar__cell">1</div></td></tr></tbody></table>'), []);
+  assert.deepEqual(check('<table class="muxui-data-diff__table"><tbody class="muxui-data-diff__body"><tr><td class="muxui-data-diff__cell">1</td></tr></tbody></table>'), ['<tr> in <tbody.muxui-data-diff__body>']);
+  const wrapper = '<div data-overlay-container="true"><div class="muxui-tooltip">Tip</div></div>';
+  assert.deepEqual(check(wrapper), []);
+  assert.deepEqual(check('<ol class="react-aria-ToastList"><li style="display: contents;">x</li></ol>'), []);
+  assert.deepEqual(check('<div role="gridcell" style="display:contents">Text</div>'), []);
+  // The same wrapper without the library's signature is Mux UI's own element, and needs a class.
+  assert.deepEqual(check('<div><div class="muxui-tooltip">Tip</div></div>'), ['<div> in <body>']);
+  // Every exception says why, and is either invisible or says what it holds.
+  assert.ok(unclassableElements.every(({ name, reason, hidden, holds }) => name && reason.length > 40 && (hidden === true) !== (typeof holds === 'string')));
 });
 
 test('a composed row whose element can be the caller\'s says so, and exactly the rows with such a fixture do', () => {
