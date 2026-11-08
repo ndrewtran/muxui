@@ -21,16 +21,31 @@ function ColorModeTogglePreview({ syncWithToolbar = true, ...args }) {
   });
 }
 
-// The toolbar decides Light and Dark, and a picked mode moves it. The toolbar has no System, so System is the scheme the
-// system resolves to, and the picker shows System only while the toolbar is on that scheme.
+// The toolbar decides Light and Dark, and a picked mode moves it. The toolbar has no System, so System is kept here as the
+// picker's own choice: the toolbar follows the scheme the system resolves to for as long as System stays chosen, and a toolbar
+// pick of another scheme ends it.
 function ColorModePickerPreview({ syncWithToolbar = true, ...args }) {
   const theme = React.useContext(StorybookThemeContext);
   const [system, setSystem] = React.useState(false);
   const resolved = () => (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const toolbar = syncWithToolbar ? theme?.scheme : undefined;
+  const latest = React.useRef({ system, setScheme: theme?.setScheme });
+  latest.current = { system, setScheme: theme?.setScheme };
+  const following = syncWithToolbar && system;
+  React.useEffect(() => {
+    if (!following) return undefined;
+    const query = window.matchMedia?.('(prefers-color-scheme: dark)');
+    const follow = () => latest.current.setScheme?.(resolved());
+    query?.addEventListener('change', follow);
+    return () => query?.removeEventListener('change', follow);
+  }, [following]);
+  // Only a change of the toolbar's own scheme can end System, so the render between picking System and the toolbar catching up keeps it.
+  React.useEffect(() => {
+    if (latest.current.system && toolbar !== undefined && toolbar !== resolved()) setSystem(false);
+  }, [toolbar]);
   return React.createElement(MuxUI.ColorModePicker, {
     ...args,
-    mode: args.mode ?? (system && toolbar === resolved() ? 'system' : toolbar),
+    mode: args.mode ?? (system ? 'system' : toolbar),
     'aria-label': 'Color mode',
     onModeChange: (mode) => {
       args.onModeChange?.(mode);
@@ -2227,6 +2242,7 @@ export const NOT_OBSERVED_IN_CANVAS = Object.freeze({
     'data-muxui-state-selected': Object.freeze(['spelled-differently', 'Selected items render as tags, not as selected options.']),
   }),
   TextArea: Object.freeze({ 'data-muxui-state-empty': Object.freeze(['no-writer-found']) }),
+  ThemePicker: Object.freeze({ 'data-muxui-state-selected': Object.freeze(['not-reached', 'The selected option carries it, and the canvas selects none.']) }),
   Virtualizer: Object.freeze({ 'data-muxui-state-disabled': Object.freeze(['not-reached', 'A disabled row carries it, and the rows render only with a measured viewport.']) }),
 });
 

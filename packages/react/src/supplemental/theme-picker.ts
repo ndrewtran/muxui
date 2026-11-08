@@ -99,10 +99,19 @@ export const ThemePicker: ForwardRefExoticComponent<ThemePickerProps & RefAttrib
   const names = repeatedNames(groups);
   const rows = rowsOf(groups, random);
   const options = rows.flat();
+  // The selection is held here, not in React Aria, so a chosen Random can be set aside when `random` turns off.
+  const controlled = value !== undefined;
+  const [internal, setInternal] = React.useState<ThemePickerValue | undefined>(defaultValue);
+  const chosen = controlled ? value : internal;
+  // Without the Random option a chosen random selects nothing, so the first option holds the tab stop.
+  // The choice itself is kept: Random is selected again if the option comes back.
+  const selected = chosen === 'random' && !random ? null : chosen ?? null;
   // React Aria's group reports a string; the options say which value it was.
   const select = (next: string) => {
     const option = options.find((candidate) => candidate === next);
-    if (option !== undefined) onChange?.(option);
+    if (option === undefined) return;
+    if (!controlled) setInternal(option);
+    onChange?.(option);
   };
   // One tab stop and Left and Right come from the radio group. The 2D keys select as they move, as a radio group's arrows do.
   const keyDown = (option: ThemePickerValue): RadioKeyDown => (event) => {
@@ -131,8 +140,7 @@ export const ThemePicker: ForwardRefExoticComponent<ThemePickerProps & RefAttrib
   });
   return h(AriaRadioGroup, {
     ref,
-    value,
-    defaultValue,
+    value: selected,
     onChange: select,
     isDisabled: disabled,
     orientation: 'horizontal',

@@ -203,8 +203,9 @@ const GUIDES = {
   'command-palette': { reference: { CommandPaletteCommand: ['subtitle', 'keywords'], UseCommandPaletteOptions: ['onError', 'close'] } },
 };
 
-// Derived components with no usage guide yet, which this check cannot read. ColorModeToggle's guide is separate documentation work.
-const WITHOUT_GUIDE = ['color-mode-toggle'];
+// Derived components with no usage guide yet, which this check cannot read. The usage guides of ColorModeToggle,
+// ColorModePicker, and ThemePicker are separate documentation work.
+const WITHOUT_GUIDE = ['color-mode-picker', 'color-mode-toggle', 'theme-picker'];
 
 /** Finite spans missing from their exact declaration owner (never a component-wide bag). */
 function missingFromReference(file, surfaces) {

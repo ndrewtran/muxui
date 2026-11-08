@@ -38,9 +38,7 @@ Each axis is selected by a data attribute:
 
 Set an attribute on the document root to apply a mode to the whole page, or on any element to apply it to that subtree.
 
-`ColorModeToggle` switches the color scheme at runtime. It sets `data-muxui-color-scheme` on the document root to `light` or `dark` and saves the choice in `localStorage` under `storageKey`, which defaults to `muxui-color-mode`. After mount it restores the saved choice, then `defaultMode`, then the operating system's `prefers-color-scheme`; the first render uses `defaultMode`, or light, so server rendering hydrates cleanly. Pass `mode` and `onModeChange` to control it.
-
-`ColorModePicker` offers Light, Dark, and System. It reads and writes the same `localStorage` key as `ColorModeToggle`, in the same format, so the two share a saved choice. Light and Dark are saved as `light` and `dark`. System saves nothing: it removes the saved choice, writes the operating system's `prefers-color-scheme` to `data-muxui-color-scheme`, and keeps following that preference while System stays chosen. With nothing saved the picker starts on System, unless `defaultMode` says otherwise. It restores after mount in the same order and takes `mode` and `onModeChange` to control it.
+[ColorModeToggle](/components/color-mode-toggle/) switches the page between light and dark, and [ColorModePicker](/components/color-mode-picker/) offers Light and Dark with a System choice that follows the operating system. Both write the result to `data-muxui-color-scheme` on the document root, so they set the scheme for the whole page, and both remember the choice in the browser. Each component's generated reference lists its props, defaults, and how a saved choice is restored.
 
 The package has no switch for the other axes, so set their attributes yourself.
 
@@ -52,16 +50,7 @@ Import `@muxui/react/themes.css` after `@muxui/react/styles.css` to enable the p
 <div data-muxui-theme="standard-harbour" data-muxui-color-scheme="dark">{children}</div>
 ```
 
-`ThemePicker` lets people choose a preset. It lists the presets of `MUXUI_THEME_PRESETS` as swatches, grouped by collection, and reports the chosen theme ID through `onChange`. It changes nothing outside itself, so the application sets `data-muxui-theme` to the ID it is given. Pass `value`, or `defaultValue` for an uncontrolled picker. Each swatch shows the preset's action background for the color scheme in force, so the picker needs neither `themes.css` nor a theme scope. `random` adds a Random option that reports `random`; the application then chooses the theme to apply.
-
-```tsx
-import { ThemePicker } from '@muxui/react';
-
-<ThemePicker
-  defaultValue="standard-harbour"
-  onChange={(theme) => document.documentElement.setAttribute('data-muxui-theme', theme)}
-/>
-```
+[ThemePicker](/components/theme-picker/) lets people choose a preset from swatches grouped by collection, and can offer a Random option. It reports the chosen theme ID and changes nothing outside itself, so the application sets `data-muxui-theme` to that ID, and decides which theme Random means. Its swatches carry each preset's own colours for the color scheme in force, so the picker needs neither `themes.css` nor a theme scope. The component's generated reference lists its props, defaults, and events.
 
 ## Cascade layers
 
