@@ -249,7 +249,24 @@ const INTERACTION_OPEN_LOCATORS = Object.freeze({
   Select: { trigger: '.muxui-select__trigger', overlay: '.muxui-select__popup' },
   // Its trigger does not announce expansion, so the open state waits for the popup alone.
   CommandPalette: { trigger: '.muxui-command-palette__trigger', overlay: '.muxui-command-palette__popup', announcesExpanded: false },
+  // A Block story holds nothing open, so a Block that declares `press` has its trigger pressed on the page, as a person would.
+  'Theme settings': { trigger: 'button[aria-label="Theme"]', overlay: '.muxui-popover', press: true },
 });
+
+// A rule only themes.css carries, so finding it proves the preset stylesheet is loaded.
+const THEME_PRESET_RULE = '[data-muxui-theme=';
+
+// The open panel's paints are audited like the closed page's, under their own coverage key and failure check.
+function openPaintCoverageKey(scheme, id) {
+  return `${scheme}:open-paints:${id}`;
+}
+
+/** The open-overlay locators a story declares: a component's States story holds its overlay open, and a Block story declares one to press open. */
+function openLocatorsOf(story) {
+  const locators = INTERACTION_OPEN_LOCATORS[storyFamily(story)];
+  const declared = locators?.press ? story.id.startsWith('muxui-block-') : story.name === 'States';
+  return declared ? locators : undefined;
+}
 
 function formatViolations(violations) {
   return violations.map((violation) => [
@@ -326,21 +343,21 @@ async function runAxe(page, contextSelector, options) {
 async function waitForInteractionOpen(page, family) {
   const locators = INTERACTION_OPEN_LOCATORS[family];
   assert.ok(locators, `missing interaction-open locators for ${family}`);
-  await page.waitForFunction(({ triggerSelector, overlaySelector, announcesExpanded }) => {
-    const section = [...document.querySelectorAll('.muxui-storybook-state')]
+  await page.waitForFunction(({ triggerSelector, overlaySelector, announcesExpanded, press }) => {
+    const section = press ? document : [...document.querySelectorAll('.muxui-storybook-state')]
       .find((candidate) => candidate.querySelector('h3')?.textContent === 'open');
     const trigger = section?.querySelector(triggerSelector);
     const overlay = document.querySelector(`${overlaySelector}:not([hidden])`);
     if (!trigger || (announcesExpanded && trigger.getAttribute('aria-expanded') !== 'true') || !overlay) return false;
     const style = getComputedStyle(overlay);
     return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-  }, { triggerSelector: locators.trigger, overlaySelector: locators.overlay, announcesExpanded: locators.announcesExpanded !== false }, { timeout: storyTimeoutMs });
+  }, { triggerSelector: locators.trigger, overlaySelector: locators.overlay, announcesExpanded: locators.announcesExpanded !== false, press: locators.press === true }, { timeout: storyTimeoutMs });
 }
 
 async function waitForInteractionClosed(page, family) {
   const locators = INTERACTION_OPEN_LOCATORS[family];
-  await page.waitForFunction(({ triggerSelector, overlaySelector }) => {
-    const section = [...document.querySelectorAll('.muxui-storybook-state')]
+  await page.waitForFunction(({ triggerSelector, overlaySelector, press }) => {
+    const section = press ? document : [...document.querySelectorAll('.muxui-storybook-state')]
       .find((candidate) => candidate.querySelector('h3')?.textContent === 'open');
     const trigger = section?.querySelector(triggerSelector);
     const overlay = document.querySelector(`${overlaySelector}:not([hidden])`);
@@ -348,7 +365,35 @@ async function waitForInteractionClosed(page, family) {
     const overlayHidden = !overlay || ['none', 'hidden'].includes(getComputedStyle(overlay).display)
       || getComputedStyle(overlay).visibility === 'hidden' || overlay.getAttribute('aria-hidden') === 'true';
     return trigger?.getAttribute('aria-expanded') !== 'true' && overlayHidden && root && !root.hasAttribute('inert');
-  }, { triggerSelector: locators.trigger, overlaySelector: locators.overlay }, { timeout: storyTimeoutMs });
+  }, { triggerSelector: locators.trigger, overlaySelector: locators.overlay, press: locators.press === true }, { timeout: storyTimeoutMs });
+}
+
+/**
+ * Opens the story's overlay: a States story already holds it open, and a Block story has its trigger pressed. The Block's panel
+ * mounts a ColorModePicker, which follows the system until told otherwise, so the system takes the audited scheme first, and the
+ * scheme and the preset stylesheet are verified before the panel is audited. `closeStoryOverlay` puts the system back.
+ */
+async function openStoryOverlay(page, story, scheme) {
+  const family = storyFamily(story);
+  const locators = openLocatorsOf(story);
+  if (locators.press) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.locator(locators.trigger).click();
+  }
+  await waitForInteractionOpen(page, family);
+  if (!locators.press) return;
+  await page.waitForFunction((expected) => document.documentElement.getAttribute('data-muxui-color-scheme') === expected, scheme, { timeout: storyTimeoutMs });
+  const held = await page.evaluate((presetRule) => ({
+    scheme: document.documentElement.getAttribute('data-muxui-color-scheme'),
+    system: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+    themes: [...document.styleSheets].some((sheet) => [...sheet.cssRules].some((rule) => rule.cssText.includes(presetRule))),
+  }), THEME_PRESET_RULE);
+  assert.deepEqual(held, { scheme, system: scheme, themes: true }, `${scheme} ${story.id}: the open panel is audited in the scheme under test, with the preset stylesheet loaded`);
+}
+
+/** Returns the system to the browser's own scheme once a pressed overlay has been audited, or after its audit failed. */
+async function closeStoryOverlay(page, story) {
+  if (openLocatorsOf(story)?.press) await page.emulateMedia({ colorScheme: null });
 }
 
 async function waitForBrowserProof(page, story, baseUrl, scheme) {
@@ -777,22 +822,32 @@ test('audit cleanup closes a browser acquired after timeout exactly once', async
 
 // Drives a page worker without a Storybook server. `failFirstGoto` fails the BrowserProof check that
 // runs before the page's visit; `nonToken` makes the paint audit report an off-token colour.
-function scriptedBrowser({ failFirstGoto = false, nonToken = [] } = {}) {
+// `openNonToken` reports an off-token colour only once a pressed trigger has opened the panel, and `held` is what the
+// page reports of the scheme and stylesheet the open panel is audited in. `emulations` records the colour schemes asked for.
+function scriptedBrowser({ failFirstGoto = false, nonToken = [], openNonToken = [], held } = {}) {
   let visits = 0;
+  let opened = false;
+  const emulations = [];
   const page = {
     setDefaultNavigationTimeout() {},
     setDefaultTimeout() {},
     goto: async () => {
       visits += 1;
+      opened = false;
       if (failFirstGoto && visits === 1) throw new Error('scripted dedicated check failure');
     },
     waitForFunction: async () => {},
     addScriptTag: async () => {},
-    evaluate: async (_function, argument) => (argument?.scope === 'canvas'
-      ? { elements: 1, paintOccurrences: 1, problems: [], media: [], nonToken }
-      : { violations: [] }),
+    emulateMedia: async ({ colorScheme }) => { emulations.push(colorScheme); },
+    locator: () => ({ click: async () => { opened = true; } }),
+    keyboard: { press: async () => { opened = false; } },
+    evaluate: async (_function, argument) => {
+      if (argument?.scope === 'canvas') return { elements: 1, paintOccurrences: 1, problems: [], media: [], nonToken: opened ? openNonToken : nonToken };
+      if (argument === THEME_PRESET_RULE) return held;
+      return { violations: [] };
+    },
   };
-  return { newContext: async () => ({ newPage: async () => page, close: async () => {} }) };
+  return { emulations, newContext: async () => ({ newPage: async () => page, close: async () => {} }) };
 }
 
 test('page workers keep paint collection, axe, and the dedicated check independent', async (t) => {
@@ -832,6 +887,40 @@ test('page workers keep paint collection, axe, and the dedicated check independe
   const clean = await run(runSelectedPageA11yWorker, plain);
   assert.deepEqual(clean.coverage, [`light:axe:${plain.id}`, paintCoverageKey('light', plain.id)].sort());
   assert.deepEqual(clean.failures, []);
+
+  // A Block story that declares an open panel is audited with that panel open.
+  const block = { id: 'muxui-block-theme-settings--popover', title: 'Mux UI Blocks/Theme settings', name: 'Popover', exportName: 'Popover' };
+  const runBlock = async (options) => {
+    const browser = scriptedBrowser(options);
+    const failures = [];
+    const coverage = await runSelectedPageA11yWorker({
+      browser, baseUrl: 'http://stub', stories: [block], schemes: ['dark'], signal: new AbortController().signal, failures,
+    });
+    return { coverage: coverage.sort(), failures: failures.map(({ message, ...key }) => ({ ...key, message })), emulations: browser.emulations };
+  };
+
+  // The system takes the audited scheme before the trigger is pressed and is released afterwards.
+  const blockClean = await runBlock({ held: { scheme: 'dark', system: 'dark', themes: true } });
+  assert.deepEqual(blockClean.coverage, expectedSelectedPageCoverage([block], ['dark']));
+  assert.deepEqual(blockClean.coverage, [
+    `dark:axe:${block.id}`, `dark:open-paints:${block.id}`, `dark:open-portal:${block.id}`, paintCoverageKey('dark', block.id),
+  ].sort());
+  assert.deepEqual(blockClean.emulations, ['dark', null]);
+  assert.deepEqual(blockClean.failures, []);
+
+  // An off-token colour only the open panel paints is recorded against the open panel, and the other proofs still run.
+  const painted = await runBlock({ held: { scheme: 'dark', system: 'dark', themes: true }, openNonToken: offToken });
+  assert.deepEqual(painted.coverage, [`dark:axe:${block.id}`, `dark:open-portal:${block.id}`, paintCoverageKey('dark', block.id)].sort());
+  assert.deepEqual(painted.failures.map(({ scheme, id, check }) => ({ scheme, id, check })), [{ scheme: 'dark', id: block.id, check: 'open paints' }]);
+
+  // A panel that is not in the scheme under test, or lacks the preset stylesheet, is not audited at all.
+  for (const held of [{ scheme: 'light', system: 'dark', themes: true }, { scheme: 'dark', system: 'dark', themes: false }]) {
+    const unverified = await runBlock({ held });
+    assert.deepEqual(unverified.coverage, [paintCoverageKey('dark', block.id)]);
+    assert.equal(unverified.failures.length, 1);
+    assert.match(unverified.failures[0].message, /audited in the scheme under test, with the preset stylesheet loaded/u);
+    assert.deepEqual(unverified.emulations, ['dark', null]);
+  }
 });
 
 test('NumberField sizing story computes fit-content, 12rem, and full container widths', {
@@ -1501,30 +1590,41 @@ async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, s
           await auditPagePaints(page, { scheme, id: story.id, coverage, failures, signal });
           await page.addScriptTag({ content: axe.source });
 
-          const interactionOpen = story.name === 'States' && INTERACTION_OPEN_LOCATORS[family];
+          const interactionOpen = openLocatorsOf(story);
           if (interactionOpen) {
-            await waitForInteractionOpen(page, family);
-            await waitForDocumentAnimations(page);
-            const portalResult = await runAxe(page, `${interactionOpen.overlay}:not([hidden])`);
-            assert.equal(
-              portalResult.violations.length,
-              0,
-              `${scheme} ${story.id} open portal has axe violations:\n${formatViolations(portalResult.violations)}`,
-            );
-            coverage.push(`${scheme}:open-portal:${story.id}`);
-            const controlledOpen = manifest.families.find(({ family: name }) => name === family)?.props.includes('open');
-            if (!controlledOpen) {
-              // The full-page axe run below happens after dismissal; check open-state
-              // page contrast first so component proof covers everything theme proof does.
-              const openContrast = await runAxe(page, undefined, { runOnly: { type: 'rule', values: ['color-contrast'] } });
+            try {
+              await openStoryOverlay(page, story, scheme);
+              await waitForDocumentAnimations(page);
+              // A Block's panel is part of what the Block paints, so its paints are audited open, as the closed page was above.
+              if (interactionOpen.press) {
+                const open = { coverage: [], failures: [] };
+                await auditPagePaints(page, { scheme, id: story.id, ...open, signal });
+                coverage.push(...open.coverage.map(() => openPaintCoverageKey(scheme, story.id)));
+                failures.push(...open.failures.map((failure) => ({ ...failure, check: 'open paints' })));
+              }
+              const portalResult = await runAxe(page, `${interactionOpen.overlay}:not([hidden])`);
               assert.equal(
-                openContrast.violations.length,
+                portalResult.violations.length,
                 0,
-                `${scheme} ${story.id} (${family}) open state has colour contrast violations:\n${formatViolations(openContrast.violations)}`,
+                `${scheme} ${story.id} open portal has axe violations:\n${formatViolations(portalResult.violations)}`,
               );
-              await focusInteractionOverlayForDismissal(page, family);
-              await page.keyboard.press('Escape');
-              await waitForInteractionClosed(page, family);
+              coverage.push(`${scheme}:open-portal:${story.id}`);
+              const controlledOpen = manifest.families.find(({ family: name }) => name === family)?.props.includes('open');
+              if (!controlledOpen) {
+                // The full-page axe run below happens after dismissal; check open-state
+                // page contrast first so component proof covers everything theme proof does.
+                const openContrast = await runAxe(page, undefined, { runOnly: { type: 'rule', values: ['color-contrast'] } });
+                assert.equal(
+                  openContrast.violations.length,
+                  0,
+                  `${scheme} ${story.id} (${family}) open state has colour contrast violations:\n${formatViolations(openContrast.violations)}`,
+                );
+                await focusInteractionOverlayForDismissal(page, family);
+                await page.keyboard.press('Escape');
+                await waitForInteractionClosed(page, family);
+              }
+            } finally {
+              await closeStoryOverlay(page, story);
             }
           }
 
@@ -1582,7 +1682,8 @@ function expectedSelectedPageCoverage(stories, schemes) {
     ...(story.name === 'Disabled items keyboard navigation' ? [`${scheme}:autocomplete-keyboard:${story.id}`] : []),
     ...(story.name === 'Nested submenu keyboard navigation' ? [`${scheme}:menu-nested-keyboard:${story.id}`] : []),
     ...(story.name === 'Variant × size' ? [`${scheme}:button-matrix:${story.id}`] : []),
-    ...(story.name === 'States' && INTERACTION_OPEN_LOCATORS[storyFamily(story)] ? [`${scheme}:open-portal:${story.id}`] : []),
+    ...(openLocatorsOf(story) ? [`${scheme}:open-portal:${story.id}`] : []),
+    ...(openLocatorsOf(story)?.press ? [openPaintCoverageKey(scheme, story.id)] : []),
     ...(story.name === 'States' && storyFamily(story) === 'Dialog' ? [`${scheme}:dialog-state-dismissal:${story.id}`] : []),
     ...(story.name === 'States' && MODAL_STATE_FAMILIES.includes(storyFamily(story)) ? [`${scheme}:modal-controls-open:${story.id}`] : []),
   ])).sort();
@@ -1689,7 +1790,8 @@ test('selected Mux UI React Storybook pages are axe-clean in light and dark', {
       }
     }
     throwIfAborted(t.signal);
-    successMessage = `partial ${selection.proof} proof: ${selection.label} (${stories.length} pages, light+dark, axe and canonical colours, ${workerTotal} worker${workerTotal === 1 ? '' : 's'}`;
+    const openPanels = stories.filter((story) => openLocatorsOf(story)?.press).length;
+    successMessage = `partial ${selection.proof} proof: ${selection.label} (${stories.length} pages, light+dark, axe and canonical colours${openPanels > 0 ? `, ${openPanels} open panel${openPanels === 1 ? '' : 's'}` : ''}, ${workerTotal} worker${workerTotal === 1 ? '' : 's'}`;
   } finally {
     activeProof = 'cleanup';
     try {
