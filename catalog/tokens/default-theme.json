@@ -5,7 +5,7 @@
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "7.0.0",
+  "tokenContractVersion": "8.0.0",
   "theme": {
     "name": "default",
     "modeAxes": {

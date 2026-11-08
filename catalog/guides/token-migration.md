@@ -5,9 +5,10 @@ id: muxui:guide:token-migration
 # Token contract migration
 
 The current versions are `schemaVersion` and `tokenContractVersion` in the
-`muxui:token:default-theme` source. Token contract `7.0.0` replaced the
-TagGroup colour tokens, and `6.0.0` changed the meaning of the spring-bearing
-transition tokens; both are described below. Token contract `5.2.0` added two component-owned DataDiff change backgrounds derived from
+`muxui:token:default-theme` source. Token contract `8.0.0` replaced the
+source's single Scale contrast algorithm with a list and a default, `7.0.0`
+replaced the TagGroup colour tokens, and `6.0.0` changed the meaning of the
+spring-bearing transition tokens; all three are described below. Token contract `5.2.0` added two component-owned DataDiff change backgrounds derived from
 existing status accents, `5.1.0` added the separate CodeBlock change
 backgrounds, and `5.0.0`
 added typed easing and transition compositions while retaining the `4.0.0`
@@ -38,6 +39,16 @@ settings:
   }
 }
 ```
+
+Token contract `8.0.0` is a breaking change to the source's Scale contrast
+metadata. `theme.scale.contrast.algorithm` is removed. `algorithms` lists the
+endpoint methods (`wcag2-endpoint-v1` and `apca-endpoint-v1`) and
+`defaultAlgorithm` names the one Scale uses unless a document sets
+`scale.contrastAlgorithm`. No token changed. Authoring documents declare
+`8.0.0`; a document that declares `7.0.0` is rejected with
+`MUXUI_THEME_CONTRACT_INVALID`. Nothing else in a `7.0.0` document needs to
+change: the new `scale.contrastAlgorithm` input is optional and defaults to the
+source's `defaultAlgorithm`.
 
 Token contract `7.0.0` is a breaking change to the TagGroup component tokens.
 Tags take a colour (neutral, brand, the status colours, and 17 hue families) and
