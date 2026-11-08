@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { ColorModeToggle } from '../../generated/index.mjs';
-import { launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const e = React.createElement;
 function ColorModeFixture() {
@@ -49,8 +49,9 @@ test('ColorModeToggle preserves full glyph motion and snaps system, self and anc
     const page = await browser.newPage({ reducedMotion: 'no-preference' });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
-    await page.goto(`${server.url}/color-mode-toggle.html`);
+    await page.goto(`${server.url}/color-mode-toggle.html`, { waitUntil: 'load' });
     await page.waitForFunction(() => window.ready);
+    await awaitFontsAndFrames(page);
     const toggle = page.getByRole('switch', { name: 'Color mode', exact: true });
     await toggle.focus();
     await settled(page);
