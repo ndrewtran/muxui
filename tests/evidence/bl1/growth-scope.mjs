@@ -231,12 +231,19 @@ const legacyScaleRewrites = [
     )));
     return true;
   },
+  // Palette tuning changed the generated palettes and named them `muxui-oklch-v2`. The schema allows that one id, so a tree from before, whose one
+  // allowed id was `muxui-oklch-v1`, takes the new one in the field's place. Any other id is left as it is, and the compiler rejects it.
+  function paletteAlgorithm(scale) {
+    if (scale.algorithm !== 'muxui-oklch-v1') return false;
+    scale.algorithm = 'muxui-oklch-v2';
+    return true;
+  },
 ];
 
 /**
- * The token source's `theme.scale` block changed shape (token contract 8.0.0), and the token source schema refuses the old one. A tree from before
- * is rewritten to the current shape on both sides (`legacyScaleRewrites`), and a source the strict parser refuses is left as it is for the compiler
- * to report. The token contract version is not rewritten: the compiler reads it as a label and compares it with nothing.
+ * The token source's `theme.scale` block changed (token contract 8.0.0 changed its shape, and palette tuning its algorithm id), and the token source
+ * schema refuses the old one. A tree from before is rewritten to the current form on both sides (`legacyScaleRewrites`), and a source the strict parser
+ * refuses is left as it is for the compiler to report. The token contract version is not rewritten: the compiler reads it as a label and compares it with nothing.
  */
 export async function normalizeLegacyScaleMetadata(directory) {
   const path = join(directory, tokenSourcePath);
@@ -373,7 +380,7 @@ export async function normalizeLegacyPlatformSafety(directory) {
 /**
  * The catalog digest of the tree at `revision`, compiled by this checkout's compiler without the sources under
  * `excludedDirectories`. A tree from before Decision 0028, before block categories became catalog data, before they carried labels,
- * before a spring transition named no easing, before the Scale block took its current shape, or before platform safety resolved from registry
+ * before a spring transition named no easing, before the Scale block took its current shape and palette algorithm id, or before platform safety resolved from registry
  * defaults is normalized first (`normalizeLegacyManifest`, `normalizeCategoryRegistry`, `normalizeLegacySpringTransitions`,
  * `normalizeLegacyScaleMetadata`, and `normalizeLegacyPlatformSafety`).
  */
