@@ -1,7 +1,7 @@
 import { compilePureTokenGraph, cssDeclaration, validatePureLiteral } from './core.mjs';
-import { NAMED_SHADES, NEUTRAL_SHADES, generatePalette, generateMonochromePalette, getContrastRatio as contrastRatio } from './scale-palette.mjs';
+import { NAMED_SHADES, NEUTRAL_SHADES, generatePalette, generateMonochromePalette, getApcaContrast, getContrastRatio as contrastRatio } from './scale-palette.mjs';
 export { NAMED_SHADES, NEUTRAL_SHADES, randomScaleBaseColor } from './scale-palette.mjs';
-export { getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
+export { getApcaContrast as getScaleApcaContrast, getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
 
 /*
  * Browser-safe theme authoring. This module intentionally has no filesystem,
@@ -13,15 +13,18 @@ export { getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
 // The token contract version this module accepts. The package must not import the
 // canonical theme (it is not packed), so authoring.test.mjs asserts this equals
 // catalog/tokens/default-theme.json's tokenContractVersion.
-const TOKEN_CONTRACT_VERSION = '7.0.0';
+const TOKEN_CONTRACT_VERSION = '8.0.0';
 const DOCUMENT_KEYS = ['schema', 'id', 'source', 'tokenContractVersion', 'modes', 'overrides', 'scale'];
 const MODE_AXES = ['colorScheme', 'contrast', 'motion', 'density', 'direction'];
-const SCALE_KEYS = ['mode', 'presetId', 'namedColor', 'neutralColor', 'whiteAnchor', 'contrastPivot', 'curvature'];
+const SCALE_KEYS = ['mode', 'presetId', 'namedColor', 'neutralColor', 'whiteAnchor', 'contrastPivot', 'contrastAlgorithm', 'curvature'];
 const HEX = /^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/iu;
 const OPAQUE_HEX = /^#[0-9a-f]{6}$/iu;
 const SCALE_OVERRIDE_ID = /^(?:reference\.color\.(?:brand|neutral)-\d+|reference\.dimension\.radius-(?:xs|s|m|l|xl|2xl)|semantic\.color\.(?:color|neutral)-\d+-fg)$/u;
 const RADIUS_FACTORS = Object.freeze({ xs: 4, s: 6, m: 8, l: 12, xl: 16, '2xl': 24 });
 const CONTRAST_PIVOTS = Object.freeze([5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+const CONTRAST_ALGORITHMS = Object.freeze(['wcag2-endpoint-v1', 'apca-endpoint-v1']);
+// A foreground is safe at WCAG 4.5:1 or APCA |Lc| 60.
+const SAFE_CONTRAST_SCORE = Object.freeze({ 'wcag2-endpoint-v1': 4.5, 'apca-endpoint-v1': 60 });
 
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function assertRecord(value, path) { if (!isRecord(value)) throw new TypeError(`MUXUI_THEME_OBJECT_INVALID: ${path}`); }
@@ -30,6 +33,11 @@ function assertKeys(value, allowed, path) {
   for (const key of Object.keys(value)) if (!allowed.includes(key)) throw new TypeError(`MUXUI_THEME_UNKNOWN_FIELD: ${path}.${key}`);
 }
 function assertHex(value, path) { if (typeof value !== 'string' || !HEX.test(value)) throw new TypeError(`MUXUI_THEME_COLOR_INVALID: ${path}`); }
+function assertContrastAlgorithm(value) { if (!CONTRAST_ALGORITHMS.includes(value)) throw new TypeError('MUXUI_THEME_SCALE_ALGORITHM_INVALID'); }
+// A contract mismatch names the version found and the one required, so a caller can say what to change.
+function contractError(subject, found, required, hint = '') {
+  return new TypeError(`MUXUI_THEME_CONTRACT_INVALID: ${subject} declares tokenContractVersion ${typeof found === 'string' ? found.slice(0, 32) : typeof found}, required ${required}${hint}`);
+}
 function assertFinite(value, path) { if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError(`MUXUI_THEME_NUMBER_INVALID: ${path}`); }
 
 function canonicalize(value) {
@@ -73,7 +81,7 @@ function validateTypedValue(value, token, path) {
 function assertSource(source, document) {
   if (!isRecord(source) || !isRecord(source.tokens) || !isRecord(source.theme) || !isRecord(source.theme.modeAxes) || !isRecord(source.theme.defaultModes)) throw new TypeError('MUXUI_THEME_SOURCE_REQUIRED');
   if (source.id !== document.source) throw new TypeError('MUXUI_THEME_SOURCE_INVALID');
-  if (source.tokenContractVersion !== document.tokenContractVersion) throw new TypeError('MUXUI_THEME_CONTRACT_INVALID');
+  if (source.tokenContractVersion !== document.tokenContractVersion) throw contractError('source', source.tokenContractVersion, document.tokenContractVersion);
   assertSourceMetadata(source);
 }
 
@@ -92,10 +100,11 @@ function assertSourceMetadata(source) {
     || !sameValue(radius.multipliers, RADIUS_FACTORS)
     || !sameValue(radius.curvature, { default: 0.5, minimum: 0, maximum: 2, step: 0.01 })) invalid('theme.scale.radius');
   const contrast = scale.contrast;
-  if (!isRecord(contrast) || contrast.algorithm !== 'wcag2-endpoint-v1'
+  if (!isRecord(contrast) || !sameValue(contrast.algorithms, CONTRAST_ALGORITHMS)
+    || !CONTRAST_ALGORITHMS.includes(contrast.defaultAlgorithm)
     || contrast.defaultPivot !== 'auto' || contrast.foregrounds !== 'per-shade'
     || !sameValue(contrast.pivots, CONTRAST_PIVOTS)) invalid('theme.scale.contrast');
-  assertKeys(contrast, ['algorithm', 'defaultPivot', 'pivots', 'foregrounds'], 'theme.scale.contrast');
+  assertKeys(contrast, ['algorithms', 'defaultAlgorithm', 'defaultPivot', 'pivots', 'foregrounds'], 'theme.scale.contrast');
   if (!isRecord(scale.defaults)) invalid('theme.scale.defaults');
   assertKeys(scale.defaults, ['standard', 'monochrome'], 'theme.scale.defaults');
   for (const [key, mode, references] of [
@@ -168,7 +177,7 @@ export function validateThemeAuthoringDocument(document, { source } = {}) {
   if (document.schema !== 'muxui-theme-authoring-v1') throw new TypeError('MUXUI_THEME_SCHEMA_INVALID');
   if (typeof document.id !== 'string' || !/^muxui:theme:[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(document.id)) throw new TypeError('MUXUI_THEME_ID_INVALID');
   if (document.source !== 'muxui:token:default-theme') throw new TypeError('MUXUI_THEME_SOURCE_INVALID');
-  if (document.tokenContractVersion !== TOKEN_CONTRACT_VERSION) throw new TypeError('MUXUI_THEME_CONTRACT_INVALID');
+  if (document.tokenContractVersion !== TOKEN_CONTRACT_VERSION) throw contractError('document', document.tokenContractVersion, TOKEN_CONTRACT_VERSION, '. See the token contract migration guide.');
   assertSource(source, document);
   assertKeys(document.modes, MODE_AXES, 'document.modes');
   for (const axis of MODE_AXES) {
@@ -193,6 +202,7 @@ export function validateThemeAuthoringDocument(document, { source } = {}) {
     if (typeof document.scale.neutralColor !== 'string' || !OPAQUE_HEX.test(document.scale.neutralColor)) throw new TypeError('MUXUI_THEME_COLOR_INVALID: document.scale.neutralColor');
     if (typeof document.scale.whiteAnchor !== 'boolean') throw new TypeError('MUXUI_THEME_SCALE_WHITE_ANCHOR_INVALID');
     if (!(document.scale.contrastPivot === 'auto' || CONTRAST_PIVOTS.includes(document.scale.contrastPivot))) throw new TypeError('MUXUI_THEME_SCALE_PIVOT_INVALID');
+    if (document.scale.contrastAlgorithm !== undefined) assertContrastAlgorithm(document.scale.contrastAlgorithm);
     if (typeof document.scale.curvature !== 'number' || !Number.isFinite(document.scale.curvature) || document.scale.curvature < 0 || document.scale.curvature > 2) throw new TypeError('MUXUI_THEME_SCALE_CURVATURE_INVALID');
   }
   const generated = scaleAssignments(document, source);
@@ -221,17 +231,48 @@ export function serializeThemeAuthoringDocument(document, options) {
 
 function typedColor(value) { return { type: 'color', unit: 'hex', value }; }
 function typedRadius(rem) { return { type: 'dimension', unit: 'px', value: rem * 16, relative: { value: rem, unit: 'rem' } }; }
-function foregroundChoice(palette, shade, pivot) {
-  const shade5 = palette.find((entry) => entry.shade === 5)?.hex;
-  const shade100 = palette.find((entry) => entry.shade === 100)?.hex;
-  const background = palette.find((entry) => entry.shade === shade)?.hex;
-  if (!shade5 || !shade100 || !background) return { light: '#ffffff', dark: '#000000', selected: '#ffffff', safe: false, ratio: 1, alternativeRatio: 1 };
-  const lightRatio = contrastRatio(background, shade5);
-  const darkRatio = contrastRatio(background, shade100);
-  const selected = pivot === 'auto' ? (lightRatio >= darkRatio ? shade5 : shade100) : shade < pivot ? shade100 : shade5;
-  const ratio = selected === shade5 ? lightRatio : darkRatio;
-  const alternativeRatio = selected === shade5 ? darkRatio : lightRatio;
-  return { light: shade5, dark: shade100, selected, safe: ratio >= 4.5, ratio, alternativeRatio };
+function contrastScore(algorithm, backgroundHex, textHex) {
+  return algorithm === 'apca-endpoint-v1' ? Math.abs(getApcaContrast(textHex, backgroundHex)) : contrastRatio(backgroundHex, textHex);
+}
+
+/**
+ * Choose the shade-5 or shade-100 text for every shade of one palette.
+ * `score` is the WCAG ratio or the absolute APCA Lc of the chosen text, and
+ * `alternative` is the other endpoint. Auto picks the higher score under the
+ * algorithm; a manual pivot gives shade-100 text to shades below it. Named and
+ * neutral palettes follow the same rules.
+ *
+ * @param {Array<{shade: number, hex: string}>} palette
+ * @param {{ pivot: 'auto'|number, algorithm: string }} options
+ */
+export function scaleForegrounds(palette, { pivot, algorithm }) {
+  assertContrastAlgorithm(algorithm);
+  if (!(pivot === 'auto' || CONTRAST_PIVOTS.includes(pivot))) throw new TypeError('MUXUI_THEME_SCALE_PIVOT_INVALID');
+  const light = palette.find(({ shade }) => shade === 5)?.hex;
+  const dark = palette.find(({ shade }) => shade === 100)?.hex;
+  if (!light || !dark) throw new TypeError('MUXUI_THEME_SCALE_PALETTE_INVALID');
+  return palette.map(({ shade, hex }) => {
+    const lightScore = contrastScore(algorithm, hex, light);
+    const darkScore = contrastScore(algorithm, hex, dark);
+    const useLight = pivot === 'auto' ? lightScore >= darkScore : shade >= pivot;
+    const score = useLight ? lightScore : darkScore;
+    return {
+      shade,
+      text: useLight ? light : dark,
+      alternative: useLight ? dark : light,
+      score,
+      alternativeScore: useLight ? darkScore : lightScore,
+      safe: score >= SAFE_CONTRAST_SCORE[algorithm],
+    };
+  });
+}
+
+// WCAG diagnostics keep ratio/alternativeRatio; APCA reports absolute Lc.
+function unsafeForeground(token, shade, choice, { algorithm, pivot, colorScheme }) {
+  const scores = algorithm === 'apca-endpoint-v1'
+    ? { lc: Number(choice.score.toFixed(1)), alternativeLc: Number(choice.alternativeScore.toFixed(1)) }
+    : { ratio: Number(choice.score.toFixed(3)), alternativeRatio: Number(choice.alternativeScore.toFixed(3)) };
+  return { code: 'MUXUI_SCALE_CONTRAST_UNSAFE', ...(colorScheme ? { colorScheme } : {}), token, shade, algorithm, ...scores, pivot };
 }
 
 // Dark neutral stops have an extra blackened canvas at 5, then map 10..100
@@ -259,6 +300,8 @@ export function generateScaleTheme(inputs) {
   assertHex(inputs.namedColor, 'scale.namedColor'); assertHex(inputs.neutralColor, 'scale.neutralColor');
   const pivot = inputs.contrastPivot ?? sourceScale.contrast.defaultPivot;
   if (!(pivot === 'auto' || sourceScale.contrast.pivots.includes(pivot))) throw new TypeError('MUXUI_THEME_SCALE_PIVOT_INVALID');
+  const algorithm = inputs.contrastAlgorithm === undefined ? sourceScale.contrast.defaultAlgorithm : inputs.contrastAlgorithm;
+  assertContrastAlgorithm(algorithm);
   const curvature = inputs.curvature ?? sourceScale.radius.curvature.default;
   if (typeof curvature !== 'number' || !Number.isFinite(curvature) || curvature < sourceScale.radius.curvature.minimum || curvature > sourceScale.radius.curvature.maximum) throw new TypeError('MUXUI_THEME_SCALE_CURVATURE_INVALID');
   const neutral = generatePalette(inputs.neutralColor, 'neutral', { whiteAnchor: Boolean(inputs.whiteAnchor), shades: neutralShades });
@@ -279,29 +322,36 @@ export function generateScaleTheme(inputs) {
   const diagnostics = [];
   const darkPalettes = modePalettes(named, activeNeutral);
   const darkAssignments = { ...assignments };
-  for (const entry of named) {
-    const light = foregroundChoice(named, entry.shade, pivot);
-    const dark = foregroundChoice(darkPalettes.named, entry.shade, pivot);
-    foregrounds.light[entry.shade] = light.selected;
-    foregrounds.dark[entry.shade] = dark.selected;
-    assignments[`semantic.color.color-${entry.shade}-fg`] = typedColor(light.selected);
-    darkAssignments[`semantic.color.color-${entry.shade}-fg`] = typedColor(dark.selected);
-    if (!light.safe) diagnostics.push({ code: 'MUXUI_SCALE_CONTRAST_UNSAFE', token: `semantic.color.color-${entry.shade}-fg`, shade: entry.shade, ratio: Number(light.ratio.toFixed(3)), alternativeRatio: Number(light.alternativeRatio.toFixed(3)), pivot });
-    if (!dark.safe) diagnostics.push({ code: 'MUXUI_SCALE_CONTRAST_UNSAFE', colorScheme: 'dark', token: `semantic.color.color-${entry.shade}-fg`, shade: entry.shade, ratio: Number(dark.ratio.toFixed(3)), alternativeRatio: Number(dark.alternativeRatio.toFixed(3)), pivot });
-  }
-  for (const entry of activeNeutral) {
-    const light = foregroundChoice(activeNeutral, entry.shade, pivot === 'auto' ? 60 : pivot);
-    const dark = foregroundChoice(darkPalettes.neutral, entry.shade, pivot === 'auto' ? 60 : pivot);
-    foregrounds.light[`neutral-${entry.shade}`] = light.selected;
-    foregrounds.dark[`neutral-${entry.shade}`] = dark.selected;
-    assignments[`semantic.color.neutral-${entry.shade}-fg`] = typedColor(light.selected);
-    darkAssignments[`semantic.color.neutral-${entry.shade}-fg`] = {
-      ...typedColor(dark.selected),
-      ...(dark.selected === darkPalettes.neutral[0].hex ? { mix: { space: 'srgb', token: 'semantic.color.neutral-10', color: '#000000', weight: 0.85 } } : {}),
+  const options = { pivot, algorithm };
+  const namedLight = scaleForegrounds(named, options);
+  const namedDark = scaleForegrounds(darkPalettes.named, options);
+  namedLight.forEach((light, index) => {
+    const dark = namedDark[index];
+    const { shade } = light;
+    const token = `semantic.color.color-${shade}-fg`;
+    foregrounds.light[shade] = light.text;
+    foregrounds.dark[shade] = dark.text;
+    assignments[token] = typedColor(light.text);
+    darkAssignments[token] = typedColor(dark.text);
+    if (!light.safe) diagnostics.push(unsafeForeground(token, shade, light, options));
+    if (!dark.safe) diagnostics.push(unsafeForeground(token, shade, dark, { ...options, colorScheme: 'dark' }));
+  });
+  const neutralLight = scaleForegrounds(activeNeutral, options);
+  const neutralDark = scaleForegrounds(darkPalettes.neutral, options);
+  neutralLight.forEach((light, index) => {
+    const dark = neutralDark[index];
+    const { shade } = light;
+    const token = `semantic.color.neutral-${shade}-fg`;
+    foregrounds.light[`neutral-${shade}`] = light.text;
+    foregrounds.dark[`neutral-${shade}`] = dark.text;
+    assignments[token] = typedColor(light.text);
+    darkAssignments[token] = {
+      ...typedColor(dark.text),
+      ...(dark.text === darkPalettes.neutral[0].hex ? { mix: { space: 'srgb', token: 'semantic.color.neutral-10', color: '#000000', weight: 0.85 } } : {}),
     };
-    if (!light.safe) diagnostics.push({ code: 'MUXUI_SCALE_CONTRAST_UNSAFE', token: `semantic.color.neutral-${entry.shade}-fg`, shade: entry.shade, ratio: Number(light.ratio.toFixed(3)), alternativeRatio: Number(light.alternativeRatio.toFixed(3)), pivot });
-    if (!dark.safe) diagnostics.push({ code: 'MUXUI_SCALE_CONTRAST_UNSAFE', colorScheme: 'dark', token: `semantic.color.neutral-${entry.shade}-fg`, shade: entry.shade, ratio: Number(dark.ratio.toFixed(3)), alternativeRatio: Number(dark.alternativeRatio.toFixed(3)), pivot });
-  }
+    if (!light.safe) diagnostics.push(unsafeForeground(token, shade, light, options));
+    if (!dark.safe) diagnostics.push(unsafeForeground(token, shade, dark, { ...options, colorScheme: 'dark' }));
+  });
   return {
     mode,
     presetId: inputs.presetId,
@@ -310,7 +360,7 @@ export function generateScaleTheme(inputs) {
     overrides: assignments,
     assignmentsByMode: { light: assignments, dark: darkAssignments },
     radius: { curvature, unit: 'rem', base: radiusBase, multipliers: radiusMultipliers },
-    contrast: { pivot, foregrounds },
+    contrast: { algorithm, pivot, foregrounds },
     diagnostics,
   };
 }
@@ -372,7 +422,7 @@ export function compileThemeAuthoringDocument(document, { source, target = 'web.
  * canonical source; this helper only resolves them into a validated document
  * and target-specific compilation result.
  */
-export function compileScalePresetTheme({ source, collection = 'standard', presetId, target = 'web.css', selector = ':root', modes, whiteAnchor = false, contrastPivot, curvature } = {}) {
+export function compileScalePresetTheme({ source, collection = 'standard', presetId, target = 'web.css', selector = ':root', modes, whiteAnchor = false, contrastPivot, contrastAlgorithm, curvature } = {}) {
   assertSource(source, { source: 'muxui:token:default-theme', tokenContractVersion: TOKEN_CONTRACT_VERSION });
   if (!['standard', 'monochrome'].includes(collection)) throw new TypeError('MUXUI_THEME_SCALE_COLLECTION_INVALID');
   if (typeof presetId !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(presetId)) throw new TypeError('MUXUI_THEME_SCALE_PRESET_INVALID');
@@ -393,6 +443,8 @@ export function compileScalePresetTheme({ source, collection = 'standard', prese
     neutralColor,
     whiteAnchor,
     contrastPivot: contrastPivot ?? scale.contrast.defaultPivot,
+    // Only an omitted method takes the default; null or anything else is validated and rejected.
+    contrastAlgorithm: contrastAlgorithm === undefined ? scale.contrast.defaultAlgorithm : contrastAlgorithm,
     curvature: curvature ?? scale.radius.curvature.default,
   };
   const generated = generateScaleTheme({ source, ...inputs });

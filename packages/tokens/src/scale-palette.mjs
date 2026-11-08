@@ -250,6 +250,37 @@ export const getContrastRatio = (hex1, hex2) => {
   return (lighter + 0.05) / (darker + 0.05);
 };
 
+// APCA 0.0.98G-4g (sRGB), written inline so authoring stays dependency-light.
+// Luminance uses a plain 2.4 power per channel, not the WCAG piecewise curve.
+const OPAQUE_HEX = /^#[0-9a-f]{6}$/iu;
+const getApcaLuminance = (hex, name) => {
+  // APCA scores opaque pairs only; an alpha channel would be silently dropped.
+  if (typeof hex !== 'string' || !OPAQUE_HEX.test(hex)) throw new TypeError(`MUXUI_THEME_COLOR_INVALID: ${name}`);
+  const h = hex.replace('#', '');
+  const channel = (offset) => Math.pow(parseInt(h.slice(offset, offset + 2), 16) / 255, 2.4);
+  const y = 0.2126729 * channel(0) + 0.7151522 * channel(2) + 0.072175 * channel(4);
+  // Soft clamp keeps near-black luminance from over-reporting contrast.
+  return y <= 0.022 ? y + Math.pow(0.022 - y, 1.414) : y;
+};
+
+/**
+ * Signed APCA lightness contrast (Lc) of text on a background. Positive means
+ * dark text on a lighter background, negative means light text on a darker one;
+ * use the absolute value to compare against a threshold. Both colours must be
+ * opaque #rrggbb; anything else throws MUXUI_THEME_COLOR_INVALID.
+ */
+export const getApcaContrast = (textHex, backgroundHex) => {
+  const text = getApcaLuminance(textHex, 'textHex');
+  const background = getApcaLuminance(backgroundHex, 'backgroundHex');
+  if (Math.abs(background - text) < 0.0005) return 0;
+  if (background > text) {
+    const s = (Math.pow(background, 0.56) - Math.pow(text, 0.57)) * 1.14;
+    return (s < 0.1 ? 0 : s - 0.027) * 100;
+  }
+  const s = (Math.pow(background, 0.65) - Math.pow(text, 0.62)) * 1.14;
+  return (s > -0.1 ? 0 : s + 0.027) * 100;
+};
+
 /**
  * Generate a random BASE hex colour suitable for the given mode.
  * Validates contrast thresholds against the actual generated palette to

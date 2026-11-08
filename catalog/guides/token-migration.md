@@ -5,9 +5,10 @@ id: muxui:guide:token-migration
 # Token contract migration
 
 The current versions are `schemaVersion` and `tokenContractVersion` in the
-`muxui:token:default-theme` source. Token contract `7.0.0` replaced the
-TagGroup colour tokens, and `6.0.0` changed the meaning of the spring-bearing
-transition tokens; both are described below. Token contract `5.2.0` added two component-owned DataDiff change backgrounds derived from
+`muxui:token:default-theme` source. Token contract `8.0.0` replaced the
+source's single Scale contrast algorithm with a list and a default, `7.0.0`
+replaced the TagGroup colour tokens, and `6.0.0` changed the meaning of the
+spring-bearing transition tokens; all three are described below. Token contract `5.2.0` added two component-owned DataDiff change backgrounds derived from
 existing status accents, `5.1.0` added the separate CodeBlock change
 backgrounds, and `5.0.0`
 added typed easing and transition compositions while retaining the `4.0.0`
@@ -38,6 +39,38 @@ settings:
   }
 }
 ```
+
+Token contract `8.0.0` is a breaking change to the source's Scale contrast
+metadata and to neutral Auto. `theme.scale.contrast.algorithm` is removed.
+`algorithms` lists the endpoint methods (`wcag2-endpoint-v1` and
+`apca-endpoint-v1`) and `defaultAlgorithm` names the one Scale uses unless a
+document sets the optional `scale.contrastAlgorithm`. A neutral palette under
+`contrastPivot: "auto"` no longer uses the fixed pivot 60. Like a named palette,
+it picks the shade-5 or shade-100 text that scores higher under the chosen
+method, so some `semantic.color.neutral-<shade>-fg` assignments change: for a
+neutral of `#878685`, shade 60 now takes `#323130` where `7.0.0` took
+`#f9f7f5`. No token was added or removed.
+
+Authoring documents declare `8.0.0`. A document that declares `7.0.0` is
+rejected with `MUXUI_THEME_CONTRACT_INVALID`, and its message names the version
+found and the version required. Changing the version alone is not enough for a
+document that carries Scale inputs with `contrastPivot: "auto"`: it then fails
+with `MUXUI_THEME_SCALE_ASSIGNMENT_INVALID`, naming the first assignment its own
+inputs no longer produce. Regenerate the Scale-owned assignments from the
+document's `scale` inputs and keep every other override and the modes:
+
+```js
+import { generateScaleTheme, validateThemeAuthoringDocument } from '@muxui/tokens/authoring';
+
+const { assignments } = generateScaleTheme({ source, ...document.scale });
+const kept = Object.fromEntries(Object.entries(document.overrides).filter(([id]) => !Object.hasOwn(assignments, id)));
+const migrated = { ...document, tokenContractVersion: source.tokenContractVersion, overrides: { ...kept, ...assignments } };
+validateThemeAuthoringDocument(migrated, { source });
+```
+
+`source` is the `muxui:token:default-theme` record at `8.0.0`. Scale's Import and
+Load apply the same checks, so they reject a `7.0.0` file until it has been
+migrated this way.
 
 Token contract `7.0.0` is a breaking change to the TagGroup component tokens.
 Tags take a colour (neutral, brand, the status colours, and 17 hue families) and
@@ -134,8 +167,9 @@ and `mono-color` roles have dark branches.
 Authoring documents must declare the source's `tokenContractVersion` and
 reference only current token IDs. The compiler validates an exact contract match; it does
 not normalize older same-major documents or rewrite overrides. Scale imports
-follow the same rule. Saved Scale settings accept numeric curvature factors and
-numeric contrast pivots (or `auto`); invalid values are rejected without conversion.
+follow the same rule. Saved Scale settings accept numeric curvature factors,
+numeric contrast pivots (or `auto`), and a contrast method (WCAG 2 or APCA);
+invalid values are rejected without conversion.
 Regenerate or update a document by choosing current
 roles and preserving each explicit override and mode branch deliberately.
 

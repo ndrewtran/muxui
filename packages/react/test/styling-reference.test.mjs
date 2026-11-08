@@ -49,9 +49,9 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
-  assert.equal(read('styles.css').rules.length, 2088);
+  assert.equal(read('styles.css').rules.length, 2090);
   const shared = readFileSync(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').trim();
-  assert.equal(readStyleRules(shared).rules.length, 518);
+  assert.equal(readStyleRules(shared).rules.length, 520);
   assert.equal(readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8').split(shared).length, 2, 'styles.css includes the shared stylesheet verbatim exactly once');
   assert.equal(read('themes.css').rules.length, 60);
   // The shapes it models: grouping at-rules with a chain, statements, leaf at-rules it skips, !important, a block in a custom property.
@@ -422,7 +422,7 @@ test('the selection index is a second reading of the stylesheet, pair for pair, 
   const mine = new Set([...facts.selection].flatMap(([attribute, byClass]) => [...byClass.keys()].map((name) => `${attribute}|${name}`)));
   assert.deepEqual([...second].filter((pair) => !mine.has(pair)).sort(), [], 'a pair the second reading finds and the module lacks');
   assert.deepEqual([...mine].filter((pair) => !second.has(pair)).sort(), [], 'a pair the module holds and the second reading does not');
-  assert.equal(mine.size, 492);
+  assert.equal(mine.size, 493);
   // The scoping rules, on selectors written for them, by both readings. An attribute in :has() belongs to the element asked for;
   // each :where() / :is() branch stands alone; a :not() test counts for the element it is on; an ancestor's tests are its own.
   const cases = [
@@ -844,11 +844,11 @@ test('reduced motion: two public inputs and an internal marker, as motion.mjs re
   assert.ok(overlays.includes("node.toggleAttribute('data-muxui-motion-reduced', reduced)"));
   assert.equal(all.get('button').overrides.motion, 'Mux UI treats motion as reduced when the system asks for it (`prefers-reduced-motion: reduce`) or when `data-muxui-motion="reduced"` is on the component or one of its ancestors; for an overlay, also on its trigger or the trigger\'s ancestors. Some overlays copy that result onto an internal `data-muxui-motion-reduced` marker; it is not an input.');
   assert.deepEqual(facts.motion, { mediaQuery: 'prefers-reduced-motion: reduce', scopeAttribute: 'data-muxui-motion', scopeValue: 'reduced', marker: 'data-muxui-motion-reduced' });
-  // 3 selectors on the internal marker beside 16 on the public attribute and 8 media blocks: not three independent triggers.
+  // 3 selectors on the internal marker beside 20 on the public attribute and 9 media blocks: not three independent triggers.
   const css = readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8');
   const literal = (pattern) => (css.match(pattern) ?? []).length;
-  assert.deepEqual(facts.motionCauses, { markerSelectors: 3, scopeAttributeSelectors: 16, mediaBlocks: 8 });
-  assert.deepEqual([literal(/\[data-muxui-motion-reduced/gu), literal(/\[data-muxui-motion='reduced'\]/gu), literal(/@media[^{]*prefers-reduced-motion/gu)], [3, 16, 8]);
+  assert.deepEqual(facts.motionCauses, { markerSelectors: 3, scopeAttributeSelectors: 20, mediaBlocks: 9 });
+  assert.deepEqual([literal(/\[data-muxui-motion-reduced/gu), literal(/\[data-muxui-motion='reduced'\]/gu), literal(/@media[^{]*prefers-reduced-motion/gu)], [3, 20, 9]);
   // The paragraph is built from what the code reads, so a changed input is a changed paragraph, and a removed one fails.
   assert.throws(() => readMotionInputs(motion.replace("'(prefers-reduced-motion: reduce)'", "'(prefers-reduced-motion: no-preference)'"), overlays), /no longer read the reduced-motion inputs/u);
   assert.throws(() => readMotionInputs(motion, overlays.replace("toggleAttribute('data-muxui-motion-reduced'", "toggleAttribute('data-muxui-motion-quiet'")), /no longer read the reduced-motion inputs/u);

@@ -1,8 +1,10 @@
 import {
   compileThemeAuthoringDocument,
   generateScaleTheme,
+  getScaleApcaContrast,
   getScaleContrastRatio,
   randomScaleBaseColor,
+  scaleForegrounds,
   serializeThemeAuthoringDocument,
   validateThemeAuthoringDocument,
 } from '@muxui/tokens/authoring';
@@ -11,7 +13,7 @@ import defaultThemeSource from '../../../catalog/tokens/default-theme.json' with
 
 const HEX = /^#[0-9a-f]{6}$/iu;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
-const SCALE_KEYS = ['mode', 'presetId', 'namedColor', 'neutralColor', 'whiteAnchor', 'contrastPivot', 'curvature'];
+const SCALE_KEYS = ['mode', 'presetId', 'namedColor', 'neutralColor', 'whiteAnchor', 'contrastPivot', 'contrastAlgorithm', 'curvature'];
 const scaleMetadata = defaultThemeSource.theme.scale;
 const sourceTokens = compilePureTokenGraph(defaultThemeSource).tokens;
 export const STANDARD_PRESETS = Object.freeze(scaleMetadata.standardPresets.map(({ id, name, namedColor, neutralColor }) => Object.freeze([id, name, sourceTokens[namedColor].value, sourceTokens[neutralColor].value])));
@@ -20,6 +22,8 @@ export const NAMED_STEPS = Object.freeze([...scaleMetadata.namedShades]);
 export const NEUTRAL_STEPS = Object.freeze([...scaleMetadata.neutralShades]);
 export const RADIUS_TOKENS = Object.freeze(Object.entries(scaleMetadata.radius.multipliers));
 export const RADIUS_SETTINGS = Object.freeze({ ...scaleMetadata.radius.curvature });
+const CONTRAST_METHOD_NAMES = { 'wcag2-endpoint-v1': 'WCAG 2', 'apca-endpoint-v1': 'APCA' };
+export const CONTRAST_METHODS = Object.freeze(scaleMetadata.contrast.algorithms.map((id) => Object.freeze([id, CONTRAST_METHOD_NAMES[id] ?? id])));
 const typographyMetadata = defaultThemeSource.theme.typography.roles;
 const typographyRoleEntries = Object.entries(typographyMetadata).map(([id, definition]) => {
   const variants = Object.entries(definition.variants).map(([name, variant]) => Object.freeze({
@@ -58,7 +62,7 @@ export const TYPOGRAPHY_TOKEN_DEFAULTS = Object.freeze(Object.fromEntries(typogr
   return [id, Object.freeze({ type: token.type, unit: token.unit, value: token.value })];
 })));
 const defaultPreset = STANDARD_PRESETS.find(([id]) => id === scaleMetadata.defaults.standard);
-export const DEFAULT_SETTINGS = Object.freeze({ presetId: defaultPreset[0], family: 'standard', namedColor: defaultPreset[2], neutralColor: defaultPreset[3], contrastPivot: scaleMetadata.contrast.defaultPivot, whiteAnchor: false, curvature: RADIUS_SETTINGS.default, background: 'light', colorMode: 'light', additionalOverrides: {}, themeModes: structuredClone(defaultThemeSource.theme.modeAxes) });
+export const DEFAULT_SETTINGS = Object.freeze({ presetId: defaultPreset[0], family: 'standard', namedColor: defaultPreset[2], neutralColor: defaultPreset[3], contrastPivot: scaleMetadata.contrast.defaultPivot, contrastAlgorithm: scaleMetadata.contrast.defaultAlgorithm, whiteAnchor: false, curvature: RADIUS_SETTINGS.default, background: 'light', colorMode: 'light', additionalOverrides: {}, themeModes: structuredClone(defaultThemeSource.theme.modeAxes) });
 export const BACKGROUNDS = Object.freeze([['light', 'Light'], ['dark', 'Dark'], ['accent', 'Accent']]);
 
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
@@ -73,6 +77,7 @@ function assertScaleInputs(scale) {
   assertHex(scale.namedColor, 'scale.namedColor'); assertHex(scale.neutralColor, 'scale.neutralColor');
   if (typeof scale.whiteAnchor !== 'boolean') throw new TypeError('MUXUI_SCALE_INPUTS_INVALID: whiteAnchor');
   if (!(scale.contrastPivot === 'auto' || (Number.isInteger(scale.contrastPivot) && NAMED_STEPS.includes(scale.contrastPivot)))) throw new TypeError('MUXUI_SCALE_INPUTS_INVALID: contrastPivot');
+  if (!scaleMetadata.contrast.algorithms.includes(scale.contrastAlgorithm)) throw new TypeError('MUXUI_SCALE_INPUTS_INVALID: contrastAlgorithm');
   if (typeof scale.curvature !== 'number' || !Number.isFinite(scale.curvature) || scale.curvature < RADIUS_SETTINGS.minimum || scale.curvature > RADIUS_SETTINGS.maximum) throw new TypeError('MUXUI_SCALE_INPUTS_INVALID: curvature');
 }
 
@@ -84,6 +89,7 @@ function scaleInputsFromSettings(settings) {
     neutralColor: assertHex(settings.neutralColor, 'neutralColor'),
     whiteAnchor: settings.whiteAnchor,
     contrastPivot: settings.contrastPivot,
+    contrastAlgorithm: settings.contrastAlgorithm,
     curvature: settings.curvature,
   };
 }
@@ -120,7 +126,7 @@ export function settingsFromDocument(document) {
   validateScaleDocument(document);
   const generated = generateScaleTheme({ source: defaultThemeSource, ...document.scale });
   const colorMode = document.modes.colorScheme.includes(defaultThemeSource.theme.defaultModes.colorScheme) ? defaultThemeSource.theme.defaultModes.colorScheme : document.modes.colorScheme[0];
-  return { ...DEFAULT_SETTINGS, family: document.scale.mode, presetId: document.scale.presetId, namedColor: document.scale.namedColor, neutralColor: document.scale.neutralColor, whiteAnchor: document.scale.whiteAnchor, contrastPivot: document.scale.contrastPivot, curvature: document.scale.curvature, colorMode, background: colorMode, themeModes: structuredClone(document.modes), additionalOverrides: Object.fromEntries(Object.entries(document.overrides).filter(([id]) => !Object.hasOwn(generated.assignments, id)).map(([id, value]) => [id, structuredClone(value)])) };
+  return { ...DEFAULT_SETTINGS, family: document.scale.mode, presetId: document.scale.presetId, namedColor: document.scale.namedColor, neutralColor: document.scale.neutralColor, whiteAnchor: document.scale.whiteAnchor, contrastPivot: document.scale.contrastPivot, contrastAlgorithm: document.scale.contrastAlgorithm ?? DEFAULT_SETTINGS.contrastAlgorithm, curvature: document.scale.curvature, colorMode, background: colorMode, themeModes: structuredClone(document.modes), additionalOverrides: Object.fromEntries(Object.entries(document.overrides).filter(([id]) => !Object.hasOwn(generated.assignments, id)).map(([id, value]) => [id, structuredClone(value)])) };
 }
 // The shared serializer runs the full authoring validation, so only Scale's own checks run here.
 export function serializeScaleDocument(document) {
@@ -180,13 +186,48 @@ export function rootCssFromPreview(css) {
   return `:root${css.slice(PREVIEW_SELECTOR.length)}`;
 }
 
-export function previewSwatches(compiled, kind, steps) {
+const WCAG_ALGORITHM = 'wcag2-endpoint-v1';
+const OPAQUE_HEX = /^#[0-9a-f]{6}$/iu;
+// A translucent colour has no single contrast score, so it reads as n/a without a badge.
+const NO_SCORE = Object.freeze({ score: null, label: 'n/a', badge: null });
+// Badge tiers: WCAG compares the ratio, APCA the absolute Lc.
+function contrastReadout(algorithm, background, text) {
+  if (!OPAQUE_HEX.test(background) || !OPAQUE_HEX.test(text ?? '')) return NO_SCORE;
+  if (algorithm === WCAG_ALGORITHM) {
+    const score = getScaleContrastRatio(background, text);
+    return { score, label: `${score.toFixed(2)}:1`, badge: score >= 7 ? 'AAA' : score >= 4.5 ? 'AA' : score >= 3 ? 'AA·LG' : 'Fail' };
+  }
+  const score = Math.abs(getScaleApcaContrast(text, background));
+  return { score, label: `Lc ${Math.round(score)}`, badge: score >= 75 ? '75+' : score >= 60 ? '60+' : score >= 45 ? '45+' : 'Fail' };
+}
+
+/**
+ * Swatches for one compiled palette. `ratio`, `label` and `badge` score the
+ * compiled foreground against the compiled background under the active
+ * `algorithm` (`ratio` is the WCAG ratio or the absolute APCA Lc). `methods`
+ * lists both methods for the readout: the active entry describes that same
+ * compiled foreground, and the other entry is the text it would choose over the
+ * compiled palette. Imported overrides can recolour a shade (even to a
+ * translucent value), so scores that cannot be computed are `n/a`.
+ */
+export function previewSwatches(compiled, kind, steps, { pivot, algorithm }) {
+  if (!scaleMetadata.contrast.algorithms.includes(algorithm)) throw new TypeError('MUXUI_SCALE_INPUTS_INVALID: contrastAlgorithm');
   const prefix = kind === 'named' ? 'color' : 'neutral';
+  const palette = (kind === 'named' ? NAMED_STEPS : NEUTRAL_STEPS).map((shade) => ({ shade, hex: compiled.tokens[`semantic.color.${prefix}-${shade}`].value }));
+  // Only opaque shades can be scored, and both endpoints must be among them.
+  const opaque = palette.filter(({ hex }) => OPAQUE_HEX.test(hex));
+  const scorable = [5, 100].every((shade) => opaque.some((entry) => entry.shade === shade));
+  const choices = CONTRAST_METHODS.map(([id, name]) => [id, name, new Map(scorable ? scaleForegrounds(opaque, { pivot, algorithm: id }).map((choice) => [choice.shade, choice.text]) : [])]);
   return steps.map((step) => {
     const background = compiled.tokens[`semantic.color.${prefix}-${step}`].value;
     const foreground = compiled.tokens[`semantic.color.${prefix}-${step}-fg`].value;
-    const ratio = getScaleContrastRatio(background, foreground);
-    return { step, value: background, background, foreground, ratio, badge: ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA·LG' : 'Fail' };
+    const active = contrastReadout(algorithm, background, foreground);
+    return {
+      step, value: background, background, foreground, ratio: active.score, label: active.label, badge: active.badge,
+      methods: choices.map(([id, name, texts]) => id === algorithm
+        ? { algorithm: id, name, text: foreground, ...active }
+        : { algorithm: id, name, text: texts.get(step) ?? null, ...contrastReadout(id, background, texts.get(step)) }),
+    };
   });
 }
 

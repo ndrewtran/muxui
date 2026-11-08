@@ -8,6 +8,9 @@ import {
   compileThemeAuthoringDocument,
   compileScalePresetTheme,
   generateScaleTheme,
+  getScaleApcaContrast,
+  getScaleContrastRatio,
+  scaleForegrounds,
   serializeThemeAuthoringDocument,
   validateThemeAuthoringDocument,
 } from '../src/authoring.mjs';
@@ -68,9 +71,51 @@ test('documents, sources and Scale generation stay on the canonical token contra
   assert.throws(() => compileScalePresetTheme({ source: offContract, presetId: 'harbour' }), /MUXUI_THEME_CONTRACT_INVALID/u);
 });
 
-test('authoring documents written for the previous contract version are rejected', () => {
-  assert.equal(source.tokenContractVersion, '7.0.0');
-  assert.throws(() => validateThemeAuthoringDocument({ ...base, tokenContractVersion: '6.0.0', overrides: {} }, { source }), /MUXUI_THEME_CONTRACT_INVALID/u);
+test('authoring documents written for the previous contract version are rejected with the versions and the guide to read', () => {
+  assert.equal(source.tokenContractVersion, '8.0.0');
+  assert.throws(
+    () => validateThemeAuthoringDocument({ ...base, tokenContractVersion: '7.0.0', overrides: {} }, { source }),
+    { message: 'MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7.0.0, required 8.0.0. See the token contract migration guide.' },
+  );
+  assert.throws(() => validateThemeAuthoringDocument({ ...base, tokenContractVersion: undefined, overrides: {} }, { source }), /MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion undefined, required 8\.0\.0/u);
+  // An off-contract source is a different fault, so it names the source and no guide.
+  assert.throws(
+    () => validateThemeAuthoringDocument({ ...base, overrides: {} }, { source: { ...source, tokenContractVersion: '7.0.0' } }),
+    { message: 'MUXUI_THEME_CONTRACT_INVALID: source declares tokenContractVersion 7.0.0, required 8.0.0' },
+  );
+});
+
+// 7.0.0 gave a neutral palette under Auto the fixed pivot 60 (shade-5 text from shade 60), and 8.0.0 picks the better endpoint
+// for the chosen method. For this palette Auto moves only the shade-60 foreground, so a document written for 7.0.0 keeps the
+// old one and carries the Scale-owned assignments of the old rule.
+test('a 7.0.0 document with neutral Auto migrates by regenerating its Scale-owned assignments, keeping its extra overrides and modes', () => {
+  const scale = { mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#878685', whiteAnchor: false, contrastPivot: 'auto', curvature: 1 };
+  const current = generateScaleTheme({ source, ...scale });
+  const light = current.palettes.neutral.find(({ shade }) => shade === 5).hex;
+  const dark = current.palettes.neutral.find(({ shade }) => shade === 100).hex;
+  const legacyForegrounds = Object.fromEntries(current.palettes.neutral.map(({ shade }) => [`semantic.color.neutral-${shade}-fg`, { type: 'color', unit: 'hex', value: shade >= 60 ? light : dark }]));
+  const extra = { 'semantic.typography.display-font-weight': { type: 'number', unit: 'unitless', value: 700 } };
+  const modes = { colorScheme: ['dark'], contrast: ['standard', 'more'], motion: ['reduced'], density: ['compact'], direction: ['ltr'] };
+  const written = { ...base, tokenContractVersion: '7.0.0', modes, overrides: { ...extra, ...current.assignments, ...legacyForegrounds }, scale };
+  assert.deepEqual(Object.keys(legacyForegrounds).filter((id) => legacyForegrounds[id].value !== current.assignments[id].value), ['semantic.color.neutral-60-fg']);
+  assert.equal(written.overrides['semantic.color.neutral-60-fg'].value, '#f9f7f5');
+  assert.equal(current.assignments['semantic.color.neutral-60-fg'].value, '#323130');
+
+  // Changing only the version leaves the old shade-60 foreground in place, which the document's own inputs no longer produce.
+  assert.throws(() => validateThemeAuthoringDocument(written, { source }), /MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7\.0\.0, required 8\.0\.0/u);
+  assert.throws(() => validateThemeAuthoringDocument({ ...written, tokenContractVersion: source.tokenContractVersion }, { source }), /MUXUI_THEME_SCALE_ASSIGNMENT_INVALID: semantic\.color\.neutral-60-fg/u);
+
+  // The recovery: regenerate the assignments from the document's `scale` inputs, keep every other override and the modes.
+  const { assignments } = generateScaleTheme({ source, ...written.scale });
+  const kept = Object.fromEntries(Object.entries(written.overrides).filter(([id]) => !Object.hasOwn(assignments, id)));
+  const migrated = { ...written, tokenContractVersion: source.tokenContractVersion, overrides: { ...kept, ...assignments } };
+  assert.equal(validateThemeAuthoringDocument(migrated, { source }), migrated);
+  assert.deepEqual(kept, extra);
+  assert.deepEqual(migrated.overrides['semantic.typography.display-font-weight'], extra['semantic.typography.display-font-weight']);
+  assert.deepEqual(migrated.modes, modes);
+  assert.deepEqual(migrated.scale, scale);
+  assert.equal(migrated.overrides['semantic.color.neutral-60-fg'].value, '#323130');
+  assert.match(compileThemeAuthoringDocument(migrated, { source, modes: { colorScheme: 'dark', motion: 'reduced', density: 'compact' } }).css, /--muxui-semantic-typography-display-font-weight: 700;/u);
 });
 
 test('authoring documents that override a removed motion easing token are rejected', () => {
@@ -453,4 +498,168 @@ test('Scale dark compilation selects generated foreground recipes without changi
   const compiled = compileThemeAuthoringDocument(documentFor(generated.overrides), { source: darkSource, modes: { colorScheme: 'dark' } });
   assert.match(compiled.css, /--muxui-semantic-color-neutral-60-fg: color-mix\(in srgb, var\(--muxui-semantic-color-neutral-10\) 85%, #000000\);/u);
   assert.equal(generated.overrides['semantic.color.neutral-60-fg'].mix, undefined);
+  // The mix follows whichever dark neutral shade first takes the blackened shade-5 text, so it moves with the method.
+  const apcaScale = { ...documentFor({}).scale, contrastAlgorithm: 'apca-endpoint-v1' };
+  const apca = generateScaleTheme({ source: darkSource, mode: 'standard', presetId: 'harbour', ...apcaScale });
+  const apcaCompiled = compileThemeAuthoringDocument(documentFor(apca.overrides, apcaScale), { source: darkSource, modes: { colorScheme: 'dark' } });
+  assert.match(apcaCompiled.css, /--muxui-semantic-color-neutral-70-fg: color-mix\(in srgb, var\(--muxui-semantic-color-neutral-10\) 85%, #000000\);/u);
+  assert.doesNotMatch(apcaCompiled.css, /--muxui-semantic-color-neutral-60-fg: color-mix/u);
+});
+
+const WCAG = 'wcag2-endpoint-v1';
+const APCA = 'apca-endpoint-v1';
+
+test('APCA 0.0.98G-4g matches the reference lightness contrast values', () => {
+  for (const [text, background, lc] of [
+    ['#888888', '#ffffff', 63.0565],
+    ['#ffffff', '#888888', -68.5415],
+    ['#000000', '#aaaaaa', 58.1463],
+    ['#aaaaaa', '#000000', -56.2411],
+    ['#112233', '#ddeeff', 91.6683],
+  ]) assert.equal(Number(getScaleApcaContrast(text, background).toFixed(4)), lc, `${text} on ${background}`);
+  assert.equal(getScaleApcaContrast('#777777', '#777777'), 0);
+});
+
+test('APCA scores opaque #rrggbb only while the WCAG ratio keeps its lenient parsing', () => {
+  for (const invalid of ['#00000000', '#ffffff80', '#fff', 'ffffff', 'red', '', null, undefined, 0x888888]) {
+    assert.throws(() => getScaleApcaContrast(invalid, '#ffffff'), /^TypeError: MUXUI_THEME_COLOR_INVALID: textHex$/u, `text ${String(invalid)}`);
+    assert.throws(() => getScaleApcaContrast('#000000', invalid), /^TypeError: MUXUI_THEME_COLOR_INVALID: backgroundHex$/u, `background ${String(invalid)}`);
+  }
+  assert.equal(Number(getScaleApcaContrast('#888888', '#FFFFFF').toFixed(4)), 63.0565, 'hex digits are case-insensitive');
+  // getContrastRatio is unchanged: it reads the first six digits and ignores alpha.
+  assert.equal(getScaleContrastRatio('#00000080', '#ffffff'), getScaleContrastRatio('#000000', '#ffffff'));
+});
+
+test('scaleForegrounds scores every shade under the chosen method and owns the endpoint rules', () => {
+  const { palettes } = generateScaleTheme({ source, mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#79716b' });
+  const named = (algorithm, pivot = 'auto') => scaleForegrounds(palettes.named, { pivot, algorithm });
+  const at = (list, shade) => list.find((entry) => entry.shade === shade);
+  // Harbour 40 (#648f9b) is where the two methods disagree.
+  const wcag40 = at(named(WCAG), 40);
+  assert.equal(wcag40.text, '#00222a');
+  assert.equal(wcag40.alternative, '#f2f9fb');
+  assert.equal(wcag40.score.toFixed(2), '4.71');
+  assert.equal(wcag40.safe, true);
+  const apca40 = at(named(APCA), 40);
+  assert.equal(apca40.text, '#f2f9fb');
+  assert.equal(Math.round(apca40.score), 64);
+  assert.ok(apca40.alternativeScore < apca40.score);
+  const apca30 = at(named(APCA), 30);
+  assert.equal(Math.round(apca30.score), 54);
+  assert.equal(apca30.safe, false, 'APCA is safe at |Lc| 60');
+  // A manual pivot gives shade-100 text below it and shade-5 text from it, for either palette and method.
+  for (const [palette, name] of [[palettes.named, 'named'], [palettes.neutral, 'neutral']]) {
+    for (const algorithm of [WCAG, APCA]) {
+      for (const { shade, text } of scaleForegrounds(palette, { pivot: 40, algorithm })) assert.equal(text, shade < 40 ? palette.at(-1).hex : palette[0].hex, `${name} ${algorithm} pivot 40: ${shade}`);
+    }
+  }
+  assert.throws(() => scaleForegrounds(palettes.named, { pivot: 'auto', algorithm: 'wcag3' }), /ALGORITHM_INVALID/u);
+  assert.throws(() => scaleForegrounds(palettes.named, { pivot: 6, algorithm: WCAG }), /PIVOT_INVALID/u);
+  assert.throws(() => scaleForegrounds(palettes.named.slice(1), { pivot: 'auto', algorithm: WCAG }), /PALETTE_INVALID/u);
+});
+
+test('Auto picks the higher-scoring text for neutral palettes under each method, with no fixed pivot', () => {
+  const inputs = { source, mode: 'standard', presetId: 'harbour', namedColor: '#025768' };
+  const firstLightShade = (palette, algorithm) => scaleForegrounds(palette, { pivot: 'auto', algorithm }).find(({ text }) => text === palette[0].hex)?.shade;
+  for (const neutralColor of ['#79716b', '#878685']) {
+    const { palettes } = generateScaleTheme({ ...inputs, neutralColor });
+    for (const algorithm of [WCAG, APCA]) {
+      for (const choice of scaleForegrounds(palettes.neutral, { pivot: 'auto', algorithm })) {
+        assert.ok(choice.score >= choice.alternativeScore, `${neutralColor} ${algorithm} neutral-${choice.shade} takes the higher score`);
+      }
+    }
+  }
+  // The Harbour neutral flips to light text at 60 under WCAG 2 but at 50 under APCA, which a fixed 60 could not do.
+  const harbour = generateScaleTheme({ ...inputs, neutralColor: '#79716b' }).palettes.neutral;
+  assert.equal(firstLightShade(harbour, WCAG), 60);
+  assert.equal(firstLightShade(harbour, APCA), 50);
+  const light = (algorithm, shade) => generateScaleTheme({ ...inputs, neutralColor: '#79716b', contrastAlgorithm: algorithm }).assignments[`semantic.color.neutral-${shade}-fg`].value;
+  assert.equal(light(WCAG, 50), harbour.at(-1).hex);
+  assert.equal(light(APCA, 50), harbour[0].hex);
+  // A custom neutral whose WCAG Auto flip is 70: shade 60 keeps dark text, unlike a manual pivot of 60.
+  const custom = generateScaleTheme({ ...inputs, neutralColor: '#878685' });
+  assert.equal(firstLightShade(custom.palettes.neutral, WCAG), 70);
+  assert.equal(custom.assignments['semantic.color.neutral-60-fg'].value, custom.palettes.neutral.at(-1).hex);
+  assert.equal(custom.assignments['semantic.color.neutral-70-fg'].value, custom.palettes.neutral[0].hex);
+  const pinned = generateScaleTheme({ ...inputs, neutralColor: '#878685', contrastPivot: 60 });
+  assert.equal(pinned.assignments['semantic.color.neutral-60-fg'].value, pinned.palettes.neutral[0].hex, 'a manual pivot of 60 still gives shade 60 light text');
+});
+
+test('the contrast method reaches generated foregrounds, diagnostics and compiled output', () => {
+  const inputs = { source, mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#79716b', whiteAnchor: false, curvature: 1 };
+  const fallback = generateScaleTheme({ ...inputs, contrastPivot: 'auto' });
+  const wcag = generateScaleTheme({ ...inputs, contrastPivot: 'auto', contrastAlgorithm: WCAG });
+  const apca = generateScaleTheme({ ...inputs, contrastPivot: 'auto', contrastAlgorithm: APCA });
+  assert.equal(fallback.contrast.algorithm, WCAG);
+  assert.deepEqual(fallback.assignments, wcag.assignments, 'an absent method is the source default');
+  assert.equal(apca.contrast.algorithm, APCA);
+  assert.equal(wcag.assignments['semantic.color.color-40-fg'].value, '#00222a');
+  assert.equal(apca.assignments['semantic.color.color-40-fg'].value, '#f2f9fb');
+  assert.equal(apca.assignmentsByMode.dark['semantic.color.color-40-fg'].value, apca.contrast.foregrounds.dark[40]);
+  // An unsafe foreground reports the active method's score fields.
+  const manual = { ...inputs, contrastPivot: 5 };
+  const wcagUnsafe = generateScaleTheme({ ...manual, contrastAlgorithm: WCAG }).diagnostics.find(({ token, colorScheme }) => token === 'semantic.color.color-5-fg' && !colorScheme);
+  assert.deepEqual(Object.keys(wcagUnsafe), ['code', 'token', 'shade', 'algorithm', 'ratio', 'alternativeRatio', 'pivot']);
+  assert.deepEqual([wcagUnsafe.algorithm, wcagUnsafe.ratio], [WCAG, 1]);
+  const apcaUnsafe = generateScaleTheme({ ...manual, contrastAlgorithm: APCA }).diagnostics.find(({ token, colorScheme }) => token === 'semantic.color.color-5-fg' && !colorScheme);
+  assert.deepEqual(Object.keys(apcaUnsafe), ['code', 'token', 'shade', 'algorithm', 'lc', 'alternativeLc', 'pivot']);
+  assert.deepEqual([apcaUnsafe.algorithm, apcaUnsafe.lc], [APCA, 0]);
+  assert.ok(apcaUnsafe.alternativeLc > 90);
+  assert.throws(() => generateScaleTheme({ ...inputs, contrastAlgorithm: 'wcag3' }), /MUXUI_THEME_SCALE_ALGORITHM_INVALID/u);
+  assert.throws(() => generateScaleTheme({ ...inputs, contrastAlgorithm: null }), /MUXUI_THEME_SCALE_ALGORITHM_INVALID/u);
+  assert.throws(() => generateScaleTheme({ ...inputs, namedColor: '#02576880', contrastAlgorithm: APCA }), /MUXUI_THEME_COLOR_INVALID/u, 'a translucent base cannot be scored by APCA');
+
+  const preset = (contrastAlgorithm) => compileScalePresetTheme({ source, presetId: 'harbour', modes: { colorScheme: 'light' }, contrastAlgorithm });
+  assert.equal(preset().inputs.contrastAlgorithm, WCAG, 'preset inputs always carry the method');
+  assert.equal(preset(APCA).document.scale.contrastAlgorithm, APCA);
+  assert.equal(preset(APCA).compiled.tokens['semantic.color.color-40-fg'].value, '#f2f9fb');
+  assert.equal(preset().compiled.tokens['semantic.color.color-40-fg'].value, '#00222a');
+  assert.deepEqual(JSON.parse(serializeThemeAuthoringDocument(preset(APCA).document, { source })), preset(APCA).document);
+});
+
+test('compileScalePresetTheme defaults only an omitted contrast method', () => {
+  const compile = (extra) => compileScalePresetTheme({ source, presetId: 'harbour', modes: { colorScheme: 'light' }, ...extra });
+  assert.equal(compile({}).inputs.contrastAlgorithm, WCAG);
+  assert.equal(compile({ contrastAlgorithm: undefined }).inputs.contrastAlgorithm, WCAG);
+  for (const contrastAlgorithm of [null, '', 'wcag3']) {
+    assert.throws(() => compile({ contrastAlgorithm }), /MUXUI_THEME_SCALE_ALGORITHM_INVALID/u, String(contrastAlgorithm));
+  }
+});
+
+test('authoring documents validate the contrast method against the source and their generated assignments', () => {
+  const scale = documentFor({}).scale;
+  const apcaScale = { ...scale, contrastAlgorithm: APCA };
+  const apcaDocument = documentFor(generateScaleTheme({ source, ...apcaScale }).assignments, apcaScale);
+  assert.doesNotThrow(() => validateThemeAuthoringDocument(apcaDocument, { source }));
+  assert.doesNotThrow(() => validateThemeAuthoringDocument(documentFor(generateScaleTheme({ source, ...scale }).assignments, scale), { source }), 'an absent method is allowed');
+  assert.throws(() => validateThemeAuthoringDocument({ ...apcaDocument, scale: { ...apcaScale, contrastAlgorithm: 'wcag3' } }, { source }), /MUXUI_THEME_SCALE_ALGORITHM_INVALID/u);
+  assert.throws(() => validateThemeAuthoringDocument({ ...apcaDocument, scale: { ...apcaScale, contrastAlgorithm: null } }, { source }), /MUXUI_THEME_SCALE_ALGORITHM_INVALID/u);
+  const stale = documentFor(generateScaleTheme({ source, ...scale }).assignments, apcaScale);
+  assert.throws(() => validateThemeAuthoringDocument(stale, { source }), /MUXUI_THEME_SCALE_ASSIGNMENT_INVALID: semantic\.color\.color-40-fg/u);
+});
+
+// One fixture list for both validators: the token-source schema and assertSourceMetadata.
+const INVALID_CONTRAST_METADATA = Object.freeze({
+  'old algorithm key replacing the pair': (contrast) => { contrast.algorithm = WCAG; delete contrast.algorithms; delete contrast.defaultAlgorithm; },
+  'old algorithm key beside the pair': (contrast) => { contrast.algorithm = WCAG; },
+  'single method': (contrast) => { contrast.algorithms = [WCAG]; },
+  'reversed order': (contrast) => { contrast.algorithms = [APCA, WCAG]; },
+  'unknown id': (contrast) => { contrast.algorithms = [WCAG, 'wcag3']; },
+  'duplicate id': (contrast) => { contrast.algorithms = [WCAG, WCAG]; },
+  'missing list': (contrast) => { delete contrast.algorithms; },
+  'missing default': (contrast) => { delete contrast.defaultAlgorithm; },
+  'unknown default': (contrast) => { contrast.defaultAlgorithm = 'wcag3'; },
+});
+
+test('the source lists both contrast algorithms and both validators reject the same invalid shapes', () => {
+  assert.deepEqual(source.theme.scale.contrast.algorithms, [WCAG, APCA]);
+  assert.equal(source.theme.scale.contrast.defaultAlgorithm, WCAG);
+  validateFamily('token-source', source);
+  const inputs = { source, mode: 'standard', namedColor: '#025768', neutralColor: '#79716b' };
+  for (const [name, change] of Object.entries(INVALID_CONTRAST_METADATA)) {
+    const invalid = structuredClone(source);
+    change(invalid.theme.scale.contrast);
+    assert.throws(() => validateFamily('token-source', invalid), name);
+    assert.throws(() => generateScaleTheme({ ...inputs, source: invalid }), /MUXUI_THEME_(?:SOURCE_METADATA_INVALID|UNKNOWN_FIELD): theme\.scale\.contrast/u, name);
+  }
 });

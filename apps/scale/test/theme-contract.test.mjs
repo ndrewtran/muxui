@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compileScalePresetTheme } from '@muxui/tokens/authoring';
+import { compileScalePresetTheme, generateScaleTheme, scaleForegrounds } from '@muxui/tokens/authoring';
 import source from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import {
+  CONTRAST_METHODS,
   DEFAULT_SETTINGS,
   MONO_PRESETS,
+  NAMED_STEPS,
+  NEUTRAL_STEPS,
   STANDARD_PRESETS,
   TYPOGRAPHY_METRIC_GROUPS,
   TYPOGRAPHY_ROLES,
@@ -155,17 +158,169 @@ test('motion easing and transition overrides round-trip through Scale authoring'
   });
 });
 
+const WCAG = 'wcag2-endpoint-v1';
+const APCA = 'apca-endpoint-v1';
+
 test('swatches use compiled backgrounds and foregrounds for both color modes', () => {
   for (const colorMode of ['light', 'dark']) {
     const compiled = previewTheme({ ...DEFAULT_SETTINGS, colorMode, background: colorMode });
     for (const [kind, prefix, steps] of [['named', 'color', [5, 60, 100]], ['neutral', 'neutral', [5, 10, 12, 98, 100]]]) {
-      for (const swatch of previewSwatches(compiled, kind, steps)) {
+      for (const swatch of previewSwatches(compiled, kind, steps, { pivot: 'auto', algorithm: WCAG })) {
         assert.equal(swatch.background, compiled.tokens[`semantic.color.${prefix}-${swatch.step}`].value);
         assert.equal(swatch.foreground, compiled.tokens[`semantic.color.${prefix}-${swatch.step}-fg`].value);
         assert.ok(Number.isFinite(swatch.ratio));
       }
     }
   }
+});
+
+test('Scale defaults, validates and round-trips the contrast method', () => {
+  assert.equal(DEFAULT_SETTINGS.contrastAlgorithm, WCAG);
+  assert.deepEqual(CONTRAST_METHODS.map(([id, name]) => [id, name]), [[WCAG, 'WCAG 2'], [APCA, 'APCA']]);
+  const settings = { ...DEFAULT_SETTINGS, contrastAlgorithm: APCA };
+  const document = createScaleDocument(settings, { slug: 'apca-method' });
+  assert.equal(document.scale.contrastAlgorithm, APCA);
+  assert.equal(document.overrides['semantic.color.color-40-fg'].value, '#f2f9fb');
+  const restored = settingsFromDocument(JSON.parse(serializeScaleDocument(document)));
+  assert.equal(restored.contrastAlgorithm, APCA);
+  assert.deepEqual(createScaleDocument(restored, { slug: 'apca-method' }), document);
+  // Documents written before the method existed (no key) load with the default.
+  const current = createScaleDocument(DEFAULT_SETTINGS, { slug: 'legacy-method' });
+  const { contrastAlgorithm: omitted, ...legacyScale } = current.scale;
+  assert.equal(omitted, WCAG);
+  assert.equal(settingsFromDocument({ ...current, scale: legacyScale }).contrastAlgorithm, WCAG);
+  for (const invalid of ['wcag3', null, 1]) {
+    assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, contrastAlgorithm: invalid }), /contrastAlgorithm/u);
+  }
+  assert.throws(() => validateScaleDocument({ ...document, scale: { ...document.scale, contrastAlgorithm: 'wcag3' } }), /MUXUI_THEME_SCALE_ALGORITHM_INVALID/u);
+});
+
+test('without overrides each method row matches scaleForegrounds and the active choice is the compiled foreground', () => {
+  for (const settings of [DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS, ...presetSettings('mono', MONO_PRESETS[0][0]) }, { ...DEFAULT_SETTINGS, contrastPivot: 40 }]) {
+    for (const contrastAlgorithm of [WCAG, APCA]) {
+      for (const colorMode of ['light', 'dark']) {
+        const compiled = previewTheme({ ...settings, contrastAlgorithm, colorMode, background: colorMode });
+        for (const [kind, prefix, steps] of [['named', 'color', NAMED_STEPS], ['neutral', 'neutral', NEUTRAL_STEPS]]) {
+          const palette = steps.map((shade) => ({ shade, hex: compiled.tokens[`semantic.color.${prefix}-${shade}`].value }));
+          const chosen = Object.fromEntries([WCAG, APCA].map((algorithm) => [algorithm, new Map(scaleForegrounds(palette, { pivot: settings.contrastPivot, algorithm }).map((choice) => [choice.shade, choice]))]));
+          for (const swatch of previewSwatches(compiled, kind, steps, { pivot: settings.contrastPivot, algorithm: contrastAlgorithm })) {
+            const label = `${settings.family} ${contrastAlgorithm} ${colorMode} ${kind}-${swatch.step}`;
+            assert.equal(chosen[contrastAlgorithm].get(swatch.step).text, swatch.foreground, `${label}: the active choice is the compiled foreground`);
+            for (const row of swatch.methods) assert.equal(row.text, chosen[row.algorithm].get(swatch.step).text, `${label}: ${row.algorithm} text`);
+            const active = swatch.methods.find(({ algorithm }) => algorithm === contrastAlgorithm);
+            assert.deepEqual([active.score, active.label, active.badge], [swatch.ratio, swatch.label, swatch.badge], label);
+          }
+        }
+      }
+    }
+  }
+});
+
+test('an imported shade override changes the readout background while the active row keeps the compiled foreground', () => {
+  const override = { type: 'color', unit: 'hex', value: '#000000' };
+  const imported = createScaleDocument({ ...DEFAULT_SETTINGS, additionalOverrides: { 'semantic.color.color-40': override } }, { slug: 'recoloured-shade' });
+  const settings = settingsFromDocument(JSON.parse(serializeScaleDocument(imported)));
+  assert.deepEqual(settings.additionalOverrides['semantic.color.color-40'], override);
+  const read = (algorithm) => previewSwatches(previewTheme({ ...settings, contrastAlgorithm: algorithm }), 'named', [40], { pivot: settings.contrastPivot, algorithm })[0];
+  const wcag = read(WCAG);
+  // The generated foreground is untouched (dark Harbour text), so on the new black it really is 1.26:1.
+  assert.deepEqual([wcag.background, wcag.foreground, wcag.label, wcag.badge], ['#000000', '#00222a', '1.26:1', 'Fail']);
+  assert.deepEqual(wcag.methods.map(({ algorithm, text, label, badge }) => [algorithm, text, label, badge]), [
+    [WCAG, '#00222a', '1.26:1', 'Fail'],
+    [APCA, '#f2f9fb', 'Lc 103', '75+'],
+  ]);
+  const apca = read(APCA);
+  assert.deepEqual([apca.background, apca.foreground, apca.label, apca.badge], ['#000000', '#f2f9fb', 'Lc 103', '75+']);
+  assert.deepEqual(apca.methods.map(({ algorithm, text, label, badge }) => [algorithm, text, label, badge]), [
+    [WCAG, '#f2f9fb', '19.72:1', 'AAA'],
+    [APCA, '#f2f9fb', 'Lc 103', '75+'],
+  ]);
+});
+
+test('translucent shade overrides read as n/a without a badge instead of failing', () => {
+  const settingsWith = (overrides) => ({ ...DEFAULT_SETTINGS, additionalOverrides: Object.fromEntries(Object.entries(overrides).map(([id, value]) => [id, { type: 'color', unit: 'hex', value }])) });
+  const read = (settings, algorithm, steps = [5, 40, 60]) => previewSwatches(previewTheme({ ...settings, contrastAlgorithm: algorithm }), 'named', steps, { pivot: 'auto', algorithm });
+  const rows = (swatch) => swatch.methods.map(({ text, score, label, badge }) => [text, score, label, badge]);
+  for (const value of ['#00000080', '#00000000']) {
+    const settings = settingsWith({ 'semantic.color.color-40': value });
+    validateScaleSettings(settings);
+    for (const algorithm of [WCAG, APCA]) {
+      const [first, translucent, last] = read(settings, algorithm);
+      assert.deepEqual([translucent.background, translucent.ratio, translucent.label, translucent.badge], [value, null, 'n/a', null], `${value} ${algorithm}`);
+      assert.deepEqual(translucent.methods.map(({ score, label, badge }) => [score, label, badge]), [[null, 'n/a', null], [null, 'n/a', null]], `${value} ${algorithm}`);
+      // Other shades keep their real scores for both methods.
+      for (const swatch of [first, last]) {
+        assert.ok(Number.isFinite(swatch.ratio));
+        assert.ok(swatch.methods.every(({ score, badge }) => Number.isFinite(score) && badge));
+      }
+    }
+  }
+  // A translucent endpoint leaves the active scores but cannot choose the other method's text.
+  const endpoint = read(settingsWith({ 'semantic.color.color-5': '#ffffff80' }), WCAG, [5, 40]);
+  assert.deepEqual(rows(endpoint[0]), [['#00222a', null, 'n/a', null], [null, null, 'n/a', null]]);
+  assert.equal(endpoint[1].label, '4.71:1');
+  assert.deepEqual(rows(endpoint[1]).map(([text, , label]) => [text, label]), [['#00222a', '4.71:1'], [null, 'n/a']]);
+  // A mix toward a transparent colour compiles to a translucent value too.
+  const mixed = createScaleDocument({ ...DEFAULT_SETTINGS, additionalOverrides: { 'semantic.color.color-40': { type: 'color', unit: 'hex', value: '#648f9b', mix: { space: 'srgb', token: 'reference.color.brand-60', weight: 0.5, color: '#00000000' } } } }, { slug: 'mixed-shade' });
+  const [mixedSwatch] = read(settingsFromDocument(mixed), APCA, [40]);
+  assert.match(mixedSwatch.background, /^#[0-9a-f]{8}$/u);
+  assert.deepEqual([mixedSwatch.label, mixedSwatch.badge], ['n/a', null]);
+});
+
+test('Scale rejects a 7.0.0 document with both versions and the guide, and imports it once its assignments are regenerated', () => {
+  const settings = { ...DEFAULT_SETTINGS, family: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#878685', whiteAnchor: false, contrastPivot: 'auto', curvature: 1,
+    additionalOverrides: { 'semantic.typography.display-font-weight': { type: 'number', unit: 'unitless', value: 700 } },
+    themeModes: { colorScheme: ['dark'], contrast: ['standard', 'more'], motion: ['reduced'], density: ['compact'], direction: ['ltr'] } };
+  const current = createScaleDocument(settings, { slug: 'previous-contract' });
+  // 7.0.0 gave neutral Auto the fixed pivot 60, so its shade-60 foreground was the light endpoint.
+  const written = structuredClone(current);
+  written.tokenContractVersion = '7.0.0';
+  written.overrides['semantic.color.neutral-60-fg'].value = '#f9f7f5';
+  assert.notEqual(current.overrides['semantic.color.neutral-60-fg'].value, '#f9f7f5');
+  const before = structuredClone(written);
+
+  assert.throws(() => validateScaleDocument(written), { message: 'MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7.0.0, required 8.0.0. See the token contract migration guide.' });
+  assert.throws(() => settingsFromDocument({ ...written, tokenContractVersion: source.tokenContractVersion }), /MUXUI_THEME_SCALE_ASSIGNMENT_INVALID: semantic\.color\.neutral-60-fg/u);
+  assert.deepEqual(written, before, 'rejecting a document does not rewrite it');
+
+  const { assignments } = generateScaleTheme({ source, ...written.scale });
+  const kept = Object.fromEntries(Object.entries(written.overrides).filter(([id]) => !Object.hasOwn(assignments, id)));
+  const migrated = { ...written, tokenContractVersion: source.tokenContractVersion, overrides: { ...kept, ...assignments } };
+  const restored = settingsFromDocument(migrated);
+  assert.deepEqual(restored.additionalOverrides, settings.additionalOverrides);
+  assert.deepEqual(restored.themeModes, settings.themeModes);
+  assert.deepEqual(createScaleDocument(restored, { slug: 'previous-contract' }), current);
+});
+
+test('neutral Auto follows the contrast method like the named palette', () => {
+  // The Auto marker sits where the compiled foreground first changes.
+  const boundary = (algorithm, kind, steps) => {
+    const settings = { ...DEFAULT_SETTINGS, contrastAlgorithm: algorithm };
+    const swatches = previewSwatches(previewTheme(settings), kind, steps, { pivot: 'auto', algorithm });
+    return swatches.find(({ foreground }, index) => index > 0 && foreground !== swatches[index - 1].foreground)?.step;
+  };
+  assert.equal(boundary(WCAG, 'named', NAMED_STEPS), 50);
+  assert.equal(boundary(APCA, 'named', NAMED_STEPS), 40);
+  assert.equal(boundary(WCAG, 'neutral', NEUTRAL_STEPS), 60);
+  assert.equal(boundary(APCA, 'neutral', NEUTRAL_STEPS), 50);
+});
+
+test('swatch readouts name the score and badge each method reports', () => {
+  const swatch = (contrastAlgorithm, step) => {
+    const settings = { ...DEFAULT_SETTINGS, contrastAlgorithm };
+    return previewSwatches(previewTheme(settings), 'named', [step], { pivot: settings.contrastPivot, algorithm: contrastAlgorithm })[0];
+  };
+  // Harbour light 40 is #648f9b: WCAG picks dark text at 4.71:1, APCA light text at Lc 64.
+  const wcag = swatch(WCAG, 40);
+  assert.deepEqual([wcag.value, wcag.foreground, wcag.label, wcag.badge], ['#648f9b', '#00222a', '4.71:1', 'AA']);
+  assert.deepEqual(wcag.methods.map(({ name, text, label, badge }) => [name, text, label, badge]), [['WCAG 2', '#00222a', '4.71:1', 'AA'], ['APCA', '#f2f9fb', 'Lc 64', '60+']]);
+  const apca = swatch(APCA, 40);
+  assert.deepEqual([apca.foreground, apca.label, apca.badge], ['#f2f9fb', 'Lc 64', '60+']);
+  assert.deepEqual(apca.methods.map(({ text }) => text), ['#00222a', '#f2f9fb']);
+  assert.deepEqual([swatch(APCA, 30).label, swatch(APCA, 30).badge], ['Lc 54', '45+']);
+  assert.equal(swatch(APCA, 100).badge, '75+');
+  assert.equal(swatch(WCAG, 100).badge, 'AAA');
+  assert.throws(() => previewSwatches(previewTheme(DEFAULT_SETTINGS), 'named', [40], { pivot: 'auto', algorithm: 'wcag3' }), /contrastAlgorithm/u);
 });
 
 test('manual contrast pivots survive serialization and reach preview, CSS export and contrast diagnostics', () => {
@@ -176,7 +331,7 @@ test('manual contrast pivots survive serialization and reach preview, CSS export
   for (const colorMode of ['light', 'dark']) {
     const selected = { ...restored, colorMode, background: colorMode };
     const compiled = previewTheme(selected);
-    const swatch = previewSwatches(compiled, 'named', [5])[0];
+    const swatch = previewSwatches(compiled, 'named', [5], { pivot: restored.contrastPivot, algorithm: restored.contrastAlgorithm })[0];
     assert.equal(swatch.foreground, swatch.background);
     assert.equal(swatch.ratio, 1);
     assert.equal(swatch.badge, 'Fail');
