@@ -477,7 +477,11 @@
         }
       },
       "contrast": {
-        "algorithm": "wcag2-endpoint-v1",
+        "algorithms": [
+          "wcag2-endpoint-v1",
+          "apca-endpoint-v1"
+        ],
+        "defaultAlgorithm": "wcag2-endpoint-v1",
         "defaultPivot": "auto",
         "pivots": [
           5,

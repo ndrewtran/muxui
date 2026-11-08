@@ -134,8 +134,9 @@ and `mono-color` roles have dark branches.
 Authoring documents must declare the source's `tokenContractVersion` and
 reference only current token IDs. The compiler validates an exact contract match; it does
 not normalize older same-major documents or rewrite overrides. Scale imports
-follow the same rule. Saved Scale settings accept numeric curvature factors and
-numeric contrast pivots (or `auto`); invalid values are rejected without conversion.
+follow the same rule. Saved Scale settings accept numeric curvature factors,
+numeric contrast pivots (or `auto`), and a contrast method (WCAG 2 or APCA);
+invalid values are rejected without conversion.
 Regenerate or update a document by choosing current
 roles and preserving each explicit override and mode branch deliberately.
 

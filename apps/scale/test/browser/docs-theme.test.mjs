@@ -6,7 +6,7 @@ import { createScaleDocument, DEFAULT_SETTINGS } from '../../src/theme-contract.
 import { openSite } from './docs-site.mjs';
 
 async function waitForScale(page) {
-  await page.getByRole('heading', { name: 'Theme Playground', exact: true }).waitFor();
+  await page.locator('#theme-playground-title').waitFor();
   await page.evaluate(() => document.fonts.ready);
 }
 
@@ -114,6 +114,60 @@ async function inspectSearch(page, screenshotName) {
 	return values;
 }
 
+test('docs Scale respects manual reduced motion when the draft cannot preview that mode', { timeout: 60_000 }, async () => {
+  const { origin: url, browser, close } = await openSite('scale/index.html');
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, reducedMotion: 'no-preference' });
+  try {
+    await context.addInitScript(() => localStorage.setItem('muxui-scale:mode-preferences:v1', JSON.stringify({ motion: 'reduced' })));
+    const page = await context.newPage();
+    await page.goto(`${url}/scale/`);
+    await waitForScale(page);
+    assert.equal(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches), false);
+    assert.equal(await page.locator('html').getAttribute('data-muxui-motion'), 'reduced');
+    const restricted = createScaleDocument({ ...DEFAULT_SETTINGS, themeModes: { ...DEFAULT_SETTINGS.themeModes, motion: ['full'] } }, { slug: 'manual-reduced-motion' });
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    await page.locator('input[type=file]').setInputFiles({ name: 'manual-reduced-motion.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(restricted)) });
+    await page.getByRole('status').filter({ hasText: 'preview unavailable' }).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: 'Export theme', exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await page.locator('.scale-app').getAttribute('data-muxui-motion'), null);
+    assert.equal(await page.locator('[data-muxui-scale-theme], .preview-canvas').count(), 0);
+    assert.deepEqual(await page.evaluate(() => JSON.parse(decodeURIComponent(location.hash.slice(1))).themeModes.motion), ['full']);
+    for (const editor of ['Typography', 'Radius']) {
+      await page.getByRole('button', { name: `${editor} editor`, exact: true }).click();
+      assert.deepEqual(await page.evaluate(() => {
+        const panel = document.querySelector('.inspector-panel:not([hidden])');
+        const rail = document.querySelector('.scale-rail');
+        return {
+          inspectorAnimation: getComputedStyle(panel).animationName,
+          inspectorAnimations: panel.getAnimations().length,
+          markerTransition: getComputedStyle(rail, '::after').transitionDuration,
+        };
+      }), { inspectorAnimation: 'none', inspectorAnimations: 0, markerTransition: '0s' }, `${editor} respects the host's motion preference`);
+    }
+    assert.deepEqual(await page.locator('.scale-chrome').evaluateAll((nodes) => [...new Set(nodes.map((node) => node.dataset.muxuiMotion))]), ['reduced']);
+    assert.equal(await page.locator('.scale-header').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-semantic-motion-state-transition-duration').trim()), '0ms');
+    assert.equal(await page.locator('.scale-header').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-semantic-motion-modal-transition-duration').trim()), '0ms');
+    await page.getByRole('button', { name: 'Apply to site', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Theme was not applied: Theme does not support requested modes: motion.' }).waitFor();
+    assert.equal(await page.locator('#muxui-applied-theme').count(), 0);
+    assert.deepEqual(await page.evaluate(() => JSON.parse(decodeURIComponent(location.hash.slice(1))).themeModes.motion), ['full']);
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Motion preference', exact: true }).selectOption('full');
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: 'Export theme', exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await page.locator('.scale-app').getAttribute('data-muxui-motion'), 'full');
+    assert.equal(await page.locator('.scale-header').getAttribute('data-muxui-motion'), 'full');
+    assert.notEqual(await page.locator('.scale-header').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-semantic-motion-state-transition-duration').trim()), '0ms');
+    const preview = page.getByRole('radio', { name: 'Preview', exact: true });
+    if (await preview.isVisible()) await preview.click();
+    assert.equal(await page.locator('.preview-canvas').getByRole('button', { name: 'Primary', exact: true }).isVisible(), true);
+  } finally {
+    await context.close();
+    await close();
+  }
+});
+
 test('docs Scale applies one validated theme across shell, islands and portals', { timeout: 300_000 }, async () => {
   const { origin: url, browser, close } = await openSite('scale/index.html');
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -136,11 +190,13 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     await page.goto(`${url}/scale/`);
     await waitForScale(page);
     assert.equal(await page.locator('h1').count(), 1, 'embedded editor does not add a second page h1');
+    assert.equal(await page.locator('main').count(), 1, 'embedded editor retains the docs main landmark');
+    assert.equal(await page.locator('main main').count(), 0);
     // The Scale page moves its native table of contents into the right sidebar after the playground hydrates.
     assert.notEqual(await page.locator('.right-sidebar-container').evaluate((node) => getComputedStyle(node).display), 'none');
     assert.equal(await page.locator('[data-scale-toc-template]').count(), 0);
     const tocTargets = await page.locator('.right-sidebar-container starlight-toc a[href^="#"]:not([href="#_top"])').evaluateAll((links) => links.map((link) => link.getAttribute('href').slice(1)));
-    assert.deepEqual(tocTargets, ['theme-playground-title', 'standard-themes-title', 'mono-themes-title', 'css-tokens-title', 'component-preview-title']);
+    assert.deepEqual(tocTargets, ['theme-playground-title']);
     for (const id of tocTargets) assert.equal(await page.locator(`[id="${id}"]`).count(), 1, `Scale TOC target #${id} resolves once`);
     assert.equal(await page.getByRole('button', { name: 'Save', exact: true }).count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Load', exact: true }).count(), 0);
@@ -148,7 +204,18 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     const defaultShellBackground = await page.evaluate(() => getComputedStyle(document.querySelector('.header')).backgroundColor);
     assert.notEqual(defaultShellBackground, 'rgba(0, 0, 0, 0)');
 
-    await page.getByRole('button', { name: 'Forest', exact: true }).click();
+    await page.getByRole('button', { name: 'Monochrome themes', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Forest', exact: true }).click();
+    const mobilePreview = page.getByRole('radio', { name: 'Preview', exact: true });
+    if (await mobilePreview.isVisible()) await mobilePreview.click();
+    await page.locator('.preview-canvas .muxui-select__trigger').click();
+    await page.locator('.muxui-select__popup').waitFor();
+    assert.equal(await page.locator('.muxui-select__popup').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-reference-color-brand-60').trim()), await page.locator('.scale-app').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-reference-color-brand-60').trim()), 'draft preview portals follow the editor before Apply');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--muxui-reference-color-brand-60').trim()), defaultBrand, 'draft popup does not apply the theme to docs');
+    await page.keyboard.press('Escape');
+    await page.locator('.muxui-select__popup').waitFor({ state: 'hidden' });
+    const mobileEditor = page.getByRole('radio', { name: 'Editor', exact: true });
+    if (await mobileEditor.isVisible()) await mobileEditor.click();
     await page.getByRole('button', { name: 'Apply to site', exact: true }).click();
     await page.getByText('Applied', { exact: true }).waitFor();
     assert.equal(await page.locator('#muxui-applied-theme').count(), 1);
@@ -175,11 +242,14 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--muxui-reference-color-brand-60').trim()), appliedBrand);
     await screenshot(page, 'scale-dark');
 
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await page.getByRole('combobox', { name: 'Motion preference', exact: true }).selectOption('reduced');
     await page.waitForFunction(() => document.documentElement.dataset.muxuiMotion === 'reduced');
     await page.getByRole('combobox', { name: 'Density preference', exact: true }).selectOption('compact');
     await page.waitForFunction(() => document.documentElement.dataset.muxuiDensity === 'compact');
     await page.waitForFunction(() => document.querySelector('.scale-app')?.dataset.muxuiMotion === 'reduced' && document.querySelector('.scale-app')?.dataset.muxuiDensity === 'compact');
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: 'Export theme', exact: true }).waitFor({ state: 'hidden' });
     const portalPage = await context.newPage();
     await portalPage.goto(`${url}/components/select/`);
     await (await waitForHydrated(portalPage.locator('.muxui-select__trigger').first())).click();
@@ -273,9 +343,12 @@ test('docs Scale applies one validated theme across shell, islands and portals',
         'semantic.typography.display-font-weight': { type: 'number', unit: 'unitless', value: 700 },
       },
     }, { slug: 'embedded-import' });
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await page.locator('input[type=file]').setInputFiles({ name: 'embedded-import.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(imported)) });
     await page.getByRole('status').filter({ hasText: 'Apply to site when ready' }).waitFor();
     assert.equal(await page.locator('.scale-app').getAttribute('data-muxui-color-scheme'), 'dark');
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: 'Export theme', exact: true }).waitFor({ state: 'hidden' });
     await page.getByRole('button', { name: 'Apply to site', exact: true }).click();
     await page.getByText('Applied', { exact: true }).waitFor();
     const importedBrand = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--muxui-reference-color-brand-60').trim());
@@ -410,7 +483,10 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     await waitForScale(page);
     await page.locator('starlight-theme-select select').first().selectOption('dark');
     await page.waitForFunction(() => document.querySelector('.scale-app')?.dataset.muxuiColorScheme === 'dark');
+    await page.getByRole('button', { name: 'Export', exact: true }).click();
     await page.getByRole('button', { name: 'Reset draft', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: 'Export theme', exact: true }).waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.scale-app').getAttribute('data-muxui-color-scheme'), 'dark');
     await page.getByRole('button', { name: 'Reset applied', exact: true }).click();
     await page.getByText('Site theme reset to defaults. Draft remains available.', { exact: true }).waitFor();
@@ -447,13 +523,22 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     await restrictedPage.reload();
     await waitForScale(restrictedPage);
     await restrictedPage.getByRole('alert').filter({ hasText: 'motion' }).waitFor();
+    await restrictedPage.getByRole('button', { name: 'Export', exact: true }).click();
     await restrictedPage.locator('input[type=file]').setInputFiles({ name: 'restricted-motion.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(restricted)) });
     await restrictedPage.getByRole('status').filter({ hasText: 'preview unavailable' }).waitFor();
+    await restrictedPage.keyboard.press('Escape');
+    await restrictedPage.getByRole('dialog', { name: 'Export theme', exact: true }).waitFor({ state: 'hidden' });
     assert.equal(await restrictedPage.locator('[data-muxui-scale-theme]').count(), 0);
     assert.equal(await restrictedPage.locator('.scale-app').getAttribute('data-muxui-motion'), null);
     assert.equal(await restrictedPage.locator('.preview-canvas').count(), 0);
-    assert.equal(await restrictedPage.getByRole('heading', { name: 'Live specimens unavailable', exact: true }).count(), 1);
+    const restrictedPreview = restrictedPage.getByRole('radio', { name: 'Preview', exact: true });
+    if (await restrictedPreview.isVisible()) await restrictedPreview.click();
+    assert.equal(await restrictedPage.getByRole('heading', { name: 'Component Preview unavailable', exact: true }).count(), 1);
     assert.equal(await restrictedPage.locator('.typography-specimen').count(), 0);
+    await restrictedPage.setViewportSize({ width: 390, height: 844 });
+    await restrictedPage.getByRole('tab', { name: 'Typography', exact: true }).click();
+    await restrictedPage.getByRole('heading', { name: 'Live specimens unavailable', exact: true }).waitFor();
+    assert.equal(await restrictedPage.getByText("The draft preview does not support the site's requested modes.", { exact: true }).isVisible(), true);
     await restrictedContext.close();
 
     const unavailableContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
