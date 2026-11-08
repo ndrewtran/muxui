@@ -41,23 +41,34 @@ settings:
 ```
 
 Token contract `8.0.0` is a breaking change to the source's Scale contrast
-metadata and to neutral Auto. `theme.scale.contrast.algorithm` is removed.
+metadata, to neutral Auto, and to the generated palettes.
+`theme.scale.contrast.algorithm` is removed.
 `algorithms` lists the endpoint methods (`wcag2-endpoint-v1` and
 `apca-endpoint-v1`) and `defaultAlgorithm` names the one Scale uses unless a
 document sets the optional `scale.contrastAlgorithm`. A neutral palette under
 `contrastPivot: "auto"` no longer uses the fixed pivot 60. Like a named palette,
 it picks the shade-5 or shade-100 text that scores higher under the chosen
 method, so some `semantic.color.neutral-<shade>-fg` assignments change: for a
-neutral of `#878685`, shade 60 now takes `#323130` where `7.0.0` took
-`#f9f7f5`. No token was added or removed.
+neutral of `#878685`, shade 60 now takes `#2a2928` where `7.0.0` took
+`#f9f7f5`. Generated palettes change as well: `theme.scale.algorithm` is now
+`muxui-oklch-v2` (it was `muxui-oklch-v1`). Shade 5 is lighter (a white-anchored
+neutral keeps its pure white), shade 100 is darker, and any other shade that
+fails WCAG 2 4.5:1 or APCA Lc 60 against its endpoint texts moves to the
+nearest lightness that passes. Harbour's named
+shades 5, 30 and 100 and its neutral shades 5, 50 and 100 change, so its
+`reference.color.brand-5` goes from `#f2f9fb` to `#f7fbfc`. No token was added
+or removed.
 
 Authoring documents declare `8.0.0`. A document that declares `7.0.0` is
 rejected with `MUXUI_THEME_CONTRACT_INVALID`, and its message names the version
 found and the version required. Changing the version alone is not enough for a
-document that carries Scale inputs with `contrastPivot: "auto"`: it then fails
-with `MUXUI_THEME_SCALE_ASSIGNMENT_INVALID`, naming the first assignment its own
-inputs no longer produce. Regenerate the Scale-owned assignments from the
-document's `scale` inputs and keep every other override and the modes:
+document that carries Scale inputs: its palette overrides were generated under
+`muxui-oklch-v1`, and under `contrastPivot: "auto"` some neutral foregrounds
+differ as well, so it fails with `MUXUI_THEME_SCALE_ASSIGNMENT_INVALID`, naming
+the first assignment its own inputs no longer produce (`reference.color.brand-5`
+for a Harbour document). Regenerate the Scale-owned assignments, palettes and
+foregrounds alike, from the document's `scale` inputs and keep every other
+override and the modes:
 
 ```js
 import { generateScaleTheme, validateThemeAuthoringDocument } from '@muxui/tokens/authoring';

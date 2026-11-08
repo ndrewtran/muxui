@@ -4,7 +4,10 @@ import { validateFamily } from '@muxui/schema';
 import { compilePureTokenGraph, cssValue } from '../src/core.mjs';
 import source from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { compileNativeTheme, compileTokenGraph, compileWebTheme } from '../src/index.mjs';
+import { generatePalette } from '../src/scale-palette.mjs';
 import {
+  NAMED_SHADES,
+  NEUTRAL_SHADES,
   compileThemeAuthoringDocument,
   compileScalePresetTheme,
   generateScaleTheme,
@@ -85,6 +88,14 @@ test('authoring documents written for the previous contract version are rejected
   );
 });
 
+// The recovery recipe from catalog/guides/token-migration.md: regenerate the Scale-owned assignments from the document's
+// own inputs, keep every other override and the modes, and declare the current contract version.
+function recover(document) {
+  const { assignments } = generateScaleTheme({ source, ...document.scale });
+  const kept = Object.fromEntries(Object.entries(document.overrides).filter(([id]) => !Object.hasOwn(assignments, id)));
+  return { kept, migrated: { ...document, tokenContractVersion: source.tokenContractVersion, overrides: { ...kept, ...assignments } } };
+}
+
 // 7.0.0 gave a neutral palette under Auto the fixed pivot 60 (shade-5 text from shade 60), and 8.0.0 picks the better endpoint
 // for the chosen method. For this palette Auto moves only the shade-60 foreground, so a document written for 7.0.0 keeps the
 // old one and carries the Scale-owned assignments of the old rule.
@@ -98,23 +109,58 @@ test('a 7.0.0 document with neutral Auto migrates by regenerating its Scale-owne
   const modes = { colorScheme: ['dark'], contrast: ['standard', 'more'], motion: ['reduced'], density: ['compact'], direction: ['ltr'] };
   const written = { ...base, tokenContractVersion: '7.0.0', modes, overrides: { ...extra, ...current.assignments, ...legacyForegrounds }, scale };
   assert.deepEqual(Object.keys(legacyForegrounds).filter((id) => legacyForegrounds[id].value !== current.assignments[id].value), ['semantic.color.neutral-60-fg']);
-  assert.equal(written.overrides['semantic.color.neutral-60-fg'].value, '#f9f7f5');
-  assert.equal(current.assignments['semantic.color.neutral-60-fg'].value, '#323130');
+  // The fixed pivot gives shade 60 the light endpoint; muxui-oklch-v1 had #f9f7f5 there, and the tuned shade 5 is #fbfaf9.
+  assert.equal(written.overrides['semantic.color.neutral-60-fg'].value, '#fbfaf9');
+  assert.equal(current.assignments['semantic.color.neutral-60-fg'].value, '#2a2928');
 
   // Changing only the version leaves the old shade-60 foreground in place, which the document's own inputs no longer produce.
   assert.throws(() => validateThemeAuthoringDocument(written, { source }), /MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7\.0\.0, required 8\.0\.0/u);
   assert.throws(() => validateThemeAuthoringDocument({ ...written, tokenContractVersion: source.tokenContractVersion }, { source }), /MUXUI_THEME_SCALE_ASSIGNMENT_INVALID: semantic\.color\.neutral-60-fg/u);
 
   // The recovery: regenerate the assignments from the document's `scale` inputs, keep every other override and the modes.
-  const { assignments } = generateScaleTheme({ source, ...written.scale });
-  const kept = Object.fromEntries(Object.entries(written.overrides).filter(([id]) => !Object.hasOwn(assignments, id)));
-  const migrated = { ...written, tokenContractVersion: source.tokenContractVersion, overrides: { ...kept, ...assignments } };
+  const { kept, migrated } = recover(written);
   assert.equal(validateThemeAuthoringDocument(migrated, { source }), migrated);
   assert.deepEqual(kept, extra);
   assert.deepEqual(migrated.overrides['semantic.typography.display-font-weight'], extra['semantic.typography.display-font-weight']);
   assert.deepEqual(migrated.modes, modes);
   assert.deepEqual(migrated.scale, scale);
-  assert.equal(migrated.overrides['semantic.color.neutral-60-fg'].value, '#323130');
+  assert.equal(migrated.overrides['semantic.color.neutral-60-fg'].value, '#2a2928');
+  assert.match(compileThemeAuthoringDocument(migrated, { source, modes: { colorScheme: 'dark', motion: 'reduced', density: 'compact' } }).css, /--muxui-semantic-typography-display-font-weight: 700;/u);
+});
+
+// 7.0.0 documents were written under muxui-oklch-v1, so their stored palettes are the untuned ladders. Build Harbour's from
+// the raw generator with the 7.0.0 foreground rules: Auto by WCAG endpoints for named, the fixed pivot 60 for neutral.
+test('a 7.0.0 Harbour document from muxui-oklch-v1 migrates by the same recovery, rebuilding its palettes', () => {
+  const scale = { mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#79716b', whiteAnchor: false, contrastPivot: 'auto', curvature: 1 };
+  const current = generateScaleTheme({ source, ...scale });
+  const color = (value) => ({ type: 'color', unit: 'hex', value });
+  const named = generatePalette(scale.namedColor, 'named', { tune: false, shades: NAMED_SHADES });
+  const neutral = generatePalette(scale.neutralColor, 'neutral', { tune: false, shades: NEUTRAL_SHADES });
+  const v1 = { ...current.assignments };
+  for (const { shade, hex } of named) v1[`reference.color.brand-${shade}`] = color(hex);
+  for (const { shade, hex } of neutral) v1[`reference.color.neutral-${shade}`] = color(hex);
+  for (const { shade, text } of scaleForegrounds(named, { pivot: 'auto', algorithm: 'wcag2-endpoint-v1' })) v1[`semantic.color.color-${shade}-fg`] = color(text);
+  for (const { shade } of neutral) v1[`semantic.color.neutral-${shade}-fg`] = color(shade >= 60 ? neutral[0].hex : neutral.at(-1).hex);
+  const extra = { 'semantic.typography.display-font-weight': { type: 'number', unit: 'unitless', value: 700 } };
+  const modes = { colorScheme: ['dark'], contrast: ['standard', 'more'], motion: ['reduced'], density: ['compact'], direction: ['ltr'] };
+  const written = { ...base, tokenContractVersion: '7.0.0', modes, overrides: { ...extra, ...v1 }, scale };
+  // v2 lifts shade 5 and darkens shade 100, and moves named 30 and neutral 50.
+  assert.deepEqual(['brand-5', 'brand-30', 'brand-100', 'neutral-5', 'neutral-50', 'neutral-100'].map((name) => [written.overrides[`reference.color.${name}`].value, current.assignments[`reference.color.${name}`].value]), [
+    ['#f2f9fb', '#f7fbfc'], ['#8cacb6', '#96b7c1'], ['#00222a', '#001c23'], ['#faf7f5', '#fbfaf8'], ['#9e9792', '#8f8884'], ['#2c2825', '#25211e'],
+  ]);
+
+  // Changing only the version fails on the first palette assignment its own inputs no longer produce.
+  assert.throws(() => validateThemeAuthoringDocument(written, { source }), /MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7\.0\.0, required 8\.0\.0/u);
+  assert.throws(() => validateThemeAuthoringDocument({ ...written, tokenContractVersion: source.tokenContractVersion }, { source }), /MUXUI_THEME_SCALE_ASSIGNMENT_INVALID: reference\.color\.brand-5/u);
+
+  const { kept, migrated } = recover(written);
+  assert.equal(validateThemeAuthoringDocument(migrated, { source }), migrated);
+  assert.deepEqual(kept, extra);
+  assert.deepEqual(migrated.modes, modes);
+  assert.deepEqual(migrated.scale, scale);
+  assert.equal(migrated.overrides['reference.color.brand-5'].value, '#f7fbfc');
+  assert.equal(migrated.overrides['reference.color.brand-100'].value, '#001c23');
+  assert.deepEqual(migrated.overrides['semantic.typography.display-font-weight'], extra['semantic.typography.display-font-weight']);
   assert.match(compileThemeAuthoringDocument(migrated, { source, modes: { colorScheme: 'dark', motion: 'reduced', density: 'compact' } }).css, /--muxui-semantic-typography-display-font-weight: 700;/u);
 });
 
