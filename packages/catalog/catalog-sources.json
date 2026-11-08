@@ -1759,6 +1759,22 @@
     {
       "family": "example",
       "path": "catalog/components/tag-group/examples/react/selection.example.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/color-mode-picker/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/color-mode-picker/examples/react/basic.example.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/theme-picker/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/theme-picker/examples/react/basic.example.json"
     }
   ]
 }

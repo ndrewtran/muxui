@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:theme-picker",
+  "kind": "component",
+  "name": "ThemePicker",
+  "summary": "Choose one of the Mux preset themes from a grid of swatches, or a Random option.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Letting people choose a preset theme for the application.",
+      "Offering a random theme beside the presets, when the application rotates themes itself."
+    ],
+    "avoidWhen": [
+      "Choosing between light and dark; use ColorModePicker or ColorModeToggle.",
+      "Choosing from a short list of unrelated options; use RadioGroup."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "group",
+    "heading",
+    "grid",
+    "option",
+    "swatch",
+    "name"
+  ],
+  "states": [
+    "idle",
+    "selected",
+    "focused",
+    "disabled"
+  ],
+  "accessibility": {
+    "nameRequired": false,
+    "obligations": [
+      "Exposes one radio group named Theme, or by aria-label or aria-labelledby, whose radios are Random and every preset, in order.",
+      "Keeps a single tab stop for the whole group; arrow keys move focus and select, and Home and End go to the first and last option.",
+      "Names a preset whose name repeats an earlier collection's with its collection, such as Monochrome Terracotta, and keeps the visible label.",
+      "Keeps the selected ring, the focus ring, and the swatch colours visible under forced colors, and the swatch transition off under reduced motion."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "behavior": [
+        "The options are the presets of MUXUI_THEME_PRESETS in the package's order, grouped by collection under a visible heading for each (Standard, then Monochrome), four to a row. Each option is a round swatch with the preset name below it.",
+        "An option's value is its theme ID. value sets the selection when the page controls it, defaultValue when the picker controls itself, and onChange is called with the theme ID each time the user selects an option. With neither value nor defaultValue nothing is selected.",
+        "random adds a Random option before the groups, on a row of its own with a shuffle glyph where the presets have their colour. Its value is random. The picker only reports it; the page rotates the themes. random is off by default.",
+        "The picker reports a choice and does nothing else. It never writes data-muxui-theme, localStorage, or any other thing outside its own state, so the page applies the theme ID, for example by setting data-muxui-theme on the document root.",
+        "The picker is one radio group with one tab stop: Tab reaches the selected option, or the first when none is selected, and the next Tab leaves the group.",
+        "Left and Right move focus to the previous and next option and select it, wrapping at the ends and reversed in a right-to-left locale. Up and Down move by one row of four to the same column, continuing across the group headings, and stop at the first and last row; a shorter last row takes its last option. Home and End go to the first and last option, which is Random when random is on.",
+        "A preset whose name an earlier collection already uses has its collection in its accessible name, so Monochrome Terracotta is announced where Terracotta is the visible label. The Standard Terracotta keeps its name.",
+        "Each swatch shows the action background of the preset for the color scheme in force, from the nearest data-muxui-color-scheme of its ancestors, light when there is none. It carries the preset's two colours itself, so it needs neither themes.css nor a data-muxui-theme scope.",
+        "The selected option shows a ring around its swatch. The focus ring is drawn around the whole option, and a disabled picker dims every option and ignores input.",
+        "The default name is Theme. aria-label or aria-labelledby replaces it.",
+        "Server rendering and the first client render are identical: the picker reads no browser state."
+      ],
+      "accessibility": [
+        "Exposes one radio group named Theme, or by aria-label or aria-labelledby, whose radios are Random and every preset, in order.",
+        "Keeps a single tab stop for the whole group; arrow keys move focus and select, and Home and End go to the first and last option."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.layout.section-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.option-radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.pill-radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.control.size-md",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.border.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.inner",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.selection.track",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.interaction-transition",
+            "requirement": "required"
+          }
+        ]
+      },
+      "runtimeProfiles": {}
+    }
+  }
+}

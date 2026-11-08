@@ -21,6 +21,26 @@ function ColorModeTogglePreview({ syncWithToolbar = true, ...args }) {
   });
 }
 
+// The toolbar decides Light and Dark, and a picked mode moves it. The toolbar has no System, so System is the scheme the
+// system resolves to, and the picker shows System only while the toolbar is on that scheme.
+function ColorModePickerPreview({ syncWithToolbar = true, ...args }) {
+  const theme = React.useContext(StorybookThemeContext);
+  const [system, setSystem] = React.useState(false);
+  const resolved = () => (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const toolbar = syncWithToolbar ? theme?.scheme : undefined;
+  return React.createElement(MuxUI.ColorModePicker, {
+    ...args,
+    mode: args.mode ?? (system && toolbar === resolved() ? 'system' : toolbar),
+    'aria-label': 'Color mode',
+    onModeChange: (mode) => {
+      args.onModeChange?.(mode);
+      if (!syncWithToolbar) return;
+      setSystem(mode === 'system');
+      theme?.setScheme(mode === 'system' ? resolved() : mode);
+    },
+  });
+}
+
 const MUXUI_SEARCH_FIELD_VALUE = 'MuxUI';
 
 const BOOLEAN_PROPS = new Set([
@@ -1406,6 +1426,7 @@ Object.assign(ADAPTERS, {
     e(MuxUI.CheckboxField.Description, null, 'Optional setting'),
     e(MuxUI.CheckboxField.Error, null, args.invalid ? 'Invalid value' : null),
   ),
+  ColorModePicker: (args) => e(ColorModePickerPreview, args),
   ColorModeToggle: (args) => e(ColorModeTogglePreview, args),
   CommandPalette: (args) => e(CommandPalettePreview, args),
   // One list of links fills the header and the drawer. href and current belong to the first link. Sign in sits
@@ -1520,6 +1541,8 @@ Object.assign(ADAPTERS, {
     ...args,
     size: args.size === 'xs' && ['display', 'heading', 'title'].includes(args.variant) ? 'sm' : args.size,
   }, 'Manage your profile details.'),
+  // The picker is named by its default, and the stories show the Random option the page can turn on.
+  ThemePicker: (args) => e(MuxUI.ThemePicker, { ...args, random: args.random ?? true }),
   Resizable: ({ defaultSizes, ...args }) => e(MuxUI.Resizable, { ...args, ...(args.sizes === undefined ? { defaultSizes: defaultSizes ?? { main: 60, side: 40 } } : {}) },
     e(MuxUI.ResizablePanel, { id: 'main' }, 'Main'),
     e(MuxUI.ResizableHandle, { id: 'main-side', before: 'main', after: 'side', 'aria-label': 'Resize panels' }),
@@ -1963,7 +1986,7 @@ function controlledValueFromEvent(controlled, payload) {
 function ControlledHarness({ record, args }) {
   const theme = React.useContext(StorybookThemeContext);
   const [values, setValues] = React.useState(() => controlledStoryArgsForBinding(record.binding, record.family,
-    record.family === 'ColorModeToggle' ? { ...args, mode: args.mode ?? args.defaultMode ?? theme?.scheme ?? 'light' } : args));
+    record.family === 'ColorModeToggle' || record.family === 'ColorModePicker' ? { ...args, mode: args.mode ?? args.defaultMode ?? theme?.scheme ?? 'light' } : args));
   const controlledPairs = controlledDefaultPairsForBinding(record.binding);
   const eventArgs = { ...values };
   for (const { controlled } of controlledPairs) {
@@ -1996,7 +2019,7 @@ function UncontrolledHarness({ record, args }) {
   const theme = React.useContext(StorybookThemeContext);
   const [initialScheme] = React.useState(theme?.scheme ?? 'light');
   // Keep the initial host default; explicit keys retain restoration across host mode changes.
-  const specimenArgs = record.family === 'ColorModeToggle'
+  const specimenArgs = record.family === 'ColorModeToggle' || record.family === 'ColorModePicker'
     ? { ...args, defaultMode: args.defaultMode ?? initialScheme, storageKey: args.storageKey ?? `muxui-storybook-uncontrolled-color-mode-${initialScheme}`, syncWithToolbar: false }
     : args;
   const uncontrolledPairs = controlledDefaultPairsForBinding(record.binding);
@@ -2907,6 +2930,8 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   Activity: '.muxui-activity__trigger',
   DataDiff: '.muxui-data-diff input[type="checkbox"]',
   CheckboxField: '.muxui-checkbox-field__button',
+  // The group, not an option: the proof clicks what it can, and an option would move the toolbar's scheme under the page's wait.
+  ColorModePicker: '.muxui-color-mode-picker',
   ColorModeToggle: '.muxui-color-mode-toggle',
   CommandPalette: '.muxui-command-palette__trigger',
   Image: '.muxui-image',
@@ -2926,6 +2951,7 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   Text: '.muxui-text',
   TextArea: '.muxui-text-area__textarea',
   TextEditor: '.muxui-text-editor__btn',
+  ThemePicker: '.muxui-theme-picker input',
 });
 for (const [family, selector] of Object.entries(R16_BROWSER_PROOF_ROOTS)) {
   BROWSER_PROOF_PLANS[family] = async ({ canvasElement }) => {
@@ -2973,7 +2999,7 @@ export function createAnatomyStory(record) {
 
 export function createControlledStory(record) {
   const args = controlledStoryArgsForBinding(record.binding, record.family);
-  if (record.family === 'ColorModeToggle') delete args.mode;
+  if (record.family === 'ColorModeToggle' || record.family === 'ColorModePicker') delete args.mode;
   return {
     name: 'Controlled',
     args,
@@ -2984,7 +3010,7 @@ export function createControlledStory(record) {
 
 export function createUncontrolledStory(record) {
   const args = uncontrolledStoryArgsForBinding(record.binding, record.family);
-  if (record.family === 'ColorModeToggle') {
+  if (record.family === 'ColorModeToggle' || record.family === 'ColorModePicker') {
     delete args.defaultMode;
     delete args.storageKey;
   }

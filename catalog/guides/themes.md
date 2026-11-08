@@ -38,14 +38,29 @@ Each axis is selected by a data attribute:
 
 Set an attribute on the document root to apply a mode to the whole page, or on any element to apply it to that subtree.
 
-`ColorModeToggle` switches the color scheme at runtime. It sets `data-muxui-color-scheme` on the document root to `light` or `dark` and saves the choice in `localStorage` under `storageKey`, which defaults to `muxui-color-mode`. After mount it restores the saved choice, then `defaultMode`, then the operating system's `prefers-color-scheme`; the first render uses `defaultMode`, or light, so server rendering hydrates cleanly. Pass `mode` and `onModeChange` to control it. The package has no switch for the other axes, so set their attributes yourself.
+`ColorModeToggle` switches the color scheme at runtime. It sets `data-muxui-color-scheme` on the document root to `light` or `dark` and saves the choice in `localStorage` under `storageKey`, which defaults to `muxui-color-mode`. After mount it restores the saved choice, then `defaultMode`, then the operating system's `prefers-color-scheme`; the first render uses `defaultMode`, or light, so server rendering hydrates cleanly. Pass `mode` and `onModeChange` to control it.
+
+`ColorModePicker` offers Light, Dark, and System. It reads and writes the same `localStorage` key as `ColorModeToggle`, in the same format, so the two share a saved choice. Light and Dark are saved as `light` and `dark`. System saves nothing: it removes the saved choice, writes the operating system's `prefers-color-scheme` to `data-muxui-color-scheme`, and keeps following that preference while System stays chosen. With nothing saved the picker starts on System, unless `defaultMode` says otherwise. It restores after mount in the same order and takes `mode` and `onModeChange` to control it.
+
+The package has no switch for the other axes, so set their attributes yourself.
 
 ## Preset themes
 
-Import `@muxui/react/themes.css` after `@muxui/react/styles.css` to enable the preset palettes, and read their IDs from `MUXUI_THEME_PRESETS` in `@muxui/react/themes`. Set `data-muxui-theme` on the same element as any `data-muxui-color-scheme` or `data-muxui-contrast` attribute, because the preset palette is chosen from the attributes on that element. `ColorModeToggle` writes to the document root, so put `data-muxui-theme` on `<html>` for the toggle to drive a preset. Presets recompute the color dependency closure; spacing, typography, motion, and density come from the base theme. An unknown preset ID matches no preset declarations, so normal base and inherited styles apply.
+Import `@muxui/react/themes.css` after `@muxui/react/styles.css` to enable the preset palettes, and read their IDs from `MUXUI_THEME_PRESETS` in `@muxui/react/themes`. Set `data-muxui-theme` on the same element as any `data-muxui-color-scheme` or `data-muxui-contrast` attribute, because the preset palette is chosen from the attributes on that element. `ColorModeToggle` and `ColorModePicker` write to the document root, so put `data-muxui-theme` on `<html>` for them to drive a preset. Presets recompute the color dependency closure; spacing, typography, motion, and density come from the base theme. An unknown preset ID matches no preset declarations, so normal base and inherited styles apply.
 
 ```tsx
 <div data-muxui-theme="standard-harbour" data-muxui-color-scheme="dark">{children}</div>
+```
+
+`ThemePicker` lets people choose a preset. It lists the presets of `MUXUI_THEME_PRESETS` as swatches, grouped by collection, and reports the chosen theme ID through `onChange`. It changes nothing outside itself, so the application sets `data-muxui-theme` to the ID it is given. Pass `value`, or `defaultValue` for an uncontrolled picker. Each swatch shows the preset's action background for the color scheme in force, so the picker needs neither `themes.css` nor a theme scope. `random` adds a Random option that reports `random`; the application then chooses the theme to apply.
+
+```tsx
+import { ThemePicker } from '@muxui/react';
+
+<ThemePicker
+  defaultValue="standard-harbour"
+  onChange={(theme) => document.documentElement.setAttribute('data-muxui-theme', theme)}
+/>
 ```
 
 ## Cascade layers

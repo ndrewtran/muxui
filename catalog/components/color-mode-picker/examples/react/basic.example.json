@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:color-mode-picker-basic-react",
+  "kind": "example",
+  "name": "Basic React ColorModePicker",
+  "summary": "A source-faithful React color-mode-picker example using the Mux-owned API.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:color-mode-picker#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/color-mode-picker/examples/react/basic.tsx"
+}

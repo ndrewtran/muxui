@@ -390,6 +390,7 @@ test('Storybook colour audit accepts dynamic color data only on marked Mux paint
       <div id="wheel-track" class="muxui-color-wheel__track" data-muxui-color-paint="track" style="width:40px;height:40px;background-image:conic-gradient(rgb(25,26,27),rgb(28,29,30))"></div>
       <div id="wheel-thumb" class="muxui-color-wheel__thumb-face" data-muxui-color-paint="sample" style="width:12px;height:12px;background-color:rgb(31,32,33)"></div>
       <div id="swatch" class="muxui-color-swatch" data-muxui-color-paint="sample" style="width:16px;height:16px;background-color:rgb(34,35,36);background-image:linear-gradient(rgb(37,38,39),rgb(40,41,42))"></div>
+      <div id="theme-swatch" class="muxui-theme-picker__swatch" data-muxui-color-paint="sample" style="width:16px;height:16px;background-color:rgb(49,50,51);border:1px solid rgb(52,53,54)"></div>
       <div id="unowned-marker" data-muxui-color-paint="area" style="width:24px;height:16px;background-image:linear-gradient(rgb(43,44,45),rgb(46,47,48))"></div>
       <div id="wrong-blend" class="muxui-color-area" data-muxui-color-paint="area" style="width:24px;height:16px;background-blend-mode:multiply;mix-blend-mode:screen"></div>
     </body></html>`);
@@ -406,8 +407,9 @@ test('Storybook colour audit accepts dynamic color data only on marked Mux paint
     assert.ok(unowned('area-text', 'color'), 'ordinary descendant text remains token-audited');
     assert.ok(unowned('unowned-marker', 'background-image'), 'a marker without the owned part cannot opt out');
     assert.ok(!result.nonToken.some((paint) => ['background-color', 'background-image'].includes(paint.property)
-      && ['area', 'area-thumb', 'slider-track', 'slider-thumb', 'wheel-track', 'wheel-thumb', 'swatch']
+      && ['area', 'area-thumb', 'slider-track', 'slider-thumb', 'wheel-track', 'wheel-thumb', 'swatch', 'theme-swatch']
         .some((id) => paint.examples.some((example) => example.includes(`#${id}`)))), JSON.stringify(result.nonToken));
+    assert.ok(unowned('theme-swatch', 'border-top-color'), 'a theme swatch border remains token-audited');
   } finally {
     await browser.close();
   }

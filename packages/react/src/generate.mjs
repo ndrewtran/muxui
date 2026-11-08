@@ -30,6 +30,23 @@ if (listing && checking) {
   throw new Error('MUXUI_REACT_GENERATE_ARGS_INVALID: --list-outputs and --check are mutually exclusive');
 }
 
+const tokenPath = resolve(repositoryRoot, 'catalog/tokens/default-theme.json');
+const tokenRaw = await readFile(tokenPath);
+const tokenSha256 = createHash('sha256').update(tokenRaw).digest('hex');
+const tokenSource = JSON.parse(tokenRaw);
+// The declarations of the themes entry. A TypeScript source (ThemePicker) imports the generated themes module by relative path,
+// so they are written to the emit directory for tsc before it runs, and themes.mjs ships beside the emitted module.
+const themeTypesBody = `export type MuxUIThemeCollection = 'standard' | 'monochrome';
+export type MuxUIStandardThemeId = ${tokenSource.theme.scale.standardPresets.map(({ id }) => `'standard-${id}'`).join(' | ')};
+export type MuxUIMonochromeThemeId = ${tokenSource.theme.scale.monochromePresets.map(({ id }) => `'monochrome-${id}'`).join(' | ')};
+export type MuxUIThemeId = MuxUIStandardThemeId | MuxUIMonochromeThemeId;
+export interface MuxUIThemeSwatch { readonly primary: string; readonly secondary: string; }
+export interface MuxUIThemePreset { readonly id: MuxUIThemeId; readonly presetId: string; readonly name: string; readonly description: string; readonly collection: MuxUIThemeCollection; readonly swatch: MuxUIThemeSwatch; }
+export declare const MUXUI_THEME_PRESETS: readonly MuxUIThemePreset[];
+export declare const MUXUI_THEME_PRESETS_BY_ID: Readonly<Record<MuxUIThemeId, MuxUIThemePreset>>;
+export declare const MUXUI_THEME_ACTION_BACKGROUNDS: Readonly<Record<MuxUIThemeId, { readonly light: string; readonly dark: string }>>;
+export declare const MUXUI_DEFAULT_THEME_PRESET_ID: MuxUIThemeId;
+`;
 // TypeScript sources ship as the .js and .d.ts that tsc emits from them (Decision 0031 item 2).
 // --check emits into a fresh directory under build/, so it never rewrites build/ts, and
 // --list-outputs names the outputs without running tsc.
@@ -44,8 +61,14 @@ async function emitTypeScript() {
   const outDir = checking ? await mkdtemp(resolve(packageRoot, 'build/ts-check-')) : resolve(packageRoot, 'build/ts');
   if (checking) process.on('exit', () => rmSync(outDir, { recursive: true, force: true }));
   else await rm(outDir, { recursive: true, force: true });
+  // rootDirs (a tsconfig-only option) makes the emit directory read as part of src, so `../themes.js` and `../themes.mjs`
+  // resolve to these declarations, and the API extraction finds them beside the emitted declarations.
+  await mkdir(outDir, { recursive: true });
+  await Promise.all(['themes.d.ts', 'themes.d.mts'].map((name) => writeFile(resolve(outDir, name), themeTypesBody)));
+  const emitConfig = resolve(outDir, 'tsconfig.json');
+  await writeFile(emitConfig, JSON.stringify({ extends: resolve(packageRoot, 'tsconfig.build.json'), compilerOptions: { rootDirs: [resolve(packageRoot, 'src'), outDir] } }));
   const tsc = resolve(dirname(createRequire(import.meta.url).resolve('typescript/package.json')), 'bin/tsc');
-  const build = spawnSync(process.execPath, [tsc, '-p', 'tsconfig.build.json', '--outDir', outDir], { cwd: packageRoot, encoding: 'utf8' });
+  const build = spawnSync(process.execPath, [tsc, '-p', emitConfig, '--outDir', outDir], { cwd: packageRoot, encoding: 'utf8' });
   if (build.status !== 0) throw new Error(`MUXUI_REACT_TYPESCRIPT_BUILD_FAILED:\n${build.stdout}${build.stderr}`);
   const emitted = new Map(await Promise.all(typeScriptSources.map(async (source) => {
     const stem = resolve(outDir, source.slice('packages/react/src/'.length).replace(/\.ts$/u, ''));
@@ -58,10 +81,6 @@ const typeScriptBuild = await emitTypeScript();
 const derivedApis = await deriveApis({ packageRoot, repositoryRoot, declarationRoot: typeScriptBuild?.outDir });
 // The exact React Aria Components pin; the generated compatibility record and README follow it.
 const racVersion = manifest.dependencies['react-aria-components'];
-const tokenPath = resolve(repositoryRoot, 'catalog/tokens/default-theme.json');
-const tokenRaw = await readFile(tokenPath);
-const tokenSha256 = createHash('sha256').update(tokenRaw).digest('hex');
-const tokenSource = JSON.parse(tokenRaw);
 const upstreamSnapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/upstream-snapshot.json'), 'utf8'));
 const upstreamExportsRaw = await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/upstream-exports.json'));
 const upstreamExports = JSON.parse(upstreamExportsRaw);
@@ -355,23 +374,19 @@ const themeCssBody = scalePresetCompilations.flatMap(({ preset, variants }) => [
   themeBlock(`[data-muxui-theme='${preset.id}'][data-muxui-color-scheme='dark'][data-muxui-contrast='more']`, variants.darkMore),
 ]).join('\n\n');
 const themeMetadata = scalePresetCompilations.map(({ preset }) => preset);
+// What a picker's swatch paints: each preset's action background in each colour scheme (contrast does not change it).
+// A sibling of the presets, so their fields stay as the token compiler builds them.
+const themeActionBackgrounds = Object.fromEntries(scalePresetCompilations.map(({ preset, variants }) => [preset.id, {
+  light: cssValue(variants.lightStandard.compiled.tokens['semantic.action.background']),
+  dark: cssValue(variants.darkStandard.compiled.tokens['semantic.action.background']),
+}]));
 const themeIds = themeMetadata.map(({ id }) => id);
 const themeCollection = themeMetadata.map(({ collection }) => collection);
 const expectedThemePresetCount = tokenSource.theme.scale.standardPresets.length + tokenSource.theme.scale.monochromePresets.length;
 if (new Set(themeIds).size !== themeIds.length || new Set(themeCollection).size !== 2 || themeMetadata.length !== expectedThemePresetCount) {
   throw new Error('MUXUI_REACT_THEME_PRESET_INVENTORY_INVALID');
 }
-const themeRuntimeBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const MUXUI_THEME_PRESETS = /*#__PURE__*/ deepFreeze(${canonicalJson(themeMetadata)});\nexport const MUXUI_THEME_PRESETS_BY_ID = /*#__PURE__*/ deepFreeze(/*#__PURE__*/ Object.fromEntries(/*#__PURE__*/ MUXUI_THEME_PRESETS.map((preset) => [preset.id, preset])));\nexport const MUXUI_DEFAULT_THEME_PRESET_ID = 'standard-${tokenSource.theme.scale.defaults.standard}';\n`;
-const themeTypesBody = `export type MuxUIThemeCollection = 'standard' | 'monochrome';
-export type MuxUIStandardThemeId = ${tokenSource.theme.scale.standardPresets.map(({ id }) => `'standard-${id}'`).join(' | ')};
-export type MuxUIMonochromeThemeId = ${tokenSource.theme.scale.monochromePresets.map(({ id }) => `'monochrome-${id}'`).join(' | ')};
-export type MuxUIThemeId = MuxUIStandardThemeId | MuxUIMonochromeThemeId;
-export interface MuxUIThemeSwatch { readonly primary: string; readonly secondary: string; }
-export interface MuxUIThemePreset { readonly id: MuxUIThemeId; readonly presetId: string; readonly name: string; readonly description: string; readonly collection: MuxUIThemeCollection; readonly swatch: MuxUIThemeSwatch; }
-export declare const MUXUI_THEME_PRESETS: readonly MuxUIThemePreset[];
-export declare const MUXUI_THEME_PRESETS_BY_ID: Readonly<Record<MuxUIThemeId, MuxUIThemePreset>>;
-export declare const MUXUI_DEFAULT_THEME_PRESET_ID: MuxUIThemeId;
-`;
+const themeRuntimeBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const MUXUI_THEME_PRESETS = /*#__PURE__*/ deepFreeze(${canonicalJson(themeMetadata)});\nexport const MUXUI_THEME_PRESETS_BY_ID = /*#__PURE__*/ deepFreeze(/*#__PURE__*/ Object.fromEntries(/*#__PURE__*/ MUXUI_THEME_PRESETS.map((preset) => [preset.id, preset])));\nexport const MUXUI_THEME_ACTION_BACKGROUNDS = /*#__PURE__*/ deepFreeze(${canonicalJson(themeActionBackgrounds)});\nexport const MUXUI_DEFAULT_THEME_PRESET_ID = 'standard-${tokenSource.theme.scale.defaults.standard}';\n`;
 
 const cssBody = `${baseTheme.theme.css.trim()}\n\n${responsiveBlock}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='ltr'] { direction: ltr; }\n[data-muxui-direction='rtl'] { direction: rtl; }`;
 

@@ -19,6 +19,8 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     ['.muxui-color-wheel__track[data-muxui-color-paint="track"]', ['background-image']],
     ['.muxui-color-wheel__thumb-face[data-muxui-color-paint="sample"]', ['background-color']],
     ['.muxui-color-swatch[data-muxui-color-paint="sample"]', ['background-color', 'background-image']],
+    // A theme swatch paints the preset's own action background, which the preset carries inline.
+    ['.muxui-theme-picker__swatch[data-muxui-color-paint="sample"]', ['background-color']],
   ];
 
   function ownsDynamicColorPaint(element, pseudo, property) {

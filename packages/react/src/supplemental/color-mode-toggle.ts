@@ -2,9 +2,11 @@ import React from 'react';
 import type { ForwardRefExoticComponent, LabelHTMLAttributes, RefAttributes } from 'react';
 import { AriaSwitch } from '../substrate.ts';
 import type { SwitchProps as AriaSwitchProps } from 'react-aria-components';
+import { useColorMode } from './color-mode.ts';
+import type { ColorMode } from './color-mode.ts';
 import { h, cx } from './part-utils.ts';
 
-export type ColorMode = 'light' | 'dark';
+export type { ColorMode };
 
 /**
  * The props Mux UI defines for ColorModeToggle; the catalog's web.react API is derived from
@@ -36,30 +38,12 @@ export const ColorModeToggle: ForwardRefExoticComponent<ColorModeToggleProps & R
   children,
   ...props
 }, ref) {
-  // Keep the first render deterministic so an SSR light default hydrates
-  // cleanly before browser-only storage or OS preference restoration runs.
-  const [internalMode, setInternalMode] = React.useState<ColorMode>(defaultMode === undefined || defaultMode === null ? 'light' : defaultMode);
-  React.useEffect(() => {
-    let nextMode = defaultMode;
-    try {
-      const saved = window.localStorage.getItem(storageKey);
-      if (saved === 'light' || saved === 'dark') nextMode = saved;
-    } catch {
-      // Storage can be disabled by privacy settings; OS/default mode still works.
-    }
-    nextMode ??= window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    setInternalMode((previous) => previous === nextMode ? previous : nextMode);
-  }, [defaultMode, storageKey]);
-  const currentMode = mode === undefined || mode === null ? internalMode : mode;
-  React.useEffect(() => {
-    if (typeof document !== 'undefined') document.documentElement.setAttribute('data-muxui-color-scheme', currentMode);
-    try { window.localStorage.setItem(storageKey, currentMode); } catch { /* best effort */ }
-  }, [currentMode, storageKey]);
+  const { choice, select } = useColorMode({ mode, defaultMode, storageKey, followSystem: false });
   const update = (selected: boolean) => {
     const next = selected ? 'dark' : 'light';
-    if (mode === undefined) setInternalMode(next);
+    select(next);
     onModeChange?.(next);
   };
   // React Aria's props type the handlers on Element, and these on the label; the rest is the label's native attributes.
-  return h(AriaSwitch, { ...(props as AriaSwitchProps), ref, 'aria-label': props['aria-label'] ?? 'Toggle dark mode', isSelected: currentMode === 'dark', isDisabled: disabled, onChange: update, className: cx('muxui-color-mode-toggle', className), ...{ 'data-muxui-mode': currentMode } }, children);
+  return h(AriaSwitch, { ...(props as AriaSwitchProps), ref, 'aria-label': props['aria-label'] ?? 'Toggle dark mode', isSelected: choice === 'dark', isDisabled: disabled, onChange: update, className: cx('muxui-color-mode-toggle', className), ...{ 'data-muxui-mode': choice } }, children);
 });

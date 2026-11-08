@@ -1,0 +1,135 @@
+.muxui-theme-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--muxui-semantic-layout-section-gap);
+  box-sizing: border-box;
+  min-inline-size: 0;
+  color: var(--muxui-semantic-content-default);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-s-font-size);
+  line-height: var(--muxui-semantic-typography-text-line-height);
+}
+
+.muxui-theme-picker__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--muxui-semantic-layout-action-gap);
+}
+
+.muxui-theme-picker__heading {
+  padding-inline: var(--muxui-semantic-layout-inset-tight);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+}
+
+.muxui-theme-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--muxui-semantic-layout-content-gap) var(--muxui-semantic-layout-tight-gap);
+}
+
+.muxui-theme-picker__option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-control-content-gap);
+  min-inline-size: 0;
+  padding: var(--muxui-semantic-layout-inset-tight) 0;
+  border-radius: var(--muxui-semantic-shape-option-radius);
+  outline: none;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* Random is a full-width row of its own, with the glyph where a preset has its colour. */
+.muxui-theme-picker__option--random {
+  flex-direction: row;
+  align-items: center;
+  padding: var(--muxui-semantic-layout-inset-tight);
+  text-align: start;
+}
+
+.muxui-theme-picker__swatch {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  inline-size: calc(var(--muxui-semantic-control-size-md) * 0.75);
+  block-size: calc(var(--muxui-semantic-control-size-md) * 0.75);
+  border: 1px solid var(--muxui-semantic-border-default);
+  border-radius: var(--muxui-semantic-shape-pill-radius);
+  background-clip: padding-box;
+  transition: box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
+}
+
+/* A preset swatch paints the action background of the nearest colour scheme, from the colours it carries inline. */
+.muxui-theme-picker__swatch[data-muxui-color-paint] {
+  background-color: var(--muxui-theme-picker-swatch-light);
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-theme-picker__swatch[data-muxui-color-paint] {
+    background-color: var(--muxui-theme-picker-swatch-dark);
+  }
+}
+
+.muxui-theme-picker__name {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.muxui-theme-picker__option[data-muxui-state-hovered]:not([data-muxui-state-selected]) .muxui-theme-picker__swatch {
+  box-shadow: 0 0 0 2px var(--muxui-semantic-border-indicator);
+}
+
+.muxui-theme-picker__option[data-muxui-state-selected] .muxui-theme-picker__swatch {
+  box-shadow:
+    0 0 0 2px var(--muxui-semantic-focus-inner),
+    0 0 0 4px var(--muxui-semantic-selection-track);
+}
+
+.muxui-theme-picker__option[data-muxui-state-focus-visible] {
+  outline: 2px solid var(--muxui-semantic-focus-ring);
+  outline-offset: 2px;
+}
+
+.muxui-theme-picker__option[data-muxui-state-disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (forced-colors: active) {
+  /* The swatch is the theme's colour, so forced colours keep it and outline it. */
+  .muxui-theme-picker__swatch {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+
+  .muxui-theme-picker__option[data-muxui-state-hovered]:not([data-muxui-state-selected]) .muxui-theme-picker__swatch {
+    box-shadow: none;
+  }
+
+  .muxui-theme-picker__option[data-muxui-state-selected] .muxui-theme-picker__swatch {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .muxui-theme-picker__option[data-muxui-state-focus-visible] {
+    outline-color: Highlight;
+  }
+
+  .muxui-theme-picker__option[data-muxui-state-disabled] {
+    color: GrayText;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muxui-theme-picker__swatch {
+    transition: none;
+  }
+}
+
+:where([data-muxui-motion='reduced']) .muxui-theme-picker__swatch {
+  transition: none;
+}
