@@ -514,6 +514,17 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     assert.equal(await page.locator('#muxui-applied-theme').count(), 0);
     assert.equal(await page.locator('html').evaluate((node) => node.classList.contains('muxui-applied-theme')), false);
 
+    // A site theme stored for the previous contract is reported with both versions and the guide, and stays in storage.
+    const previousContract = JSON.stringify({ ...createScaleDocument({ ...DEFAULT_SETTINGS }, { slug: 'previous-contract' }), tokenContractVersion: '7.0.0' });
+    await page.evaluate((value) => localStorage.setItem('muxui-scale:applied:v1', value), previousContract);
+    await page.reload();
+    await waitForScale(page);
+    await page.getByRole('alert').filter({ hasText: 'Saved site theme rejected: MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7.0.0, required 8.0.0. See the token contract migration guide.' }).waitFor();
+    assert.equal(await page.evaluate(() => localStorage.getItem('muxui-scale:applied:v1')), previousContract);
+    await page.evaluate(() => localStorage.removeItem('muxui-scale:applied:v1'));
+    await page.reload();
+    await waitForScale(page);
+
     const restricted = createScaleDocument({ ...DEFAULT_SETTINGS }, { slug: 'restricted-motion' });
     restricted.modes = { colorScheme: ['light', 'dark'], contrast: ['standard', 'more'], motion: ['full'], density: ['comfortable', 'compact'], direction: ['ltr', 'rtl'] };
     const restrictedContext = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'light', reducedMotion: 'reduce' });

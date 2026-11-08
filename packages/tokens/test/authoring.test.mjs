@@ -71,9 +71,18 @@ test('documents, sources and Scale generation stay on the canonical token contra
   assert.throws(() => compileScalePresetTheme({ source: offContract, presetId: 'harbour' }), /MUXUI_THEME_CONTRACT_INVALID/u);
 });
 
-test('authoring documents written for the previous contract version are rejected', () => {
+test('authoring documents written for the previous contract version are rejected with the versions and the guide to read', () => {
   assert.equal(source.tokenContractVersion, '8.0.0');
-  assert.throws(() => validateThemeAuthoringDocument({ ...base, tokenContractVersion: '7.0.0', overrides: {} }, { source }), /MUXUI_THEME_CONTRACT_INVALID/u);
+  assert.throws(
+    () => validateThemeAuthoringDocument({ ...base, tokenContractVersion: '7.0.0', overrides: {} }, { source }),
+    { message: 'MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7.0.0, required 8.0.0. See the token contract migration guide.' },
+  );
+  assert.throws(() => validateThemeAuthoringDocument({ ...base, tokenContractVersion: undefined, overrides: {} }, { source }), /MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion undefined, required 8\.0\.0/u);
+  // An off-contract source is a different fault, so it names the source and no guide.
+  assert.throws(
+    () => validateThemeAuthoringDocument({ ...base, overrides: {} }, { source: { ...source, tokenContractVersion: '7.0.0' } }),
+    { message: 'MUXUI_THEME_CONTRACT_INVALID: source declares tokenContractVersion 7.0.0, required 8.0.0' },
+  );
 });
 
 test('authoring documents that override a removed motion easing token are rejected', () => {

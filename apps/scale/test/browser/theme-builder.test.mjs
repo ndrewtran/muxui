@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -459,6 +459,10 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     await page.locator('input[type=file]').setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...document, unknown: true })) });
     await page.getByRole('status').filter({ hasText: 'Import rejected' }).waitFor();
     assert.deepEqual(await settingsIn(page), importedSettings);
+    const previousContract = 'document declares tokenContractVersion 7.0.0, required 8.0.0. See the token contract migration guide.';
+    await page.locator('input[type=file]').setInputFiles({ name: 'previous-contract.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ ...document, tokenContractVersion: '7.0.0' })) });
+    await page.getByRole('status').filter({ hasText: `Import rejected: MUXUI_THEME_CONTRACT_INVALID: ${previousContract}` }).waitFor();
+    assert.deepEqual(await settingsIn(page), importedSettings, 'a rejected import changes nothing');
     // FileTrigger resets its picker before each press, so the same file can be imported again.
     for (let attempt = 0; attempt < 2; attempt += 1) {
       await page.getByRole('button', { name: 'Copy CSS', exact: true }).click();
@@ -481,6 +485,15 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     await page.waitForFunction(() => document.querySelector('[role=status]').textContent === 'Saved browser-theme.');
     const savedPath = join(workspaceRoot, 'catalog/tokens/themes/browser-theme.json');
     assert.deepEqual(JSON.parse(await readFile(savedPath, 'utf8')), document);
+    // A saved file from the previous contract is reported with both versions, and Load leaves it as it is.
+    const stalePath = join(workspaceRoot, 'catalog/tokens/themes/previous-contract.json');
+    const staleText = `${JSON.stringify({ ...document, id: 'muxui:theme:previous-contract', tokenContractVersion: '7.0.0' })}\n`;
+    await writeFile(stalePath, staleText);
+    await page.getByRole('textbox', { name: 'Theme slug', exact: true }).fill('previous-contract');
+    await page.getByRole('button', { name: 'Load', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: `MUXUI_THEME_CONTRACT_INVALID: ${previousContract}` }).waitFor();
+    assert.equal(await readFile(stalePath, 'utf8'), staleText);
+    await page.getByRole('textbox', { name: 'Theme slug', exact: true }).fill('browser-theme');
 
     const downloaded = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Export JSON', exact: true }).click();

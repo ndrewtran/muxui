@@ -34,6 +34,10 @@ function assertKeys(value, allowed, path) {
 }
 function assertHex(value, path) { if (typeof value !== 'string' || !HEX.test(value)) throw new TypeError(`MUXUI_THEME_COLOR_INVALID: ${path}`); }
 function assertContrastAlgorithm(value) { if (!CONTRAST_ALGORITHMS.includes(value)) throw new TypeError('MUXUI_THEME_SCALE_ALGORITHM_INVALID'); }
+// A contract mismatch names the version found and the one required, so a caller can say what to change.
+function contractError(subject, found, required, hint = '') {
+  return new TypeError(`MUXUI_THEME_CONTRACT_INVALID: ${subject} declares tokenContractVersion ${typeof found === 'string' ? found.slice(0, 32) : typeof found}, required ${required}${hint}`);
+}
 function assertFinite(value, path) { if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError(`MUXUI_THEME_NUMBER_INVALID: ${path}`); }
 
 function canonicalize(value) {
@@ -77,7 +81,7 @@ function validateTypedValue(value, token, path) {
 function assertSource(source, document) {
   if (!isRecord(source) || !isRecord(source.tokens) || !isRecord(source.theme) || !isRecord(source.theme.modeAxes) || !isRecord(source.theme.defaultModes)) throw new TypeError('MUXUI_THEME_SOURCE_REQUIRED');
   if (source.id !== document.source) throw new TypeError('MUXUI_THEME_SOURCE_INVALID');
-  if (source.tokenContractVersion !== document.tokenContractVersion) throw new TypeError('MUXUI_THEME_CONTRACT_INVALID');
+  if (source.tokenContractVersion !== document.tokenContractVersion) throw contractError('source', source.tokenContractVersion, document.tokenContractVersion);
   assertSourceMetadata(source);
 }
 
@@ -173,7 +177,7 @@ export function validateThemeAuthoringDocument(document, { source } = {}) {
   if (document.schema !== 'muxui-theme-authoring-v1') throw new TypeError('MUXUI_THEME_SCHEMA_INVALID');
   if (typeof document.id !== 'string' || !/^muxui:theme:[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(document.id)) throw new TypeError('MUXUI_THEME_ID_INVALID');
   if (document.source !== 'muxui:token:default-theme') throw new TypeError('MUXUI_THEME_SOURCE_INVALID');
-  if (document.tokenContractVersion !== TOKEN_CONTRACT_VERSION) throw new TypeError('MUXUI_THEME_CONTRACT_INVALID');
+  if (document.tokenContractVersion !== TOKEN_CONTRACT_VERSION) throw contractError('document', document.tokenContractVersion, TOKEN_CONTRACT_VERSION, '. See the token contract migration guide.');
   assertSource(source, document);
   assertKeys(document.modes, MODE_AXES, 'document.modes');
   for (const axis of MODE_AXES) {
