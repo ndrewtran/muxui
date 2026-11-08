@@ -180,7 +180,7 @@ test('Scale defaults, validates and round-trips the contrast method', () => {
   const settings = { ...DEFAULT_SETTINGS, contrastAlgorithm: APCA };
   const document = createScaleDocument(settings, { slug: 'apca-method' });
   assert.equal(document.scale.contrastAlgorithm, APCA);
-  assert.equal(document.overrides['semantic.color.color-40-fg'].value, '#f2f9fb');
+  assert.equal(document.overrides['semantic.color.color-40-fg'].value, '#f7fbfc');
   const restored = settingsFromDocument(JSON.parse(serializeScaleDocument(document)));
   assert.equal(restored.contrastAlgorithm, APCA);
   assert.deepEqual(createScaleDocument(restored, { slug: 'apca-method' }), document);
@@ -223,17 +223,17 @@ test('an imported shade override changes the readout background while the active
   assert.deepEqual(settings.additionalOverrides['semantic.color.color-40'], override);
   const read = (algorithm) => previewSwatches(previewTheme({ ...settings, contrastAlgorithm: algorithm }), 'named', [40], { pivot: settings.contrastPivot, algorithm })[0];
   const wcag = read(WCAG);
-  // The generated foreground is untouched (dark Harbour text), so on the new black it really is 1.26:1.
-  assert.deepEqual([wcag.background, wcag.foreground, wcag.label, wcag.badge], ['#000000', '#00222a', '1.26:1', 'Fail']);
+  // The generated foreground is untouched (dark Harbour text), so on the new black it really is 1.19:1.
+  assert.deepEqual([wcag.background, wcag.foreground, wcag.label, wcag.badge], ['#000000', '#001c23', '1.19:1', 'Fail']);
   assert.deepEqual(wcag.methods.map(({ algorithm, text, label, badge }) => [algorithm, text, label, badge]), [
-    [WCAG, '#00222a', '1.26:1', 'Fail'],
-    [APCA, '#f2f9fb', 'Lc 103', '75+'],
+    [WCAG, '#001c23', '1.19:1', 'Fail'],
+    [APCA, '#f7fbfc', 'Lc 105', '75+'],
   ]);
   const apca = read(APCA);
-  assert.deepEqual([apca.background, apca.foreground, apca.label, apca.badge], ['#000000', '#f2f9fb', 'Lc 103', '75+']);
+  assert.deepEqual([apca.background, apca.foreground, apca.label, apca.badge], ['#000000', '#f7fbfc', 'Lc 105', '75+']);
   assert.deepEqual(apca.methods.map(({ algorithm, text, label, badge }) => [algorithm, text, label, badge]), [
-    [WCAG, '#f2f9fb', '19.72:1', 'AAA'],
-    [APCA, '#f2f9fb', 'Lc 103', '75+'],
+    [WCAG, '#f7fbfc', '20.16:1', 'AAA'],
+    [APCA, '#f7fbfc', 'Lc 105', '75+'],
   ]);
 });
 
@@ -257,9 +257,9 @@ test('translucent shade overrides read as n/a without a badge instead of failing
   }
   // A translucent endpoint leaves the active scores but cannot choose the other method's text.
   const endpoint = read(settingsWith({ 'semantic.color.color-5': '#ffffff80' }), WCAG, [5, 40]);
-  assert.deepEqual(rows(endpoint[0]), [['#00222a', null, 'n/a', null], [null, null, 'n/a', null]]);
-  assert.equal(endpoint[1].label, '4.71:1');
-  assert.deepEqual(rows(endpoint[1]).map(([text, , label]) => [text, label]), [['#00222a', '4.71:1'], [null, 'n/a']]);
+  assert.deepEqual(rows(endpoint[0]), [['#001c23', null, 'n/a', null], [null, null, 'n/a', null]]);
+  assert.equal(endpoint[1].label, '4.99:1');
+  assert.deepEqual(rows(endpoint[1]).map(([text, , label]) => [text, label]), [['#001c23', '4.99:1'], [null, 'n/a']]);
   // A mix toward a transparent colour compiles to a translucent value too.
   const mixed = createScaleDocument({ ...DEFAULT_SETTINGS, additionalOverrides: { 'semantic.color.color-40': { type: 'color', unit: 'hex', value: '#648f9b', mix: { space: 'srgb', token: 'reference.color.brand-60', weight: 0.5, color: '#00000000' } } } }, { slug: 'mixed-shade' });
   const [mixedSwatch] = read(settingsFromDocument(mixed), APCA, [40]);
@@ -267,29 +267,59 @@ test('translucent shade overrides read as n/a without a badge instead of failing
   assert.deepEqual([mixedSwatch.label, mixedSwatch.badge], ['n/a', null]);
 });
 
+// The recovery recipe from catalog/guides/token-migration.md.
+function recover(document) {
+  const { assignments } = generateScaleTheme({ source, ...document.scale });
+  const kept = Object.fromEntries(Object.entries(document.overrides).filter(([id]) => !Object.hasOwn(assignments, id)));
+  return { ...document, tokenContractVersion: source.tokenContractVersion, overrides: { ...kept, ...assignments } };
+}
+
+const MIGRATION_SETTINGS = { ...DEFAULT_SETTINGS, family: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#878685', whiteAnchor: false, contrastPivot: 'auto', curvature: 1,
+  additionalOverrides: { 'semantic.typography.display-font-weight': { type: 'number', unit: 'unitless', value: 700 } },
+  themeModes: { colorScheme: ['dark'], contrast: ['standard', 'more'], motion: ['reduced'], density: ['compact'], direction: ['ltr'] } };
+
 test('Scale rejects a 7.0.0 document with both versions and the guide, and imports it once its assignments are regenerated', () => {
-  const settings = { ...DEFAULT_SETTINGS, family: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#878685', whiteAnchor: false, contrastPivot: 'auto', curvature: 1,
-    additionalOverrides: { 'semantic.typography.display-font-weight': { type: 'number', unit: 'unitless', value: 700 } },
-    themeModes: { colorScheme: ['dark'], contrast: ['standard', 'more'], motion: ['reduced'], density: ['compact'], direction: ['ltr'] } };
+  const settings = MIGRATION_SETTINGS;
   const current = createScaleDocument(settings, { slug: 'previous-contract' });
   // 7.0.0 gave neutral Auto the fixed pivot 60, so its shade-60 foreground was the light endpoint.
+  const light = current.overrides['reference.color.neutral-5'].value;
   const written = structuredClone(current);
   written.tokenContractVersion = '7.0.0';
-  written.overrides['semantic.color.neutral-60-fg'].value = '#f9f7f5';
-  assert.notEqual(current.overrides['semantic.color.neutral-60-fg'].value, '#f9f7f5');
+  written.overrides['semantic.color.neutral-60-fg'].value = light;
+  assert.notEqual(current.overrides['semantic.color.neutral-60-fg'].value, light);
   const before = structuredClone(written);
 
   assert.throws(() => validateScaleDocument(written), { message: 'MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7.0.0, required 8.0.0. See the token contract migration guide.' });
   assert.throws(() => settingsFromDocument({ ...written, tokenContractVersion: source.tokenContractVersion }), /MUXUI_THEME_SCALE_ASSIGNMENT_INVALID: semantic\.color\.neutral-60-fg/u);
   assert.deepEqual(written, before, 'rejecting a document does not rewrite it');
 
-  const { assignments } = generateScaleTheme({ source, ...written.scale });
-  const kept = Object.fromEntries(Object.entries(written.overrides).filter(([id]) => !Object.hasOwn(assignments, id)));
-  const migrated = { ...written, tokenContractVersion: source.tokenContractVersion, overrides: { ...kept, ...assignments } };
-  const restored = settingsFromDocument(migrated);
+  const restored = settingsFromDocument(recover(written));
   assert.deepEqual(restored.additionalOverrides, settings.additionalOverrides);
   assert.deepEqual(restored.themeModes, settings.themeModes);
   assert.deepEqual(createScaleDocument(restored, { slug: 'previous-contract' }), current);
+});
+
+test('Scale rejects a 7.0.0 Harbour document with muxui-oklch-v1 palettes, and imports it once they are regenerated', () => {
+  const settings = { ...MIGRATION_SETTINGS, neutralColor: '#79716b' };
+  const current = createScaleDocument(settings, { slug: 'previous-palettes' });
+  // The six Harbour shades that muxui-oklch-v2 changes, as 7.0.0 stored them.
+  const v1 = { 'brand-5': '#f2f9fb', 'brand-30': '#8cacb6', 'brand-100': '#00222a', 'neutral-5': '#faf7f5', 'neutral-50': '#9e9792', 'neutral-100': '#2c2825' };
+  const written = structuredClone(current);
+  written.tokenContractVersion = '7.0.0';
+  for (const [name, value] of Object.entries(v1)) {
+    assert.notEqual(current.overrides[`reference.color.${name}`].value, value, name);
+    written.overrides[`reference.color.${name}`].value = value;
+  }
+  const before = structuredClone(written);
+
+  assert.throws(() => validateScaleDocument(written), { message: 'MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7.0.0, required 8.0.0. See the token contract migration guide.' });
+  assert.throws(() => settingsFromDocument({ ...written, tokenContractVersion: source.tokenContractVersion }), /MUXUI_THEME_SCALE_ASSIGNMENT_INVALID: reference\.color\.brand-5/u);
+  assert.deepEqual(written, before, 'rejecting a document does not rewrite it');
+
+  const restored = settingsFromDocument(recover(written));
+  assert.deepEqual(restored.additionalOverrides, settings.additionalOverrides);
+  assert.deepEqual(restored.themeModes, settings.themeModes);
+  assert.deepEqual(createScaleDocument(restored, { slug: 'previous-palettes' }), current);
 });
 
 test('neutral Auto follows the contrast method like the named palette', () => {
@@ -310,14 +340,18 @@ test('swatch readouts name the score and badge each method reports', () => {
     const settings = { ...DEFAULT_SETTINGS, contrastAlgorithm };
     return previewSwatches(previewTheme(settings), 'named', [step], { pivot: settings.contrastPivot, algorithm: contrastAlgorithm })[0];
   };
-  // Harbour light 40 is #648f9b: WCAG picks dark text at 4.71:1, APCA light text at Lc 64.
+  // Harbour light 40 is #648f9b: WCAG picks dark text at 4.99:1, APCA light text at Lc 65.
   const wcag = swatch(WCAG, 40);
-  assert.deepEqual([wcag.value, wcag.foreground, wcag.label, wcag.badge], ['#648f9b', '#00222a', '4.71:1', 'AA']);
-  assert.deepEqual(wcag.methods.map(({ name, text, label, badge }) => [name, text, label, badge]), [['WCAG 2', '#00222a', '4.71:1', 'AA'], ['APCA', '#f2f9fb', 'Lc 64', '60+']]);
+  assert.deepEqual([wcag.value, wcag.foreground, wcag.label, wcag.badge], ['#648f9b', '#001c23', '4.99:1', 'AA']);
+  assert.deepEqual(wcag.methods.map(({ name, text, label, badge }) => [name, text, label, badge]), [['WCAG 2', '#001c23', '4.99:1', 'AA'], ['APCA', '#f7fbfc', 'Lc 65', '60+']]);
   const apca = swatch(APCA, 40);
-  assert.deepEqual([apca.foreground, apca.label, apca.badge], ['#f2f9fb', 'Lc 64', '60+']);
-  assert.deepEqual(apca.methods.map(({ text }) => text), ['#00222a', '#f2f9fb']);
-  assert.deepEqual([swatch(APCA, 30).label, swatch(APCA, 30).badge], ['Lc 54', '45+']);
+  assert.deepEqual([apca.foreground, apca.label, apca.badge], ['#f7fbfc', 'Lc 65', '60+']);
+  assert.deepEqual(apca.methods.map(({ text }) => text), ['#001c23', '#f7fbfc']);
+  // Tuning lifted shade 30 to the Lc 60 line; a recoloured grey in the dead band still reads 45+.
+  assert.deepEqual([swatch(APCA, 30).label, swatch(APCA, 30).badge], ['Lc 60', '60+']);
+  const grey = { ...DEFAULT_SETTINGS, contrastAlgorithm: APCA, additionalOverrides: { 'semantic.color.color-30': { type: 'color', unit: 'hex', value: '#9c9c9c' } } };
+  const [dead] = previewSwatches(previewTheme(grey), 'named', [30], { pivot: 'auto', algorithm: APCA });
+  assert.deepEqual([dead.foreground, dead.label, dead.badge], ['#001c23', 'Lc 49', '45+']);
   assert.equal(swatch(APCA, 100).badge, '75+');
   assert.equal(swatch(WCAG, 100).badge, 'AAA');
   assert.throws(() => previewSwatches(previewTheme(DEFAULT_SETTINGS), 'named', [40], { pivot: 'auto', algorithm: 'wcag3' }), /contrastAlgorithm/u);

@@ -309,7 +309,7 @@
       }
     },
     "scale": {
-      "algorithm": "muxui-oklch-v1",
+      "algorithm": "muxui-oklch-v2",
       "namedShades": [
         5,
         10,
