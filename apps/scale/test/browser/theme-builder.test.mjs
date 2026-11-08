@@ -83,7 +83,11 @@ async function openExport(page) {
 async function closeExport(page) {
   await page.keyboard.press('Escape');
   await page.getByRole('dialog', { name: 'Export theme', exact: true }).waitFor({ state: 'hidden' });
-  assert.equal(await page.getByRole('button', { name: 'Export', exact: true }).evaluate((node) => node === document.activeElement), true, 'closing export restores its trigger focus');
+  // React Aria restores focus in a requestAnimationFrame callback, and a page that is not in front can run frames about once a second on Linux, so
+  // the check polls on a timer rather than in frames and still requires the trigger to be focused.
+  const trigger = await page.getByRole('button', { name: 'Export', exact: true }).elementHandle();
+  const restored = await page.waitForFunction((node) => node === document.activeElement, trigger, { polling: 50, timeout: 2000 }).then(() => true, () => false);
+  assert.equal(restored, true, 'closing export restores its trigger focus');
 }
 
 async function choosePreset(page, name) {
@@ -522,6 +526,8 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     const savedAgainResponse = await savedAgain;
     assert.equal(savedAgainResponse.status(), 200, await savedAgainResponse.text());
     await second.waitForFunction(() => document.querySelector('[role=status]').textContent === 'Saved browser-theme.');
+    // The second page was in front; a page behind it runs frames slowly, which the later focus and animation checks would wait on.
+    await page.bringToFront();
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('[role=status]').textContent.includes('has changed'));
     const latest = JSON.parse(await readFile(savedPath, 'utf8'));

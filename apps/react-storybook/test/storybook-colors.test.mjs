@@ -1144,6 +1144,8 @@ async function runColourWorker({ browser, schemes, workerId }) {
       assert.equal(await locator.evaluate((element) => element.matches(':focus-visible')), true, `${label}: keyboard focus-visible`);
       await snapshot(scheme, `${label}/focus`);
     }
+    // Resolves to the settled paint. A component colour transitions for the state-transition duration after hover(), so a read
+    // straight after the hover samples a mid-transition frame: wait here (bounded) for the token instead of reading once.
     async function tokenPaint(scheme, locator, property, tokenId) {
       const result = await locator.evaluate(async (element, { property, value }) => {
         const probe = document.createElement('span');
@@ -1156,6 +1158,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
         return { actual: getComputedStyle(element)[property], expected };
       }, { property, value: graphs[scheme][tokenId].value });
       assert.equal(result.actual, result.expected, `${scheme}: ${property} must use ${tokenId}`);
+      return result.actual;
     }
     for (const scheme of schemes) {
       // Keep the manager's real loading overlay mounted by holding its index
@@ -1699,7 +1702,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
       await canvasLink.waitFor();
       const canvasLinkColor = await canvasLink.evaluate((element) => getComputedStyle(element).color);
       await canvasLink.hover();
-      const canvasLinkHoverColor = await canvasLink.evaluate((element) => getComputedStyle(element).color);
+      const canvasLinkHoverColor = await tokenPaint(scheme, canvasLink, 'color', 'semantic.content.link-hover');
       const docs = page.frameLocator('#storybook-preview-iframe');
       // Storybook 10.5 remounts Docs examples on globals updates. A pending
       // example teardown can reload the iframe and discard the next click.
@@ -1772,7 +1775,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
       assert.ok(link.token, 'Embedded component must retain its own Mux token context');
       assert.equal(link.color, canvasLinkColor, 'Docs chrome must not recolour the embedded component');
       await docs.locator('.muxui-breadcrumbs a').first().hover();
-      const docsLinkHoverColor = await docs.locator('.muxui-breadcrumbs a').first().evaluate((element) => getComputedStyle(element).color);
+      const docsLinkHoverColor = await tokenPaint(scheme, docs.locator('.muxui-breadcrumbs a').first(), 'color', 'semantic.content.link-hover');
       assert.equal(docsLinkHoverColor, canvasLinkHoverColor, 'Docs chrome must preserve component hover');
       report.states.push({ scheme, state: 'docs/embedded-component', ...link, hoverColor: docsLinkHoverColor });
     }
