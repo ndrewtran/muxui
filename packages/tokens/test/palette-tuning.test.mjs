@@ -74,6 +74,28 @@ test('tuned lightness stays strictly monotonic from shade 5 to shade 100', () =>
   }
 });
 
+test('a moved shade keeps the neighbour lightness margin in its emitted hex', () => {
+  const margin = (palette, raw, label) => palette.forEach(({ shade: number, hex }, index) => {
+    if (index === 0 || index === palette.length - 1 || hex === raw[index].hex) return;
+    assert.ok(lightness(palette[index - 1].hex) - lightness(hex) > 0.004, `${label} ${number} above`);
+    assert.ok(lightness(hex) - lightness(palette[index + 1].hex) > 0.004, `${label} ${number} below`);
+  });
+  // On neutral #05f598 the search once took #577863 for shade 88, 0.0034 below shade 90: it checked the margin
+  // on the candidate lightness before gamut clamping and hex rounding moved it.
+  const raw = generatePalette('#05f598', 'neutral', { tune: false });
+  const tuned = generatePalette('#05f598', 'neutral');
+  assert.notEqual(shade(tuned, 88), '#577863');
+  assert.equal(shade(tuned, 88), shade(raw, 88), 'with no emitted hex inside the margin that passes, the shade stays');
+  margin(tuned, raw, '#05f598 neutral');
+  let seed = 11;
+  const channel = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return Math.floor(5 + (seed / 4294967296) * 245).toString(16).padStart(2, '0'); };
+  for (let index = 0; index < 150; index += 1) {
+    const base = `#${channel()}${channel()}${channel()}`;
+    for (const kind of ['named', 'neutral']) margin(generatePalette(base, kind), generatePalette(base, kind, { tune: false }), `${base} ${kind}`);
+    margin(generateMonochromePalette(base), generateMonochromePalette(base, { tune: false }), `${base} monochrome`);
+  }
+});
+
 test('the neutral white anchor survives tuning, in neutral and monochrome palettes', () => {
   const anchored = themeFor(harbour, { whiteAnchor: true }).palettes;
   assert.equal(shade(anchored.neutral, 5), '#ffffff');

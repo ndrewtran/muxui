@@ -345,6 +345,8 @@ const endpointPairs = (palette, kind) => {
 };
 
 // The nearest lightness to `hex` (original chroma and hue) that passes, between the neighbours.
+// Gamut clamping and hex rounding shift the emitted lightness, so the bounds and the pass
+// criteria are checked on the emitted hex, not only on the candidate.
 const findReadableHex = (hex, pairs, lowerL, upperL) => {
   const { l, c, h } = toOklch(hex);
   for (let step = 1; step <= SEARCH_STEPS; step += 1) {
@@ -353,6 +355,8 @@ const findReadableHex = (hex, pairs, lowerL, upperL) => {
     for (const candidate of [l - distance, l + distance]) {
       if (candidate <= lowerL || candidate >= upperL) continue;
       const next = oklchToHex(candidate, c, h);
+      const emitted = toOklch(next).l;
+      if (emitted <= lowerL || emitted >= upperL) continue;
       if (pairs.every((pair) => isReadable(next, pair))) return next;
     }
   }
