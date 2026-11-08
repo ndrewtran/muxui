@@ -99,6 +99,14 @@ export const ThemePicker: ForwardRefExoticComponent<ThemePickerProps & RefAttrib
   const names = repeatedNames(groups);
   const rows = rowsOf(groups, random);
   const options = rows.flat();
+  // React Aria keeps the value of the option that last had focus, and with nothing selected it leaves every other option out of
+  // the tab order while that one is missing. Removing Random starts the group over, so a removed Random cannot hold the tab stop.
+  const [hadRandom, setHadRandom] = React.useState(random);
+  const [generation, setGeneration] = React.useState(0);
+  if (hadRandom !== random) {
+    setHadRandom(random);
+    if (!random) setGeneration(generation + 1);
+  }
   // The selection is held here, not in React Aria, so a chosen Random can be set aside when `random` turns off.
   const controlled = value !== undefined;
   const [internal, setInternal] = React.useState<ThemePickerValue | undefined>(defaultValue);
@@ -139,6 +147,7 @@ export const ThemePicker: ForwardRefExoticComponent<ThemePickerProps & RefAttrib
     children: h(React.Fragment, null, swatch, h('span', { className: 'muxui-theme-picker__name' }, label)),
   });
   return h(AriaRadioGroup, {
+    key: generation,
     ref,
     value: selected,
     onChange: select,

@@ -132,25 +132,30 @@ test('a controlled ThemePicker shows the value it is given and leaves the choice
   });
 });
 
-test('ThemePicker keeps a tab stop when Random is removed while it is chosen, and selects it again if it returns', async () => {
+test('ThemePicker keeps a tab stop when Random is removed while it is chosen or focused, and selects it again if it returns', async () => {
   const tabStops = () => radios().filter((radio) => radio.tabIndex === 0).map((radio) => radio.value);
   // With nothing selected React Aria leaves the group enterable, which a picker that never had a choice shows too.
   let unselected;
   await inPage({}, async () => { unselected = tabStops(); });
   assert.ok(unselected.length > 0, 'a picker with no choice can be entered');
   for (const controlled of [false, true]) {
-    const changes = [];
-    const props = (random) => ({ random, ...(controlled ? { value: 'random' } : {}), onChange: (value) => changes.push(value) });
-    await inPage(props(true), async ({ render }) => {
-      if (!controlled) await act(async () => radios().find((radio) => radio.value === 'random').click());
-      assert.deepEqual([checked(), tabStops()], [['random'], ['random']], `controlled ${controlled}: Random is the one tab stop while it is chosen`);
-      const reported = [...changes];
-      await render(props(false));
-      assert.deepEqual([checked(), tabStops()], [[], unselected], `controlled ${controlled}: the group is enterable again`);
-      assert.deepEqual(changes, reported, `controlled ${controlled}: the picker reports no change of its own`);
-      await render(props(true));
-      assert.deepEqual([checked(), tabStops()], [['random'], ['random']], `controlled ${controlled}: the chosen Random is selected again`);
-    });
+    for (const focused of [false, true]) {
+      const label = `controlled ${controlled}, focused ${focused}`;
+      const changes = [];
+      const props = (random) => ({ random, ...(controlled ? { value: 'random' } : {}), onChange: (value) => changes.push(value) });
+      await inPage(props(true), async ({ render }) => {
+        if (!controlled) await act(async () => radios().find((radio) => radio.value === 'random').click());
+        // React Aria remembers the option that had focus, so a focused Random is the case that can strand the group.
+        if (focused) await focusOn('random');
+        assert.deepEqual([checked(), tabStops()], [['random'], ['random']], `${label}: Random is the one tab stop while it is chosen`);
+        const reported = [...changes];
+        await render(props(false));
+        assert.deepEqual([checked(), tabStops()], [[], unselected], `${label}: the group is enterable again`);
+        assert.deepEqual(changes, reported, `${label}: the picker reports no change of its own`);
+        await render(props(true));
+        assert.deepEqual([checked(), tabStops()], [['random'], ['random']], `${label}: the chosen Random is selected again`);
+      });
+    }
   }
 });
 
