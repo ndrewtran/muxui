@@ -29,6 +29,15 @@
   display: table-row-group;
 }
 
+/* React Aria Components render the grid's rows and cells without a className. They take the grid's typography, not the host's
+   `tr` and `td` rules. */
+:where(.muxui-calendar__grid-header, .muxui-calendar__grid-body) > :where(tr),
+:where(.muxui-calendar__grid-body) > :where(tr) > :where(td) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-calendar__cell {
   display: inline-flex;
   align-items: center;
@@ -455,6 +464,14 @@
   outline: none;
   cursor: default;
   transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
+}
+
+/* React Aria Components wrap a row's content in a `display: contents` cell without a className. A data-driven label sits in it as
+   text, so the cell takes the row's typography, not the host's `div` rule. */
+:where(.muxui-grid-list__item) > :where([role='gridcell']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .muxui-grid-list__item[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-disabled], [data-muxui-state-dragging], [data-muxui-state-drop-target]) {
@@ -1967,6 +1984,13 @@
   box-shadow: inset 0 -2px var(--muxui-table-header-separator);
 }
 
+/* The header row comes from React Aria Components without a className. It takes the table's typography, not the host's `tr` rule. */
+:where(.muxui-table__header) > :where(tr) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-table__column {
   padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
   text-align: start;
@@ -2211,6 +2235,14 @@
     background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
     color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
+}
+
+/* React Aria Components wrap a tag's content in a `display: contents` cell without a className. A data-driven label sits in it as
+   text, so the cell takes the tag's typography, not the host's `div` rule. */
+:where(.muxui-tag-group__tag) > :where([role='gridcell']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .muxui-tag-group__tag[data-muxui-color='brand'] {
@@ -2688,6 +2720,14 @@
   transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
+/* React Aria Components wrap a row's content in a `display: contents` cell without a className. The cell takes the row's
+   typography, not the host's `div` rule. */
+:where(.muxui-tree__item) > :where([role='gridcell']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-tree__item[data-muxui-state-hovered] {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
@@ -2895,6 +2935,14 @@
   outline: none;
 }
 
+/* React Aria Components' TokenInput wraps each token, and the text typed around it, in a span without a className. The span takes the
+   input's typography, not the host's `span` rule: its line box holds the text and the zero-width spaces around a token. */
+:where(.muxui-token-field__input) > :where(span) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-token-field[data-muxui-state-disabled] .muxui-token-field__input,
 .muxui-token-field[aria-disabled='true'] .muxui-token-field__input {
   cursor: not-allowed;
@@ -2911,6 +2959,15 @@
   overflow: auto;
   border-radius: var(--muxui-semantic-control-radius);
   outline: none;
+}
+
+/* The box that sizes the scroll area and the box that places each item are React Aria Components' own, without a className. They take
+   the typography of the part that scrolls (a GridList in a grid Virtualizer scrolls itself), not the host's `div` rule. */
+:where(.muxui-virtualizer, .muxui-grid-list[data-muxui-virtualized]) > :where([role='presentation']),
+:where(.muxui-virtualizer, .muxui-grid-list[data-muxui-virtualized]) > :where([role='presentation']) > :where([role='presentation']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .muxui-virtualizer:focus-visible {

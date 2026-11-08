@@ -36,7 +36,7 @@
     "test/browser/header-nav.test.mjs": 10,
     "test/browser/heavy-components.test.mjs": 13,
     "test/browser/hook-only-reach.test.mjs": 6,
-    "test/browser/host-independence.test.mjs": 6,
+    "test/browser/host-independence.test.mjs": 9,
     "test/browser/icon-button.test.mjs": 3,
     "test/browser/image-avatar.test.mjs": 2,
     "test/browser/interaction-motion.test.mjs": 52,

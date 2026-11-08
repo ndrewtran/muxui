@@ -11,9 +11,10 @@
 // warning or an exception while one renders fails.
 // The same renders prove the other half of the class rule: every native element a component renders carries a Mux UI class
 // (support/unclassed-elements.mjs). The examples' JSX and the fixtures' `h` mark the elements the caller creates, so an unmarked
-// element without a class is Mux UI's own or a library's, and the exceptions are listed there with their reasons. The fixtures cover
-// the states the examples do not render (an open menu, an empty table). A scan of the source (support/unclassed-sources.mjs) covers
-// the rest: every state of every call that creates a native element with a literal tag.
+// element without a class is Mux UI's own or a library's, and the exceptions are listed there with their reasons and the rules that
+// keep the host's element-type rules out of them (the host-independence browser test compares them across a bare and a host page).
+// The fixtures cover the states the examples do not render (an open menu, an empty table, an editor with a document). A scan of the
+// source (support/unclassed-sources.mjs) covers the rest: every state of every call that creates a native element with a literal tag.
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import test from 'node:test';
@@ -191,7 +192,7 @@ test('no source creates a native element without a className, in any state', asy
   assert.deepEqual(unclassedSites({ 'mutant.ts': mutant }), ['mutant.ts:3 <li>', 'mutant.ts:3 <li>', 'mutant.ts:3 <span>', 'mutant.ts:3 <th|td>']);
 });
 
-test('the rendered class check sees an unmarked unclassed element and a lost class, and excepts only a library\'s own wrappers', () => {
+test('the rendered class check sees an unmarked unclassed element and a lost class, and excepts only a library\'s own wrappers', async () => {
   const check = (html, root = documentOf(html).body) => unclassedElements(root, { isClass });
   const caller = '<p data-caller="">own</p>';
   assert.deepEqual(check(`<div class="muxui-card">${caller}<ul class="muxui-card__list"><li class="muxui-card__item">a</li></ul></div>`), []);
@@ -211,8 +212,13 @@ test('the rendered class check sees an unmarked unclassed element and a lost cla
   assert.deepEqual(check('<div role="gridcell" style="display:contents">Text</div>'), []);
   // The same wrapper without the library's signature is Mux UI's own element, and needs a class.
   assert.deepEqual(check('<div><div class="muxui-tooltip">Tip</div></div>'), ['<div> in <body>']);
-  // Every exception says why, and is either invisible or says what it holds.
-  assert.ok(unclassableElements.every(({ name, reason, hidden, holds }) => name && reason.length > 40 && (hidden === true) !== (typeof holds === 'string')));
+  // Every exception says why, and is exactly one of invisible, boxless, or kept off the host by rules whose selectors the source CSS spells.
+  assert.ok(unclassableElements.every(({ name, reason, ...kinds }) => name && reason.length > 40
+    && [kinds.hidden, kinds.boxless, kinds.rules].filter((kind) => kind !== undefined).length === 1));
+  const sourceCss = Object.values((await readAuthored(packageRoot)).css).join('\n');
+  for (const { name, rules = [] } of unclassableElements) {
+    for (const selector of rules) assert.ok(sourceCss.includes(selector), `${name}: the source CSS has no rule for ${selector}`);
+  }
 });
 
 test('a composed row whose element can be the caller\'s says so, and exactly the rows with such a fixture do', () => {

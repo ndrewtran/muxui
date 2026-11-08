@@ -1369,6 +1369,14 @@
     outline-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
+/* React Aria Components wrap a tag's content in a `display: contents` cell without a className. A data-driven label sits in it as
+   text, so the cell takes the tag's typography, not the host's `div` rule. */
+:where(.muxui-input-tags__tag) > :where([role='gridcell']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-input-tags__tag[data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent),

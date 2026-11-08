@@ -162,9 +162,11 @@
 
 /* A Mux UI part takes its text size, family and line height from Mux UI, never from the page it sits in. Every Mux UI element
    inherits them, so an element-type rule of the host (`li`, `tr`, `summary`, `span`, ...) cannot reach a part, whichever element a
-   component renders it with: that is why every element a component renders carries a Mux UI class. Zero specificity, so a family's
-   rule, or a `:where()` heading or text role later in this layer, still wins; it comes after the form-control `font: inherit` resets
-   and before the boundary rule below. */
+   component renders it with: that is why every element a component renders carries a Mux UI class. A library wrapper that cannot take
+   a class and holds text or content (a collection cell, a token segment, a document node) inherits the same way by a rule in its
+   family's section; the list is test/support/unclassed-elements.mjs. Zero specificity, so a family's rule, or a `:where()` heading
+   or text role later in this layer, still wins; it comes after the form-control `font: inherit` resets and before the boundary rule
+   below. */
 :where([class^='muxui-'], [class*=' muxui-']) {
   font-family: inherit;
   font-size: inherit;
