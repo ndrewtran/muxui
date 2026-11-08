@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { compileScalePresetTheme, scaleForegrounds } from '@muxui/tokens/authoring';
+import { compileScalePresetTheme, generateScaleTheme, scaleForegrounds } from '@muxui/tokens/authoring';
 import source from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import {
   CONTRAST_METHODS,
@@ -265,6 +265,31 @@ test('translucent shade overrides read as n/a without a badge instead of failing
   const [mixedSwatch] = read(settingsFromDocument(mixed), APCA, [40]);
   assert.match(mixedSwatch.background, /^#[0-9a-f]{8}$/u);
   assert.deepEqual([mixedSwatch.label, mixedSwatch.badge], ['n/a', null]);
+});
+
+test('Scale rejects a 7.0.0 document with both versions and the guide, and imports it once its assignments are regenerated', () => {
+  const settings = { ...DEFAULT_SETTINGS, family: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#878685', whiteAnchor: false, contrastPivot: 'auto', curvature: 1,
+    additionalOverrides: { 'semantic.typography.display-font-weight': { type: 'number', unit: 'unitless', value: 700 } },
+    themeModes: { colorScheme: ['dark'], contrast: ['standard', 'more'], motion: ['reduced'], density: ['compact'], direction: ['ltr'] } };
+  const current = createScaleDocument(settings, { slug: 'previous-contract' });
+  // 7.0.0 gave neutral Auto the fixed pivot 60, so its shade-60 foreground was the light endpoint.
+  const written = structuredClone(current);
+  written.tokenContractVersion = '7.0.0';
+  written.overrides['semantic.color.neutral-60-fg'].value = '#f9f7f5';
+  assert.notEqual(current.overrides['semantic.color.neutral-60-fg'].value, '#f9f7f5');
+  const before = structuredClone(written);
+
+  assert.throws(() => validateScaleDocument(written), { message: 'MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7.0.0, required 8.0.0. See the token contract migration guide.' });
+  assert.throws(() => settingsFromDocument({ ...written, tokenContractVersion: source.tokenContractVersion }), /MUXUI_THEME_SCALE_ASSIGNMENT_INVALID: semantic\.color\.neutral-60-fg/u);
+  assert.deepEqual(written, before, 'rejecting a document does not rewrite it');
+
+  const { assignments } = generateScaleTheme({ source, ...written.scale });
+  const kept = Object.fromEntries(Object.entries(written.overrides).filter(([id]) => !Object.hasOwn(assignments, id)));
+  const migrated = { ...written, tokenContractVersion: source.tokenContractVersion, overrides: { ...kept, ...assignments } };
+  const restored = settingsFromDocument(migrated);
+  assert.deepEqual(restored.additionalOverrides, settings.additionalOverrides);
+  assert.deepEqual(restored.themeModes, settings.themeModes);
+  assert.deepEqual(createScaleDocument(restored, { slug: 'previous-contract' }), current);
 });
 
 test('neutral Auto follows the contrast method like the named palette', () => {

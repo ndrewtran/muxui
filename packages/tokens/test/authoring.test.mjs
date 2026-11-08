@@ -85,6 +85,39 @@ test('authoring documents written for the previous contract version are rejected
   );
 });
 
+// 7.0.0 gave a neutral palette under Auto the fixed pivot 60 (shade-5 text from shade 60), and 8.0.0 picks the better endpoint
+// for the chosen method. For this palette Auto moves only the shade-60 foreground, so a document written for 7.0.0 keeps the
+// old one and carries the Scale-owned assignments of the old rule.
+test('a 7.0.0 document with neutral Auto migrates by regenerating its Scale-owned assignments, keeping its extra overrides and modes', () => {
+  const scale = { mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#878685', whiteAnchor: false, contrastPivot: 'auto', curvature: 1 };
+  const current = generateScaleTheme({ source, ...scale });
+  const light = current.palettes.neutral.find(({ shade }) => shade === 5).hex;
+  const dark = current.palettes.neutral.find(({ shade }) => shade === 100).hex;
+  const legacyForegrounds = Object.fromEntries(current.palettes.neutral.map(({ shade }) => [`semantic.color.neutral-${shade}-fg`, { type: 'color', unit: 'hex', value: shade >= 60 ? light : dark }]));
+  const extra = { 'semantic.typography.display-font-weight': { type: 'number', unit: 'unitless', value: 700 } };
+  const modes = { colorScheme: ['dark'], contrast: ['standard', 'more'], motion: ['reduced'], density: ['compact'], direction: ['ltr'] };
+  const written = { ...base, tokenContractVersion: '7.0.0', modes, overrides: { ...extra, ...current.assignments, ...legacyForegrounds }, scale };
+  assert.deepEqual(Object.keys(legacyForegrounds).filter((id) => legacyForegrounds[id].value !== current.assignments[id].value), ['semantic.color.neutral-60-fg']);
+  assert.equal(written.overrides['semantic.color.neutral-60-fg'].value, '#f9f7f5');
+  assert.equal(current.assignments['semantic.color.neutral-60-fg'].value, '#323130');
+
+  // Changing only the version leaves the old shade-60 foreground in place, which the document's own inputs no longer produce.
+  assert.throws(() => validateThemeAuthoringDocument(written, { source }), /MUXUI_THEME_CONTRACT_INVALID: document declares tokenContractVersion 7\.0\.0, required 8\.0\.0/u);
+  assert.throws(() => validateThemeAuthoringDocument({ ...written, tokenContractVersion: source.tokenContractVersion }, { source }), /MUXUI_THEME_SCALE_ASSIGNMENT_INVALID: semantic\.color\.neutral-60-fg/u);
+
+  // The recovery: regenerate the assignments from the document's `scale` inputs, keep every other override and the modes.
+  const { assignments } = generateScaleTheme({ source, ...written.scale });
+  const kept = Object.fromEntries(Object.entries(written.overrides).filter(([id]) => !Object.hasOwn(assignments, id)));
+  const migrated = { ...written, tokenContractVersion: source.tokenContractVersion, overrides: { ...kept, ...assignments } };
+  assert.equal(validateThemeAuthoringDocument(migrated, { source }), migrated);
+  assert.deepEqual(kept, extra);
+  assert.deepEqual(migrated.overrides['semantic.typography.display-font-weight'], extra['semantic.typography.display-font-weight']);
+  assert.deepEqual(migrated.modes, modes);
+  assert.deepEqual(migrated.scale, scale);
+  assert.equal(migrated.overrides['semantic.color.neutral-60-fg'].value, '#323130');
+  assert.match(compileThemeAuthoringDocument(migrated, { source, modes: { colorScheme: 'dark', motion: 'reduced', density: 'compact' } }).css, /--muxui-semantic-typography-display-font-weight: 700;/u);
+});
+
 test('authoring documents that override a removed motion easing token are rejected', () => {
   for (const id of ['semantic.motion.reveal-easing', 'semantic.motion.dismiss-easing', 'semantic.motion.modal-easing']) {
     const overrides = { [id]: { type: 'easing', unit: 'structured', value: { kind: 'keyword', value: 'linear' } } };
