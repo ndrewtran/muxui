@@ -312,26 +312,40 @@ const modeBlocks = axes.flatMap(([axis, values]) => {
   });
 });
 
-const scalePresetCompilations = [
-  ['standard', tokenSource.theme.scale.standardPresets],
-  ['monochrome', tokenSource.theme.scale.monochromePresets],
-].flatMap(([collection, presets]) => presets.map(({ id }) => {
-  const compile = (colorScheme, contrast) => compileScalePresetTheme({
-    source: tokenSource,
-    collection,
-    presetId: id,
-    modes: { colorScheme, contrast },
-  });
-  const variants = {
-    lightStandard: compile('light', 'standard'),
-    lightMore: compile('light', 'more'),
-    darkStandard: compile('dark', 'standard'),
-    darkMore: compile('dark', 'more'),
-  };
-  return { preset: variants.lightStandard.preset, variants };
-}));
-const themeColorSeedIds = new Set(scalePresetCompilations.flatMap(({ variants }) => Object.values(variants).flatMap(({ generated }) => Object.keys(generated.assignments))
+// Both stylesheets compile the same presets; only the method that picks each shade's text colour differs.
+// `themes.css` takes the token source's default method and `themes-apca.css` names APCA.
+const apcaContrastAlgorithm = 'apca-endpoint-v1';
+function compileScalePresets(contrastAlgorithm) {
+  return [
+    ['standard', tokenSource.theme.scale.standardPresets],
+    ['monochrome', tokenSource.theme.scale.monochromePresets],
+  ].flatMap(([collection, presets]) => presets.map(({ id }) => {
+    const compile = (colorScheme, contrast) => compileScalePresetTheme({
+      source: tokenSource,
+      collection,
+      presetId: id,
+      contrastAlgorithm,
+      modes: { colorScheme, contrast },
+    });
+    const variants = {
+      lightStandard: compile('light', 'standard'),
+      lightMore: compile('light', 'more'),
+      darkStandard: compile('dark', 'standard'),
+      darkMore: compile('dark', 'more'),
+    };
+    return { preset: variants.lightStandard.preset, variants };
+  }));
+}
+const scalePresetCompilations = compileScalePresets();
+const apcaScalePresetCompilations = compileScalePresets(apcaContrastAlgorithm);
+const themeColorSeedIdsOf = (compilations) => new Set(compilations.flatMap(({ variants }) => Object.values(variants).flatMap(({ generated }) => Object.keys(generated.assignments))
   .filter((id) => tokenSource.tokens[id]?.type === 'color')));
+const themeColorSeedIds = themeColorSeedIdsOf(scalePresetCompilations);
+// Both stylesheets declare one token set, so the APCA compilation must seed the same tokens.
+const apcaThemeColorSeedIds = themeColorSeedIdsOf(apcaScalePresetCompilations);
+if (apcaThemeColorSeedIds.size !== themeColorSeedIds.size || [...apcaThemeColorSeedIds].some((id) => !themeColorSeedIds.has(id))) {
+  throw new Error('MUXUI_REACT_THEME_APCA_SEED_MISMATCH');
+}
 const themeTokenIds = [...dependentClosure(themeColorSeedIds, baseTheme.graph)]
   .sort((left, right) => left.localeCompare(right));
 const unsupportedThemeTokenIds = themeTokenIds.filter((id) => !['color', 'effect'].includes(tokenSource.tokens[id]?.type));
@@ -348,12 +362,16 @@ function themeDeclarations(compiled) {
 function themeBlock(selector, compiled) {
   return `${selector} {\n${themeDeclarations(compiled)}\n}`;
 }
-const themeCssBody = scalePresetCompilations.flatMap(({ preset, variants }) => [
-  themeBlock(`[data-muxui-theme='${preset.id}']:not([data-muxui-color-scheme='dark']):not([data-muxui-contrast='more'])`, variants.lightStandard),
-  themeBlock(`[data-muxui-theme='${preset.id}']:not([data-muxui-color-scheme='dark'])[data-muxui-contrast='more']`, variants.lightMore),
-  themeBlock(`[data-muxui-theme='${preset.id}'][data-muxui-color-scheme='dark']:not([data-muxui-contrast='more'])`, variants.darkStandard),
-  themeBlock(`[data-muxui-theme='${preset.id}'][data-muxui-color-scheme='dark'][data-muxui-contrast='more']`, variants.darkMore),
-]).join('\n\n');
+function themeCssBodyOf(compilations) {
+  return compilations.flatMap(({ preset, variants }) => [
+    themeBlock(`[data-muxui-theme='${preset.id}']:not([data-muxui-color-scheme='dark']):not([data-muxui-contrast='more'])`, variants.lightStandard),
+    themeBlock(`[data-muxui-theme='${preset.id}']:not([data-muxui-color-scheme='dark'])[data-muxui-contrast='more']`, variants.lightMore),
+    themeBlock(`[data-muxui-theme='${preset.id}'][data-muxui-color-scheme='dark']:not([data-muxui-contrast='more'])`, variants.darkStandard),
+    themeBlock(`[data-muxui-theme='${preset.id}'][data-muxui-color-scheme='dark'][data-muxui-contrast='more']`, variants.darkMore),
+  ]).join('\n\n');
+}
+const themeCssBody = themeCssBodyOf(scalePresetCompilations);
+const apcaThemeCssBody = themeCssBodyOf(apcaScalePresetCompilations);
 const themeMetadata = scalePresetCompilations.map(({ preset }) => preset);
 const themeIds = themeMetadata.map(({ id }) => id);
 const themeCollection = themeMetadata.map(({ collection }) => collection);
@@ -570,7 +588,7 @@ pnpm add ./muxui-react-${candidateVersion}.tgz
 
 ## Cascade layers
 
-Every rule in \`styles.css\` and \`themes.css\` sits in one of the cascade layers \`muxui.tokens\`, \`muxui.components\`, and \`muxui.utilities\`, in that order. Tokens, theme presets, and direction rules are in \`muxui.tokens\`; component, field, collection, overlay, and supplemental styles are in \`muxui.components\`; \`muxui.utilities\` is declared and empty. Each file starts with the full order statement.
+Every rule in \`styles.css\`, \`themes.css\`, and \`themes-apca.css\` sits in one of the cascade layers \`muxui.tokens\`, \`muxui.components\`, and \`muxui.utilities\`, in that order. Tokens, theme presets, and direction rules are in \`muxui.tokens\`; component, field, collection, overlay, and supplemental styles are in \`muxui.components\`; \`muxui.utilities\` is declared and empty. Each file starts with the full order statement.
 
 For ordinary declarations, CSS outside a layer beats CSS inside one, whatever its specificity, so your own unlayered rules override Mux UI without \`!important\` or a higher-specificity selector. A rule in a layer ranked after \`muxui.components\` beats it too, and \`muxui.utilities\` is the place in Mux UI's own order for rules of yours that should outrank component defaults. To restyle by token, assign the \`--muxui-semantic-*\` and \`--muxui-component-*\` variables a component's styles read on a theme scope element, not on one rendered component.
 
@@ -608,6 +626,17 @@ contrast combinations while leaving spacing, typography, motion, and density
 values in the base theme. An unknown ID matches no preset declarations; normal
 base and inherited styles apply on that scope. Forced-colors component rules
 retain their system-color priority.
+
+The optional \`@muxui/react/themes-apca.css\` holds the same presets as
+\`themes.css\`, with the same selectors, cascade layer, and rule order, so a page
+imports one or the other after \`styles.css\`; when both load, the one imported
+last wins wherever they differ. Only the way each shade's text color is chosen
+differs: \`themes.css\` picks the light or dark endpoint text with the higher
+WCAG 2 contrast ratio, and \`themes-apca.css\` picks the endpoint with the
+higher APCA 0.0.98G-4g score (absolute Lc). Choose it when your own tooling
+scores text with APCA. Each file only selects the endpoint with the higher score
+under its method and does not promise a minimum score for every pair. The
+\`@muxui/react/themes\` metadata is the same for both.
 
 Component styles consume semantic roles from \`catalog/tokens/default-theme.json\`: gaps, content insets, outer spacing, viewport clearance, surfaces, borders, typography, shapes, and motion are independently themeable. Explicit per-mode palette painting uses non-inverting semantic palette aliases so dark styles are not inverted twice. Choose tokens by their documented meaning, not because their default values happen to match.
 
@@ -909,6 +938,7 @@ if (!componentCssRecords.some(({ slug }) => slug === sharedStyleAnchorSlug)) {
 const componentCssBody = `${authoredCss}${componentCssRecords.map(({ slug, styleSource, style }) => `${style && styleSource !== sharedStyleSource ? `\n\n${style.trim()}` : ''}${slug === sharedStyleAnchorSlug ? `\n\n${supplementalStylesSource.trim()}` : ''}`).join('')}`;
 const layeredStylesCss = `${cssLayerOrder}\n\n${cssLayer('muxui.tokens', cssBody)}\n\n${cssLayer('muxui.components', componentCssBody)}`;
 const layeredThemeCss = `${cssLayerOrder}\n\n${cssLayer('muxui.tokens', themeCssBody)}`;
+const layeredApcaThemeCss = `${cssLayerOrder}\n\n${cssLayer('muxui.tokens', apcaThemeCssBody)}`;
 assertReactR15GeneratedContracts({
   closure: r15ClosureSource,
   snapshot: familySnapshot,
@@ -953,6 +983,7 @@ const outputs = new Map([
   ['themes.mjs', generatedText('packages/react/src/generate.mjs', themeRuntimeBody)],
   ['themes.d.ts', generatedText('packages/react/src/generate.mjs', themeTypesBody)],
   ['themes.css', generatedCss('packages/react/src/generate.mjs', layeredThemeCss)],
+  ['themes-apca.css', generatedCss('packages/react/src/generate.mjs', layeredApcaThemeCss)],
   ['descriptor.json', descriptor],
   ['descriptor.json.provenance', provenance('descriptor.json', descriptor)],
   ['release.json', release],

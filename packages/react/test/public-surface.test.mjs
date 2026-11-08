@@ -14,7 +14,7 @@ const readJson = async (path) => JSON.parse(await readFile(path, 'utf8'));
 const tokenSource = await readJson(resolve(repositoryRoot, 'catalog/tokens/default-theme.json'));
 const manifest = await readJson(resolve(packageRoot, 'package.json'));
 const generatedStyles = Object.fromEntries(await Promise.all(
-  ['styles.css', 'themes.css'].map(async (name) => [name, await readFile(resolve(packageRoot, 'generated', name), 'utf8')]),
+  ['styles.css', 'themes.css', 'themes-apca.css'].map(async (name) => [name, await readFile(resolve(packageRoot, 'generated', name), 'utf8')]),
 ));
 
 test('the construct scanner sees unlayered rules and ignores braces in comments and strings', () => {
@@ -31,7 +31,7 @@ test('every shipped style entry declares the layer order first and holds every r
   const cascadeLayers = ['muxui.tokens', 'muxui.components', 'muxui.utilities'];
   const orderStatement = `@layer ${cascadeLayers.join(', ')}`;
   const entries = Object.entries(manifest.exports).filter(([name]) => name.endsWith('.css'));
-  assert.deepEqual(entries.map(([name]) => name), ['./styles.css', './themes.css']);
+  assert.deepEqual(entries.map(([name]) => name), ['./styles.css', './themes.css', './themes-apca.css']);
   for (const [name, target] of entries) {
     assert.ok(generatedStyles[target.replace('./generated/', '')], `${name} resolves to a generated file`);
   }
@@ -51,6 +51,7 @@ test('every shipped style entry declares the layer order first and holds every r
   const layersIn = (file) => [...new Set(topLevelConstructs(generatedStyles[file]).slice(1).map(({ prelude }) => prelude))];
   assert.deepEqual(layersIn('styles.css'), ['@layer muxui.tokens', '@layer muxui.components']);
   assert.deepEqual(layersIn('themes.css'), ['@layer muxui.tokens']);
+  assert.deepEqual(layersIn('themes-apca.css'), ['@layer muxui.tokens']);
 });
 
 // An instance-policy token is a promise that setting it on a rendered instance restyles it (Decision 0031
