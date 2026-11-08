@@ -2,6 +2,7 @@
  * It is unlayered, so it is a consumer's rule and wins over the layered stylesheets. test/browser/hook-only-reach.test.mjs loads it after
  * the shipped styles and checks each rule reaches exactly the elements of its selector; styling-tokens.test.mjs checks the rules and the
  * rows are the same set. The probe colour is not a Mux colour: it only has to be told apart from every colour Mux paints. */
+.muxui-color-mode-picker { outline-color: rgb(1, 2, 3); }
 .muxui-command-palette__separator { outline-color: rgb(1, 2, 3); }
 .muxui-data-diff__body { outline-color: rgb(1, 2, 3); }
 .muxui-date-range-picker__start { outline-color: rgb(1, 2, 3); }

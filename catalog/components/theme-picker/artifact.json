@@ -36,7 +36,7 @@
       "Exposes one radio group named Theme, or by aria-label or aria-labelledby, whose radios are Random and every preset, in order.",
       "Keeps a single tab stop for the whole group; arrow keys move focus and select, and Home and End go to the first and last option.",
       "Names a preset whose name repeats an earlier collection's with its collection, such as Monochrome Terracotta, and keeps the visible label.",
-      "Keeps the selected ring, the focus ring, and the swatch colours visible under forced colors, and the swatch transition off under reduced motion."
+      "Keeps the selected ring, the focus ring, and the swatch colours visible under forced colors, and the selection ring's transition off under reduced motion."
     ]
   },
   "bindings": {
@@ -54,7 +54,7 @@
         "Left and Right move focus to the previous and next option and select it, wrapping at the ends and reversed in a right-to-left locale. Up and Down move by one row of four to the same column, continuing across the group headings, and stop at the first and last row; a shorter last row takes its last option. Home and End go to the first and last option, which is Random when random is on.",
         "A preset whose name an earlier collection already uses has its collection in its accessible name, so Monochrome Terracotta is announced where Terracotta is the visible label. The Standard Terracotta keeps its name.",
         "Each swatch shows the action background of the preset for the color scheme in force, from the nearest data-muxui-color-scheme of its ancestors, light when there is none. It carries the preset's two colours itself, so it needs neither themes.css nor a data-muxui-theme scope.",
-        "The selected option shows a ring around its swatch. The focus ring is drawn around the whole option, and a disabled picker dims every option and ignores input.",
+        "The selected option shows a ring, with a gap, around its swatch, and the pointer over an option fills it. The focus ring is drawn around the whole option, and a disabled picker dims every option and ignores input.",
         "The default name is Theme. aria-label or aria-labelledby replaces it.",
         "Server rendering and the first client render are identical: the picker reads no browser state."
       ],
@@ -66,11 +66,11 @@
         "source": "muxui:token:default-theme",
         "requirements": [
           {
-            "token": "semantic.layout.section-gap",
+            "token": "semantic.layout.action-gap",
             "requirement": "required"
           },
           {
-            "token": "semantic.shape.option-radius",
+            "token": "semantic.shape.container-radius",
             "requirement": "required"
           },
           {
@@ -82,11 +82,15 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.border.default",
+            "token": "semantic.border.strong",
             "requirement": "required"
           },
           {
-            "token": "semantic.focus.inner",
+            "token": "semantic.surface.strong",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.border.emphasis",
             "requirement": "required"
           },
           {
@@ -94,11 +98,11 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.selection.track",
+            "token": "semantic.motion.interaction-transition",
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.interaction-transition",
+            "token": "semantic.motion.state-transition",
             "requirement": "required"
           }
         ]

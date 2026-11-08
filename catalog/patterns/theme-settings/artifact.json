@@ -3,7 +3,7 @@
   "id": "muxui:pattern:theme-settings",
   "kind": "pattern",
   "name": "Theme settings",
-  "summary": "A Theme button that opens a popover with a colour mode, a theme grid with Random, and the chosen theme's name.",
+  "summary": "A Theme button that opens a popover with a colour mode, a theme grid with Random, and the current theme's name.",
   "lifecycle": "experimental",
   "keywords": [
     "theme",
@@ -65,7 +65,7 @@
   "accessibility": [
     "The icon button is named Theme and opens a dialog named Theme settings; Escape closes it and returns focus to the button.",
     "The color mode and the themes are each one radio group with a single tab stop, so Tab crosses the popover in two stops.",
-    "The foot is a role=status element, so a new theme is announced, including the one Random picks."
+    "The foot names the current theme, or the one Random rolled, in a role=status element, so a new theme is announced, including the one Random picks."
   ],
   "unsupported": [
     "Saving the choice: it lives in React state and resets when the page reloads",

@@ -1,54 +1,67 @@
+/* A compact swatch grid: a round colour with its name under it, four to a row, under small uppercase group headings. */
 .muxui-theme-picker {
   display: flex;
   flex-direction: column;
-  gap: var(--muxui-semantic-layout-section-gap);
+  gap: var(--muxui-semantic-layout-action-gap);
   box-sizing: border-box;
   min-inline-size: 0;
   color: var(--muxui-semantic-content-default);
   font-family: var(--muxui-semantic-typography-text-font-family);
-  font-size: var(--muxui-semantic-typography-text-s-font-size);
-  line-height: var(--muxui-semantic-typography-text-line-height);
+  font-size: var(--muxui-semantic-typography-badge-size);
+  line-height: var(--muxui-semantic-typography-compact-line-height);
 }
 
 .muxui-theme-picker__group {
   display: flex;
   flex-direction: column;
-  gap: var(--muxui-semantic-layout-action-gap);
+  gap: var(--muxui-semantic-layout-tight-gap);
 }
 
+/* The label token is `normal`, so the tracking is set here. */
 .muxui-theme-picker__heading {
-  padding-inline: var(--muxui-semantic-layout-inset-tight);
-  font-weight: var(--muxui-semantic-typography-label-font-weight);
+  padding-inline: var(--muxui-semantic-layout-utility-inset);
+  color: var(--muxui-semantic-content-muted);
+  font-size: var(--muxui-semantic-typography-badge-size);
+  font-weight: var(--muxui-semantic-typography-text-font-weight);
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .muxui-theme-picker__grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--muxui-semantic-layout-content-gap) var(--muxui-semantic-layout-tight-gap);
+  gap: var(--muxui-semantic-layout-dense-gap);
 }
 
 .muxui-theme-picker__option {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--muxui-semantic-layout-control-content-gap);
+  gap: var(--muxui-semantic-layout-tight-gap);
   min-inline-size: 0;
-  padding: var(--muxui-semantic-layout-inset-tight) 0;
-  border-radius: var(--muxui-semantic-shape-option-radius);
+  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-utility-inset);
+  border-radius: var(--muxui-semantic-shape-container-radius);
   outline: none;
   cursor: pointer;
   text-align: center;
+  transition:
+    color var(--muxui-semantic-motion-interaction-transition),
+    background-color var(--muxui-semantic-motion-interaction-transition);
 }
 
 /* Random is a full-width row of its own, with the glyph where a preset has its colour. */
 .muxui-theme-picker__option--random {
   flex-direction: row;
-  align-items: center;
-  padding: var(--muxui-semantic-layout-inset-tight);
+  gap: var(--muxui-semantic-layout-action-gap);
+  padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-medium);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
   text-align: start;
 }
 
+/* A round colour. The selection ring is its ::after, so the ring can keep a gap and the swatch keeps its edge. */
 .muxui-theme-picker__swatch {
+  position: relative;
   display: flex;
   flex: none;
   align-items: center;
@@ -56,10 +69,22 @@
   box-sizing: border-box;
   inline-size: calc(var(--muxui-semantic-control-size-md) * 0.75);
   block-size: calc(var(--muxui-semantic-control-size-md) * 0.75);
-  border: 1px solid var(--muxui-semantic-border-default);
+  border: 1px solid var(--muxui-semantic-border-strong);
   border-radius: var(--muxui-semantic-shape-pill-radius);
   background-clip: padding-box;
-  transition: box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
+}
+
+.muxui-theme-picker__swatch::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: var(--muxui-semantic-shape-pill-radius);
+  box-shadow: 0 0 0 1.5px var(--muxui-semantic-border-emphasis);
+  opacity: 0;
+  transform: scale(0.8);
+  transition:
+    transform var(--muxui-semantic-motion-state-transition),
+    opacity var(--muxui-semantic-motion-interaction-transition);
 }
 
 /* A preset swatch paints the action background of the nearest colour scheme, from the colours it carries inline. */
@@ -73,19 +98,27 @@
   }
 }
 
+.muxui-theme-picker__option--random .muxui-theme-picker__swatch {
+  background-color: var(--muxui-semantic-surface-subtle);
+}
+
 .muxui-theme-picker__name {
   min-inline-size: 0;
   overflow-wrap: anywhere;
 }
 
-.muxui-theme-picker__option[data-muxui-state-hovered]:not([data-muxui-state-selected]) .muxui-theme-picker__swatch {
-  box-shadow: 0 0 0 2px var(--muxui-semantic-border-indicator);
+/* A translucent overlay, so the hover darkens (or, in dark, lightens) the panel and theme beneath instead of painting a patch. */
+.muxui-theme-picker__option[data-muxui-state-hovered] {
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
 }
 
-.muxui-theme-picker__option[data-muxui-state-selected] .muxui-theme-picker__swatch {
-  box-shadow:
-    0 0 0 2px var(--muxui-semantic-focus-inner),
-    0 0 0 4px var(--muxui-semantic-selection-track);
+.muxui-theme-picker__option[data-muxui-state-selected] {
+  color: var(--muxui-semantic-content-strong);
+}
+
+.muxui-theme-picker__option[data-muxui-state-selected] .muxui-theme-picker__swatch::after {
+  opacity: 1;
+  transform: none;
 }
 
 .muxui-theme-picker__option[data-muxui-state-focus-visible] {
@@ -99,20 +132,21 @@
 }
 
 @media (forced-colors: active) {
-  /* The swatch is the theme's colour, so forced colours keep it and outline it. */
+  /* The swatch is the theme's colour, so forced colours keep it and outline it. The selection is a CanvasText circle, apart
+     from the Highlight rectangle of keyboard focus; the shadows that draw it otherwise are dropped. */
   .muxui-theme-picker__swatch {
     forced-color-adjust: none;
     border-color: CanvasText;
   }
 
-  .muxui-theme-picker__option[data-muxui-state-hovered]:not([data-muxui-state-selected]) .muxui-theme-picker__swatch {
-    box-shadow: none;
+  .muxui-theme-picker__option--random .muxui-theme-picker__swatch {
+    forced-color-adjust: auto;
   }
 
-  .muxui-theme-picker__option[data-muxui-state-selected] .muxui-theme-picker__swatch {
+  .muxui-theme-picker__swatch::after {
+    inset: -7px;
+    border: 2px solid CanvasText;
     box-shadow: none;
-    outline: 2px solid Highlight;
-    outline-offset: 2px;
   }
 
   .muxui-theme-picker__option[data-muxui-state-focus-visible] {
@@ -125,11 +159,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .muxui-theme-picker__swatch {
+  .muxui-theme-picker__option,
+  .muxui-theme-picker__swatch::after {
     transition: none;
   }
 }
 
-:where([data-muxui-motion='reduced']) .muxui-theme-picker__swatch {
+:where([data-muxui-motion='reduced']) .muxui-theme-picker__option,
+:where([data-muxui-motion='reduced']) .muxui-theme-picker__swatch::after {
   transition: none;
 }

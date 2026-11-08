@@ -49,7 +49,7 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
-  assert.equal(read('styles.css').rules.length, 2115);
+  assert.equal(read('styles.css').rules.length, 2117);
   const shared = readFileSync(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').trim();
   assert.equal(readStyleRules(shared).rules.length, 520);
   assert.equal(readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8').split(shared).length, 2, 'styles.css includes the shared stylesheet verbatim exactly once');
@@ -216,8 +216,8 @@ test('every part-map row is a class row of its family, once and in anatomy order
   const dispositions = Object.groupBy(allRows(classRows), ({ row }) => row.disposition);
   assert.deepEqual(Object.fromEntries(Object.entries(dispositions).map(([name, list]) => [name, list.length])), { class: 360, 'root-element': 8, field: 48, composed: 12, internal: 10, none: 19 });
   const byNote = (pattern) => allRows(classRows).filter(({ row }) => pattern.test(row.note));
-  assert.equal(allRows(classRows).filter(({ row }) => row.hookOnly).length, 12);
-  assert.equal(byNote(/Hook only: no Mux rule styles it\./u).length, 12);
+  assert.equal(allRows(classRows).filter(({ row }) => row.hookOnly).length, 13);
+  assert.equal(byNote(/Hook only: no Mux rule styles it\./u).length, 13);
   assert.equal(byNote(/^Internal: no hook\.$/u).length, 10);
   assert.equal(byNote(/^Renders no element \(/u).length, 19);
 });
@@ -698,9 +698,9 @@ const tokenRows = (styling) => styling.tokens.groups.flatMap(({ rows }) => rows)
 
 test('token rows are the recipe requirements, each with the record\'s meaning, policy, alias and light and dark values', () => {
   const rows = allRows(tokenRows);
-  assert.equal(rows.length, 851);
-  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.group)).map(([name, list]) => [name, list.length])), { semantic: 640, component: 211 });
-  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.policy)).map(([name, list]) => [name, list.length])), { theme: 778, fixed: 73 });
+  assert.equal(rows.length, 852);
+  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.group)).map(([name, list]) => [name, list.length])), { semantic: 641, component: 211 });
+  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.policy)).map(([name, list]) => [name, list.length])), { theme: 779, fixed: 73 });
   assert.deepEqual([...new Set(rows.filter(({ row }) => row.policy === 'fixed').map(({ row }) => row.token))], ['semantic.focus.ring']);
   assert.equal(new Set(rows.filter(({ row }) => row.group === 'component').map(({ row }) => row.token)).size, 196);
   assert.equal(new Set(rows.filter(({ row }) => row.group === 'component').map(({ slug }) => slug)).size, 18);
@@ -845,11 +845,11 @@ test('reduced motion: two public inputs and an internal marker, as motion.mjs re
   assert.ok(overlays.includes("node.toggleAttribute('data-muxui-motion-reduced', reduced)"));
   assert.equal(all.get('button').overrides.motion, 'Mux UI treats motion as reduced when the system asks for it (`prefers-reduced-motion: reduce`) or when `data-muxui-motion="reduced"` is on the component or one of its ancestors; for an overlay, also on its trigger or the trigger\'s ancestors. Some overlays copy that result onto an internal `data-muxui-motion-reduced` marker; it is not an input.');
   assert.deepEqual(facts.motion, { mediaQuery: 'prefers-reduced-motion: reduce', scopeAttribute: 'data-muxui-motion', scopeValue: 'reduced', marker: 'data-muxui-motion-reduced' });
-  // 3 selectors on the internal marker beside 21 on the public attribute and 10 media blocks: not three independent triggers.
+  // 3 selectors on the internal marker beside 22 on the public attribute and 10 media blocks: not three independent triggers.
   const css = readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8');
   const literal = (pattern) => (css.match(pattern) ?? []).length;
-  assert.deepEqual(facts.motionCauses, { markerSelectors: 3, scopeAttributeSelectors: 21, mediaBlocks: 10 });
-  assert.deepEqual([literal(/\[data-muxui-motion-reduced/gu), literal(/\[data-muxui-motion='reduced'\]/gu), literal(/@media[^{]*prefers-reduced-motion/gu)], [3, 21, 10]);
+  assert.deepEqual(facts.motionCauses, { markerSelectors: 3, scopeAttributeSelectors: 22, mediaBlocks: 10 });
+  assert.deepEqual([literal(/\[data-muxui-motion-reduced/gu), literal(/\[data-muxui-motion='reduced'\]/gu), literal(/@media[^{]*prefers-reduced-motion/gu)], [3, 22, 10]);
   // The paragraph is built from what the code reads, so a changed input is a changed paragraph, and a removed one fails.
   assert.throws(() => readMotionInputs(motion.replace("'(prefers-reduced-motion: reduce)'", "'(prefers-reduced-motion: no-preference)'"), overlays), /no longer read the reduced-motion inputs/u);
   assert.throws(() => readMotionInputs(motion, overlays.replace("toggleAttribute('data-muxui-motion-reduced'", "toggleAttribute('data-muxui-motion-quiet'")), /no longer read the reduced-motion inputs/u);

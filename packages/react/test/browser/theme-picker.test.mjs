@@ -101,10 +101,11 @@ test('ThemePicker keeps one tab stop, moves and selects by arrow keys, and shows
     assert.equal(await focused(), 'after');
     await tab.evaluate(() => window.mount({ random: true, defaultValue: 'standard-fern' }));
 
-    // The selected swatch has a ring, and the page's scheme picks which colour every swatch shows.
+    // The selected swatch has a ring (its ::after), and the page's scheme picks which colour every swatch shows.
     const swatch = (scope, id) => tab.locator(`${scope} label:has(input[value="${id}"]) .muxui-theme-picker__swatch`);
-    assert.notEqual(await swatch('#page', 'standard-fern').evaluate((node) => getComputedStyle(node).boxShadow), 'none');
-    assert.equal(await swatch('#page', 'standard-harbour').evaluate((node) => getComputedStyle(node).boxShadow), 'none');
+    const ringOpacity = (scope, id) => swatch(scope, id).evaluate((node) => getComputedStyle(node, '::after').opacity);
+    assert.equal(await ringOpacity('#page', 'standard-fern'), '1');
+    assert.equal(await ringOpacity('#page', 'standard-harbour'), '0');
     for (const scheme of ['light', 'dark']) {
       await tab.evaluate((value) => { document.documentElement.dataset.muxuiColorScheme = value; }, scheme);
       for (const { id } of MUXUI_THEME_PRESETS) {
@@ -115,13 +116,13 @@ test('ThemePicker keeps one tab stop, moves and selects by arrow keys, and shows
       }
     }
 
-    // Forced colors keep the theme's colour and outline the selection; reduced motion drops the swatch transition.
+    // Forced colors keep the theme's colour and draw the selection ring as a border; reduced motion drops the ring's transition.
     await tab.emulateMedia({ forcedColors: 'active', reducedMotion: 'reduce' });
     const forced = await swatch('#page', 'standard-fern').evaluate((node) => {
-      const style = getComputedStyle(node);
-      return { background: style.backgroundColor, outline: style.outlineStyle, transition: style.transitionDuration };
+      const ring = getComputedStyle(node, '::after');
+      return { background: getComputedStyle(node).backgroundColor, ring: ring.borderStyle, transition: ring.transitionDuration };
     });
-    assert.deepEqual(forced, { background: rgb(MUXUI_THEME_ACTION_BACKGROUNDS['standard-fern'].dark), outline: 'solid', transition: '0s' });
+    assert.deepEqual(forced, { background: rgb(MUXUI_THEME_ACTION_BACKGROUNDS['standard-fern'].dark), ring: 'solid', transition: '0s' });
 
     assert.equal(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.deepEqual(errors, []);

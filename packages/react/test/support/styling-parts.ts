@@ -159,7 +159,7 @@ export const partRows: readonly PartRow[] = [
   { family: 'color-field', part: 'input', disposition: 'field', hook: 'muxui-field-input' },
   { family: 'color-field', part: 'description', disposition: 'field', hook: 'muxui-field-description' },
   { family: 'color-field', part: 'error', disposition: 'field', hook: 'muxui-field-error' },
-  { family: 'color-mode-picker', part: 'root', disposition: 'class', hook: 'muxui-color-mode-picker' },
+  { family: 'color-mode-picker', part: 'root', disposition: 'class', hook: 'muxui-color-mode-picker', hookOnly: 'ToggleButtonGroup supplies the whole look and no authored rule selects the picker class, which only names the group.' },
   { family: 'color-mode-picker', part: 'option', disposition: 'composed', hook: 'muxui-toggle-button', composedOf: 'button' },
   { family: 'color-mode-toggle', part: 'root', disposition: 'class', hook: 'muxui-color-mode-toggle' },
   { family: 'color-picker', part: 'root', disposition: 'class', hook: 'muxui-color-picker' },

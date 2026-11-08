@@ -49,7 +49,9 @@ export function ThemeSettingsPopoverExample() {
     };
   }, [applied]);
 
-  const title = theme === undefined ? 'Page theme' : choice === 'random' ? `Random: ${theme.name}` : theme.name;
+  // Random keeps its own label, and the value is the preset it rolled.
+  const label = choice === 'random' ? 'Random theme' : 'Current theme';
+  const value = theme?.name ?? 'Page default';
 
   return (
     <div className="theme-bar">
@@ -60,39 +62,105 @@ export function ThemeSettingsPopoverExample() {
           padding: var(--muxui-semantic-layout-inset-large) var(--muxui-semantic-layout-viewport-inset);
         }
 
+        /* A round, bordered button that takes a translucent fill, so it reads on any theme, while hovered or the panel is open.
+           Forced colours keep Button's own system-colour border and text. */
+        .muxui-button.theme-trigger {
+          border-radius: var(--muxui-semantic-shape-pill-radius);
+        }
+
+        @media (forced-colors: none) {
+          .muxui-button.theme-trigger {
+            outline-color: var(--muxui-semantic-field-border);
+            color: var(--muxui-semantic-content-default);
+          }
+
+          .muxui-button.theme-trigger:is(:hover, [aria-expanded='true']):not([data-muxui-state-disabled]) {
+            background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
+            color: var(--muxui-semantic-content-strong);
+          }
+        }
+
+        .theme-trigger .muxui-icon-button__icon {
+          inline-size: 1rem;
+          block-size: 1rem;
+        }
+
         /* The popover's own surface is a strong one that the pickers' text does not read on, so it takes the raised
            surface other popups use. It scrolls inside the room the viewport leaves, as the panel is tall. */
-        .theme-popover {
+        .muxui-popover.theme-popover {
           box-sizing: border-box;
+          inline-size: min(23.25rem, calc(100vw - 1.5rem));
+          max-inline-size: none;
           max-block-size: inherit;
           overflow-y: auto;
+          padding: var(--muxui-semantic-layout-inset-medium);
           background-color: var(--muxui-semantic-surface-raised);
-          border: 1px solid var(--muxui-semantic-border-popup);
-          box-shadow: var(--muxui-semantic-elevation-overlay);
+          border: 1px solid var(--muxui-semantic-border-strong);
+          border-radius: var(--muxui-semantic-shape-feature-card-radius);
+          box-shadow: var(--muxui-semantic-elevation-floating);
           color: var(--muxui-semantic-content-default);
         }
 
         .theme-panel {
           display: flex;
           flex-direction: column;
-          gap: var(--muxui-semantic-layout-section-gap);
-          inline-size: 18rem;
-          max-inline-size: 100%;
+          gap: var(--muxui-semantic-layout-action-gap);
+        }
+
+        .theme-mode {
+          display: flex;
+          flex-direction: column;
+          gap: var(--muxui-semantic-layout-tight-gap);
+        }
+
+        /* Small, uppercase and muted, as ThemePicker's group headings are. The label token is normal, so the tracking is set here. */
+        .theme-heading {
+          padding-inline: var(--muxui-semantic-layout-utility-inset);
+          color: var(--muxui-semantic-content-muted);
+          font-size: var(--muxui-semantic-typography-badge-size);
+          line-height: 1;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .theme-foot {
+          display: flex;
+          flex-direction: column;
+          gap: var(--muxui-semantic-layout-action-gap);
+          padding-inline: var(--muxui-semantic-layout-utility-inset);
+        }
+
+        /* The rule is an hr, whose own margin the foot's gap replaces. */
+        .muxui-separator.theme-rule {
+          margin: 0;
+          background-color: var(--muxui-semantic-border-faint);
+        }
+
+        .theme-current {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: var(--muxui-semantic-layout-action-gap);
         }
       `}</style>
       <Popover
         aria-label="Theme settings"
         className="theme-popover"
         placement="bottom-end"
-        trigger={<IconButton aria-label="Theme" variant="neutral"><Palette /></IconButton>}
+        trigger={<IconButton aria-label="Theme" className="theme-trigger" size="lg" variant="ghost"><Palette /></IconButton>}
       >
         <div className="theme-panel">
-          <ColorModePicker />
+          <div className="theme-mode">
+            <div className="theme-heading" aria-hidden="true">Mode</div>
+            <ColorModePicker />
+          </div>
           <ThemePicker random value={choice} onChange={choose} />
-          <Separator />
-          <div role="status">
-            <Text as="p" variant="label" size="sm">{title}</Text>
-            <Text as="p" size="sm" color="muted">{theme?.description ?? 'No preset chosen.'}</Text>
+          <div className="theme-foot">
+            <Separator className="theme-rule" />
+            <div className="theme-current" role="status">
+              <Text size="xs" color="muted">{label}</Text>
+              <Text size="xs">{value}</Text>
+            </div>
           </div>
         </div>
       </Popover>

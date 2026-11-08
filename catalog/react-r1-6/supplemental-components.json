@@ -111,7 +111,7 @@
         "isolation": "root"
       },
       "runtimeSource": "packages/react/src/supplemental/color-mode-picker.ts",
-      "styleSource": "packages/react/src/supplemental/color-mode-picker.css"
+      "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
       "family": "ColorModeToggle",

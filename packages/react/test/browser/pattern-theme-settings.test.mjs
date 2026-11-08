@@ -15,7 +15,6 @@ import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 // (see harness.mjs).
 
 const variant = await patternVariant('theme-settings', 'popover');
-const preset = (id) => MUXUI_THEME_PRESETS.find((candidate) => candidate.id === id);
 // The preset the block picks when Math.random returns `value`.
 const rolled = (value) => MUXUI_THEME_PRESETS[Math.floor(value * MUXUI_THEME_PRESETS.length)];
 
@@ -36,11 +35,10 @@ const option = (dialog, value) => dialog.locator(`label:has(input[value="${value
 const foot = (dialog) => dialog.getByRole('status');
 // The theme radio values that are checked, in the popover.
 const chosen = (dialog) => dialog.locator('.muxui-theme-picker input:checked').evaluateAll((inputs) => inputs.map((input) => input.value));
-const NOTHING = ['Page theme', 'No preset chosen.'];
-const expectFoot = async (dialog, title, description) => {
-  const [name, details] = await foot(dialog).locator('p').allTextContents();
-  assert.equal(name, title);
-  assert.equal(details, description);
+// The foot is one row: a label on the left, the theme's name on the right.
+const NOTHING = ['Current theme', 'Page default'];
+const expectFoot = async (dialog, label, name) => {
+  assert.deepEqual(await foot(dialog).locator('span').allTextContents(), [label, name]);
 };
 
 for (const engine of browserEngines()) {
@@ -65,11 +63,11 @@ for (const engine of browserEngines()) {
           await expectFoot(dialog, ...NOTHING);
           assert.equal(await appliedTheme(tab), null, 'opening applies nothing');
 
-          // A pointer press on a preset applies it, marks it, and the foot follows its metadata.
+          // A pointer press on a preset applies it, marks it, and the foot names it.
           await option(dialog, 'monochrome-forest').click();
           await expectTheme(tab, 'monochrome-forest');
           assert.deepEqual(await chosen(dialog), ['monochrome-forest']);
-          await expectFoot(dialog, 'Forest', preset('monochrome-forest').description);
+          await expectFoot(dialog, 'Current theme', 'Forest');
 
           // The color mode picks the scheme on the same root, beside the theme.
           await dialog.getByRole('radio', { name: 'Dark' }).click();
@@ -94,7 +92,7 @@ for (const engine of browserEngines()) {
             const dialog = await open(tab);
             await pollUntil(tab, (count) => document.querySelectorAll('.muxui-theme-picker input:checked').length === count, expected.length, { message: 'the theme grid shows the page theme' });
             assert.deepEqual(await chosen(dialog), expected);
-            if (expected.length > 0) await expectFoot(dialog, 'Lagoon', preset('standard-lagoon').description);
+            if (expected.length > 0) await expectFoot(dialog, 'Current theme', 'Lagoon');
             else await expectFoot(dialog, ...NOTHING);
             assert.equal(await appliedTheme(tab), hostTheme, 'the page keeps the theme it had');
             assert.deepEqual(await tab.evaluate(() => window.__writes), [], 'nothing wrote the theme before a pick');
@@ -122,7 +120,7 @@ for (const engine of browserEngines()) {
             const expected = rolled(value);
             await expectTheme(tab, expected.id);
             assert.equal(await dialog.locator('input[value="random"]').isChecked(), true, 'Random stays chosen');
-            await expectFoot(dialog, `Random: ${expected.name}`, expected.description);
+            await expectFoot(dialog, 'Random theme', expected.name);
             return expected;
           };
           const first = await roll(0.99);
@@ -131,7 +129,7 @@ for (const engine of browserEngines()) {
           // A preset ends the roll, and choosing Random again rolls again.
           await option(dialog, 'standard-lagoon').click();
           await expectTheme(tab, 'standard-lagoon');
-          await expectFoot(dialog, 'Lagoon', preset('standard-lagoon').description);
+          await expectFoot(dialog, 'Current theme', 'Lagoon');
           const second = await roll(0.5);
           assert.notEqual(second.id, first.id, 'the second roll is a different preset');
 
