@@ -62,6 +62,7 @@
     "test/browser/pattern-quick-find.test.mjs": 31,
     "test/browser/pattern-recommendation.test.mjs": 30,
     "test/browser/pattern-task-filters.test.mjs": 48,
+    "test/browser/pattern-theme-settings.test.mjs": 16,
     "test/browser/pattern-workspace-navigation.test.mjs": 30,
     "test/browser/popover-motion.test.mjs": 12,
     "test/browser/progress-circle.test.mjs": 2,

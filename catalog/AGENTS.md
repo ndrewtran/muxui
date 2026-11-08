@@ -28,9 +28,10 @@ canonical record in `packages/catalog/catalog-sources.json`, so add or remove
 the files and regenerate instead of editing that list. The compiler checks variant sources against the import and
 content rules (`packages/catalog/src/pattern-imports.mjs` and
 `pattern-content.mjs`): imports only in the leading header, from `react`,
-`react/jsx-runtime`, `@muxui/react`, and `@muxui/react/markdown` (the last two
-as static named imports, and `pattern.participants` must declare each component
-they name; no other subpath), no remote reference, no literal colour, an `<asset>.license.json` beside any asset
+`react/jsx-runtime`, `@muxui/react`, `@muxui/react/markdown`, and
+`@muxui/react/themes` (the last three as static named imports, and
+`pattern.participants` must declare each component they name; the themes
+subpath exports preset data, not components; no other subpath), no remote reference, no literal colour, an `<asset>.license.json` beside any asset
 (dotfiles but `.DS_Store` included), and a local `src`, `href`, `url()`, or
 `srcSet` path only to a licensed asset inside the pattern directory (`#fragment`
 and `data:` references are fine; `action` and `formAction` count only as
