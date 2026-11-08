@@ -46,8 +46,8 @@
   cursor: pointer;
   text-align: center;
   transition:
-    color var(--muxui-semantic-motion-interaction-transition),
-    background-color var(--muxui-semantic-motion-interaction-transition);
+    color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
+    background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
 /* Random is a full-width row of its own, with the glyph where a preset has its colour. */
@@ -83,8 +83,8 @@
   opacity: 0;
   transform: scale(0.8);
   transition:
-    transform var(--muxui-semantic-motion-state-transition),
-    opacity var(--muxui-semantic-motion-interaction-transition);
+    transform var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing),
+    opacity var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
 /* A preset swatch paints the action background of the nearest colour scheme, from the colours it carries inline. */
