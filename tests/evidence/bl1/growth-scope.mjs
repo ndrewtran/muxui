@@ -19,7 +19,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
-import { parseJsonStrict } from '../../../packages/schema/src/index.mjs';
+import { API_VERSION, QUERY_API_VERSIONS, parseJsonStrict } from '../../../packages/schema/src/index.mjs';
 import { canonicalJson } from '../../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { compileBundle, repositoryRoot } from './regression.mjs';
 
@@ -255,6 +255,30 @@ export async function normalizeLegacyScaleMetadata(directory) {
   if (changed) await writeFile(path, `${JSON.stringify(source, null, 2)}\n`);
 }
 
+/**
+ * The compiler reads only the current query API, with the page budget profile that names it and the CLI choices that list it (query API 3.0.0
+ * replaced 2.1.0). A tree from before names an earlier query API in its manifest, carries that API's profile, and offers it as the CLI's only choice,
+ * so on both sides the manifest and the command registry's choices take the current query API and the tree takes this checkout's profile. Both sides
+ * are compiled with one profile, so the digest comparison does not read its values. A file the strict parser refuses is left as it is for the compiler
+ * to report.
+ */
+export async function normalizeLegacyQueryApi(directory) {
+  const path = join(directory, manifestPath);
+  const manifest = await readFile(path, 'utf8').then(parseJsonStrict, () => undefined);
+  if (manifest === null || typeof manifest !== 'object' || typeof manifest.pageBudgetProfilePath !== 'string') return;
+  if (manifest.queryApiVersion === API_VERSION && canonicalJson(manifest.supportedQueryApiVersions) === canonicalJson(QUERY_API_VERSIONS)) return;
+  manifest.queryApiVersion = API_VERSION;
+  manifest.supportedQueryApiVersions = [...QUERY_API_VERSIONS];
+  await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
+  await writeFile(join(directory, manifest.pageBudgetProfilePath), await readFile(join(repositoryRoot, manifest.pageBudgetProfilePath)));
+  const registryPath = join(directory, manifest.commandRegistryPath);
+  const registry = await readFile(registryPath, 'utf8').then(parseJsonStrict, () => undefined);
+  const option = registry?.selectors?.find(({ requestKey }) => requestKey === 'queryApiVersion');
+  if (option === undefined) return;
+  option.choices = [...QUERY_API_VERSIONS];
+  await writeFile(registryPath, `${JSON.stringify(registry, null, 2)}\n`);
+}
+
 /** Makes the extracted tree's source manifest compile: drops the removed `authorityDecisionPath`; any other unknown key still fails the compiler. */
 async function normalizeLegacyManifest(directory) {
   const path = join(directory, manifestPath);
@@ -380,15 +404,16 @@ export async function normalizeLegacyPlatformSafety(directory) {
 /**
  * The catalog digest of the tree at `revision`, compiled by this checkout's compiler without the sources under
  * `excludedDirectories`. A tree from before Decision 0028, before block categories became catalog data, before they carried labels,
- * before a spring transition named no easing, before the Scale block took its current shape and palette algorithm id, or before platform safety resolved from registry
- * defaults is normalized first (`normalizeLegacyManifest`, `normalizeCategoryRegistry`, `normalizeLegacySpringTransitions`,
- * `normalizeLegacyScaleMetadata`, and `normalizeLegacyPlatformSafety`).
+ * before a spring transition named no easing, before the Scale block took its current shape and palette algorithm id, before the current query API, or before platform
+ * safety resolved from registry defaults is normalized first (`normalizeLegacyManifest`, `normalizeCategoryRegistry`, `normalizeLegacySpringTransitions`,
+ * `normalizeLegacyScaleMetadata`, `normalizeLegacyQueryApi`, and `normalizeLegacyPlatformSafety`).
  */
 export const catalogDigestAt = ({ cwd = repositoryRoot, revision, excludedDirectories }) => withTree(cwd, revision, async (directory) => {
   await normalizeLegacyManifest(directory);
   await normalizeCategoryRegistry(directory);
   await normalizeLegacySpringTransitions(directory);
   await normalizeLegacyScaleMetadata(directory);
+  await normalizeLegacyQueryApi(directory);
   await normalizeLegacyPlatformSafety(directory);
   const excluded = ({ path }) => excludedDirectories.some((excludedDirectory) => path.startsWith(excludedDirectory));
   return (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest;

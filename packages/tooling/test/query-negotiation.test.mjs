@@ -49,8 +49,8 @@ const [schemaMajor, schemaMinor] = SCHEMA_VERSION.split('.').map(Number);
 const laterPatch = `${schemaMajor}.${schemaMinor}.1`;
 const laterMinor = `${schemaMajor}.${schemaMinor + 1}.0`;
 const unreadMajor = {
-  catalog: { queryApiVersion: '3.0.0', supportedQueryApiVersions: ['3.0.0'] },
-  release: { queryApiVersion: '3.0.0' },
+  catalog: { queryApiVersion: '4.0.0', supportedQueryApiVersions: ['4.0.0'] },
+  release: { queryApiVersion: '4.0.0' },
 };
 
 function assertIncompatible(result, dimension, label) {
@@ -69,8 +69,8 @@ test('E-P2.1-05 negotiation picks the highest shared query API version by SemVer
   assert.ok(satisfies(SCHEMA_VERSION, SCHEMA_READ_RANGE));
   assert.ok(satisfies(laterPatch, SCHEMA_READ_RANGE));
   assert.ok(!satisfies(laterMinor, SCHEMA_READ_RANGE));
-  assert.equal(negotiateQueryApiVersion(['1.1.0', '1.2.0', API_VERSION, '3.0.0']), API_VERSION);
-  assert.equal(negotiateQueryApiVersion(['1.1.0', '1.2.0', '3.0.0']), undefined);
+  assert.equal(negotiateQueryApiVersion(['1.1.0', '1.2.0', API_VERSION, '4.0.0']), API_VERSION);
+  assert.equal(negotiateQueryApiVersion(['1.1.0', '1.2.0', '4.0.0']), undefined);
   assert.equal(negotiateQueryApiVersion(['2.2.0', '2.1.0', '1.2.0'], ['2.1.0', '2.2.0']), '2.2.0');
   assert.equal(negotiateQueryApiVersion(['2.1.0', '3.0.0'], ['2.1.0', '2.2.0']), '2.1.0');
   // Precedence, not list order or text order: rc.10 follows rc.2, and a release follows its prereleases.
@@ -112,7 +112,7 @@ test('E-P2.1-05 the current contract is read', async () => {
 test('E-P2.1-05 the retained G0.4 corpus keeps its older tuples and its unsupported-request graph', async () => {
   const value = await corpus();
   const retained = value.catalogs.find(({ id }) => id === 'catalog-compatible');
-  assert.deepEqual(retained.supportedQueryApiVersions, ['1.1.0', '1.2.0', '2.1.0']);
+  assert.deepEqual(retained.supportedQueryApiVersions, ['1.1.0', '1.2.0', '3.0.0']);
   const graph = value.graphs.find(({ id }) => id === 'query-api-version-unsupported');
   assert.equal(resolve(value, graph).error.code, graph.expected.code);
   assert.equal(resolve(value, directGraph(value)).type, 'success');
@@ -120,16 +120,16 @@ test('E-P2.1-05 the retained G0.4 corpus keeps its older tuples and its unsuppor
 
 test('E-P2.1-05 supported older and newer tuples are read', async () => {
   const cases = [
-    ['an older catalog that lists only the shared version', { catalog: { supportedQueryApiVersions: ['2.1.0'] } }],
+    ['an older catalog that lists only the shared version', { catalog: { supportedQueryApiVersions: ['3.0.0'] } }],
     ['a catalog that lists retired and future versions around the shared one', {
-      catalog: { supportedQueryApiVersions: ['1.2.0', '2.1.0', '2.2.0', '3.0.0'] },
+      catalog: { supportedQueryApiVersions: ['1.2.0', '3.0.0', '3.1.0', '4.0.0'] },
     }],
     ['a catalog whose current query API tooling does not read', {
-      catalog: { queryApiVersion: '2.2.0', supportedQueryApiVersions: ['2.1.0', '2.2.0'] },
-      release: { queryApiVersion: '2.2.0' },
+      catalog: { queryApiVersion: '3.1.0', supportedQueryApiVersions: ['3.0.0', '3.1.0'] },
+      release: { queryApiVersion: '3.1.0' },
     }],
-    ['a valid but unknown prerelease in the list', { catalog: { supportedQueryApiVersions: ['2.1.0', '2.2.0-rc.1'] } }],
-    ['an unknown version with build metadata', { catalog: { supportedQueryApiVersions: ['2.1.0', '3.0.0+build.1'] } }],
+    ['a valid but unknown prerelease in the list', { catalog: { supportedQueryApiVersions: ['3.0.0', '3.1.0-rc.1'] } }],
+    ['an unknown version with build metadata', { catalog: { supportedQueryApiVersions: ['3.0.0', '4.0.0+build.1'] } }],
     ['the current schema', { release: { schemaVersion: SCHEMA_VERSION } }],
     ['a later patch of the current schema', { release: { schemaVersion: laterPatch } }],
   ];
@@ -149,8 +149,8 @@ test('E-P2.1-05 a schema-incompatible catalog and an unsupported query API major
     }, 'query-api'],
     ['a schema minor tooling does not implement', { release: { schemaVersion: laterMinor } }, 'schema'],
     ['a schema above the readable range', { release: { schemaVersion: `${schemaMajor + 1}.0.0` } }, 'schema'],
-    ['a catalog that needs a newer reader', { catalog: { schemaRange: '^3.1.0' } }, 'schema'],
-    ['a superseded schema major', { catalog: { schemaRange: '^2.0.0' }, release: { schemaVersion: '2.0.0' } }, 'schema'],
+    ['a catalog that needs a newer reader', { catalog: { schemaRange: '^4.1.0' } }, 'schema'],
+    ['a superseded schema major', { catalog: { schemaRange: '^3.0.0' }, release: { schemaVersion: '3.0.0' } }, 'schema'],
   ];
   for (const [label, change, dimension] of cases) assertIncompatible(await resolveDirect(change), dimension, label);
 });
@@ -158,12 +158,12 @@ test('E-P2.1-05 a schema-incompatible catalog and an unsupported query API major
 test('E-P2.1-05 an explicit query API version is rejected only when tooling cannot serve it', async () => {
   const served = await resolveDirect({ request: { queryApiVersion: API_VERSION } });
   assert.equal(served.type, 'success');
-  // The retained catalog lists 1.2.0, and a newer catalog lists 2.2.0: tooling reads neither.
+  // The retained catalog lists 1.2.0, and a newer catalog lists 3.1.0: tooling reads neither.
   for (const [label, change] of [
     ['a retired version the catalog still lists', { request: { queryApiVersion: '1.2.0' } }],
     ['a newer version the catalog lists', {
-      request: { queryApiVersion: '2.2.0' },
-      catalog: { supportedQueryApiVersions: ['2.1.0', '2.2.0'] },
+      request: { queryApiVersion: '3.1.0' },
+      catalog: { supportedQueryApiVersions: ['3.0.0', '3.1.0'] },
     }],
   ]) {
     const result = await resolveDirect(change);
@@ -194,9 +194,9 @@ test('E-P2.1-05 the CLI has no reader for a retired query API version', () => {
 });
 
 test('E-P2.1-05 prerelease catalogs with different base versions resolve by declared compatibility, not by the range', async () => {
-  // Decision 0032 item 8: tooling's own range on the catalog, `^2.1.0-rc.1`, admits 2.1.0-rc.2 but not 2.2.0-rc.1.
-  const toolingRange = '^2.1.0-rc.1';
-  for (const [version, inToolingRange] of [['2.1.0-rc.2', true], ['2.2.0-rc.1', false]]) {
+  // Decision 0032 item 8: tooling's own range on the catalog, `^3.0.0-rc.1`, admits 3.0.0-rc.2 but not 3.1.0-rc.1.
+  const toolingRange = '^3.0.0-rc.1';
+  for (const [version, inToolingRange] of [['3.0.0-rc.2', true], ['3.1.0-rc.1', false]]) {
     assert.equal(satisfies(version, toolingRange), inToolingRange, version);
     const read = await resolveDirect({ version });
     assert.equal(read.type, 'success', version);
@@ -294,19 +294,19 @@ async function withCatalogProject(options, check) {
 
 test('E-P2.1-05 an installed prerelease catalog from a newer query line is read at the version tooling serves', async () => {
   await withCatalogProject({
-    version: '2.2.0-rc.1',
-    apiVersion: '2.2.0',
-    supported: ['1.2.0', '2.1.0', '2.2.0', '3.0.0+build.1'],
+    version: '3.1.0-rc.1',
+    apiVersion: '3.1.0',
+    supported: ['1.2.0', '3.0.0', '3.1.0', '4.0.0+build.1'],
     schemaVersion: SCHEMA_VERSION,
   }, async (project) => {
     const { exitCode, stdout } = runCli(['manifest', '--project', project.path, '--detail', 'brief', '--json']);
     assert.equal(exitCode, 0);
     const response = JSON.parse(stdout);
     assert.equal(response.apiVersion, API_VERSION);
-    assert.equal(response.meta.resolution.targetPackages['@muxui/catalog'], '2.2.0-rc.1');
+    assert.equal(response.meta.resolution.targetPackages['@muxui/catalog'], '3.1.0-rc.1');
 
-    // The catalog lists 2.2.0, but tooling cannot serve it: an explicit request for it is the one UNSUPPORTED case.
-    const requested = resolvePnpmProjectCatalog({ project: project.path, queryApiVersion: '2.2.0' });
+    // The catalog lists 3.1.0, but tooling cannot serve it: an explicit request for it is the one UNSUPPORTED case.
+    const requested = resolvePnpmProjectCatalog({ project: project.path, queryApiVersion: '3.1.0' });
     assert.equal(requested.error.code, 'MUXUI_QUERY_API_VERSION_UNSUPPORTED');
     assert.equal(resolvePnpmProjectCatalog({ project: project.path, queryApiVersion: API_VERSION }).type, 'success');
 
@@ -321,9 +321,9 @@ test('E-P2.1-05 an installed prerelease catalog from a newer query line is read 
 
 test('E-P2.1-05 an installed catalog with an unsupported query API major returns MUXUI_CATALOG_INCOMPATIBLE', async () => {
   await withCatalogProject({
-    version: '2.1.0-rc.2',
-    apiVersion: '3.0.0',
-    supported: ['3.0.0'],
+    version: '4.0.0-rc.1',
+    apiVersion: '4.0.0',
+    supported: ['4.0.0'],
     schemaVersion: SCHEMA_VERSION,
   }, (project) => {
     assertIncompatible(resolvePnpmProjectCatalog({ project: project.path }), 'query-api', 'adapter');
@@ -338,7 +338,7 @@ test('E-P2.1-05 an installed catalog with an unsupported query API major returns
 
 test('E-P2.1-05 an installed catalog on a newer schema minor is incompatible, not an integrity mismatch', async () => {
   await withCatalogProject({
-    version: '2.1.0-rc.2',
+    version: '3.0.0-rc.2',
     apiVersion: API_VERSION,
     supported: [API_VERSION],
     schemaVersion: laterMinor,
@@ -354,7 +354,7 @@ test('E-P2.1-05 an installed catalog on a newer schema minor is incompatible, no
 
 test('E-P2.1-05 an installed catalog on an unreadable schema is never inspected for records', async () => {
   await withCatalogProject({
-    version: '2.1.0-rc.2',
+    version: '3.0.0-rc.2',
     apiVersion: API_VERSION,
     supported: [API_VERSION],
     schemaVersion: `${schemaMajor + 1}.0.0`,
@@ -374,7 +374,7 @@ test('E-P2.1-05 an installed catalog on an unreadable schema is never inspected 
 
 test('E-P2.1-05 an installed catalog that lists a malformed query API version fails integrity', async () => {
   await withCatalogProject({
-    version: '2.1.0-rc.2',
+    version: '3.0.0-rc.2',
     apiVersion: API_VERSION,
     supported: ['not-a-version', API_VERSION],
     schemaVersion: SCHEMA_VERSION,
