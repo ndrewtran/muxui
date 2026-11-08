@@ -115,8 +115,22 @@ test('every package has its own rc rule: a first publish is its rc.1, a later on
   const published = document({ latest: '3.0.0-rc.1', next: '3.0.0-rc.2' }, '3.0.0-rc.1', '3.0.0-rc.2');
   assert.deepEqual(classify(catalog, '3.0.0-rc.3', 404, published), { kind: 'later', latest: '3.0.0-rc.1', next: '3.0.0-rc.2' });
   assert.throws(() => classify(catalog, '3.0.0-rc.4', 404, published), /must be the next release candidate after next \(rc\.N\+1\); next points at 3\.0\.0-rc\.2/u);
-  // A new base version is its own decision, never an automatic continuation.
+  // A strictly higher base version starts at its rc.1 (Decision 0035); the other candidates over the same history stop for a decision.
+  assert.deepEqual(classify(catalog, '3.1.0-rc.1', 404, published), { kind: 'later', latest: '3.0.0-rc.1', next: '3.0.0-rc.2' });
+  assert.deepEqual(classify(catalog, '4.0.0-rc.1', 404, published), { kind: 'later', latest: '3.0.0-rc.1', next: '3.0.0-rc.2' });
+  assert.throws(() => classify(catalog, '3.1.0-rc.2', 404, published), /must be the next release candidate after next \(rc\.N\+1\); next points at 3\.0\.0-rc\.2/u);
   assert.throws(() => classify(catalog, '2.2.0-rc.1', 404, published), /must be the next release candidate/u);
+  assert.throws(() => classify(catalog, '2.2.0-rc.2', 404, published), /must be the next release candidate/u);
+  // The base compares numerically per part, not as text.
+  const tens = document({ latest: '3.9.0-rc.1', next: '3.9.0-rc.1' }, '3.9.0-rc.1');
+  assert.deepEqual(classify(catalog, '3.10.0-rc.1', 404, tens), { kind: 'later', latest: '3.9.0-rc.1', next: '3.9.0-rc.1' });
+  assert.throws(() => classify(catalog, '3.8.0-rc.1', 404, tens), /must be the next release candidate/u);
+  // A higher base is no way round the other checks: a version already on the registry, and any extra dist-tag, still stop.
+  assert.throws(() => classify(catalog, '3.1.0-rc.1', 200, published), /@muxui\/catalog@3\.1\.0-rc\.1 is already on the registry/u);
+  assert.throws(() => classify(catalog, '3.1.0-rc.1', 404, document({ latest: '3.0.0-rc.1', next: '3.0.0-rc.2', beta: '3.0.0-rc.1' }, '3.0.0-rc.1', '3.0.0-rc.2', '3.1.0-rc.1')), /is listed in the packument/u);
+  assert.throws(() => classify(catalog, '3.1.0-rc.1', 404, document({ latest: '3.0.0-rc.1', next: '3.0.0-rc.2', beta: '3.0.0-rc.1' }, '3.0.0-rc.1', '3.0.0-rc.2')), /Expected exactly latest and next/u);
+  // React keeps its pinned base, so no higher base is a candidate for it.
+  assert.throws(() => classify(react, '0.2.0-rc.1', 404, document({ latest: '0.1.0-rc.1', next: '0.1.0-rc.5' }, '0.1.0-rc.1', '0.1.0-rc.5')), /not an admitted candidate version for @muxui\/react \(0\.1\.0-rc\.N/u);
   assert.throws(() => classify(catalog, '3.0.0-rc.2', 200, published), /@muxui\/catalog@3\.0\.0-rc\.2 is already on the registry/u);
   assert.throws(() => classify(catalog, '3.0.0-rc.2', 404, published), /is listed in the packument/u);
   assert.throws(() => classify(catalog, '3.0.0-rc.3', 404, document({ latest: '3.0.0-rc.1', next: '3.0.0-rc.2', beta: '3.0.0-rc.1' }, '3.0.0-rc.1', '3.0.0-rc.2')), /Expected exactly latest and next/u);

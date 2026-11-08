@@ -35,6 +35,13 @@ export const MINIMUM_NPM = '11.5.1';
 const candidatePattern = /^(?<base>\d+\.\d+\.\d+)-rc\.(?<rc>[1-9]\d*)$/u;
 const pinnedBases = new Map([[PACKAGE_NAME, '0.1.0']]);
 
+/** Whether the base version `left` is strictly higher than `right` (both `X.Y.Z`), numerically per part. */
+const isHigherBase = (left, right) => {
+  const [a, b] = [left, right].map((base) => base.split('.').map(Number));
+  const part = a.findIndex((value, index) => value !== b[index]);
+  return part !== -1 && a[part] > b[part];
+};
+
 export class NpmPublicationError extends Error {
   constructor(title, message) {
     super(message);
@@ -82,9 +89,9 @@ export function meetsMinimumNpm(version, minimum = MINIMUM_NPM) {
  * when the package is absent (404).
  *
  * - first: the package is absent, so this must be its rc.1 (the registry sets `latest`).
- * - later: `latest` is recorded as-is, `next` must be a published rc of the same base and
- *   this version the next number after it (rc.N+1, Decision 0023 amendment 01), and no
- *   other dist-tag may exist.
+ * - later: `latest` is recorded as-is, `next` must be a published rc, and no other dist-tag
+ *   may exist. This version is either the next number after it on the same base (rc.N+1,
+ *   Decision 0023 amendment 01) or the rc.1 of a strictly higher base (Decision 0035).
  */
 export function classifyPreflight({ name = PACKAGE_NAME, version, versionStatus, packument }) {
   const { base, rc } = parseCandidate(name, version);
@@ -109,8 +116,10 @@ export function classifyPreflight({ name = PACKAGE_NAME, version, versionStatus,
   if (!versions.includes(latest)) stop('Dist-tag drift', `latest points at ${latest}, which is not a published version.`);
   if (!versions.includes(next)) stop('Dist-tag drift', `next points at ${next}, which is not a published version.`);
   const previous = candidatePattern.exec(next)?.groups;
-  if (previous?.base !== base || Number(previous.rc) + 1 !== rc) {
-    stop('Not the next candidate', `${version} must be the next release candidate after next (rc.N+1); next points at ${next}. Anything else stops for a decision.`);
+  const nextNumber = previous?.base === base && Number(previous.rc) + 1 === rc;
+  const higherBase = previous !== undefined && rc === 1 && isHigherBase(base, previous.base);
+  if (!nextNumber && !higherBase) {
+    stop('Not the next candidate', `${version} must be the next release candidate after next (rc.N+1); next points at ${next}. A higher base version starts at its rc.1. Anything else stops for a decision.`);
   }
   return { kind: 'later', latest, next };
 }
