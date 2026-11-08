@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { rmSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { canonicalJson } from '@muxui/schema';
 import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
@@ -66,7 +66,9 @@ async function emitTypeScript() {
   await mkdir(outDir, { recursive: true });
   await Promise.all(['themes.d.ts', 'themes.d.mts'].map((name) => writeFile(resolve(outDir, name), themeTypesBody)));
   const emitConfig = resolve(outDir, 'tsconfig.json');
-  await writeFile(emitConfig, JSON.stringify({ extends: resolve(packageRoot, 'tsconfig.build.json'), compilerOptions: { rootDirs: [resolve(packageRoot, 'src'), outDir] } }));
+  // Paths relative to the config, so the file does not carry this checkout's location (the generation identity compares two checkouts).
+  const fromEmitConfig = (path) => relative(outDir, resolve(packageRoot, path)).replaceAll('\\', '/');
+  await writeFile(emitConfig, JSON.stringify({ extends: fromEmitConfig('tsconfig.build.json'), compilerOptions: { rootDirs: [fromEmitConfig('src'), '.'] } }));
   const tsc = resolve(dirname(createRequire(import.meta.url).resolve('typescript/package.json')), 'bin/tsc');
   const build = spawnSync(process.execPath, [tsc, '-p', emitConfig, '--outDir', outDir], { cwd: packageRoot, encoding: 'utf8' });
   if (build.status !== 0) throw new Error(`MUXUI_REACT_TYPESCRIPT_BUILD_FAILED:\n${build.stdout}${build.stderr}`);
