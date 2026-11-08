@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:02425c95d5e5b3e4404384f881a75185b53fcf1b893a079660d2c8a2107fbf4e -->
+<!-- @generated-content-sha256: sha256:1cc7fc8823a5dc10228dd616f70d320c3c54214954b5183a9b14caf56fc4d5d8 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -29,7 +29,7 @@ Install the prerelease from the `next` dist-tag on npm:
 pnpm add @muxui/react@next
 ```
 
-It requires Node.js `>=24.19.0 <25`, React `>=19.2.0 <20`, and React DOM `>=19.2.0 <20`. npm also points `latest` at the first published version; that is not a stable or `latest` support claim.
+It requires Node.js `>=24.19.0 <27`, React `>=19.2.0 <20`, and React DOM `>=19.2.0 <20`. npm also points `latest` at the first published version; that is not a stable or `latest` support claim.
 
 ## Usage
 
@@ -47,6 +47,18 @@ export function Example() {
 The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle, and public prop names. React Aria Components is an internal implementation substrate; this package does not transfer its APIs or styling boundary.
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
+
+## Locale and routing
+
+`MuxProvider` sets the application-wide context components read. Its `locale` prop is the language tag components format numbers and dates in and take their text direction from. Pass the locale the server detected, on the server and the client, so the markup hydrates unchanged; without one, components render `en-US` on the server and switch to the browser's language after hydration. Its optional `navigate` (and `useHref`) props hand the `href` of a `Link` or a breadcrumb to a client-side router instead of a page load. The provider renders no element; the page still owns `<html lang dir>`.
+
+```tsx
+import { MuxProvider } from '@muxui/react';
+
+export function Root({ locale, children }: { locale: string; children: React.ReactNode }) {
+  return <MuxProvider locale={locale}>{children}</MuxProvider>;
+}
+```
 
 ## State attributes
 

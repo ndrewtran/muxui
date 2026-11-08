@@ -714,8 +714,8 @@ const allPages = async () => Promise.all(manifest.families.map(async (record) =>
 test('every export and part of the package is on exactly one Docs page or in the reference files the pages point to, against the public surface inventory', async () => {
   const { problems, count, held } = coverageProblems(await allPages());
   assert.deepEqual(problems, []);
-  assert.equal(held, 35, 'the 11 package-level exports and the 24 shared types');
-  assert.equal(count + held, 318 + 109 + 132, 'the 318 types, 109 values and 132 parts of the public surface');
+  assert.equal(held, 37, 'the 13 package-level exports and the 24 shared types');
+  assert.equal(count + held, 319 + 110 + 132, 'the 319 types, 110 values and 132 parts of the public surface');
 });
 
 test('each Docs page points to the two reference files that hold the package-level exports and the shared types', async () => {

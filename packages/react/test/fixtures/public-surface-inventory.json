@@ -815,5 +815,19 @@
       "partValues": []
     }
   },
-  "added": {}
+  "added": {
+    ".": {
+      "types": [
+        "MuxProviderProps"
+      ],
+      "values": [
+        "MuxProvider"
+      ],
+      "components": [
+        "MuxProvider"
+      ],
+      "parts": [],
+      "partValues": []
+    }
+  }
 }

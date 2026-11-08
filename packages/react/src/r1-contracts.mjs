@@ -183,7 +183,7 @@ export function assertReactR15GeneratedContracts({
     || closure.tranche !== 'R1.5'
     || !same(Object.keys(closure).sort(), expectedClosureKeys.sort())
     || closure.compatibility?.runtimeProfile !== 'web.react'
-    || closure.compatibility?.node !== '>=24.19.0 <25'
+    || closure.compatibility?.node !== '>=24.19.0 <27'
     || closure.compatibility?.react !== '>=19.2.0 <20'
     || closure.compatibility?.reactDom !== '>=19.2.0 <20'
     || closure.compatibility?.browserMatrix?.browser !== 'Google Chrome 151'

@@ -35,6 +35,7 @@ const OWNER_EXCEPTIONS = Object.freeze({
     ...group('drop-zone', 'the drop item and event types are the DropZone API', 'MuxUIDirectoryDropItem', 'MuxUIDropActivateEvent', 'MuxUIDropEvent', 'MuxUIDropItem', 'MuxUIDropOperation', 'MuxUIFileDropItem', 'MuxUITextDropItem'),
     ...group('breadcrumbs', 'the item type of Breadcrumbs, whose name is the singular of the family name', 'BreadcrumbItem'),
     ...group('toast', 'the hook that reaches the toast manager of ToastProvider', 'useToast'),
+    ...group(PACKAGE_LEVEL, 'the application-wide locale and router context of the package, not a component', 'MuxProvider', 'MuxProviderProps'),
     ...group(PACKAGE_LEVEL, 'the compatibility record of the package, not a component', 'reactCompatibility'),
     ...group(PACKAGE_LEVEL, 'the list of supplemental family names, not a component', 'supplementalFamilies'),
   }),
