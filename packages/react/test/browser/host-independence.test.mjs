@@ -18,6 +18,11 @@ import { launchBrowser, packageRoot, repositoryRoot } from './harness.mjs';
 // the grammar the emission test holds every emitted class to. The part map lists only the documented hooks, not the internal parts
 // the examples also emit, and a class an example defines for itself (`muxui-number-field-sizing-example`) is outside the grammar.
 //
+// Each example is placed twice on each page: bare, and nested, inside a Mux UI container with a consumer element between them
+// (`<div class="muxui-card"><div class="host-wrap">`). On the reset page `.host-wrap` carries typography unlike the browser's and
+// Mux UI's; on the bare page it carries none. A part whose parent is a consumer element is the edge of Mux UI's own markup, so it
+// must take Mux UI's typography and not the consumer's, whatever Mux UI element sits further up.
+//
 // Chromium only, two pages, no server: the fixtures are static markup, so computed style needs neither script nor layout.
 const properties = ['box-sizing', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left', 'font-family', 'font-size', 'line-height'];
 
@@ -33,13 +38,15 @@ const inheritsByDesign = [
 const hostCss = `@layer host-reset {
   *, *::before, *::after { box-sizing: border-box; margin: 0; }
 }
-body { font-family: Impact, fantasy; font-size: 18px; line-height: 2; }`;
+body { font-family: Impact, fantasy; font-size: 18px; line-height: 2; }
+.host-wrap { font: 30px/normal Impact, fantasy; }`;
 
 /** The example markup on a page of the package's CSS; `host` adds the host's CSS before it. The figure has a default margin and no Mux UI class. */
 const documentOf = ({ examples, stylesheet, themes, host }) => '<!doctype html><html data-muxui-color-scheme="light"><head><meta charset="utf-8">'
   + (host ? `<style>@layer host-reset, muxui.tokens, muxui.components, muxui.utilities;</style><style>${hostCss}</style>` : '')
   + `<style>${stylesheet}</style><style>${themes}</style></head><body><figure id="control">control</figure>`
-  + examples.map(({ name, html }) => `<section data-example="${name}">${html}</section>`).join('')
+  + examples.map(({ name, html }) => `<section data-example="${name}">${html}</section>`
+    + `<section data-example="${name}#nested"><div class="muxui-card"><div class="host-wrap">${html}</div></div></section>`).join('')
   + '</body></html>';
 
 /** Runs in the page: the classes it carries. */
@@ -63,7 +70,8 @@ function measure({ owned, properties: names }) {
     }
   });
   const control = document.getElementById('control');
-  return { rows, control: read(getComputedStyle(control), control) };
+  const wrap = document.querySelector('.host-wrap');
+  return { rows, control: read(getComputedStyle(control), control), wrap: read(getComputedStyle(wrap), wrap) };
 }
 
 let browser;
@@ -130,11 +138,14 @@ function report(found) {
 test('the host CSS reaches the page, so a part that took a value from it would show', () => {
   const [bareBox, bareMargin, , , , , bareSize, bareLine] = pages.bare.control;
   const [resetBox, resetMargin, , , , , resetSize, resetLine] = pages.reset.control;
+  const [, , , , , , wrapSize, wrapLine] = pages.reset.wrap;
   assert.notEqual(bareBox, resetBox, 'the reset sets box-sizing on an unclassed figure');
   assert.notEqual(bareMargin, resetMargin, 'the reset removes the figure margin');
   assert.deepEqual([resetSize, resetLine], ['18px', '36px'], 'the page typography applies to an unclassed figure');
   assert.notEqual(bareSize, resetSize);
   assert.notEqual(bareLine, resetLine);
+  assert.deepEqual([wrapSize, wrapLine], ['30px', 'normal'], 'the consumer element between a Mux UI container and the example carries its own typography');
+  assert.deepEqual([pages.bare.wrap[6], pages.bare.wrap[7]], [bareSize, bareLine], 'and none on the bare page');
   assert.ok(pages.bare.rows.length > 1000, `${pages.bare.rows.length} Mux UI elements and pseudo-elements were measured`);
 });
 

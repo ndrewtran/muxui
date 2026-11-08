@@ -35,7 +35,7 @@
   color: var(--muxui-semantic-typography-text-color);
 }
 .muxui-value-label { color: var(--muxui-progress-label-color); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
-.muxui-switch__label { color: var(--muxui-component-switch-label); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
+.muxui-switch__label { color: var(--muxui-component-switch-label); font-weight: var(--muxui-semantic-typography-control-weight); }
 .muxui-meter__track, .muxui-progress-bar__track { position: relative; inline-size: 100%; min-block-size: 0.5rem; overflow: hidden; border-radius: var(--muxui-semantic-shape-pill-radius); background: var(--muxui-semantic-surface-pressed); }
 .muxui-meter__fill, .muxui-progress-bar__fill { min-block-size: inherit; border-radius: inherit; background: var(--muxui-semantic-selection-track); transition: inline-size var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
 .muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar__fill {

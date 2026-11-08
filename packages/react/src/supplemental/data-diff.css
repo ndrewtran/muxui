@@ -12,6 +12,10 @@
   line-height: var(--muxui-semantic-typography-text-line-height);
 }
 
+/* The header row's cells sit under an unclassed tr, so base.css would give them the Mux UI defaults. They take the table's typography instead. */
+.muxui-data-diff__column,
+.muxui-data-diff__selection { font-family: inherit; font-size: inherit; line-height: inherit; }
+
 .muxui-data-diff__header,
 .muxui-data-diff__footer {
   display: flex;

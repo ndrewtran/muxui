@@ -160,13 +160,16 @@
   font: inherit;
 }
 
-/* A Mux UI part takes its text size, family and line height from Mux UI, never from the page it sits in. The body and the
-   outermost Mux UI element (a Mux UI class and no Mux UI ancestor) get the body defaults, and nested parts inherit them from that
-   element. Zero specificity, and after the form-control `font: inherit` resets so a Mux UI button or field takes the body
-   defaults too: a family's rule, or a `:where()` heading or text role later in this layer, still wins, and an inline part such as
-   Link declares `inherit` itself. */
+/* A Mux UI part takes its text size, family and line height from Mux UI, never from the page it sits in. The body and every
+   Mux UI element whose parent is not a Mux UI element (the outermost part, a portaled part, a component inside consumer content
+   that is itself inside another Mux UI part) get the body defaults, and the parts below them inherit those. Zero specificity, and
+   after the form-control `font: inherit` resets so a Mux UI button or field takes the body defaults too: a family's rule, or a
+   `:where()` heading or text role later in this layer, still wins, and an inline part such as Link declares `inherit` itself.
+   So does a part that a component renders under one of its own unclassed wrappers (the Activity, Message and DataDiff parts
+   under a details, summary, li, div or tr): that wrapper is not a Mux UI element, so without `inherit` the part would take
+   the defaults and not its component's typography. */
 :where(body),
-:where([class^='muxui-'], [class*=' muxui-']):not(:where([class^='muxui-'], [class*=' muxui-']) *) {
+:where([class^='muxui-'], [class*=' muxui-']):not(:where([class^='muxui-'], [class*=' muxui-']) > *) {
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-text-m-font-size, var(--muxui-semantic-typography-body-size));
   line-height: var(--muxui-semantic-typography-text-line-height, var(--muxui-semantic-typography-body-line-height));

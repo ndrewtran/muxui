@@ -252,22 +252,25 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
 // SwitchField draws its switch with Switch's own classes and component tokens, so each pair below must paint the
 // same track, thumb, label and text on any host. Cases cover the rest states; `variants` cover the pointer, focus,
 // press, scheme, direction and media states. State attributes are set by hand on both: the CSS reads only them.
+// The last case wraps a long label in a narrow column under a root that sets its own line height: the label's lines must keep
+// Mux UI's line height in both, not the root's.
 const parityCases = [
   ['off', {}],
   ['on', { selected: true }],
   ['invalid off', { invalid: true }],
   ['invalid on', { selected: true, invalid: true }],
   ['disabled on', { selected: true, disabled: true }],
+  ['wrapped label off', { label: 'A long notification label which wraps over multiple lines', width: 200, style: { lineHeight: 2.5 } }],
 ];
 
 function SwitchParityFixture() {
   const copy = { description: 'Send product updates by email.', error: 'Notifications must be on.' };
-  return React.createElement('main', null, parityCases.map(([name, { selected = false, invalid, disabled }]) => React.createElement('section', { key: name, 'data-case': name, style: { display: 'flex', gap: 48, width: 560, marginBlock: 16 } },
-    React.createElement('div', { 'data-kind': 'switch', style: { width: 240 } },
-      React.createElement(Switch, { label: 'Notifications', description: copy.description, errorMessage: copy.error, defaultSelected: selected, invalid, disabled })),
-    React.createElement('div', { 'data-kind': 'field', style: { width: 240 } },
-      React.createElement(SwitchField.Root, { defaultChecked: selected, invalid, disabled },
-        React.createElement(SwitchField.Button, null, React.createElement(SwitchField.Thumb), 'Notifications'),
+  return React.createElement('main', null, parityCases.map(([name, { selected = false, invalid, disabled, label = 'Notifications', width = 240, style }]) => React.createElement('section', { key: name, 'data-case': name, style: { display: 'flex', gap: 48, width: 560, marginBlock: 16 } },
+    React.createElement('div', { 'data-kind': 'switch', style: { width } },
+      React.createElement(Switch, { label, description: copy.description, errorMessage: copy.error, defaultSelected: selected, invalid, disabled, style })),
+    React.createElement('div', { 'data-kind': 'field', style: { width } },
+      React.createElement(SwitchField.Root, { defaultChecked: selected, invalid, disabled, style },
+        React.createElement(SwitchField.Button, null, React.createElement(SwitchField.Thumb), label),
         React.createElement(SwitchField.Description, null, copy.description),
         React.createElement(SwitchField.Error, null, copy.error))))));
 }
@@ -330,7 +333,8 @@ function measureParity({ scheme = 'light', dir = 'ltr', labelAttributes = [], th
     return {
       track: { width: trackWidth, height: trackHeight, ...pick(track, ['box-sizing', 'border-top-width', 'border-top-color', 'background-color', 'background-image', 'border-radius', 'box-shadow', 'transition-property']) },
       thumb: { start: along(rtl ? thumbBox.right : thumbBox.left), end: round(trackWidth - along(rtl ? thumbBox.left : thumbBox.right)), width: round(thumbBox.width), height: round(thumbBox.height), centre: round(thumbBox.top + thumbBox.height / 2 - (box.top + box.height / 2)), ...pick(getComputedStyle(thumb), ['background-color', 'box-shadow', 'border-radius', 'transform', 'transition-property']) },
-      label: { textStart: along(rtl ? textBox.right : textBox.left), ...pick(getComputedStyle(label), ['color', 'opacity', 'cursor', 'font-family', 'font-size', 'font-weight', 'padding-inline-start', 'column-gap', 'min-block-size']) },
+      // `text` is the element that holds the label's text: Switch's label span, or the SwitchField Button itself.
+      label: { textStart: along(rtl ? textBox.right : textBox.left), height: round(box.height), ...pick(getComputedStyle(label), ['color', 'opacity', 'cursor', 'font-family', 'font-size', 'font-weight', 'padding-inline-start', 'column-gap', 'min-block-size']), text: pick(getComputedStyle(text.parentElement), ['color', 'font-family', 'font-size', 'font-weight', 'line-height']) },
       description: below(field ? '.muxui-switch-field__description' : '.muxui-field-description'),
       error: below(field ? '.muxui-switch-field__error' : '.muxui-field-error'),
     };
@@ -358,6 +362,9 @@ test('SwitchField paints the same switch as Switch on a bare page and under a ho
           // Switch's balanced geometry: a 40x22 track whose 14px thumb sits 4px from the edge it rests against.
           assert.deepEqual([field.track.width, field.track.height, field.thumb.width, field.thumb.height], [40, 22, 14, 14], `${host}, ${name}: track and thumb size`);
           assert.equal(name.endsWith('off') ? field.thumb.start : field.thumb.end, 4, `${host}, ${name}: thumb inset`);
+          // Mux UI's text line height is 1.5 x 16px, whatever the root around the label sets, and the wrapped label has more than one line.
+          assert.equal(field.label.text['line-height'], '24px', `${host}, ${name}: label line height`);
+          if (name.startsWith('wrapped')) assert.ok(field.label.height >= 48 && field.label.height % 24 === 0, `${host}, ${name}: ${field.label.height}px is whole 24px lines, at least two`);
         }
       }
       await page.close();
