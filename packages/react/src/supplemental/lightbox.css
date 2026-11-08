@@ -34,6 +34,8 @@
 
 .muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox__previous,
 .muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox__next {
+  /* IconButton's square aspect ratio would win over fit-content in Firefox and squeeze the chevron. */
+  aspect-ratio: auto;
   width: fit-content;
   height: var(--muxui-control-target-size, var(--muxui-control-size-md));
   min-height: var(--muxui-control-target-size, var(--muxui-control-size-md));
@@ -47,8 +49,8 @@
   height: 1.5rem;
 }
 
+/* Square at the sm IconButton size, like Dialog's close. */
 .muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox__close {
-  --muxui-icon-button-size: 1.5rem;
   min-height: auto;
   padding: var(--muxui-semantic-layout-inset-tight);
 }
