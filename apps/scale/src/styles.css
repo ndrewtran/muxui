@@ -138,7 +138,6 @@ body:has(.scale-app) { margin: 0; }
   .contrast-methods li[data-active='true'] { color: var(--scale-ink); font-weight: 600; }
   .contrast-method-name { flex: 0 0 58px; white-space: nowrap; }
   .contrast-chip { flex: 0 0 28px; display: grid; place-items: center; height: 22px; border: 1px solid var(--scale-border); font: 600 12px/1 var(--muxui-semantic-typography-text-font-family); }
-  .contrast-chip[data-empty='true'] { visibility: hidden; }
   .contrast-method-text, .contrast-method-score { font-family: var(--muxui-semantic-typography-mono-font-family); font-size: 12px; white-space: nowrap; }
   .contrast-method-text { flex: 1 1 auto; }
   .contrast-method-score { margin-inline-start: auto; }

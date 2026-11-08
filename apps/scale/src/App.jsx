@@ -266,7 +266,7 @@ function PaletteRow({ title, compiled, kind, steps, contrastPivot, contrastAlgor
     <ul className="contrast-methods" aria-label={`Text on ${title} ${selected.step}`}>
       {selected.methods.map(({ algorithm, name, text, label, badge }) => <li key={algorithm} data-active={algorithm === contrastAlgorithm ? 'true' : undefined} aria-current={algorithm === contrastAlgorithm ? 'true' : undefined}>
         <span className="contrast-method-name">{name}</span>
-        <span className="contrast-chip" data-empty={text ? undefined : 'true'} style={text ? { color: text, backgroundColor: selected.background } : undefined} aria-hidden="true">Aa</span>
+        <span className="contrast-chip" style={text ? { color: text, backgroundColor: selected.background } : { visibility: 'hidden' }} aria-hidden="true">Aa</span>
         <span className="contrast-method-text">{text}</span>
         <span className="contrast-method-score">{scoreText(label, badge)}</span>
       </li>)}
