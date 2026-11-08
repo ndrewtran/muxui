@@ -1031,7 +1031,7 @@ function measureRange(editor: Editor, { from, to }: TextRange): Rect {
 const sameRect = (a: Rect | null, b: Rect | null) => a !== null && b !== null && a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
 
 const e = React.createElement;
-const barIcon = (Icon: LucideIcon) => e(Icon, { className: 'muxui-text-editor__icon', size: 16, 'aria-hidden': 'true', focusable: 'false' });
+const barIcon = (Icon: LucideIcon, ...extra: string[]) => e(Icon, { className: ['muxui-text-editor__icon', ...extra].join(' '), size: 16, 'aria-hidden': 'true', focusable: 'false' });
 
 type SelectionActionsProps = {
   editor: Editor;
@@ -1270,7 +1270,7 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
     content = [
       // The text stays selected, so keep the bar closed until the selection changes.
       button('keep', { variant: 'primary', onActivate: () => leave(() => { dismissSelection(); controller.keep(record!); }) }, barIcon(Check), 'Keep'),
-      button('discard', { onActivate: () => leave(() => controller.discard(record!)) }, barIcon(X), 'Discard'),
+      button('discard', { onActivate: () => leave(() => controller.discard(record!)) }, barIcon(X, 'muxui-text-editor__discard-icon'), 'Discard'),
       e('div', { key: 'divider', className: 'muxui-text-editor__separator', 'aria-hidden': 'true' }),
       iconButton('retry', 'Try again', RotateCw, { onActivate: () => controller.retry(record!) }),
     ];

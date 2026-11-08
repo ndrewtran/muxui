@@ -1059,6 +1059,30 @@
   height: 1rem;
 }
 
+/* Lucide draws its X at 2 units of a 24-unit viewBox, so the line grows and shrinks with the icon: 1px at 12px, about 1.33px at 16px.
+   The shapes of each X below draw a 1.5px line at the size the icon renders, whatever its `size` prop or the CSS that resizes it.
+   This is the only rule that sets an X's stroke, so a new X joins the list (lucide-internal.test.mjs holds the list to the X icons
+   the sources render). `vector-effect` is not inherited, so both declarations sit on the svg's children, its paths. The rule has
+   zero specificity, so a consumer's rule on the shapes wins. */
+:where(
+  .muxui-alert-dialog__close-icon,
+  .muxui-command-palette__chip-remove-icon,
+  .muxui-command-palette__close-icon,
+  .muxui-dialog__close-icon,
+  .muxui-header-nav__mobile-close-icon,
+  .muxui-lightbox__close-icon,
+  .muxui-prompt-composer__remove-icon,
+  .muxui-search-field__clear-icon,
+  .muxui-sidebar__mobile-close-icon,
+  .muxui-tag-group__remove-icon,
+  .muxui-tag-select__remove-icon,
+  .muxui-text-editor__discard-icon,
+  .muxui-toast__dismiss-icon
+) > * {
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
 .muxui-date-trigger:hover:not([data-muxui-state-disabled]) {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-strong);

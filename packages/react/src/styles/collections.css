@@ -2237,6 +2237,12 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
+/* A removable tag ends in its round remove button, whose box already spaces the icon from the tag's end cap, so the tag drops
+   its end padding and the icon sits as far from the end as the label does from the start. */
+.muxui-tag-group__tag:has(.muxui-tag-group__remove) {
+  padding-inline-end: 0;
+}
+
 /* React Aria Components wrap a tag's content in a `display: contents` cell without a className. A data-driven label sits in it as
    text, so the cell takes the tag's typography, not the host's `div` rule. */
 :where(.muxui-tag-group__tag) > :where([role='gridcell']) {
