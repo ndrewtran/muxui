@@ -117,30 +117,38 @@ function blocksOf(css) {
 const wcagBlocks = blocksOf(themeCss);
 const apcaBlocks = blocksOf(apcaThemeCss);
 
+// The tokens a preset re-declares: the color tokens its compile assigns and every color or effect token that reads one,
+// through the base token graph.
+const graph = compileTokenGraph(source);
+const dependents = new Map();
+for (const [id, dependencies] of Object.entries(graph.dependencies)) {
+  for (const dependency of dependencies) dependents.set(dependency, [...(dependents.get(dependency) ?? []), id]);
+}
+function withDependents(seeds) {
+  const found = new Set(seeds);
+  for (const id of found) for (const dependent of dependents.get(id) ?? []) found.add(dependent);
+  return found;
+}
+
 test('themes-apca.css is a second export, and each stylesheet is its own method compiled for every block', () => {
   assert.equal(manifest.exports['./themes-apca.css'], './generated/themes-apca.css');
   for (const [blocks, algorithm] of [[wcagBlocks, WCAG2], [apcaBlocks, APCA]]) {
     assert.deepEqual([...blocks.keys()], blockOrder.map(({ selector }) => selector), `${algorithm}: selectors in rule order`);
     blockOrder.forEach(({ selector }, index) => {
-      const { compiled, preset } = compilations[algorithm][index];
-      const properties = new Map(Object.keys(compiled.tokens).map((id) => [cssName(id), id]));
-      for (const [property, value] of blocks.get(selector)) {
-        assert.equal(value, cssValue(compiled.tokens[properties.get(property)]), `${algorithm}: ${selector} ${property}`);
-      }
+      const { compiled, generated, preset } = compilations[algorithm][index];
+      const seeds = Object.keys(generated.assignments).filter((id) => source.tokens[id]?.type === 'color');
+      const expected = [...withDependents(seeds)].filter((id) => ['color', 'effect'].includes(compiled.tokens[id]?.type));
+      const block = blocks.get(selector);
+      // Each sheet is held to its own method's compile, so a property missing from both sheets still fails.
+      assert.deepEqual([...block.keys()].sort(), expected.map(cssName).sort(), `${algorithm}: ${selector} declares exactly the seeded tokens and what reads them`);
+      for (const id of expected) assert.equal(block.get(cssName(id)), cssValue(compiled.tokens[id]), `${algorithm}: ${selector} ${id}`);
       assert.deepEqual(preset, MUXUI_THEME_PRESETS_BY_ID[preset.id], `${algorithm}: ${preset.id} metadata is method-independent`);
     });
   }
 });
 
 test('themes-apca.css differs from themes.css only in text tokens and the declarations that read them', () => {
-  const graph = compileTokenGraph(source);
-  const dependents = new Map();
-  for (const [id, dependencies] of Object.entries(graph.dependencies)) {
-    for (const dependency of dependencies) dependents.set(dependency, [...(dependents.get(dependency) ?? []), id]);
-  }
-  const reachable = Object.keys(source.tokens).filter((id) => /^semantic\.color\.(?:color|neutral)-\d+-fg$/u.test(id));
-  for (const id of reachable) for (const dependent of dependents.get(id) ?? []) if (!reachable.includes(dependent)) reachable.push(dependent);
-  const allowed = new Set(reachable.map(cssName));
+  const allowed = new Set([...withDependents(Object.keys(source.tokens).filter((id) => /^semantic\.color\.(?:color|neutral)-\d+-fg$/u.test(id)))].map(cssName));
 
   assert.deepEqual([...apcaBlocks.keys()], [...wcagBlocks.keys()]);
   let differing = 0;

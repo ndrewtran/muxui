@@ -1116,9 +1116,13 @@ consists of:
   keeps that policy only while the component's CSS reads the property and a test
   shows that setting it on a rendered instance changes the computed style.
 - **Style entry points.** One component stylesheet, `styles.css`, which holds
-  every family, including the editor and Markdown styles, and the optional
-  `themes.css`. Within a major, `styles.css` stays complete, so any finer entry
-  is added later only additively.
+  every family, including the editor and Markdown styles, and two optional theme
+  stylesheets, `themes.css` and `themes-apca.css`. They hold the same presets
+  with the same selectors, layer, and order, and differ only in how each shade's
+  text color is chosen: by WCAG 2 contrast ratio in `themes.css`, by APCA
+  endpoint selection in `themes-apca.css` (Decision 0036). Within a major,
+  `styles.css` stays complete, so any finer entry is added later only
+  additively.
 
 For supported published contracts, the compatibility promise is deliberately
 narrow and machine-enumerated:
@@ -1135,8 +1139,8 @@ component tokens and never raw palette values. A test in `@muxui/react` renders
 the exported components and checks the published surface. Every declared public
 class and state attribute is emitted in its applicable fixtures and has CSS
 coverage, every public custom property is read and changes computed style in a
-browser, the layers exist, `styles.css` and `themes.css` are the only style
-entries, and canonical examples rely on no internal hook. Internal classes and
+browser, the layers exist, `styles.css`, `themes.css`, and `themes-apca.css` are
+the only style entries, and canonical examples rely on no internal hook. Internal classes and
 substrate attributes may be emitted; they are not part of the contract. The
 catalog and that test expose only registered hooks and flag examples that rely
 on internal selectors. During the

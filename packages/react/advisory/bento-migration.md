@@ -13,7 +13,7 @@ exists in Mux; it does not mean Bento has migrated or a package has been release
 | B18 | Image and Avatar | Previously completed |
 | B19 | ProgressCircle as the Spinner replacement | Previously verified |
 | B20 | SelectNative | Previously completed |
-| B10 | Consumable theme tokens, selectable preset assets, and metadata | Implemented: `@muxui/react/themes` exposes typed metadata for every canonical Scale preset and `@muxui/react/themes.css` provides scoped light/dark and standard/more contrast color declarations generated through the shared Scale authoring compiler. |
+| B10 | Consumable theme tokens, selectable preset assets, and metadata | Implemented: `@muxui/react/themes` exposes typed metadata for every canonical Scale preset and `@muxui/react/themes.css` provides scoped light/dark and standard/more contrast color declarations generated through the shared Scale authoring compiler. `@muxui/react/themes-apca.css` provides the same presets with text colors chosen by APCA endpoint selection instead of WCAG 2 contrast ratio; a project imports one of the two. |
 | B21 | Two-tone circular ColorSwatch | Implemented: `secondaryColor`, `shape`, and accessible `colorName`; both colours retain alpha |
 | B23 | Reusable command data management | Implemented: Mux-owned `useCommandPalette` for query, matching, ranking, grouping, action execution, and dismissal |
 
@@ -75,7 +75,7 @@ These are implementation checks, not Firefox-host or release acceptance.
 
 - The shared token authoring tests compile all canonical standard and monochrome presets, including light/dark and standard/more contrast selections, and verify the derived two-tone swatches.
 - React generation emits typed metadata plus scoped CSS for each preset and combined mode. The CSS includes the complete color dependency closure and related effect roles while leaving layout, typography metrics, density, and motion values in the base stylesheet.
-- Packed-consumer release proof resolves `@muxui/react/themes`, its declaration file, and `@muxui/react/themes.css` without adding a runtime dependency on Scale or private token modules.
+- Packed-consumer release proof resolves `@muxui/react/themes`, its declaration file, `@muxui/react/themes.css`, and `@muxui/react/themes-apca.css` without adding a runtime dependency on Scale or private token modules.
 - An unknown preset ID matches no preset declarations; nested scopes retain inherited values. Forced-colors behavior continues to use the existing system-color rules.
 
 B10 closes the Mux capability only. Bento integration work for B11, persisted compatibility for B22, and the remaining ledger items stay open.
