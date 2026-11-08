@@ -237,7 +237,7 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     await page.getByRole('button', { name: /^Copy Named 60,/u }).click();
     const WCAG_ID = 'wcag2-endpoint-v1';
     const APCA_ID = 'apca-endpoint-v1';
-    // Harbour with Auto: shade 40 takes dark text under WCAG 2 (4.71:1) and light text under APCA (Lc 64).
+    // Harbour with Auto: shade 40 takes dark text under WCAG 2 (4.99:1) and light text under APCA (Lc 65).
     assert.equal(await page.locator('.pivot-selector + .method-selector').count(), 1, 'the contrast method row sits under the pivot row');
     const wcagMethod = page.getByRole('radio', { name: 'WCAG 2', exact: true });
     const apcaMethod = page.getByRole('radio', { name: 'APCA', exact: true });
@@ -246,23 +246,23 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     const compiledText = (shade) => page.locator('.scale-app').evaluate((node, token) => getComputedStyle(node).getPropertyValue(token).trim(), `--muxui-semantic-color-color-${shade}-fg`);
     await page.getByRole('button', { name: /^Copy Named 40,/u }).click();
     assert.equal(await wcagMethod.isChecked(), true);
-    assert.equal(await compiledText(40), '#00222a');
+    assert.equal(await compiledText(40), '#001c23');
     assert.match(await pivotSwatches.getAttribute('aria-label'), /^Copy Named 50,.*Automatic foreground boundary$/u);
-    assert.match(await page.getByRole('button', { name: /^Copy Named 40,/u }).getAttribute('aria-label'), /, 4\.71 to 1, AA$/u);
-    assert.deepEqual(await readout(), [['WCAG 2', 'true', '#00222a', '4.71:1 · AA'], ['APCA', null, '#f2f9fb', 'Lc 64 · 60+']]);
+    assert.match(await page.getByRole('button', { name: /^Copy Named 40,/u }).getAttribute('aria-label'), /, 4\.99 to 1, AA$/u);
+    assert.deepEqual(await readout(), [['WCAG 2', 'true', '#001c23', '4.99:1 · AA'], ['APCA', null, '#f7fbfc', 'Lc 65 · 60+']]);
     await apcaMethod.click();
     assert.equal(await apcaMethod.isChecked(), true);
-    assert.equal(await compiledText(40), '#f2f9fb');
+    assert.equal(await compiledText(40), '#f7fbfc');
     assert.match(await pivotSwatches.getAttribute('aria-label'), /^Copy Named 40,.*Automatic foreground boundary$/u);
-    assert.match(await page.getByRole('button', { name: /^Copy Named 40,/u }).getAttribute('aria-label'), /, Lc 64, 60\+/u);
-    assert.deepEqual(await readout(), [['WCAG 2', null, '#00222a', '4.71:1 · AA'], ['APCA', 'true', '#f2f9fb', 'Lc 64 · 60+']]);
+    assert.match(await page.getByRole('button', { name: /^Copy Named 40,/u }).getAttribute('aria-label'), /, Lc 65, 60\+/u);
+    assert.deepEqual(await readout(), [['WCAG 2', null, '#001c23', '4.99:1 · AA'], ['APCA', 'true', '#f7fbfc', 'Lc 65 · 60+']]);
     assert.deepEqual(await methodRows.evaluateAll((rows) => rows.map((row) => [getComputedStyle(row).fontWeight, getComputedStyle(row).color])), [['400', 'rgb(102, 102, 102)'], ['600', 'rgb(0, 0, 0)']], 'the active method reads as primary text');
     assert.equal(await page.locator('.palette-details dt').first().textContent(), 'Named 40', 'changing the method keeps the selected shade');
     assert.equal((await settingsIn(page)).contrastAlgorithm, 'apca-endpoint-v1');
     await page.reload();
     await page.getByRole('heading', { name: 'Scale', exact: true }).waitFor();
     assert.equal(await apcaMethod.isChecked(), true, 'reload keeps the method from the URL');
-    assert.equal(await compiledText(40), '#f2f9fb');
+    assert.equal(await compiledText(40), '#f7fbfc');
     await ready(page, url);
     assert.equal(await apcaMethod.isChecked(), true, 'a fresh visit keeps the method from the saved draft');
     assert.match(await pivotSwatches.getAttribute('aria-label'), /^Copy Named 40,.*Automatic foreground boundary$/u);
@@ -300,11 +300,11 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     assert.match(await translucent.getByRole('button', { name: /^Copy Named 40,/u }).getAttribute('aria-label'), /^Copy Named 40, #00000080, n\/a(?:,|$)/u);
     assert.deepEqual(await translucent.locator('.contrast-method-score').allTextContents(), ['n/a', 'n/a']);
     await translucent.getByRole('button', { name: /^Copy Named 60,/u }).click();
-    assert.deepEqual(await translucent.locator('.contrast-method-score').allTextContents(), ['7.69:1 · AAA', 'Lc 88 · 75+'], 'other shades keep their scores');
+    assert.deepEqual(await translucent.locator('.contrast-method-score').allTextContents(), ['7.86:1 · AAA', 'Lc 89 · 75+'], 'other shades keep their scores');
     assert.deepEqual(translucentErrors, []);
     await translucent.close();
     await wcagMethod.click();
-    assert.equal(await compiledText(40), '#00222a');
+    assert.equal(await compiledText(40), '#001c23');
     assert.match(await pivotSwatches.getAttribute('aria-label'), /^Copy Named 50,.*Automatic foreground boundary$/u);
     await page.getByRole('button', { name: /^Copy Named 60,/u }).click();
     assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontSize), '18px');

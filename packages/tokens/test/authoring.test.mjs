@@ -536,17 +536,19 @@ test('scaleForegrounds scores every shade under the chosen method and owns the e
   const at = (list, shade) => list.find((entry) => entry.shade === shade);
   // Harbour 40 (#648f9b) is where the two methods disagree.
   const wcag40 = at(named(WCAG), 40);
-  assert.equal(wcag40.text, '#00222a');
-  assert.equal(wcag40.alternative, '#f2f9fb');
-  assert.equal(wcag40.score.toFixed(2), '4.71');
+  assert.equal(wcag40.text, '#001c23');
+  assert.equal(wcag40.alternative, '#f7fbfc');
+  assert.equal(wcag40.score.toFixed(2), '4.99');
   assert.equal(wcag40.safe, true);
   const apca40 = at(named(APCA), 40);
-  assert.equal(apca40.text, '#f2f9fb');
-  assert.equal(Math.round(apca40.score), 64);
+  assert.equal(apca40.text, '#f7fbfc');
+  assert.equal(Math.round(apca40.score), 65);
   assert.ok(apca40.alternativeScore < apca40.score);
+  // Tuning moved shade 30 up to Lc 60.3; the same shade with forced light text is below the |Lc| 60 line.
   const apca30 = at(named(APCA), 30);
-  assert.equal(Math.round(apca30.score), 54);
-  assert.equal(apca30.safe, false, 'APCA is safe at |Lc| 60');
+  assert.equal(apca30.score.toFixed(1), '60.3');
+  assert.equal(apca30.safe, true, 'APCA is safe at |Lc| 60');
+  assert.equal(at(named(APCA, 5), 30).safe, false, 'a manual pivot of 5 gives shade 30 light text, which fails');
   // A manual pivot gives shade-100 text below it and shade-5 text from it, for either palette and method.
   for (const [palette, name] of [[palettes.named, 'named'], [palettes.neutral, 'neutral']]) {
     for (const algorithm of [WCAG, APCA]) {
@@ -593,8 +595,8 @@ test('the contrast method reaches generated foregrounds, diagnostics and compile
   assert.equal(fallback.contrast.algorithm, WCAG);
   assert.deepEqual(fallback.assignments, wcag.assignments, 'an absent method is the source default');
   assert.equal(apca.contrast.algorithm, APCA);
-  assert.equal(wcag.assignments['semantic.color.color-40-fg'].value, '#00222a');
-  assert.equal(apca.assignments['semantic.color.color-40-fg'].value, '#f2f9fb');
+  assert.equal(wcag.assignments['semantic.color.color-40-fg'].value, '#001c23');
+  assert.equal(apca.assignments['semantic.color.color-40-fg'].value, '#f7fbfc');
   assert.equal(apca.assignmentsByMode.dark['semantic.color.color-40-fg'].value, apca.contrast.foregrounds.dark[40]);
   // An unsafe foreground reports the active method's score fields.
   const manual = { ...inputs, contrastPivot: 5 };
@@ -612,8 +614,8 @@ test('the contrast method reaches generated foregrounds, diagnostics and compile
   const preset = (contrastAlgorithm) => compileScalePresetTheme({ source, presetId: 'harbour', modes: { colorScheme: 'light' }, contrastAlgorithm });
   assert.equal(preset().inputs.contrastAlgorithm, WCAG, 'preset inputs always carry the method');
   assert.equal(preset(APCA).document.scale.contrastAlgorithm, APCA);
-  assert.equal(preset(APCA).compiled.tokens['semantic.color.color-40-fg'].value, '#f2f9fb');
-  assert.equal(preset().compiled.tokens['semantic.color.color-40-fg'].value, '#00222a');
+  assert.equal(preset(APCA).compiled.tokens['semantic.color.color-40-fg'].value, '#f7fbfc');
+  assert.equal(preset().compiled.tokens['semantic.color.color-40-fg'].value, '#001c23');
   assert.deepEqual(JSON.parse(serializeThemeAuthoringDocument(preset(APCA).document, { source })), preset(APCA).document);
 });
 

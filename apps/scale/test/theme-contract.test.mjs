@@ -180,7 +180,7 @@ test('Scale defaults, validates and round-trips the contrast method', () => {
   const settings = { ...DEFAULT_SETTINGS, contrastAlgorithm: APCA };
   const document = createScaleDocument(settings, { slug: 'apca-method' });
   assert.equal(document.scale.contrastAlgorithm, APCA);
-  assert.equal(document.overrides['semantic.color.color-40-fg'].value, '#f2f9fb');
+  assert.equal(document.overrides['semantic.color.color-40-fg'].value, '#f7fbfc');
   const restored = settingsFromDocument(JSON.parse(serializeScaleDocument(document)));
   assert.equal(restored.contrastAlgorithm, APCA);
   assert.deepEqual(createScaleDocument(restored, { slug: 'apca-method' }), document);
@@ -223,17 +223,17 @@ test('an imported shade override changes the readout background while the active
   assert.deepEqual(settings.additionalOverrides['semantic.color.color-40'], override);
   const read = (algorithm) => previewSwatches(previewTheme({ ...settings, contrastAlgorithm: algorithm }), 'named', [40], { pivot: settings.contrastPivot, algorithm })[0];
   const wcag = read(WCAG);
-  // The generated foreground is untouched (dark Harbour text), so on the new black it really is 1.26:1.
-  assert.deepEqual([wcag.background, wcag.foreground, wcag.label, wcag.badge], ['#000000', '#00222a', '1.26:1', 'Fail']);
+  // The generated foreground is untouched (dark Harbour text), so on the new black it really is 1.19:1.
+  assert.deepEqual([wcag.background, wcag.foreground, wcag.label, wcag.badge], ['#000000', '#001c23', '1.19:1', 'Fail']);
   assert.deepEqual(wcag.methods.map(({ algorithm, text, label, badge }) => [algorithm, text, label, badge]), [
-    [WCAG, '#00222a', '1.26:1', 'Fail'],
-    [APCA, '#f2f9fb', 'Lc 103', '75+'],
+    [WCAG, '#001c23', '1.19:1', 'Fail'],
+    [APCA, '#f7fbfc', 'Lc 105', '75+'],
   ]);
   const apca = read(APCA);
-  assert.deepEqual([apca.background, apca.foreground, apca.label, apca.badge], ['#000000', '#f2f9fb', 'Lc 103', '75+']);
+  assert.deepEqual([apca.background, apca.foreground, apca.label, apca.badge], ['#000000', '#f7fbfc', 'Lc 105', '75+']);
   assert.deepEqual(apca.methods.map(({ algorithm, text, label, badge }) => [algorithm, text, label, badge]), [
-    [WCAG, '#f2f9fb', '19.72:1', 'AAA'],
-    [APCA, '#f2f9fb', 'Lc 103', '75+'],
+    [WCAG, '#f7fbfc', '20.16:1', 'AAA'],
+    [APCA, '#f7fbfc', 'Lc 105', '75+'],
   ]);
 });
 
@@ -257,9 +257,9 @@ test('translucent shade overrides read as n/a without a badge instead of failing
   }
   // A translucent endpoint leaves the active scores but cannot choose the other method's text.
   const endpoint = read(settingsWith({ 'semantic.color.color-5': '#ffffff80' }), WCAG, [5, 40]);
-  assert.deepEqual(rows(endpoint[0]), [['#00222a', null, 'n/a', null], [null, null, 'n/a', null]]);
-  assert.equal(endpoint[1].label, '4.71:1');
-  assert.deepEqual(rows(endpoint[1]).map(([text, , label]) => [text, label]), [['#00222a', '4.71:1'], [null, 'n/a']]);
+  assert.deepEqual(rows(endpoint[0]), [['#001c23', null, 'n/a', null], [null, null, 'n/a', null]]);
+  assert.equal(endpoint[1].label, '4.99:1');
+  assert.deepEqual(rows(endpoint[1]).map(([text, , label]) => [text, label]), [['#001c23', '4.99:1'], [null, 'n/a']]);
   // A mix toward a transparent colour compiles to a translucent value too.
   const mixed = createScaleDocument({ ...DEFAULT_SETTINGS, additionalOverrides: { 'semantic.color.color-40': { type: 'color', unit: 'hex', value: '#648f9b', mix: { space: 'srgb', token: 'reference.color.brand-60', weight: 0.5, color: '#00000000' } } } }, { slug: 'mixed-shade' });
   const [mixedSwatch] = read(settingsFromDocument(mixed), APCA, [40]);
@@ -310,14 +310,18 @@ test('swatch readouts name the score and badge each method reports', () => {
     const settings = { ...DEFAULT_SETTINGS, contrastAlgorithm };
     return previewSwatches(previewTheme(settings), 'named', [step], { pivot: settings.contrastPivot, algorithm: contrastAlgorithm })[0];
   };
-  // Harbour light 40 is #648f9b: WCAG picks dark text at 4.71:1, APCA light text at Lc 64.
+  // Harbour light 40 is #648f9b: WCAG picks dark text at 4.99:1, APCA light text at Lc 65.
   const wcag = swatch(WCAG, 40);
-  assert.deepEqual([wcag.value, wcag.foreground, wcag.label, wcag.badge], ['#648f9b', '#00222a', '4.71:1', 'AA']);
-  assert.deepEqual(wcag.methods.map(({ name, text, label, badge }) => [name, text, label, badge]), [['WCAG 2', '#00222a', '4.71:1', 'AA'], ['APCA', '#f2f9fb', 'Lc 64', '60+']]);
+  assert.deepEqual([wcag.value, wcag.foreground, wcag.label, wcag.badge], ['#648f9b', '#001c23', '4.99:1', 'AA']);
+  assert.deepEqual(wcag.methods.map(({ name, text, label, badge }) => [name, text, label, badge]), [['WCAG 2', '#001c23', '4.99:1', 'AA'], ['APCA', '#f7fbfc', 'Lc 65', '60+']]);
   const apca = swatch(APCA, 40);
-  assert.deepEqual([apca.foreground, apca.label, apca.badge], ['#f2f9fb', 'Lc 64', '60+']);
-  assert.deepEqual(apca.methods.map(({ text }) => text), ['#00222a', '#f2f9fb']);
-  assert.deepEqual([swatch(APCA, 30).label, swatch(APCA, 30).badge], ['Lc 54', '45+']);
+  assert.deepEqual([apca.foreground, apca.label, apca.badge], ['#f7fbfc', 'Lc 65', '60+']);
+  assert.deepEqual(apca.methods.map(({ text }) => text), ['#001c23', '#f7fbfc']);
+  // Tuning lifted shade 30 to the Lc 60 line; a recoloured grey in the dead band still reads 45+.
+  assert.deepEqual([swatch(APCA, 30).label, swatch(APCA, 30).badge], ['Lc 60', '60+']);
+  const grey = { ...DEFAULT_SETTINGS, contrastAlgorithm: APCA, additionalOverrides: { 'semantic.color.color-30': { type: 'color', unit: 'hex', value: '#9c9c9c' } } };
+  const [dead] = previewSwatches(previewTheme(grey), 'named', [30], { pivot: 'auto', algorithm: APCA });
+  assert.deepEqual([dead.foreground, dead.label, dead.badge], ['#001c23', 'Lc 49', '45+']);
   assert.equal(swatch(APCA, 100).badge, '75+');
   assert.equal(swatch(WCAG, 100).badge, 'AAA');
   assert.throws(() => previewSwatches(previewTheme(DEFAULT_SETTINGS), 'named', [40], { pivot: 'auto', algorithm: 'wcag3' }), /contrastAlgorithm/u);

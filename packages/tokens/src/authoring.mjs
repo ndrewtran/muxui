@@ -1,5 +1,5 @@
 import { compilePureTokenGraph, cssDeclaration, validatePureLiteral } from './core.mjs';
-import { NAMED_SHADES, NEUTRAL_SHADES, generatePalette, generateMonochromePalette, getApcaContrast, getContrastRatio as contrastRatio } from './scale-palette.mjs';
+import { BLACKEN_WEIGHT, NAMED_SHADES, NEUTRAL_SHADES, blackenHex, generatePalette, generateMonochromePalette, getApcaContrast, getContrastRatio as contrastRatio } from './scale-palette.mjs';
 export { NAMED_SHADES, NEUTRAL_SHADES, randomScaleBaseColor } from './scale-palette.mjs';
 export { getApcaContrast as getScaleApcaContrast, getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
 
@@ -92,7 +92,7 @@ function assertSourceMetadata(source) {
   const { scale, fonts, typography } = source.theme;
   if (!isRecord(scale) || !isRecord(fonts) || !isRecord(typography?.roles)) invalid('theme');
   assertKeys(scale, ['algorithm', 'namedShades', 'neutralShades', 'defaults', 'standardPresets', 'monochromePresets', 'radius', 'contrast'], 'theme.scale');
-  if (scale.algorithm !== 'muxui-oklch-v1'
+  if (scale.algorithm !== 'muxui-oklch-v2'
     || !sameValue(scale.namedShades, NAMED_SHADES)
     || !sameValue(scale.neutralShades, NEUTRAL_SHADES)) invalid('theme.scale.shades');
   const radius = scale.radius;
@@ -278,7 +278,7 @@ function unsafeForeground(token, shade, choice, { algorithm, pivot, colorScheme 
 // Dark neutral stops have an extra blackened canvas at 5, then map 10..100
 // to the reversed 100..10 base stops. This is not a simple 27-stop reversal.
 function modePalettes(named, neutral) {
-  const blackened = `#${[1, 3, 5].map((offset) => Math.round(Number.parseInt(neutral.at(-1).hex.slice(offset, offset + 2), 16) * 0.85).toString(16).padStart(2, '0')).join('')}`;
+  const blackened = blackenHex(neutral.at(-1).hex);
   return {
     named: named.map(({ shade }, index) => ({ shade, hex: named[named.length - 1 - index].hex })),
     neutral: neutral.map(({ shade }, index) => ({ shade, hex: index === 0 ? blackened : neutral[neutral.length - index].hex })),
@@ -304,10 +304,10 @@ export function generateScaleTheme(inputs) {
   assertContrastAlgorithm(algorithm);
   const curvature = inputs.curvature ?? sourceScale.radius.curvature.default;
   if (typeof curvature !== 'number' || !Number.isFinite(curvature) || curvature < sourceScale.radius.curvature.minimum || curvature > sourceScale.radius.curvature.maximum) throw new TypeError('MUXUI_THEME_SCALE_CURVATURE_INVALID');
-  const neutral = generatePalette(inputs.neutralColor, 'neutral', { whiteAnchor: Boolean(inputs.whiteAnchor), shades: neutralShades });
+  // Both palettes come out tuned: every shade passes WCAG 2 and APCA against its endpoint texts.
   const mono = mode === 'monochrome' ? generateMonochromePalette(inputs.namedColor, { whiteAnchor: Boolean(inputs.whiteAnchor) }).filter(({ shade }) => neutralShades.includes(shade)) : null;
   const named = mono ? mono.filter(({ shade }) => namedShades.includes(shade)) : generatePalette(inputs.namedColor, 'named', { shades: namedShades });
-  const activeNeutral = mono ?? neutral;
+  const activeNeutral = mono ?? generatePalette(inputs.neutralColor, 'neutral', { whiteAnchor: Boolean(inputs.whiteAnchor), shades: neutralShades });
   const assignments = {};
   for (const entry of named) assignments[`reference.color.brand-${entry.shade}`] = typedColor(entry.hex);
   for (const entry of activeNeutral) assignments[`reference.color.neutral-${entry.shade}`] = typedColor(entry.hex);
@@ -347,7 +347,7 @@ export function generateScaleTheme(inputs) {
     assignments[token] = typedColor(light.text);
     darkAssignments[token] = {
       ...typedColor(dark.text),
-      ...(dark.text === darkPalettes.neutral[0].hex ? { mix: { space: 'srgb', token: 'semantic.color.neutral-10', color: '#000000', weight: 0.85 } } : {}),
+      ...(dark.text === darkPalettes.neutral[0].hex ? { mix: { space: 'srgb', token: 'semantic.color.neutral-10', color: '#000000', weight: BLACKEN_WEIGHT } } : {}),
     };
     if (!light.safe) diagnostics.push(unsafeForeground(token, shade, light, options));
     if (!dark.safe) diagnostics.push(unsafeForeground(token, shade, dark, { ...options, colorScheme: 'dark' }));
