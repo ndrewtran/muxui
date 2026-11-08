@@ -52,9 +52,11 @@ method, so some `semantic.color.neutral-<shade>-fg` assignments change: for a
 neutral of `#878685`, shade 60 now takes `#2a2928` where `7.0.0` took
 `#f9f7f5`. Generated palettes change as well: `theme.scale.algorithm` is now
 `muxui-oklch-v2` (it was `muxui-oklch-v1`). Shade 5 is lighter (a white-anchored
-neutral keeps its pure white), shade 100 is darker, and any other shade that
-fails WCAG 2 4.5:1 or APCA Lc 60 against its endpoint texts moves to the
-nearest lightness that passes. Harbour's named
+neutral keeps its pure white), and shade 100 is darker. Shades 10 and 60 stay
+fixed. Every other shade that fails WCAG 2 4.5:1 or APCA Lc 60 against its
+endpoint texts moves to the nearest lightness between its neighbours that
+passes both; a shade with no such lightness keeps its generated value and can
+still fall short. Harbour's named
 shades 5, 30 and 100 and its neutral shades 5, 50 and 100 change, so its
 `reference.color.brand-5` goes from `#f2f9fb` to `#f7fbfc`. No token was added
 or removed.
