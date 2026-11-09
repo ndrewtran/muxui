@@ -11,8 +11,9 @@ import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 // own preset on one that has it (applying nothing either way), applies a picked preset to the
 // document root, rolls a preset each time Random is chosen and names it in the foot, restores
 // the root's earlier theme when it unmounts, keeps its keyboard stops, and stays inside the
-// viewport down to 360 (E-BL1-04). Runs in every engine named by MUXUI_BROWSER_ENGINES
-// (see harness.mjs).
+// viewport down to 360 (E-BL1-04). The open panel is a dark scope on a light page and on a
+// dark one: it carries the page's preset, follows a pick while open, and its text stays
+// readable on the panel. Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const variant = await patternVariant('theme-settings', 'popover');
 // The preset the block picks when Math.random returns `value`.
@@ -40,6 +41,49 @@ const NOTHING = ['Current theme', 'Page default'];
 const expectFoot = async (dialog, label, name) => {
   assert.deepEqual(await foot(dialog).locator('span').allTextContents(), [label, name]);
 };
+
+// The scope attributes on the open panel's positioner.
+const panelScope = (tab) => tab.evaluate(() => {
+  const positioner = document.querySelector('.muxui-popover__positioner');
+  return ['data-muxui-color-scheme', 'data-muxui-theme'].map((name) => positioner.getAttribute(name));
+});
+
+// The WCAG contrast ratio of every visible piece of text in the open panel against the opaque background it sits on.
+// Colours go through a canvas, which reads any CSS colour syntax a computed value can take.
+const panelTextContrast = (tab) => tab.evaluate(() => {
+  const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const rgba = (css) => {
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = '#000';
+    context.fillStyle = css;
+    context.fillRect(0, 0, 1, 1);
+    return context.getImageData(0, 0, 1, 1).data;
+  };
+  const luminance = ([red, green, blue]) => {
+    const [r, g, b] = [red, green, blue].map((channel) => {
+      const value = channel / 255;
+      return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const backgroundOf = (element) => {
+    for (let node = element; node; node = node.parentElement) {
+      const color = rgba(getComputedStyle(node).backgroundColor);
+      if (color[3] === 255) return color;
+    }
+    return rgba('white');
+  };
+  const panel = document.querySelector('.muxui-popover');
+  return [...panel.querySelectorAll('*')]
+    .filter((element) => [...element.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== ''))
+    .filter((element) => { const box = element.getBoundingClientRect(); return box.width > 1 && box.height > 1 && getComputedStyle(element).visibility !== 'hidden'; })
+    // The mode picker's selection highlight carries its own copy of each label, inverted and shown only over the selected segment.
+    .filter((element) => !element.classList.contains('muxui-toggle-button-group__motion-label'))
+    .map((element) => {
+      const [light, dark] = [luminance(rgba(getComputedStyle(element).color)), luminance(backgroundOf(element))].sort((a, b) => b - a);
+      return { text: element.textContent.trim(), ratio: (light + 0.05) / (dark + 0.05) };
+    });
+});
 
 for (const engine of browserEngines()) {
   test(`theme settings keep their popover, theme, Random roll, and unmount behavior in ${engine}`, { timeout: 300_000 }, async (t) => {
@@ -77,6 +121,37 @@ for (const engine of browserEngines()) {
           assert.deepEqual(errors, []);
         } finally {
           await context.close();
+        }
+      });
+
+      await t.test('is a dark scope on a light and a dark page that carries the page preset, follows a pick while open, and stays readable', async () => {
+        for (const scheme of ['light', 'dark']) {
+          const { context, tab, errors } = await openBlock(browser, url, { scheme, hostTheme: 'standard-lagoon' });
+          try {
+            const dialog = await open(tab);
+            assert.deepEqual(await panelScope(tab), ['dark', 'standard-lagoon'], `${scheme} page: a dark panel with the page's preset`);
+
+            // A pick while the panel is open re-themes it, with no reopening.
+            await option(dialog, 'monochrome-forest').click();
+            await expectTheme(tab, 'monochrome-forest');
+            await pollUntil(tab, () => document.querySelector('.muxui-popover__positioner').getAttribute('data-muxui-theme') === 'monochrome-forest', undefined, { message: 'the open panel follows the picked theme', report: () => document.querySelector('.muxui-popover__positioner').getAttribute('data-muxui-theme') });
+            assert.deepEqual(await panelScope(tab), ['dark', 'monochrome-forest']);
+
+            // The foot and both pickers read on the panel: names, headings, and the foot's label and value.
+            const readable = await panelTextContrast(tab);
+            assert.ok(readable.length >= 10, `${scheme} page: the probe saw the panel's text (${readable.length} pieces)`);
+            const unreadable = readable.filter(({ ratio }) => ratio < 4.5);
+            assert.deepEqual(unreadable, [], `${scheme} page: text under 4.5:1 on the panel`);
+
+            // Choosing the other mode flips the page, and the panel stays dark.
+            await dialog.getByRole('radio', { name: scheme === 'light' ? 'Dark' : 'Light' }).click();
+            await pollUntil(tab, (expected) => document.documentElement.getAttribute('data-muxui-color-scheme') === expected, scheme === 'light' ? 'dark' : 'light', { message: 'the mode flips the page' });
+            assert.deepEqual(await panelScope(tab), ['dark', 'monochrome-forest']);
+            assert.deepEqual((await panelTextContrast(tab)).filter(({ ratio }) => ratio < 4.5), [], `${scheme} page flipped: text under 4.5:1 on the panel`);
+            assert.deepEqual(errors, []);
+          } finally {
+            await context.close();
+          }
         }
       });
 

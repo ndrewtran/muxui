@@ -450,6 +450,35 @@ test('Storybook colour audit recognizes canonical token mixes and shadow-only fo
   }
 });
 
+test('Storybook colour audit reads a nested colour scheme scope against its own scheme\'s tokens', async () => {
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    const page = await browser.newPage();
+    // A mix of a token whose value differs by scheme, so only the dark graph holds this colour.
+    const derived = graphs.dark['semantic.color.neutral-5'];
+    const source = graphs.dark[derived.mix.token];
+    const mix = `color-mix(in ${derived.mix.space}, ${source.value} ${derived.mix.weight * 100}%, ${derived.mix.color})`;
+    const html = (inside, outside = '') => `<html data-muxui-color-scheme="light"><body style="color:${graphs.light['semantic.content.strong'].value};background:${graphs.light['semantic.surface.canvas'].value}">
+      ${outside}<div data-muxui-color-scheme="dark" style="width:40px;height:24px;background:${inside}"><span id="nested-child" style="background:${inside}">x</span></div>
+    </body></html>`;
+    const flagged = (result) => result.nonToken.filter((paint) => paint.property === 'background-color' && paint.rgba === '14.45,13.6,12.75,1');
+
+    await page.setContent(html(mix));
+    assert.equal(flagged(await page.evaluate(collectStorybookPaints, { tokens: graphs.light })).length, 1, 'the light graph alone does not hold a dark mix');
+    const nested = await page.evaluate(collectStorybookPaints, { tokens: graphs.light, schemeTokens: graphs });
+    assert.deepEqual(flagged(nested), [], 'inside a dark scope the dark graph applies, for the scope and its descendants');
+    assert.ok(nested.paints.some(({ property, rgba, token }) => property === 'background-color' && rgba === '14.45,13.6,12.75,1' && graphs.dark[token]?.mix), JSON.stringify(nested.paints));
+
+    // The same colour on the light page itself, outside the scope, is still off the page's tokens.
+    await page.setContent(html('transparent', `<div id="outside" style="width:40px;height:24px;background:${mix}"></div>`));
+    const outside = await page.evaluate(collectStorybookPaints, { tokens: graphs.light, schemeTokens: graphs });
+    assert.equal(flagged(outside).length, 1);
+    assert.ok(flagged(outside)[0].examples.some((example) => example.includes('#outside')));
+  } finally {
+    await browser.close();
+  }
+});
+
 test('Storybook colour audit preserves intrinsic alpha in canonical effect paints', async () => {
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
   try {
