@@ -70,6 +70,7 @@ function sampleTravel(selector) {
     || button.getAttribute('aria-checked') === 'true'
     || button.getAttribute('aria-pressed') === 'true');
   const indicator = root.querySelector('.muxui-toggle-button-group__motion-indicator');
+  const foreground = root.querySelector('.muxui-toggle-button-group__motion-foreground');
   const rect = (node) => {
     const value = node?.getBoundingClientRect();
     return value ? { left: value.left, top: value.top, width: value.width, height: value.height } : null;
@@ -80,6 +81,11 @@ function sampleTravel(selector) {
     buttonBackgrounds: buttons.map((button) => getComputedStyle(button).backgroundColor),
     indicator: rect(indicator),
     selectedRects: selected.map(rect),
+    indicatorOpacity: getComputedStyle(indicator).opacity,
+    foregroundOpacity: getComputedStyle(foreground).opacity,
+    foregroundClip: getComputedStyle(foreground).clipPath,
+    buttons: buttons.map(rect),
+    labels: [...foreground.children].map(rect),
   };
 }
 
@@ -208,6 +214,32 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     const settledTwo = await readGroup(page, primary);
     assertRectsClose(settledTwo.indicator, settledTwo.selectedRects[0], 'fill should settle exactly on target');
 
+    for (const [id, text, scheme] of [['one', 'One', 'dark'], ['two', 'Two', 'light']]) {
+      const themeRecording = await recordFrames(page, sampleTravel, primary);
+      await page.evaluate(({ id, scheme }) => {
+        // Match a host's commit-time theme refresh before the selection paints.
+        const observer = new MutationObserver(() => {
+          observer.disconnect();
+          document.documentElement.setAttribute('data-muxui-color-scheme', scheme);
+          document.documentElement.removeAttribute('data-muxui-motion');
+          document.documentElement.setAttribute('data-muxui-motion', 'full');
+        });
+        observer.observe(document.querySelector('#primary-toggle'), { subtree: true, attributes: true, attributeFilter: ['aria-checked'] });
+        window.__toggleSetPrimary(id);
+      }, { id, scheme });
+      await waitForSelected(page, primary, text);
+      await waitForAlignment(page, primary);
+      const themeFrames = (await themeRecording.stop()).filter(({ trailing }) => trailing);
+      assert.ok(themeFrames.some(({ indicator, selectedRects }) => Math.abs(indicator.left - selectedRects[0].left) > 1), `${scheme}: unchanged full motion must preserve moving selection`);
+      assert.ok(new Set(themeFrames.map(({ foregroundClip }) => foregroundClip)).size > 1, `${scheme}: foreground clip follows the movement`);
+      for (const frame of themeFrames) {
+        assert.equal(frame.indicatorOpacity, '1');
+        assert.equal(frame.foregroundOpacity, '1');
+        assert.equal(frame.labels.length, frame.buttons.length, 'one foreground label per button');
+        frame.labels.forEach((label, index) => assertRectsClose(label, frame.buttons[index], 'foreground label retains button geometry'));
+      }
+    }
+
     // Reverse in the same frame that records the moving fill, then read the fill
     // one frame after the reversal commits.
     const reversalRecording = await recordFrames(page, (selector, state) => {
@@ -255,8 +287,16 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     await waitForSelected(page, primary, 'One');
     await waitForAlignment(page, primary);
 
+    await page.evaluate(() => window.__toggleSetPrimary('long'));
+    await page.waitForFunction(() => document.querySelector('#primary-toggle[data-muxui-toggle-motion-trailing]'));
     await page.evaluate(() => document.querySelector('#primary-toggle').setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => document.querySelector('#primary-toggle[data-muxui-toggle-motion-reduced]'));
+    const interrupted = await readGroup(page, primary);
+    assert.equal(interrupted.trailing, false);
+    assertRectsClose(interrupted.indicator, interrupted.selectedRects[0], 'a real reduced preference change immediately settles active travel');
+    await page.evaluate(() => window.__toggleSetPrimary('one'));
+    await waitForSelected(page, primary, 'One');
+    await waitForAlignment(page, primary);
     await page.evaluate(() => window.__toggleSetPrimary('long'));
     await waitForSelected(page, primary, 'Longer selection');
     await waitForAlignment(page, primary);
@@ -266,6 +306,11 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     assertRectsClose(reduced.indicator, reduced.selectedRects[0], 'reduced motion should settle immediately');
     await page.evaluate(() => document.querySelector('#primary-toggle').removeAttribute('data-muxui-motion'));
     await page.waitForFunction(() => !document.querySelector('#primary-toggle[data-muxui-toggle-motion-reduced]'));
+    const resumedRecording = await recordFrames(page, sampleTravel, primary);
+    await page.evaluate(() => window.__toggleSetPrimary('one'));
+    await waitForSelected(page, primary, 'One');
+    await waitForAlignment(page, primary);
+    assert.ok((await resumedRecording.stop()).some(({ trailing }) => trailing), 'restoring full motion animates subsequent selection');
 
     const multiple = '#multiple-toggle';
     const multipleInitial = await readGroup(page, multiple);

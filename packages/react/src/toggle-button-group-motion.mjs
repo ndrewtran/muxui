@@ -155,7 +155,7 @@ function observeToggleButtonSelection(root, selectionMode) {
   root.setAttribute('data-muxui-toggle-motion', 'single');
 
   let active = true;
-  let reduced = false;
+  let reduced = null;
   let controls = null;
   let pendingFrame = null;
   let currentKey = null;
@@ -305,6 +305,7 @@ function observeToggleButtonSelection(root, selectionMode) {
 
   const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => scheduleSync(true, true));
   const disconnectReduced = observeReducedMotion(root, null, (nextReduced) => {
+    if (reduced === nextReduced) return;
     reduced = nextReduced;
     root.toggleAttribute(REDUCED_ATTRIBUTE, nextReduced);
     if (nextReduced) stop();

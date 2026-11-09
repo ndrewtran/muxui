@@ -43,8 +43,21 @@ values imply interchangeable contracts.
 canonical source through `{ source }`:
 
 - `generateScaleTheme({ source, mode, presetId, namedColor, neutralColor,
-  whiteAnchor, contrastPivot, curvature })` returns typed assignments and
-  light/dark palette projections.
+  whiteAnchor, contrastPivot, contrastAlgorithm, curvature })` returns typed
+  assignments and light/dark palette projections. `contrastAlgorithm` is
+  `wcag2-endpoint-v1` (default) or `apca-endpoint-v1`; it sets how Auto and
+  the safe check score the shade-5 and shade-100 text candidates.
+  Palettes are tuned (`theme.scale.algorithm` `muxui-oklch-v2`): shade 5 and
+  shade 100 are strengthened, then each other shade that would fail WCAG 2 4.5:1
+  or APCA |Lc| 60 against its endpoint texts, light and dark, moves along OKLCH
+  lightness to the nearest passing position between its neighbours. The search
+  never moves shades 5, 10, 60 (the base) or 100, and a shade with no passing
+  position stays as generated, so a custom base can still report an unsafe
+  foreground.
+- `scaleForegrounds(palette, { pivot, algorithm })` returns the chosen text,
+  alternative and scores per shade of a named or neutral palette, the same
+  choice `generateScaleTheme` compiles. Auto picks the higher score under the
+  algorithm for both palettes.
 - `compileScalePresetTheme({ source, collection, presetId, modes })` resolves a
   canonical standard or monochrome preset through the same authoring document
   and compiler path used by Scale. Consumers should derive preset metadata and

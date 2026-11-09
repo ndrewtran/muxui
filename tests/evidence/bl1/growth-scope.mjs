@@ -215,6 +215,46 @@ async function normalizeLegacySpringTransitions(directory) {
   if (changed) await writeFile(path, `${JSON.stringify(source, null, 2)}\n`);
 }
 
+/**
+ * The rewrites of a token source's `theme.scale` block that a tree from before needs, each taking the block and returning whether it changed it.
+ * A later change to that block that the schema refuses in an older tree adds one entry here; `normalizeLegacyScaleMetadata` applies them all.
+ */
+const legacyScaleRewrites = [
+  // Token contract 8.0.0 replaced the contrast `algorithm` with the `algorithms` the source offers and the `defaultAlgorithm` it starts from. The
+  // schema allowed one value before, so a tree from before has exactly that value, which becomes the default beside the two algorithms the current
+  // source lists. Any other value is left as it is, and the compiler rejects it.
+  function contrastAlgorithms(scale) {
+    const { contrast } = scale;
+    if (contrast === null || typeof contrast !== 'object' || contrast.algorithm !== 'wcag2-endpoint-v1' || 'algorithms' in contrast || 'defaultAlgorithm' in contrast) return false;
+    scale.contrast = Object.fromEntries(Object.entries(contrast).flatMap(([key, value]) => (
+      key === 'algorithm' ? [['algorithms', ['wcag2-endpoint-v1', 'apca-endpoint-v1']], ['defaultAlgorithm', value]] : [[key, value]]
+    )));
+    return true;
+  },
+  // Palette tuning changed the generated palettes and named them `muxui-oklch-v2`. The schema allows that one id, so a tree from before, whose one
+  // allowed id was `muxui-oklch-v1`, takes the new one in the field's place. Any other id is left as it is, and the compiler rejects it.
+  function paletteAlgorithm(scale) {
+    if (scale.algorithm !== 'muxui-oklch-v1') return false;
+    scale.algorithm = 'muxui-oklch-v2';
+    return true;
+  },
+];
+
+/**
+ * The token source's `theme.scale` block changed (token contract 8.0.0 changed its shape, and palette tuning its algorithm id), and the token source
+ * schema refuses the old one. A tree from before is rewritten to the current form on both sides (`legacyScaleRewrites`), and a source the strict parser
+ * refuses is left as it is for the compiler to report. The token contract version is not rewritten: the compiler reads it as a label and compares it with nothing.
+ */
+export async function normalizeLegacyScaleMetadata(directory) {
+  const path = join(directory, tokenSourcePath);
+  const source = await readFile(path, 'utf8').then(parseJsonStrict, () => undefined);
+  const scale = source?.theme?.scale;
+  if (scale === null || typeof scale !== 'object') return;
+  let changed = false;
+  for (const rewrite of legacyScaleRewrites) changed = rewrite(scale) || changed;
+  if (changed) await writeFile(path, `${JSON.stringify(source, null, 2)}\n`);
+}
+
 /** Makes the extracted tree's source manifest compile: drops the removed `authorityDecisionPath`; any other unknown key still fails the compiler. */
 async function normalizeLegacyManifest(directory) {
   const path = join(directory, manifestPath);
@@ -340,13 +380,15 @@ export async function normalizeLegacyPlatformSafety(directory) {
 /**
  * The catalog digest of the tree at `revision`, compiled by this checkout's compiler without the sources under
  * `excludedDirectories`. A tree from before Decision 0028, before block categories became catalog data, before they carried labels,
- * before a spring transition named no easing, or before platform safety resolved from registry defaults is normalized first
- * (`normalizeLegacyManifest`, `normalizeCategoryRegistry`, `normalizeLegacySpringTransitions`, and `normalizeLegacyPlatformSafety`).
+ * before a spring transition named no easing, before the Scale block took its current shape and palette algorithm id, or before platform safety resolved from registry
+ * defaults is normalized first (`normalizeLegacyManifest`, `normalizeCategoryRegistry`, `normalizeLegacySpringTransitions`,
+ * `normalizeLegacyScaleMetadata`, and `normalizeLegacyPlatformSafety`).
  */
 export const catalogDigestAt = ({ cwd = repositoryRoot, revision, excludedDirectories }) => withTree(cwd, revision, async (directory) => {
   await normalizeLegacyManifest(directory);
   await normalizeCategoryRegistry(directory);
   await normalizeLegacySpringTransitions(directory);
+  await normalizeLegacyScaleMetadata(directory);
   await normalizeLegacyPlatformSafety(directory);
   const excluded = ({ path }) => excludedDirectories.some((excludedDirectory) => path.startsWith(excludedDirectory));
   return (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest;

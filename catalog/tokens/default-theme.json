@@ -5,7 +5,7 @@
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "7.0.0",
+  "tokenContractVersion": "8.0.0",
   "theme": {
     "name": "default",
     "modeAxes": {
@@ -309,7 +309,7 @@
       }
     },
     "scale": {
-      "algorithm": "muxui-oklch-v1",
+      "algorithm": "muxui-oklch-v2",
       "namedShades": [
         5,
         10,
@@ -477,7 +477,11 @@
         }
       },
       "contrast": {
-        "algorithm": "wcag2-endpoint-v1",
+        "algorithms": [
+          "wcag2-endpoint-v1",
+          "apca-endpoint-v1"
+        ],
+        "defaultAlgorithm": "wcag2-endpoint-v1",
         "defaultPivot": "auto",
         "pivots": [
           5,

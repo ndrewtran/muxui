@@ -4,9 +4,10 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { catalogAcrossCommit, gitIn, growthRepository, jsonEdit } from './evidence-growth-repository.mjs';
 
-// BL1 growth, E-BL1-08: a tree from before Decision 0028, before block categories were catalog data, before they carried labels, or before a spring
-// transition named no easing is normalized the same way on both sides of the comparison. Like `evidence-growth-catalog.test.mjs`, it compiles two full extracted trees
-// per comparison (once per tree, however many comparisons share it), and `node --test` runs the two files in parallel.
+// BL1 growth, E-BL1-08: a tree from before Decision 0028, before block categories were catalog data, before they carried labels, before a spring
+// transition named no easing, or before the Scale block took its current shape or palette algorithm is normalized the same way on both sides of the comparison. Like
+// `evidence-growth-catalog.test.mjs`, it compiles two full extracted trees per comparison (once per tree, however many comparisons share it), and
+// `node --test` runs the two files in parallel.
 test('trees from before the manifest key was removed or before category labels compile the way they did, and an unknown registry shape still fails', async () => {
   const repo = await growthRepository();
   const { cwd, second } = repo;
@@ -57,6 +58,27 @@ test('trees from before the manifest key was removed or before category labels c
     assert.equal(await sameDigest(springEasing, second), true, 'a legacy easing beside a spring is dropped, so the tree compiles as the one without it');
     const bareTransition = await themeEdit((tokens) => { delete tokens['semantic.motion.progress-transition'].value.easing; });
     await assert.rejects(catalogAcrossCommit({ cwd, commit: bareTransition, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), (error) => error.code === 'MUXUI_SCHEMA_INVALID', 'a transition with neither a spring nor an easing still fails the compiler');
+    // Token contract 8.0.0 replaced the Scale contrast `algorithm` with `algorithms` and a `defaultAlgorithm`, and the token source schema refuses the old
+    // field, so a tree from before, whose one allowed algorithm was `wcag2-endpoint-v1`, is rewritten on both sides and compiles to the digest of the tree
+    // with the current block. Any other algorithm is not converted away.
+    // The old block led with `algorithm`, and the digest follows field order, so the rewrite keeps the old field's place.
+    const scaleEdit = (algorithm) => repo.modify((edit) => edit(themePath, jsonEdit((theme) => {
+      const { algorithms: _algorithms, defaultAlgorithm: _defaultAlgorithm, ...rest } = theme.theme.scale.contrast;
+      theme.theme.scale.contrast = { algorithm, ...rest };
+      return theme;
+    })));
+    const legacyContrast = await scaleEdit('wcag2-endpoint-v1');
+    assert.equal(await sameDigest(legacyContrast, second), true, 'a legacy contrast algorithm becomes the list and default, so the tree compiles as the one with them');
+    const otherAlgorithm = await scaleEdit('apca-endpoint-v1');
+    await assert.rejects(catalogAcrossCommit({ cwd, commit: otherAlgorithm, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), (error) => error.code === 'MUXUI_SCHEMA_INVALID', 'an algorithm the old schema refused still fails the compiler');
+    // Palette tuning replaced the palette algorithm id `muxui-oklch-v1` with `muxui-oklch-v2`, which the token source schema now requires, so a tree from
+    // before is rewritten on both sides and compiles to the digest of the tree with the current id. It keeps the field's place, since the digest follows
+    // field order. Any other id is not converted away.
+    const paletteEdit = (algorithm) => repo.modify((edit) => edit(themePath, jsonEdit((theme) => { theme.theme.scale.algorithm = algorithm; return theme; })));
+    const legacyPalette = await paletteEdit('muxui-oklch-v1');
+    assert.equal(await sameDigest(legacyPalette, second), true, 'the legacy palette algorithm becomes the current id, so the tree compiles as the one with it');
+    const otherPalette = await paletteEdit('muxui-oklch-v0');
+    await assert.rejects(catalogAcrossCommit({ cwd, commit: otherPalette, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), (error) => error.code === 'MUXUI_SCHEMA_INVALID', 'an algorithm id the old schema refused still fails the compiler');
     // Anything else is not converted, so the compiler still rejects it: a group that is not a list of ids, a list mixed with a labelled group, and a list the
     // old schema already refused.
     for (const [name, change] of [

@@ -537,6 +537,20 @@
   cursor: not-allowed;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .muxui-color-mode-toggle,
+  .muxui-color-mode-toggle::before {
+    transition: none;
+  }
+}
+
+.muxui-color-mode-toggle[data-muxui-motion='reduced'],
+.muxui-color-mode-toggle[data-muxui-motion='reduced']::before,
+:where([data-muxui-motion='reduced']) .muxui-color-mode-toggle,
+:where([data-muxui-motion='reduced']) .muxui-color-mode-toggle::before {
+  transition: none;
+}
+
 /* command-palette */
 .muxui-command-palette {
   display: contents;
