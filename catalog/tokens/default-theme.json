@@ -2585,7 +2585,7 @@
       "alias": "semantic.content.muted",
       "modes": {
         "colorScheme.dark": {
-          "alias": "semantic.color.neutral-default-50"
+          "alias": "semantic.color.neutral-default-40"
         }
       }
     },
