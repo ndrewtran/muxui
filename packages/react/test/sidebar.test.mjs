@@ -189,7 +189,7 @@ test('items without a link keep the markup Sidebar always rendered', () => {
   // Shared with the pre-nesting implementation: a details group, an optional current header, and plain child links.
   assert.equal(
     withoutSvgPaths(renderToString(nav(h(Sidebar.NavItem, { icon: Icon, current: true, badge: '2', items: [{ href: '/now', label: 'Now', current: true }, { href: '/next', label: 'Next' }] }, 'Roadmap')))),
-    '<aside class="muxui-sidebar"><ul class="muxui-sidebar__nav-list"><li class="muxui-sidebar__nav-item"><details>'
+    '<aside class="muxui-sidebar"><ul class="muxui-sidebar__nav-list"><li class="muxui-sidebar__nav-item"><details class="muxui-sidebar__nav-details">'
       + '<summary class="muxui-sidebar__nav-link muxui-sidebar__nav-link--current"><svg class="muxui-sidebar__nav-icon" aria-hidden="true"></svg><span class="muxui-sidebar__nav-label">Roadmap</span><span class="muxui-sidebar__nav-badge">2</span><svg/></summary>'
       + '<ul class="muxui-sidebar__nav-children">'
       + '<li class="muxui-sidebar__nav-item"><a class="muxui-sidebar__nav-link muxui-sidebar__nav-child-link muxui-sidebar__nav-link--current" data-rac="" href="/now" tabindex="0" data-react-aria-pressable="true" aria-current="page" data-muxui-state-current="true">Now</a></li>'
@@ -208,8 +208,8 @@ test('groups render closed unless defaultExpanded or expanded says otherwise', (
   assert.doesNotMatch(open, /<ul[^>]* hidden/u);
   assert.match(open, /<button[^>]*aria-expanded="true"/u);
 
-  assert.match(renderToString(nav(h(Sidebar.NavItem, { defaultExpanded: true, items: [{ label: 'Leaf', href: '/leaf' }] }, 'Group'))), /<details open="">/u);
-  assert.match(renderToString(nav(h(Sidebar.NavItem, { expanded: true, items: [{ label: 'Leaf', href: '/leaf' }] }, 'Group'))), /<details open="">/u);
+  assert.match(renderToString(nav(h(Sidebar.NavItem, { defaultExpanded: true, items: [{ label: 'Leaf', href: '/leaf' }] }, 'Group'))), /<details class="muxui-sidebar__nav-details" open="">/u);
+  assert.match(renderToString(nav(h(Sidebar.NavItem, { expanded: true, items: [{ label: 'Leaf', href: '/leaf' }] }, 'Group'))), /<details class="muxui-sidebar__nav-details" open="">/u);
 });
 
 test('a link group pairs the link with a toggle that names and controls its list', () => {

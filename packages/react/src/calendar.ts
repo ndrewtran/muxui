@@ -119,7 +119,7 @@ function useHydrated() {
 }
 
 function placeholderCell(cellClass: string, key?: number) {
-  return React.createElement('td', { key, 'aria-hidden': 'true' }, React.createElement('div', { className: cellClass, 'data-muxui-calendar-placeholder': '' }, '\u00a0'));
+  return React.createElement('td', { key, className: 'muxui-calendar__grid-cell', 'aria-hidden': 'true' }, React.createElement('div', { className: cellClass, 'data-muxui-calendar-placeholder': '' }, '\u00a0'));
 }
 
 // Server and client can disagree about today (clock and timezone), so day cells
@@ -154,7 +154,7 @@ function CalendarDays({ cellClass, reserve }: { cellClass: string; reserve: numb
     }),
   ));
   const content = cellClass === 'muxui-range-calendar__cell' ? React.createElement(RangeSelectionMotion, null, grid) : grid;
-  return reserve === undefined ? content : React.createElement('div', { style: reserveReleased ? undefined : { minHeight: reserve } }, content);
+  return reserve === undefined ? content : React.createElement('div', { className: 'muxui-calendar__reserve', style: reserveReleased ? undefined : { minHeight: reserve } }, content);
 }
 
 function calendarGrid(cellClass = 'muxui-calendar__cell', reserve?: number) {
@@ -192,12 +192,12 @@ function calendarPlaceholderFrame({ ref, className, label, labelId, gridRef, cel
       React.createElement(IconButton, { 'aria-label': 'Previous month', disabled: true, className: 'muxui-calendar__previous' }, icon(ChevronLeftIcon)),
       React.createElement('h2', { className: 'muxui-calendar__heading', 'aria-hidden': 'true' }, '\u00a0'),
       React.createElement(IconButton, { 'aria-label': 'Next month', disabled: true, className: 'muxui-calendar__next' }, icon(ChevronRightIcon))),
-    React.createElement('div', { ref: gridRef },
+    React.createElement('div', { ref: gridRef, className: 'muxui-calendar__grid-frame' },
       React.createElement('table', { className: 'muxui-calendar__grid', 'aria-hidden': 'true', cellPadding: 0 },
         React.createElement('thead', { className: 'muxui-calendar__grid-header' },
-          React.createElement('tr', null, days.map((day) => React.createElement('th', { key: day, className: 'muxui-calendar__header-cell' }, '\u00a0')))),
+          React.createElement('tr', { className: 'muxui-calendar__grid-row' }, days.map((day) => React.createElement('th', { key: day, className: 'muxui-calendar__header-cell' }, '\u00a0')))),
         React.createElement('tbody', { className: 'muxui-calendar__grid-body' },
-          Array.from({ length: 6 }, (_, week) => React.createElement('tr', { key: week }, days.map((day) => placeholderCell(cellClass, day))))))));
+          Array.from({ length: 6 }, (_, week) => React.createElement('tr', { key: week, className: 'muxui-calendar__grid-row' }, days.map((day) => placeholderCell(cellClass, day))))))));
 }
 
 function calendarHeader() {

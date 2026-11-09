@@ -74,7 +74,8 @@ export function stateFailures(catalogStates, classification) {
  * (a class hook is `partClass(family, part)` unless the row says why, a field hook is one of the four shared classes, a `none`
  * row has a reason and no hook), a `selector` uses only the hook, the family root, one of the five scope classes and the recorded
  * element predicates, and the rows the plan names carry their exception or qualifier. Every documented hook is selected by an
- * authored rule unless its row is `hookOnly`, and a `hookOnly` hook no rule selects (a stale one fails).
+ * authored rule, or by a rule on the class its row is `styledThrough`, unless its row is `hookOnly`, and a `hookOnly` hook no rule selects
+ * (a stale one fails).
  */
 export function partFailures(anatomy, rows, contract, { selected, isEstablished }) {
   const { partClass, publicSharedClasses, scopeClasses, elementQualifiers, noElementReasons, dispositions } = contract;
@@ -98,10 +99,10 @@ export function partFailures(anatomy, rows, contract, { selected, isEstablished 
 
   for (const row of rows) {
     const key = keyOf(row);
-    const { disposition, hook, selector, exception, hookOnly, reason, composedOf, callerSupplied } = row;
+    const { disposition, hook, selector, exception, hookOnly, reason, composedOf, callerSupplied, styledThrough } = row;
     if (!dispositions.includes(disposition)) { failures.push(`${key}: unknown disposition ${disposition}`); continue; }
     if (disposition === 'none') {
-      if (hook !== undefined || selector !== undefined || hookOnly !== undefined || composedOf !== undefined || callerSupplied !== undefined) failures.push(`${key}: a none row names no element`);
+      if (hook !== undefined || selector !== undefined || hookOnly !== undefined || composedOf !== undefined || callerSupplied !== undefined || styledThrough !== undefined) failures.push(`${key}: a none row names no element`);
       if (!noElementReasons.includes(reason)) failures.push(`${key}: none without a reason from ${noElementReasons.join(', ')}`);
       continue;
     }
@@ -125,8 +126,15 @@ export function partFailures(anatomy, rows, contract, { selected, isEstablished 
     if (composedOf !== undefined && !anatomy.has(composedOf)) failures.push(`${key}: composedOf ${composedOf} is not a family`);
     if (callerSupplied !== undefined && (composedOf === undefined || !callerSupplied)) failures.push(`${key}: callerSupplied qualifies composedOf, so it needs both a composedOf and a reason`);
     if (selector !== undefined) failures.push(...selectorFailures(key, row, rootHook(row.family), { scopeClasses, elementQualifiers }));
+    if (styledThrough !== undefined) {
+      const carried = rows.some((other) => other.family !== row.family && ['class', 'root-element'].includes(other.disposition) && other.hook === styledThrough) || publicSharedClasses.includes(styledThrough);
+      if (disposition !== 'class') failures.push(`${key}: only a class row is styledThrough another class`);
+      else if (!carried) failures.push(`${key}: styledThrough ${styledThrough} is neither a documented hook of another family nor a shared field class`);
+      if (hookOnly !== undefined) failures.push(`${key}: styledThrough names the class that styles the hook, so the row is not hookOnly`);
+    }
     if (documented.includes(disposition)) {
-      const isSelected = selected.has(hook);
+      // A hook is styled when a rule selects it, or selects the class the element also carries for it.
+      const isSelected = selected.has(hook) || (styledThrough !== undefined && selected.has(styledThrough));
       if (hookOnly !== undefined && !hookOnly) failures.push(`${key}: hookOnly without a reason`);
       if (!isSelected && hookOnly === undefined) failures.push(`${key}: no authored rule selects ${hook} and the row is not hookOnly`);
       if (isSelected && hookOnly !== undefined) failures.push(`${key}: hookOnly, but an authored rule now selects ${hook}`);

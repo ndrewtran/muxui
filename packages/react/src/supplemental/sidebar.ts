@@ -308,7 +308,7 @@ function SidebarNavNode({ label, href, icon: Icon, badge, current = false, exter
     // Folded, the group has no room to open: activating it unfolds the sidebar and opens the group.
     const onClick = (event: React.MouseEvent) => { event.preventDefault(); if (sidebar?.collapsed) { sidebar.setCollapsed(false); setOpen(true); } else setOpen(!open); };
     const onToggle = (event: React.SyntheticEvent<HTMLDetailsElement>) => { if (event.currentTarget.open === open) return; setOpen(event.currentTarget.open); rerender(); };
-    content = h('details', { ref: detailsRef, open, onToggle }, named(h('summary', { ref: controlRef, className, onClick }, ...body(chevron))), nested);
+    content = h('details', { ref: detailsRef, className: 'muxui-sidebar__nav-details', open, onToggle }, named(h('summary', { ref: controlRef, className, onClick }, ...body(chevron))), nested);
   }
   return h('li', { className: 'muxui-sidebar__nav-item' }, content);
 }
@@ -404,7 +404,7 @@ const SidebarToggle = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, SidebarT
   React.useImperativeHandle(ref, () => node.current as HTMLButtonElement);
   const { toggles } = sidebar;
   useIsomorphicLayoutEffect(() => { const element = node.current as HTMLButtonElement; toggles.add(element); return () => { toggles.delete(element); }; }, [toggles]);
-  return h(IconButton, { 'aria-label': 'Toggle sidebar', ...props, ref: node, 'aria-expanded': !sidebar.collapsed, 'aria-controls': sidebar.rootId, className: cx('muxui-sidebar__toggle', className), onActivate: (event) => { onActivate?.(event); sidebar.toggle(); } }, children ?? h(PanelLeftIcon, { 'aria-hidden': true, focusable: 'false' }));
+  return h(IconButton, { 'aria-label': 'Toggle sidebar', ...props, ref: node, 'aria-expanded': !sidebar.collapsed, 'aria-controls': sidebar.rootId, className: cx('muxui-sidebar__toggle', className), onActivate: (event) => { onActivate?.(event); sidebar.toggle(); } }, children ?? h(PanelLeftIcon, { className: 'muxui-sidebar__toggle-icon', 'aria-hidden': true, focusable: 'false' }));
 });
 const SidebarHeader = /*#__PURE__*/ React.forwardRef<HTMLDivElement, PartProps<HTMLDivElement>>(function SidebarHeader(props, ref) { return nativePart('div', 'muxui-sidebar__header', props, ref); });
 const SidebarSearch = /*#__PURE__*/ React.forwardRef<HTMLDivElement, SidebarSearchProps>(function SidebarSearch({ placeholder = 'Search', value, onChange, className, ...props }, ref) {
@@ -506,8 +506,8 @@ const SidebarMobileTrigger = function SidebarMobileTrigger({ children, logo }: S
   // The drawer is always full size, so its navigation ignores the folded state of the desktop sidebar.
   // React Aria's DialogTrigger types its children as a prop, and takes the trigger and the overlay as two children.
   return h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen } as AriaDialogTriggerProps,
-    h('header', { ref: header, className: 'muxui-sidebar__mobile-header' }, logo && h('div', { className: 'muxui-sidebar__mobile-logo' }, logo), h(IconButton, { ref: button, className: 'muxui-sidebar__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true, focusable: 'false' }))),
-    h(AriaModalOverlay, { className: 'muxui-sidebar__mobile-overlay' }, h(AriaModal, { className: 'muxui-sidebar__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-sidebar__mobile-dialog', children: ({ close }) => h(SidebarContext.Provider, { value: null }, h(SidebarDrawerExit, { exit }), h('div', { className: 'muxui-sidebar__mobile-close-row' }, h(IconButton, { size: 'sm', className: 'muxui-sidebar__mobile-close-btn', onActivate: close, 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true, focusable: 'false' }))), children) }))));
+    h('header', { ref: header, className: 'muxui-sidebar__mobile-header' }, logo && h('div', { className: 'muxui-sidebar__mobile-logo' }, logo), h(IconButton, { ref: button, className: 'muxui-sidebar__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { className: 'muxui-sidebar__mobile-trigger-icon', 'aria-hidden': true, focusable: 'false' }))),
+    h(AriaModalOverlay, { className: 'muxui-sidebar__mobile-overlay' }, h(AriaModal, { className: 'muxui-sidebar__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-sidebar__mobile-dialog', children: ({ close }) => h(SidebarContext.Provider, { value: null }, h(SidebarDrawerExit, { exit }), h('div', { className: 'muxui-sidebar__mobile-close-row' }, h(IconButton, { size: 'sm', className: 'muxui-sidebar__mobile-close-btn', onActivate: close, 'aria-label': 'Close navigation' }, h(XIcon, { className: 'muxui-sidebar__mobile-close-icon', 'aria-hidden': true, focusable: 'false' }))), children) }))));
 };
 const SidebarFeatureCard = /*#__PURE__*/ React.forwardRef<HTMLDivElement, SidebarFeatureCardProps>(function SidebarFeatureCard({ title, description, dismissLabel, onDismiss, ...props }, ref) { return nativePart('div', 'muxui-sidebar__feature-card', props, ref, h(React.Fragment, null, title && h('div', { className: 'muxui-sidebar__feature-card-title' }, title), description && h('div', { className: 'muxui-sidebar__feature-card-description' }, description), props.children, onDismiss && h('button', { type: 'button', className: 'muxui-sidebar__feature-card-dismiss', onClick: onDismiss }, dismissLabel == null ? 'Dismiss' : dismissLabel))); });
 

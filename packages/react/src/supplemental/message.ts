@@ -74,8 +74,8 @@ export const Message: ForwardRefExoticComponent<MessageProps & RefAttributes<HTM
       sources.length > 0 && e('button', { 'data-muxui-size': 'sm', 'data-muxui-variant': 'ghost', type: 'button', className: 'muxui-button muxui-message__sources-trigger', 'aria-expanded': expanded, 'aria-controls': `${id}-sources`, onClick: toggle }, `${sources.length} ${sources.length === 1 ? 'source' : 'sources'}`, e(ChevronDown, { ref: chevron, className: 'muxui-message__sources-chevron', size: 16, 'aria-hidden': true, focusable: 'false' }))),
     sources.length > 0 && e('ul', { ref: sourcePanel, id: `${id}-sources`, className: 'muxui-message__sources', hidden: !expanded }, sources.map((source, index) => {
       const href = safeHref(source.href);
-      return e('li', { key: source.id }, e('span', { className: 'muxui-message__source-index', 'aria-hidden': true }, index + 1),
-        e('div', null, href ? e('a', { href, className: 'muxui-link' }, source.label) : e('span', null, source.label), source.description && e('span', { className: 'muxui-message__source-description' }, source.description)));
+      return e('li', { key: source.id, className: 'muxui-message__source' }, e('span', { className: 'muxui-message__source-index', 'aria-hidden': true }, index + 1),
+        e('div', { className: 'muxui-message__source-body' }, href ? e('a', { href, className: 'muxui-link' }, source.label) : e('span', { className: 'muxui-message__source-label' }, source.label), source.description && e('span', { className: 'muxui-message__source-description' }, source.description)));
     })),
     followUps.length > 0 && onFollowUp && e('div', { className: 'muxui-message__follow-ups', role: 'group', 'aria-label': 'Follow-ups' }, e('span', { className: 'muxui-message__follow-up-label' }, 'Follow-ups'),
       followUps.map((item) => e('button', { key: item.id, 'data-muxui-size': 'sm', 'data-muxui-variant': 'neutral', className: 'muxui-button', type: 'button', onClick: () => onFollowUp(item) }, item.label, e(ArrowUpRight, { className: 'muxui-message__follow-up-icon', size: 16, 'aria-hidden': true, focusable: 'false' })))),

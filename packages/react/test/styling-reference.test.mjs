@@ -49,9 +49,9 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
-  assert.equal(read('styles.css').rules.length, 2090);
+  assert.equal(read('styles.css').rules.length, 2113);
   const shared = readFileSync(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').trim();
-  assert.equal(readStyleRules(shared).rules.length, 520);
+  assert.equal(readStyleRules(shared).rules.length, 509);
   assert.equal(readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8').split(shared).length, 2, 'styles.css includes the shared stylesheet verbatim exactly once');
   assert.equal(read('themes.css').rules.length, 60);
   // The shapes it models: grouping at-rules with a chain, statements, leaf at-rules it skips, !important, a block in a custom property.
@@ -94,7 +94,7 @@ test('the observation reader agrees with jsdom on every element of the 217 rende
     assert.deepEqual(mine.map((element) => element.text), theirs.map((element) => domText(element)), `${name}: the same text in every element`);
     elements += mine.length;
   }
-  assert.equal(elements, 3758); // Sidebar's grouping example adds six elements with its newly demonstrated public parts.
+  assert.equal(elements, 3765); // Sidebar's grouping example adds six elements with its newly demonstrated public parts.
   // A <template> holds React Aria's collection and is inert: the template is an element, its content is not.
   const inert = parseObservation('<template><b class="muxui-x">in</b></template><i>out</i>');
   assert.deepEqual(inert.elements.map(({ tag }) => tag), ['template', 'i']);
@@ -220,6 +220,26 @@ test('every part-map row is a class row of its family, once and in anatomy order
   assert.equal(byNote(/Hook only: no Mux rule styles it\./u).length, 12);
   assert.equal(byNote(/^Internal: no hook\.$/u).length, 10);
   assert.equal(byNote(/^Renders no element \(/u).length, 19);
+});
+
+// SwitchField draws Switch's switch, so no rule selects its Button and Thumb hooks: the part map says the hooks are styled through the
+// classes the elements also carry, and the reference reads those rules as the parts' own instead of reporting a hook nothing styles.
+test('SwitchField parts are styled through the classes Switch and the field text give them, and their states are those rules\'', () => {
+  const styling = all.get('switch-field');
+  const row = (hook) => classRows(styling).find((candidate) => candidate.hook === hook);
+  const html = new JSDOM(renders.filter(({ family }) => family === 'switch-field').map((render) => render.html).join('')).window.document;
+  for (const [hook, through, owner] of [['muxui-switch-field__button', 'muxui-switch', ' \\(Switch\\)'], ['muxui-switch-field__thumb', 'muxui-switch__indicator', ' \\(Switch\\)'], ['muxui-switch-field__description', 'muxui-field-description', ''], ['muxui-switch-field__error', 'muxui-field-error', '']]) {
+    const part = row(`.${hook}`);
+    assert.deepEqual([part.selectedOn.length, part.hookOnly, part.styledThrough], [1, undefined, through], hook);
+    assert.match(part.note, new RegExp(`Styled through \\.${through}, which the element also carries${owner}\\.`, 'u'), hook);
+    // The note's claim is the markup's: every element of the part in the examples carries the class (the error shows only while invalid).
+    const found = [...html.querySelectorAll(`.${hook}`)];
+    assert.ok(found.every((element) => element.classList.contains(through)) && (found.length > 0 || hook.endsWith('__error')), `${hook} elements carry ${through}`);
+  }
+  const selectedOn = new Map(stateRowsOf(styling).map((state) => [state.hook, state.selectedOn]));
+  for (const name of ['disabled', 'invalid', 'hovered', 'focus-visible']) assert.deepEqual(selectedOn.get(`data-muxui-state-${name}`), ['button'], name);
+  assert.deepEqual(selectedOn.get('data-muxui-state-selected'), ['button', 'thumb']);
+  assert.deepEqual(allRows(classRows).filter(({ row: candidate }) => candidate.styledThrough !== undefined).map(({ slug, row: candidate }) => `${slug}.${candidate.part}`), ['switch-field.button', 'switch-field.thumb', 'switch-field.description', 'switch-field.error']);
 });
 
 test('class notes keep the part map\'s conditions: caller-supplied elements, composed roots, wrapper exceptions and scopes', () => {
@@ -422,7 +442,7 @@ test('the selection index is a second reading of the stylesheet, pair for pair, 
   const mine = new Set([...facts.selection].flatMap(([attribute, byClass]) => [...byClass.keys()].map((name) => `${attribute}|${name}`)));
   assert.deepEqual([...second].filter((pair) => !mine.has(pair)).sort(), [], 'a pair the second reading finds and the module lacks');
   assert.deepEqual([...mine].filter((pair) => !second.has(pair)).sort(), [], 'a pair the module holds and the second reading does not');
-  assert.equal(mine.size, 493);
+  assert.equal(mine.size, 491);
   // The scoping rules, on selectors written for them, by both readings. An attribute in :has() belongs to the element asked for;
   // each :where() / :is() branch stands alone; a :not() test counts for the element it is on; an ancestor's tests are its own.
   const cases = [
@@ -468,7 +488,7 @@ test('catalog state rows: one per attribute and family, in catalog order, with t
   // hooks, composed roots and a root companion, which can only add pairs, and the extra ones are named.
   const pairs = catalogRows.filter(({ row }) => !isStatus(row));
   assert.equal(pairs.length, 258);
-  const ownHooks = (slug) => new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element'].includes(row.disposition)).map((row) => row.hook));
+  const ownHooks = (slug) => new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element'].includes(row.disposition)).flatMap((row) => [row.hook, row.styledThrough].filter(Boolean)));
   const own = pairs.filter(({ slug, row }) => [...ownHooks(slug)].some((name) => secondHas(row.hook, name)));
   assert.equal(own.length, 124, 'selected on a class or root-element hook of the family');
   assert.equal(pairs.length - own.length, 134);
@@ -500,7 +520,7 @@ test('interaction rows: per family, only for a state the CSS selects on the fami
   const recount = [];
   for (const slug of slugs) {
     const declared = new Set(records.get(slug).states.map(attributeOfState));
-    const hooks = new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element'].includes(row.disposition)).map((row) => row.hook));
+    const hooks = new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element'].includes(row.disposition)).flatMap((row) => [row.hook, row.styledThrough].filter(Boolean)));
     for (const name of interactionStates) {
       const attribute = `data-muxui-state-${name}`;
       if (!declared.has(attribute) && [...hooks].some((hook) => secondHas(attribute, hook))) recount.push(`${slug} ${attribute}`);
@@ -697,12 +717,12 @@ const tokenRows = (styling) => styling.tokens.groups.flatMap(({ rows }) => rows)
 
 test('token rows are the recipe requirements, each with the record\'s meaning, policy, alias and light and dark values', () => {
   const rows = allRows(tokenRows);
-  assert.equal(rows.length, 839);
-  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.group)).map(([name, list]) => [name, list.length])), { semantic: 628, component: 211 });
-  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.policy)).map(([name, list]) => [name, list.length])), { theme: 768, fixed: 71 });
+  assert.equal(rows.length, 848);
+  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.group)).map(([name, list]) => [name, list.length])), { semantic: 629, component: 219 });
+  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.policy)).map(([name, list]) => [name, list.length])), { theme: 777, fixed: 71 });
   assert.deepEqual([...new Set(rows.filter(({ row }) => row.policy === 'fixed').map(({ row }) => row.token))], ['semantic.focus.ring']);
-  assert.equal(new Set(rows.filter(({ row }) => row.group === 'component').map(({ row }) => row.token)).size, 196);
-  assert.equal(new Set(rows.filter(({ row }) => row.group === 'component').map(({ slug }) => slug)).size, 18);
+  assert.equal(new Set(rows.filter(({ row }) => row.group === 'component').map(({ row }) => row.token)).size, 198);
+  assert.equal(new Set(rows.filter(({ row }) => row.group === 'component').map(({ slug }) => slug)).size, 19);
   for (const slug of slugs) {
     const required = records.get(slug).bindings['web.react'].tokenRecipe.requirements;
     assert.deepEqual(tokenRows(all.get(slug)).map(({ token }) => token).sort(), required.map(({ token }) => token).sort(), `${slug}: every requirement is a row`);
@@ -729,16 +749,16 @@ test('groups: component roles first, semantic roles second, and only the long se
   assert.deepEqual(collapsed, ['code-block semantic 30', 'data-diff semantic 25', 'text semantic 50']);
   assert.ok(slugs.every((slug) => all.get(slug).tokens.groups.every(({ id, label, caption }, index) => (id === 'component' ? index === 0 && label === 'Component roles' : label === 'Semantic roles') && caption.length > 0)));
   const noRoles = slugs.filter((slug) => !all.get(slug).tokens.groups.some(({ id }) => id === 'component'));
-  assert.equal(noRoles.length, 66, '66 families have no component role');
-  assert.equal(slugs.length - noRoles.length, 18);
+  assert.equal(noRoles.length, 65, '65 families have no component role');
+  assert.equal(slugs.length - noRoles.length, 19);
 });
 
-test('read-by: 194 roles are read by rules, one through structured parts and one through a compiled dependency, and none by nothing', () => {
+test('read-by: 196 roles are read by rules, one through structured parts and one through a compiled dependency, and none by nothing', () => {
   const components = new Map();
   for (const { row } of allRows(tokenRows)) if (row.group === 'component') components.set(row.token, row.readBy);
-  assert.equal(components.size, 196);
+  assert.equal(components.size, 198);
   const kinds = Object.groupBy([...components], ([, readBy]) => readBy.kind);
-  assert.deepEqual(Object.fromEntries(Object.entries(kinds).map(([name, list]) => [name, list.length])), { rules: 194, parts: 1, compiled: 1 });
+  assert.deepEqual(Object.fromEntries(Object.entries(kinds).map(([name, list]) => [name, list.length])), { rules: 196, parts: 1, compiled: 1 });
   assert.deepEqual(kinds.parts.map(([id]) => id), ['component.disclosuregroup.transition']);
   assert.deepEqual(kinds.compiled.map(([id]) => id), ['component.disclosuregroup.motion-duration']);
   // The same classification from the authored sources by the rule the tokens test uses for reachability: a role is read when a rule
@@ -762,11 +782,11 @@ test('read-by: 194 roles are read by rules, one through structured parts and one
   const distinct = new Set();
   let entries = 0; const internalTokens = new Set();
   for (const [id, readBy] of components) for (const entry of readBy.selectors) { distinct.add(`${id}|${entry.selector}`); entries += 1; if (!entry.public) internalTokens.add(id); }
-  assert.equal(distinct.size, 237, '237 token and selector pairs');
+  assert.equal(distinct.size, 242, '242 token and selector pairs');
   const implementation = new Set();
   for (const [id, readBy] of components) for (const entry of readBy.selectors) if (!entry.public) implementation.add(`${id}|${entry.selector}`);
-  assert.equal(implementation.size, 10, '10 of the 237 are implementation selectors');
-  assert.equal(internalTokens.size, 8, 'in 8 tokens');
+  assert.equal(implementation.size, 15, '15 of the 242 are implementation selectors');
+  assert.equal(internalTokens.size, 10, 'in 10 tokens');
   assert.ok(selectors.length >= distinct.size && entries === selectors.length);
   const buttonBackground = components.get('component.button.background');
   assert.deepEqual(buttonBackground.selectors.map(({ selector, property }) => [selector, property]).sort(), [

@@ -65,5 +65,5 @@ export function CalendarHeightMotion({ children }) {
     };
   }, [isOpen, triggerRef]);
 
-  return React.createElement('div', { ref: bodyRef }, children);
+  return React.createElement('div', { ref: bodyRef, className: 'muxui-calendar__height-motion' }, children);
 }

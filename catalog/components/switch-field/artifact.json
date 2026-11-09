@@ -85,6 +85,34 @@
           {
             "token": "semantic.motion.state-transition",
             "requirement": "required"
+          },
+          {
+            "token": "semantic.selection.track",
+            "requirement": "required"
+          },
+          {
+            "token": "component.switch.label",
+            "requirement": "required"
+          },
+          {
+            "token": "component.switch.invalid-border",
+            "requirement": "required"
+          },
+          {
+            "token": "component.switch.selected-invalid-border",
+            "requirement": "required"
+          },
+          {
+            "token": "component.switch.selected-track",
+            "requirement": "required"
+          },
+          {
+            "token": "component.switch.selected-track-hover",
+            "requirement": "required"
+          },
+          {
+            "token": "component.switch.selected-thumb",
+            "requirement": "required"
           }
         ]
       },

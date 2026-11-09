@@ -262,6 +262,15 @@
   list-style: none;
 }
 
+/* React Aria Components' ToastRegion renders the list and an item per toast without a className. They take the region's typography,
+   not the host's `ol` and `li` rules. */
+:where(.muxui-toast__region) > :where(ol),
+:where(.muxui-toast__region) > :where(ol) > :where(li) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-toast__announcer {
   position: absolute;
   width: 1px;
