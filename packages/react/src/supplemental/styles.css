@@ -845,7 +845,7 @@
 }
 
 .muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-muxui-state-hovered]:not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
 .muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-hovered] {
@@ -1828,7 +1828,7 @@
 }
 
 .muxui-multi-select__item:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
   color: var(--muxui-item-focus-color);
 }
 
@@ -3659,7 +3659,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 .muxui-tag-select__item:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
   color: var(--muxui-item-focus-color);
 }
 

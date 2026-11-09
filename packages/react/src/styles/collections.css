@@ -841,7 +841,7 @@
 
 .muxui-list-box .muxui-list-box__item:hover:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not([aria-disabled='true']),
 .muxui-list-box .muxui-list-box__item[data-muxui-state-hovered]:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not([aria-disabled='true']) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
   color: var(--muxui-item-focus-color);
 }
 
@@ -1114,7 +1114,7 @@
 }
 
 .muxui-range-calendar__cell:hover:not([data-muxui-state-selected], [data-muxui-state-selection-start], [data-muxui-state-selection-end], [data-muxui-state-outside-month], [data-muxui-state-disabled], [data-muxui-state-unavailable]) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
 .muxui-range-calendar__cell[data-muxui-state-today] {
@@ -1436,7 +1436,7 @@
 }
 
 .muxui-tabs__motion[data-muxui-tabs-variant='underline'] .muxui-tabs__tab:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true'], :active, [data-muxui-state-pressed]) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
 /* Once the hover layer is live it paints hover, so the tab's own hover fill clears. The
@@ -2049,7 +2049,7 @@
 }
 
 .muxui-table__row[data-muxui-state-hovered] {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
 .muxui-table__row[data-muxui-state-selected] {
