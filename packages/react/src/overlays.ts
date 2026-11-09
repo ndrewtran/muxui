@@ -611,17 +611,19 @@ function readPresetScope(trigger: Element): PresetScope {
 }
 
 /**
- * The preset attributes a scoped Popover carries while it is open: read when it opens, and again whenever one of
- * them changes on the trigger or an ancestor. A trigger replaced while the Popover is open, as a keyed swap does,
- * is noticed on the render that replaces it: its surroundings are read again and the observer moves to the new node.
- * The observer stops when the Popover closes or unmounts.
+ * The preset attributes a scoped Popover carries while it is open: read from the trigger's nearest scope when it opens,
+ * and read again whenever one of them changes on the trigger or an ancestor. A trigger node replaced while the Popover
+ * is open is picked up on the Popover's next render, when the effect below sees a different node, or on the next open;
+ * a trigger that swaps its own element without the Popover rendering is not seen before then. The observer stops when
+ * the Popover closes or unmounts.
  */
 function usePresetScope(triggerRef: RefObject<Element | null> | undefined, enabled: boolean): PresetScope {
   const [scope, setScope] = React.useState(NO_PRESET_SCOPE);
   // The node being watched, and what stops the watching.
   const watching = React.useRef<{ node: Element; stop: () => void } | null>(null);
-  // After every render, because a replaced trigger changes the ref's node and nothing else. The state it sets is
-  // guarded, so a render that finds the same node watched changes nothing and costs no further render.
+  // After every render of the Popover, so a trigger node replaced since the last one is seen; the ref's node is all that
+  // changes then. The state it sets is guarded, so a render that finds the same node watched changes nothing and costs
+  // no further render.
   useIsomorphicLayoutEffect(() => {
     const node = enabled ? triggerRef?.current ?? null : null;
     if ((watching.current?.node ?? null) === node) return;
@@ -767,7 +769,7 @@ export type PopoverOwnProps = {
   containerPadding?: number;
   /** Whether the Popover contains focus until it closes. When false, it is non-blocking: it has no focus containment, outside-content exclusion, or scroll locking. */
   modal?: boolean;
-  /** Makes the open Popover a scope of this color scheme, whatever the page's. Its surface is that scheme's raised popup surface, not the strong surface an unscoped Popover has, and its text and any Mux UI component inside follow the scheme. Unset leaves the Popover as the page styles it. A scoped Popover also carries the data-muxui-theme and data-muxui-contrast of its trigger's nearest scope, or of the document root, and follows them while it is open. */
+  /** Makes the open Popover a scope of this color scheme, whatever the page's. Its surface is that scheme's raised popup surface, not the strong surface an unscoped Popover has, and its text and any Mux UI component inside follow the scheme. Unset leaves the Popover as the page styles it. A scoped Popover also carries the data-muxui-theme and data-muxui-contrast it reads from its trigger's nearest scope, or from the document root, when it opens. While it is open it follows a change to either on the trigger or its ancestors, and it picks up a replaced trigger node on its next render or the next time it opens. */
   colorScheme?: ColorMode;
   /** Reports the Popover opening or closing. */
   onOpenChange?: (open: boolean) => void;

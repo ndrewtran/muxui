@@ -21,7 +21,7 @@ The Popover modes example shows a non-modal details Popover with an action and a
 
 ## Color scheme
 
-A Popover's own surface is strong and inverted against its page, so Mux UI components inside it, whose text follows the page's color scheme, do not read on it. For a panel of controls, such as a settings panel, set a color scheme on the Popover: the panel then becomes a surface of that scheme, with that scheme's components inside, whatever the page uses. A preset theme on the page carries into it. The Popover color scheme example shows a dark panel on a light page with a preset theme, and the generated [Popover reference](/components/popover/) lists the prop and what the panel copies from around its trigger.
+A Popover's own surface is strong and inverted against its page, so Mux UI components inside it, whose text follows the page's color scheme, do not read on it. For a panel of controls, such as a settings panel, set a color scheme on the Popover: the panel then becomes a surface of that scheme, with that scheme's components inside, whatever the page uses. A preset theme on the page carries into it. The Popover color scheme example shows a dark panel on a light page with a preset theme, the generated [Popover reference](/components/popover/) lists the prop, and the [Behavior](#behavior) section says what the panel reads from around its trigger and when it picks up a change.
 
 ## Common mistake
 

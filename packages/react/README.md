@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:2859fe342c08bb6213b3d6bf427b74c2d8d81c44a371c5855859211bebeb2f85 -->
+<!-- @generated-content-sha256: sha256:6262e38986574165efc064c4dd32ed3abaa1cfffd98717f264ba650345ba8cb8 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -412,8 +412,9 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `c
 - data-muxui-modal on the positioner exposes the modal setting for consumer styling.
 - colorScheme makes the open Popover a scope of that color scheme: data-muxui-color-scheme is set on the positioner that wraps the surface, so tokens and Mux UI components inside resolve as they do on a page of that scheme, whatever the page uses.
 - A scoped Popover's surface is that scheme's raised popup surface with the scheme's default text, not the strong surface an unscoped Popover has, because that surface is inverted against its page and Mux UI components inside would not read on it.
-- A scoped Popover also carries the data-muxui-theme and data-muxui-contrast of the nearest element at or above its trigger that has each, falling back to the document root, because a preset palette is chosen from the attributes on the scope element and the portal sits outside the trigger's surroundings.
-- The copied attributes are read when the Popover opens and stay live while it is open, so changing either on the trigger, an ancestor, or the document root re-themes the open Popover without reopening it; an attribute that nothing carries is absent from the Popover, and watching stops when it closes.
+- A scoped Popover also carries the data-muxui-theme and data-muxui-contrast of the nearest element at or above its trigger that has each, read when it opens and falling back to the document root, because a preset palette is chosen from the attributes on the scope element and the portal sits outside the trigger's surroundings.
+- While the Popover is open, a change to either attribute on the trigger or on one of its ancestors, the document root included, re-themes the open Popover without reopening it; an attribute that nothing carries is absent from the Popover, and watching stops when it closes.
+- A trigger node replaced while the Popover is open is picked up on the Popover's next render or the next time it opens.
 - With colorScheme unset, the Popover adds none of these attributes, renders no extra element, and looks and behaves as before.
 - A dismissable non-modal Popover also closes on an outside press, and on Escape while focus is on the trigger.
 - With dismissable set to false, Escape, an outside press, and the trigger do not close the Popover, in modal and non-modal mode.

@@ -96,7 +96,7 @@
               "type": "ColorMode",
               "values": ["light", "dark"],
               "refs": ["color-mode#ColorMode"],
-              "doc": "Makes the open Popover a scope of this color scheme, whatever the page's. Its surface is that scheme's raised popup surface, not the strong surface an unscoped Popover has, and its text and any Mux UI component inside follow the scheme. Unset leaves the Popover as the page styles it. A scoped Popover also carries the data-muxui-theme and data-muxui-contrast of its trigger's nearest scope, or of the document root, and follows them while it is open."
+              "doc": "Makes the open Popover a scope of this color scheme, whatever the page's. Its surface is that scheme's raised popup surface, not the strong surface an unscoped Popover has, and its text and any Mux UI component inside follow the scheme. Unset leaves the Popover as the page styles it. A scoped Popover also carries the data-muxui-theme and data-muxui-contrast it reads from its trigger's nearest scope, or from the document root, when it opens. While it is open it follows a change to either on the trigger or its ancestors, and it picks up a replaced trigger node on its next render or the next time it opens."
             },
             {
               "name": "onOpenChange",
@@ -259,7 +259,7 @@
           "type": "ColorMode",
           "values": ["light", "dark"],
           "refs": ["color-mode#ColorMode"],
-          "doc": "Makes the open Popover a scope of this color scheme, whatever the page's. Its surface is that scheme's raised popup surface, not the strong surface an unscoped Popover has, and its text and any Mux UI component inside follow the scheme. Unset leaves the Popover as the page styles it. A scoped Popover also carries the data-muxui-theme and data-muxui-contrast of its trigger's nearest scope, or of the document root, and follows them while it is open."
+          "doc": "Makes the open Popover a scope of this color scheme, whatever the page's. Its surface is that scheme's raised popup surface, not the strong surface an unscoped Popover has, and its text and any Mux UI component inside follow the scheme. Unset leaves the Popover as the page styles it. A scoped Popover also carries the data-muxui-theme and data-muxui-contrast it reads from its trigger's nearest scope, or from the document root, when it opens. While it is open it follows a change to either on the trigger or its ancestors, and it picks up a replaced trigger node on its next render or the next time it opens."
         },
         {
           "name": "onOpenChange",

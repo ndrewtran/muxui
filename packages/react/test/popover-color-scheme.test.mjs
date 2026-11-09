@@ -12,6 +12,7 @@ const installDom = (markup) => createDom(markup, { globals: ['File', 'Blob', 'Fi
 
 const moduleEnvironment = installDom();
 const { Popover } = await import('../src/overlays.ts');
+const { Button } = await import('../src/button.ts');
 moduleEnvironment.restore();
 
 const h = React.createElement;
@@ -169,7 +170,7 @@ test('the observer runs only while a scoped Popover is open, and stops on close 
   });
 });
 
-test('a trigger replaced while the Popover is open is read again, and the new node is watched in place of the old one', async () => {
+test('a trigger replaced by a Popover render is read again, and the new node is watched in place of the old one', async () => {
   // The trigger carries its own theme, so a keyed swap puts the Popover under a different scope.
   const trigger = (key, theme) => ({ trigger: h('button', { key, id: key, 'data-muxui-theme': theme }, 'Open') });
   await withPopover({ props: { colorScheme: 'dark', ...trigger('first', 'standard-harbour') }, root: 'data-muxui-theme="monochrome-forest"' }, async ({ render, attributes, observers }) => {
@@ -178,13 +179,41 @@ test('a trigger replaced while the Popover is open is read again, and the new no
 
     await render(trigger('second', 'standard-lagoon'));
     assert.equal(document.getElementById('first'), null, 'the first trigger is gone');
-    assert.equal(attributes()['data-muxui-theme'], 'standard-lagoon', 'the new trigger\'s scope is read as soon as it replaces the old one');
+    assert.equal(attributes()['data-muxui-theme'], 'standard-lagoon', 'the new trigger\'s scope is read on the render that replaces the old one');
     assert.equal(observers(), 1, 'the old node is no longer watched');
 
     await mutate(document.getElementById('second'), 'data-muxui-theme', 'standard-fern');
     assert.equal(attributes()['data-muxui-theme'], 'standard-fern', 'a later change on the new trigger is followed');
     await mutate(document.getElementById('second'), 'data-muxui-theme', null);
     assert.equal(attributes()['data-muxui-theme'], 'monochrome-forest', 'and so is the new trigger losing it');
+  });
+});
+
+// A trigger that swaps its own keyed element through local state, so the Popover does not render when it does.
+const THEMES = ['standard-harbour', 'standard-lagoon', 'standard-fern'];
+let swapTrigger;
+const SwappingTrigger = React.forwardRef(function SwappingTrigger(props, ref) {
+  const [index, setIndex] = React.useState(0);
+  swapTrigger = () => setIndex((current) => current + 1);
+  // A Button takes the Popover's press context itself, as a trigger that is not a DOM element has to.
+  return h(Button, { ...props, ref, key: index, id: `swap-${index}`, 'data-muxui-theme': THEMES[index % THEMES.length] }, 'Open');
+});
+
+test('a trigger node that replaces itself is picked up on the Popover\'s next render and the next time it opens', async () => {
+  await withPopover({ props: { colorScheme: 'dark', trigger: h(SwappingTrigger), defaultOpen: undefined, open: true } }, async ({ render, attributes, observers }) => {
+    assert.equal(attributes()['data-muxui-theme'], 'standard-harbour');
+
+    await act(async () => swapTrigger());
+    await render({});
+    assert.equal(attributes()['data-muxui-theme'], 'standard-lagoon', 'the next render of the Popover reads the new node');
+    assert.equal(observers(), 1);
+
+    await act(async () => swapTrigger());
+    await render({ open: false });
+    assert.equal(observers(), 0);
+    await render({ open: true });
+    assert.equal(attributes()['data-muxui-theme'], 'standard-fern', 'the next open reads the node that is there');
+    assert.equal(observers(), 1);
   });
 });
 
