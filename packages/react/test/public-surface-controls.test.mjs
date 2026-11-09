@@ -22,6 +22,12 @@ test('an accepted difference absorbs only its own assertion, with the values it 
     assert.deepEqual(result.unaccepted, [other]);
     assert.deepEqual(result.stale, [entry]);
   }
+  // An entry for one compiler and mode is in play only in that run, so it is neither absorbing nor stale elsewhere.
+  const scoped = { ...entry, compiler: 'TypeScript 7', mode: 'loose' };
+  assert.deepEqual(applyAccepted([failure], [scoped], { compiler: 'TypeScript 7', mode: 'loose' }), { unaccepted: [], stale: [] });
+  for (const run of [{ compiler: 'TypeScript 6', mode: 'loose' }, { compiler: 'TypeScript 7', mode: 'exact' }]) {
+    assert.deepEqual(applyAccepted([failure], [scoped], run), { unaccepted: [failure], stale: [] });
+  }
 });
 
 test('a compile that rejects nothing, or something the probe did not ask for, is not a pass', () => {

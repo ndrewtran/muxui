@@ -266,7 +266,7 @@ const EXPLAINED_DIFFERENCES = [
 test('the declarations and the catalog agree on every prop, event and named type of the 86 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 86, parts: 126, props: 765, events: 124, types: 157, references: 157 });
+  assert.deepEqual(result.counts, { families: 86, parts: 126, props: 766, events: 124, types: 158, references: 158 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });

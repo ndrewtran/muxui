@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:popover-color-scheme-react",
+  "kind": "example",
+  "name": "Popover color scheme",
+  "summary": "Open a dark Popover on a light page that uses a preset theme; the Popover carries the page preset and follows it while open.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:popover#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 4
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/popover/examples/react/color-scheme.tsx"
+}

@@ -49,7 +49,7 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
-  assert.equal(read('styles.css').rules.length, 2137);
+  assert.equal(read('styles.css').rules.length, 2138);
   const shared = readFileSync(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').trim();
   assert.equal(readStyleRules(shared).rules.length, 509);
   assert.equal(readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8').split(shared).length, 2, 'styles.css includes the shared stylesheet verbatim exactly once');
@@ -76,8 +76,8 @@ test('the stylesheet reader models the shipped sheets and refuses what it does n
 // Observations.
 // ---------------------------------------------------------------------------------------------------------------------------
 
-test('the observation reader agrees with jsdom on every element of the 219 renders and refuses markup it does not model', () => {
-  assert.equal(renders.length, 219);
+test('the observation reader agrees with jsdom on every element of the 220 renders and refuses markup it does not model', () => {
+  assert.equal(renders.length, 220);
   const signature = (tag, classes, attributes) => `${tag}|${classes.join(' ')}|${[...attributes].filter(([name]) => name.startsWith('data-muxui')).sort(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}=${value}`).join(',')}`;
   // The DOM's text of an element, without the content of a descendant script or style (code, which the reader keeps out of an ancestor's text).
   const domText = (node, top = true) => (node.nodeType === 3 ? node.data
@@ -94,7 +94,7 @@ test('the observation reader agrees with jsdom on every element of the 219 rende
     assert.deepEqual(mine.map((element) => element.text), theirs.map((element) => domText(element)), `${name}: the same text in every element`);
     elements += mine.length;
   }
-  assert.equal(elements, 3862); // Sidebar's grouping example adds six elements with its newly demonstrated public parts, and the ThemePicker and ColorModePicker examples 97 more.
+  assert.equal(elements, 3865); // Sidebar's grouping example adds six elements with its newly demonstrated public parts, the ThemePicker and ColorModePicker examples 97 more, and the Popover color scheme example three.
   // A <template> holds React Aria's collection and is inert: the template is an element, its content is not.
   const inert = parseObservation('<template><b class="muxui-x">in</b></template><i>out</i>');
   assert.deepEqual(inert.elements.map(({ tag }) => tag), ['template', 'i']);
@@ -442,7 +442,7 @@ test('the selection index is a second reading of the stylesheet, pair for pair, 
   const mine = new Set([...facts.selection].flatMap(([attribute, byClass]) => [...byClass.keys()].map((name) => `${attribute}|${name}`)));
   assert.deepEqual([...second].filter((pair) => !mine.has(pair)).sort(), [], 'a pair the second reading finds and the module lacks');
   assert.deepEqual([...mine].filter((pair) => !second.has(pair)).sort(), [], 'a pair the module holds and the second reading does not');
-  assert.equal(mine.size, 496);
+  assert.equal(mine.size, 497);
   // The scoping rules, on selectors written for them, by both readings. An attribute in :has() belongs to the element asked for;
   // each :where() / :is() branch stands alone; a :not() test counts for the element it is on; an ancestor's tests are its own.
   const cases = [

@@ -105,7 +105,7 @@ test('every part-map row with an element is emitted by a fixture of its own fami
   const withElement = partRows.filter((row) => row.disposition !== 'none');
   const byExample = withElement.filter((row) => exampleDocuments.some(({ family, document }) => family === row.family && document.querySelector(selectorOf(row)) !== null));
   assert.deepEqual([withElement.length, byExample.length, withElement.length - byExample.length], [438, 314, 124]);
-  assert.equal(exampleDocuments.length, 219);
+  assert.equal(exampleDocuments.length, 220);
 });
 
 test('every row that has no element says why, and no fixture stands in for one', () => {

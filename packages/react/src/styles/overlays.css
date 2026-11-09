@@ -200,6 +200,16 @@
   }
 }
 
+/* A Popover that sets colorScheme is a scope of that scheme, and its surface is that scheme's raised popup surface. The
+   strong surface an unscoped Popover uses is inverted against its page, so Mux UI components inside, whose text follows
+   the scope's scheme, would not read on it. */
+.muxui-popover__positioner[data-muxui-color-scheme] .muxui-popover {
+  background-color: var(--muxui-popup-bg);
+  border-color: var(--muxui-popup-border-color);
+  color: var(--muxui-semantic-content-default);
+  box-shadow: var(--muxui-popup-shadow);
+}
+
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-preview-trigger__content {
     color: var(--muxui-semantic-color-neutral-default-20);
