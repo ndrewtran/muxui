@@ -1783,6 +1783,10 @@
     {
       "family": "example",
       "path": "catalog/patterns/theme-settings/examples/react/popover.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/popover/examples/react/color-scheme.example.json"
     }
   ]
 }

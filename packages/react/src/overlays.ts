@@ -31,8 +31,10 @@ import type { DropItem, ModalOverlayProps, QueuedToast, TooltipProps as AriaTool
 import { DialogMotion } from './dialog-motion.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { observeReducedMotion } from './motion.mjs';
+import { observeAncestorAttributes } from './motion-geometry.mjs';
 import { useMotionLayout, useMotionLifecycle } from './motion-components.mjs';
 import { IconButton } from './supplemental/icon-button.ts';
+import type { ColorMode } from './supplemental/color-mode.ts';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
@@ -591,6 +593,57 @@ export const Dialog: ForwardRefExoticComponent<DialogProps & RefAttributes<HTMLE
   return component;
 })();
 
+// The attributes that pick a preset palette beside the color scheme. A scoped Popover copies them from its trigger's
+// surroundings, because the palette is chosen from the attributes on one element and the portal sits outside them.
+const PRESET_ATTRIBUTES = ['data-muxui-theme', 'data-muxui-contrast'] as const;
+
+interface PresetScope {
+  theme?: string;
+  contrast?: string;
+}
+
+const NO_PRESET_SCOPE: PresetScope = {};
+
+// Each attribute comes from the nearest element at or above the trigger that carries it, else from the document root.
+function readPresetScope(trigger: Element): PresetScope {
+  const [theme, contrast] = PRESET_ATTRIBUTES.map((name) => (trigger.closest(`[${name}]`) ?? trigger.ownerDocument.documentElement).getAttribute(name));
+  return { theme: theme ?? undefined, contrast: contrast ?? undefined };
+}
+
+/**
+ * The preset attributes a scoped Popover carries while it is open: read from the trigger's nearest scope when it opens,
+ * and read again whenever one of them changes on the trigger or an ancestor. A trigger node replaced while the Popover
+ * is open is picked up on the Popover's next render, when the effect below sees a different node, or on the next open;
+ * a trigger that swaps its own element without the Popover rendering is not seen before then. The observer stops when
+ * the Popover closes or unmounts.
+ */
+function usePresetScope(triggerRef: RefObject<Element | null> | undefined, enabled: boolean): PresetScope {
+  const [scope, setScope] = React.useState(NO_PRESET_SCOPE);
+  // The node being watched, and what stops the watching.
+  const watching = React.useRef<{ node: Element; stop: () => void } | null>(null);
+  // After every render of the Popover, so a trigger node replaced since the last one is seen; the ref's node is all that
+  // changes then. The state it sets is guarded, so a render that finds the same node watched changes nothing and costs
+  // no further render.
+  useIsomorphicLayoutEffect(() => {
+    const node = enabled ? triggerRef?.current ?? null : null;
+    if ((watching.current?.node ?? null) === node) return;
+    watching.current?.stop();
+    watching.current = null;
+    if (!node) return;
+    const sync = () => {
+      const next = readPresetScope(node);
+      setScope((current) => current.theme === next.theme && current.contrast === next.contrast ? current : next);
+    };
+    sync();
+    watching.current = { node, stop: observeAncestorAttributes([node, node.ownerDocument.documentElement], PRESET_ATTRIBUTES, sync) };
+  });
+  useIsomorphicLayoutEffect(() => () => {
+    watching.current?.stop();
+    watching.current = null;
+  }, []);
+  return scope;
+}
+
 interface PopoverSurfaceProps {
   modal: boolean;
   children?: ReactNode;
@@ -625,16 +678,19 @@ interface PopupContentProps {
   dismissable: boolean;
   anchorRef?: RefObject<Element | null>;
   modal?: boolean;
+  colorScheme?: ColorMode;
   onDismissOutside?: () => void;
   explicitClose: () => void;
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }
 
-const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentProps>(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, onDismissOutside, explicitClose, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentProps>(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, colorScheme, onDismissOutside, explicitClose, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   const dialogContext = React.useContext(AriaDialogContext);
   const popoverContext = React.useContext(AriaPopoverContext);
   const triggerRef = popoverContext && 'triggerRef' in popoverContext ? popoverContext.triggerRef : undefined;
+  const open = React.useContext(AriaOverlayTriggerStateContext)?.isOpen === true;
+  const presetScope = usePresetScope(triggerRef, colorScheme !== undefined && open);
   const positionerRef = React.useRef<HTMLElement | null>(null);
   const setRef = React.useMemo(() => mergeRefs(positionerRef, ref), [ref]);
   // RAC never dismisses a non-modal popover on outside press. Presses inside
@@ -667,6 +723,8 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
     containerPadding: geometry.containerPadding,
     isNonModal: !modal,
     'data-muxui-modal': modal,
+    // The positioner wraps the surface, so the scheme's rules reach the surface and everything inside it.
+    ...(colorScheme !== undefined && { 'data-muxui-color-scheme': colorScheme, 'data-muxui-theme': presetScope.theme, 'data-muxui-contrast': presetScope.contrast }),
     className: 'muxui-popover__positioner',
     isKeyboardDismissDisabled: !dismissable,
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
@@ -711,6 +769,8 @@ export type PopoverOwnProps = {
   containerPadding?: number;
   /** Whether the Popover contains focus until it closes. When false, it is non-blocking: it has no focus containment, outside-content exclusion, or scroll locking. */
   modal?: boolean;
+  /** Makes the open Popover a scope of this color scheme, whatever the page's. Its surface is that scheme's raised popup surface, not the strong surface an unscoped Popover has, and its text and any Mux UI component inside follow the scheme. Unset leaves the Popover as the page styles it. A scoped Popover also carries the data-muxui-theme and data-muxui-contrast it reads from its trigger's nearest scope, or from the document root, when it opens. While it is open it follows a change to either on the trigger or its ancestors, and it picks up a replaced trigger node on its next render or the next time it opens. */
+  colorScheme?: ColorMode;
   /** Reports the Popover opening or closing. */
   onOpenChange?: (open: boolean) => void;
 };
@@ -731,6 +791,7 @@ export const Popover: ForwardRefExoticComponent<PopoverProps & RefAttributes<HTM
   containerPadding = POPOVER_GEOMETRY.containerPadding,
   anchorRef,
   modal = true,
+  colorScheme,
   onOpenChange,
   className,
   ...props
@@ -749,7 +810,7 @@ export const Popover: ForwardRefExoticComponent<PopoverProps & RefAttributes<HTM
     dismissNonModal();
   };
   const dismissibleTrigger = React.cloneElement(trigger, { onKeyDown: composeEventHandlers(trigger.props.onKeyDown, onTriggerKeyDown) });
-  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal, onDismissOutside: dismissNonModal, explicitClose: triggerState.close }, children);
+  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal, colorScheme, onDismissOutside: dismissNonModal, explicitClose: triggerState.close }, children);
   return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange, children: CHILDREN_FOLLOW }, pressableTrigger(dismissibleTrigger, false, 'muxui-popover__trigger'), content);
 });
 

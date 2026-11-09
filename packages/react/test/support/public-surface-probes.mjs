@@ -229,17 +229,29 @@ export function runProbe(snapshots, probe, { tsc }) {
 /**
  * Sets `failures` against the accepted map (`[{ subject, assertion, old, new, reason }]`): an accepted entry
  * absorbs only the failure of that subject and assertion whose old and new values it states, and nothing
- * else on the subject. Returns what is left: `{ unaccepted, stale }`.
+ * else on the subject. A union diagnostic has no parsed old and new values, so its entry states the diagnostic's own
+ * text as `message` (whitespace collapsed) instead; an entry that states neither values nor text absorbs nothing, and
+ * a failure with values is never absorbed by an entry that states none. An entry may also name the `compiler` (a run's
+ * label, such as TypeScript 7) and the `mode` (loose or exact) of the only runs that report its difference, since each
+ * compiler prints a type its own way and an explicit undefined literal is probed only in the loose mode; `run` is
+ * `{ compiler, mode }`, and an entry that names another run is not in play for this one. Returns what is left:
+ * `{ unaccepted, stale }`.
  */
-export function applyAccepted(failures, accepted) {
+export function applyAccepted(failures, accepted, run = {}) {
+  const inPlay = accepted.filter((entry) => (entry.compiler === undefined || entry.compiler === run.compiler) && (entry.mode === undefined || entry.mode === run.mode));
+  const statesWhat = (entry) => entry.old !== undefined || entry.new !== undefined || entry.message !== undefined;
+  const absorbs = (entry, failure) => statesWhat(entry)
+    && entry.subject === failure.subject && entry.assertion === failure.assertion
+    && entry.old === failure.old && entry.new === failure.new
+    && (entry.message === undefined || entry.message === tidy(failure.message ?? ''));
   const used = new Set();
   const unaccepted = failures.filter((failure) => {
-    const index = accepted.findIndex((entry) => entry.subject === failure.subject && entry.assertion === failure.assertion && entry.old === failure.old && entry.new === failure.new);
+    const index = inPlay.findIndex((entry) => absorbs(entry, failure));
     if (index === -1) return true;
     used.add(index);
     return false;
   });
-  return { unaccepted, stale: accepted.filter((_, index) => !used.has(index)) };
+  return { unaccepted, stale: inPlay.filter((_, index) => !used.has(index)) };
 }
 
 /**
@@ -247,11 +259,15 @@ export function applyAccepted(failures, accepted) {
  * under each of `compilers` (`[{ label, tsc }]`) in both optional-property modes, and the result is
  * `{ baseline, current, runs: [{ label, loose, exact }] }` with each mode `{ failures, seconds }`.
  * `tamper` rewrites the member classification before it is probed, for the control that drops a member.
+ * `only` (a list of subject ids) probes just those subjects, for a control that needs a few; a subject
+ * that is not in both snapshots throws, so a misspelt id cannot pass for a clean probe.
  */
-export function comparePublicSurfaces(snapshots, compilers, { tamper } = {}) {
+export function comparePublicSurfaces(snapshots, compilers, { tamper, only } = {}) {
   const baseline = listSubjects(snapshots, snapshots.baseline);
   const current = listSubjects(snapshots, snapshots.current);
-  const common = commonSubjects(baseline, current);
+  const shared = commonSubjects(baseline, current);
+  const common = only === undefined ? shared : shared.filter(({ old }) => only.includes(old.id));
+  if (only !== undefined && common.length !== only.length) throw new Error(`not in both snapshots: ${only.filter((id) => !common.some(({ old }) => old.id === id)).join(', ')}`);
   const members = classifyMembers(snapshots, common);
   const probe = buildProbe(snapshots, common, tamper ? tamper(members) : members);
   return { baseline, current, runs: compilers.map(({ label, tsc }) => ({ label, ...runProbe(snapshots, probe, { tsc }) })) };

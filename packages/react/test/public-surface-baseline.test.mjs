@@ -76,12 +76,12 @@ test('every subject the package exported before the TypeScript moves is still ex
   t.diagnostic(`baseline subjects ${JSON.stringify(counts)}`);
 });
 
-for (const { label } of compilers) {
+for (const { label: compiler } of compilers) {
   for (const mode of ['loose', 'exact']) {
-    test(`the current declarations keep the public surface of the baseline under ${label}, exactOptionalPropertyTypes ${mode === 'exact'}`, (t) => {
-      const run = realComparison().runs.find((candidate) => candidate.label === label)[mode];
+    test(`the current declarations keep the public surface of the baseline under ${compiler}, exactOptionalPropertyTypes ${mode === 'exact'}`, (t) => {
+      const run = realComparison().runs.find((candidate) => candidate.label === compiler)[mode];
       t.diagnostic(`${run.seconds.toFixed(1)} s`);
-      const { unaccepted, stale } = applyAccepted(run.failures, accepted);
+      const { unaccepted, stale } = applyAccepted(run.failures, accepted, { compiler, mode });
       assert.deepEqual(unaccepted.map(describeFailure), [], 'differences from the baseline that are not accepted');
       assert.deepEqual(stale.map(({ subject, assertion }) => `${subject} ${assertion}`), [], 'accepted differences the check no longer finds');
     });

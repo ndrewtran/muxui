@@ -26,6 +26,8 @@ export async function auditPagePaints(page, { scheme, id, coverage, failures, si
   try {
     const result = await page.evaluate(collectStorybookPaints, {
       tokens: tokenGraphs[scheme],
+      // A nested colour scheme scope, such as an open Popover with colorScheme, is read against its own scheme's tokens.
+      schemeTokens: tokenGraphs,
       scope: 'canvas',
     });
     if (result.nonToken.length > 0) {

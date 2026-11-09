@@ -19,6 +19,10 @@ The Popover modes example shows a non-modal details Popover with an action and a
 - Keep the content to what the trigger names: a few lines of information, or one small control with its action.
 - Name the dialog surface for what it holds, such as Report details, with `aria-label`.
 
+## Color scheme
+
+A Popover's own surface is strong and inverted against its page, so Mux UI components inside it, whose text follows the page's color scheme, do not read on it. For a panel of controls, such as a settings panel, set a color scheme on the Popover: the panel then becomes a surface of that scheme, with that scheme's components inside, whatever the page uses. A preset theme on the page carries into it. The Popover color scheme example shows a dark panel on a light page with a preset theme, the generated [Popover reference](/components/popover/) lists the prop, and the [Behavior](#behavior) section says what the panel reads from around its trigger and when it picks up a change.
+
 ## Common mistake
 
 Leaving the default `modal` on a Popover that only shows information. It contains focus and locks page scrolling, so the user cannot scroll or tab through the page while reading. Set `modal={false}` for anything the user may want to compare with the page.

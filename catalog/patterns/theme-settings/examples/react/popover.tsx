@@ -85,8 +85,8 @@ export function ThemeSettingsPopoverExample() {
           block-size: 1rem;
         }
 
-        /* The popover's own surface is a strong one that the pickers' text does not read on, so it takes the raised
-           surface other popups use. It scrolls inside the room the viewport leaves, as the panel is tall. */
+        /* The panel is a dark scope (colorScheme on the Popover), so its surface and text, and the pickers inside, are the dark
+           ones. Popover does not cap its own height, so the panel scrolls inside the room the viewport leaves, as it is tall. */
         .muxui-popover.theme-popover {
           box-sizing: border-box;
           inline-size: min(23.25rem, calc(100vw - 1.5rem));
@@ -94,11 +94,7 @@ export function ThemeSettingsPopoverExample() {
           max-block-size: inherit;
           overflow-y: auto;
           padding: var(--muxui-semantic-layout-inset-medium);
-          background-color: var(--muxui-semantic-surface-raised);
-          border: 1px solid var(--muxui-semantic-border-strong);
           border-radius: var(--muxui-semantic-shape-feature-card-radius);
-          box-shadow: var(--muxui-semantic-elevation-floating);
-          color: var(--muxui-semantic-content-default);
         }
 
         .theme-panel {
@@ -146,6 +142,7 @@ export function ThemeSettingsPopoverExample() {
       <Popover
         aria-label="Theme settings"
         className="theme-popover"
+        colorScheme="dark"
         placement="bottom-end"
         trigger={<IconButton aria-label="Theme" className="theme-trigger" size="lg" variant="ghost"><Palette /></IconButton>}
       >
