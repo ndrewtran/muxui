@@ -1,5 +1,5 @@
 {
-  "note": "The only differences from the declarations before the TypeScript moves that the public-surface check accepts, each as the one failed assertion of one subject with the old and new value the compiler reports. An entry absorbs nothing else on its subject, and an entry the check no longer needs fails it. An entry may name the `compiler` (TypeScript 7 or TypeScript 6) and the `mode` (loose or exact) of the only runs that report its difference, because each compiler prints a type its own way and an explicit undefined literal is probed only in the loose mode. These are pair-assertion differences, not the only observable changes: the new augmentation reach is asserted in catalog-examples-types.test.mjs, and new exports are listed in public-surface-inventory.json.",
+  "note": "The only differences from the declarations before the TypeScript moves that the public-surface check accepts, each as the one failed assertion of one subject with the old and new value the compiler reports. An entry absorbs nothing else on its subject, and an entry the check no longer needs fails it. A union diagnostic has no parsed old and new values, so its entry states the diagnostic's text as `message`, and an entry that states neither values nor text absorbs nothing. An entry may name the `compiler` (TypeScript 7 or TypeScript 6) and the `mode` (loose or exact) of the only runs that report its difference, because each compiler prints a type its own way and an explicit undefined literal is probed only in the loose mode. These are pair-assertion differences, not the only observable changes: the new augmentation reach is asserted in catalog-examples-types.test.mjs, and new exports are listed in public-surface-inventory.json.",
   "accepted": [
     {
       "subject": ".:type:DataDiffValues",
@@ -118,14 +118,35 @@
     {
       "subject": ".:props:Popover",
       "assertion": "optional",
-      "reason": "colorScheme is optional, so the optional-key list gains it; every key it had before is unchanged.",
+      "compiler": "TypeScript 7",
+      "message": "{ old: \"anchorRef\" | \"aria-label\" | \"className\" | \"containerPadding\" | \"crossOffset\" | \"defaultOpen\" | \"dismissable\" | \"key\" | \"modal\" | \"offset\" | \"onOpenChange\" | \"open\" | \"placement\" | \"ref\" | \"shouldFlip\"; new: \"anchorRef\" | ... 14 more ... | \"shouldFlip\"; } | { ...; }",
+      "reason": "colorScheme is optional, so the optional-key list of Popover's props gains it. The diagnostic is a union with no parsed old and new values, so the entry states its text: the baseline's full key list and the count of keys the current list elides, which a second added optional prop changes. Each compiler prints the list its own way.",
+      "tranche": "Popover colorScheme, opt-in colour scheme scope"
+    },
+    {
+      "subject": ".:props:Popover",
+      "assertion": "optional",
+      "compiler": "TypeScript 6",
+      "message": "{ old: \"offset\" | \"key\" | \"open\" | \"className\" | \"ref\" | \"aria-labelledby\" | \"defaultOpen\" | \"onOpenChange\" | \"dismissable\" | \"placement\" | \"crossOffset\" | \"shouldFlip\" | \"containerPadding\" | \"modal\" | \"anchorRef\"; new: \"offset\" | ... 14 more ... | \"anchorRef\"; } | { ...; }",
+      "reason": "colorScheme is optional, so the optional-key list of Popover's props gains it. The diagnostic is a union with no parsed old and new values, so the entry states its text: the baseline's full key list and the count of keys the current list elides, which a second added optional prop changes. Each compiler prints the list its own way.",
       "tranche": "Popover colorScheme, opt-in colour scheme scope"
     },
     {
       "subject": ".:props:Popover",
       "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 7",
       "mode": "loose",
-      "reason": "colorScheme accepts an explicit undefined literal like every other optional prop; the loose run lists it, and the exact run has no such probe.",
+      "message": "{ old: \"anchorRef\" | \"aria-label\" | \"className\" | \"containerPadding\" | \"crossOffset\" | \"defaultOpen\" | \"dismissable\" | \"key\" | \"modal\" | \"offset\" | \"onOpenChange\" | \"open\" | \"placement\" | \"ref\" | \"shouldFlip\"; new: \"anchorRef\" | ... 14 more ... | \"shouldFlip\"; } | { ...; }",
+      "reason": "colorScheme accepts an explicit undefined literal like every other optional prop, so the literal-key list gains it; the loose run lists it and the exact run has no such probe. The entry states the diagnostic's text, as the optional entry does.",
+      "tranche": "Popover colorScheme, opt-in colour scheme scope"
+    },
+    {
+      "subject": ".:props:Popover",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 6",
+      "mode": "loose",
+      "message": "{ old: \"offset\" | \"key\" | \"open\" | \"className\" | \"ref\" | \"aria-labelledby\" | \"defaultOpen\" | \"onOpenChange\" | \"dismissable\" | \"placement\" | \"crossOffset\" | \"shouldFlip\" | \"containerPadding\" | \"modal\" | \"anchorRef\"; new: \"offset\" | ... 14 more ... | \"anchorRef\"; } | { ...; }",
+      "reason": "colorScheme accepts an explicit undefined literal like every other optional prop, so the literal-key list gains it; the loose run lists it and the exact run has no such probe. The entry states the diagnostic's text, as the optional entry does.",
       "tranche": "Popover colorScheme, opt-in colour scheme scope"
     },
     {
@@ -149,14 +170,35 @@
     {
       "subject": ".:type:PopoverProps",
       "assertion": "optional",
-      "reason": "colorScheme is optional, so the optional-key list gains it; every key it had before is unchanged.",
+      "compiler": "TypeScript 7",
+      "message": "{ old: \"anchorRef\" | \"aria-label\" | \"className\" | \"containerPadding\" | \"crossOffset\" | \"defaultOpen\" | \"dismissable\" | \"modal\" | \"offset\" | \"onOpenChange\" | \"open\" | \"placement\" | \"shouldFlip\"; new: \"anchorRef\" | ... 12 more ... | \"shouldFlip\"; } | { ...; }",
+      "reason": "colorScheme is optional, so the optional-key list of Popover's props gains it. The diagnostic is a union with no parsed old and new values, so the entry states its text: the baseline's full key list and the count of keys the current list elides, which a second added optional prop changes. Each compiler prints the list its own way.",
+      "tranche": "Popover colorScheme, opt-in colour scheme scope"
+    },
+    {
+      "subject": ".:type:PopoverProps",
+      "assertion": "optional",
+      "compiler": "TypeScript 6",
+      "message": "{ old: \"offset\" | \"open\" | \"className\" | \"aria-labelledby\" | \"defaultOpen\" | \"onOpenChange\" | \"dismissable\" | \"placement\" | \"crossOffset\" | \"shouldFlip\" | \"containerPadding\" | \"modal\" | \"anchorRef\"; new: \"offset\" | ... 12 more ... | \"anchorRef\"; } | { ...; }",
+      "reason": "colorScheme is optional, so the optional-key list of Popover's props gains it. The diagnostic is a union with no parsed old and new values, so the entry states its text: the baseline's full key list and the count of keys the current list elides, which a second added optional prop changes. Each compiler prints the list its own way.",
       "tranche": "Popover colorScheme, opt-in colour scheme scope"
     },
     {
       "subject": ".:type:PopoverProps",
       "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 7",
       "mode": "loose",
-      "reason": "colorScheme accepts an explicit undefined literal like every other optional prop; the loose run lists it, and the exact run has no such probe.",
+      "message": "{ old: \"anchorRef\" | \"aria-label\" | \"className\" | \"containerPadding\" | \"crossOffset\" | \"defaultOpen\" | \"dismissable\" | \"modal\" | \"offset\" | \"onOpenChange\" | \"open\" | \"placement\" | \"shouldFlip\"; new: \"anchorRef\" | ... 12 more ... | \"shouldFlip\"; } | { ...; }",
+      "reason": "colorScheme accepts an explicit undefined literal like every other optional prop, so the literal-key list gains it; the loose run lists it and the exact run has no such probe. The entry states the diagnostic's text, as the optional entry does.",
+      "tranche": "Popover colorScheme, opt-in colour scheme scope"
+    },
+    {
+      "subject": ".:type:PopoverProps",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 6",
+      "mode": "loose",
+      "message": "{ old: \"offset\" | \"open\" | \"className\" | \"aria-labelledby\" | \"defaultOpen\" | \"onOpenChange\" | \"dismissable\" | \"placement\" | \"crossOffset\" | \"shouldFlip\" | \"containerPadding\" | \"modal\" | \"anchorRef\"; new: \"offset\" | ... 12 more ... | \"anchorRef\"; } | { ...; }",
+      "reason": "colorScheme accepts an explicit undefined literal like every other optional prop, so the literal-key list gains it; the loose run lists it and the exact run has no such probe. The entry states the diagnostic's text, as the optional entry does.",
       "tranche": "Popover colorScheme, opt-in colour scheme scope"
     }
   ]
