@@ -419,7 +419,7 @@ function DialogContent({ title, description, actions, children, ariaLabel, dismi
     description !== undefined && description !== null ? React.createElement('p', { id: descriptionId, className: classNames('muxui-dialog__description', descriptionClassName) }, description) : null,
     React.createElement('div', { className: classNames('muxui-dialog__content', contentClassName) }, children),
     actions !== undefined && actions !== null ? React.createElement('div', { className: classNames('muxui-dialog__actions', actionsClassName) }, actions) : null,
-    dismissable ? React.createElement(IconButton, { slot: 'close', size: 'sm', className: classNames('muxui-dialog__close', closeClassName), 'aria-label': 'Close dialog' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
+    dismissable ? React.createElement(IconButton, { slot: 'close', size: 'sm', className: classNames('muxui-dialog__close', closeClassName), 'aria-label': 'Close dialog' }, React.createElement(XIcon, { className: 'muxui-dialog__close-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
   return React.createElement(AriaOverlayTriggerStateContext.Provider, { value: explicitCloseState }, dialog);
 }
 
@@ -584,7 +584,7 @@ export const Dialog: ForwardRefExoticComponent<DialogProps & RefAttributes<HTMLE
       return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange, children: CHILDREN_FOLLOW }, pressableTrigger(trigger, false, 'muxui-dialog__trigger'), content);
     }
     return React.createElement(React.Fragment, null,
-      React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
+      React.createElement('span', { ref: motionOriginRef, className: 'muxui-dialog__motion-origin', hidden: true, 'aria-hidden': 'true' }),
       content);
   });
   component.displayName = 'Dialog';
@@ -1221,7 +1221,7 @@ function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, ori
     React.createElement(AriaToastContent, { className: 'muxui-toast__content' },
       React.createElement(AriaText, { slot: 'title', className: classNames('muxui-toast__title', hasTitle ? undefined : 'muxui-toast__title-fallback') }, hasTitle ? value.title : TOAST_FALLBACK_TITLE),
       React.createElement(AriaText, { slot: 'description', className: 'muxui-toast__message' }, value.message)),
-    React.createElement(IconButton, { slot: 'close', size: 'sm', className: 'muxui-toast__dismiss', 'aria-label': 'Dismiss notification' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })));
+    React.createElement(IconButton, { slot: 'close', size: 'sm', className: 'muxui-toast__dismiss', 'aria-label': 'Dismiss notification' }, React.createElement(XIcon, { className: 'muxui-toast__dismiss-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 })));
 }
 
 /** What a notification added through the manager can say and do. */
@@ -1328,7 +1328,7 @@ export const ToastProvider: FC<ToastProviderProps> = function ToastProvider({ ch
   const manager = React.useMemo(() => ({ add, remove }), [add, remove]);
   const value = React.useMemo(() => ({ manager, addDeclarative, dispose, refresh }), [addDeclarative, dispose, manager, refresh]);
   return React.createElement(ToastContext.Provider, { value }, children,
-    React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
+    React.createElement('span', { ref: motionOriginRef, className: 'muxui-toast__motion-origin', hidden: true, 'aria-hidden': 'true' }),
     // The region reads the queue only through its subscribe, visibleToasts, add, close, pauseAll, resumeAll, and clear;
     // React Aria types it as the ToastQueue class, whose private members no other object has.
     React.createElement(UNSTABLE_ToastRegion<ToastContent>, { ref: trackRegionFocus, queue: animatedQueue as unknown as UNSTABLE_ToastQueue<ToastContent>, className: classNames('muxui-toast__region', className), 'aria-label': 'Notifications', ...{ placement, 'data-muxui-placement': placement },

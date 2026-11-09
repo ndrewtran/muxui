@@ -484,7 +484,7 @@ function Action({ editor, disabled, action, label, icon: Icon, callbacks }: Acti
     onActivate: () => run(editor, action, callbacks),
   };
   return Icon
-    ? React.createElement(IconButton, buttonProps, React.createElement(Icon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }))
+    ? React.createElement(IconButton, buttonProps, React.createElement(Icon, { className: 'muxui-text-editor__icon', size: 16, 'aria-hidden': 'true', focusable: 'false' }))
     : React.createElement(Button, buttonProps, label);
 }
 
@@ -506,13 +506,13 @@ function ColorPicker({ editor, disabled, callbacks }: PickerProps) {
   };
   // React Aria's types make the trigger's children a required prop, and createElement takes them as arguments after the props.
   return React.createElement(DialogTrigger, { isOpen: open, onOpenChange: setOpen } as DialogTriggerProps,
-    React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, 'aria-label': 'Text color', onActivate: () => setOpen(true) }, React.createElement(Type, { size: 16, 'aria-hidden': 'true', focusable: 'false' })),
+    React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, 'aria-label': 'Text color', onActivate: () => setOpen(true) }, React.createElement(Type, { className: 'muxui-text-editor__icon', size: 16, 'aria-hidden': 'true', focusable: 'false' })),
     React.createElement(AriaPopover, { className: 'muxui-text-editor__color-popup' },
       React.createElement(AriaDialog, { className: 'muxui-text-editor__color-dialog', 'aria-label': 'Text color picker' },
         React.createElement('div', { className: 'muxui-text-editor__color-swatches' }, [...SAFE_COLORS].map((hex) => React.createElement('button', { key: hex, type: 'button', className: 'muxui-text-editor__color-swatch', style: { backgroundColor: hex }, 'aria-label': hex, onClick: () => apply(hex) }))),
         React.createElement('div', { className: 'muxui-text-editor__color-field-row' },
           React.createElement(AriaLabel, { className: 'muxui-text-editor__color-field-label' }, 'Custom'),
-          React.createElement(AriaColorField, { value: color, onChange: handleColorChange, className: 'muxui-text-editor__custom-color-field', 'aria-label': 'Custom color' }, React.createElement(AriaInput, null)),
+          React.createElement(AriaColorField, { value: color, onChange: handleColorChange, className: 'muxui-text-editor__custom-color-field', 'aria-label': 'Custom color' }, React.createElement(AriaInput, { className: 'muxui-text-editor__custom-color-input' })),
         ),
       ),
     ),
@@ -531,7 +531,7 @@ function ImagePicker({ editor, disabled, callbacks }: PickerProps) {
   return React.createElement(IconButton, { className: 'muxui-text-editor__btn muxui-text-editor__image-picker', disabled, ...{ 'data-muxui-state-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert image', onActivate: () => {
     if (callbacks.onImageRequest) callbacks.onImageRequest({ insertImage: (src, alt) => insert(src, alt) });
     else promptImage();
-  } }, React.createElement(ImageIcon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }));
+  } }, React.createElement(ImageIcon, { className: 'muxui-text-editor__icon', size: 16, 'aria-hidden': 'true', focusable: 'false' }));
 }
 
 function Separator() {
@@ -551,7 +551,7 @@ function Toolbar({ editor, disabled, variant, floating, callbacks }: ToolbarProp
       onActivate: () => callback ? callback(actions) : fallback(),
     };
     return Icon
-      ? React.createElement(IconButton, buttonProps, React.createElement(Icon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }))
+      ? React.createElement(IconButton, buttonProps, React.createElement(Icon, { className: 'muxui-text-editor__icon', size: 16, 'aria-hidden': 'true', focusable: 'false' }))
       : React.createElement(Button, buttonProps, label);
   };
   const linkActions: TextEditorActionCallbacks = { setLink: (href) => run(editor, { type: 'link', href }), unsetLink: () => run(editor, { type: 'unlink' }) };
@@ -564,8 +564,8 @@ function Toolbar({ editor, disabled, variant, floating, callbacks }: ToolbarProp
   const className = cx('muxui-text-editor__toolbar', advanced && 'muxui-text-editor__toolbar--advanced', floating && 'muxui-text-editor__toolbar--floating');
   return React.createElement('div', { role: 'toolbar', 'aria-label': 'Formatting', className },
     advanced ? React.createElement(React.Fragment, null,
-      React.createElement('select', { className: 'muxui-text-editor__select', disabled, 'aria-label': 'Font family', defaultValue: 'Inter', onChange: (event: ChangeEvent<HTMLSelectElement>) => run(editor, { type: 'fontFamily', value: event.target.value as TextEditorFontFamily }) }, [...FONT_FAMILIES].map((value) => React.createElement('option', { key: value, value }, value === 'Comic Sans MS, Comic Sans' ? 'Comic Sans' : value[0].toUpperCase() + value.slice(1)))),
-      React.createElement('select', { className: 'muxui-text-editor__select', disabled, 'aria-label': 'Font size', defaultValue: '16px', onChange: (event: ChangeEvent<HTMLSelectElement>) => run(editor, { type: 'fontSize', value: event.target.value as TextEditorFontSize }) }, [...FONT_SIZES].map((value) => React.createElement('option', { key: value, value }, value.replace('px', '')))),
+      React.createElement('select', { className: 'muxui-text-editor__select', disabled, 'aria-label': 'Font family', defaultValue: 'Inter', onChange: (event: ChangeEvent<HTMLSelectElement>) => run(editor, { type: 'fontFamily', value: event.target.value as TextEditorFontFamily }) }, [...FONT_FAMILIES].map((value) => React.createElement('option', { key: value, value, className: 'muxui-text-editor__option' }, value === 'Comic Sans MS, Comic Sans' ? 'Comic Sans' : value[0].toUpperCase() + value.slice(1)))),
+      React.createElement('select', { className: 'muxui-text-editor__select', disabled, 'aria-label': 'Font size', defaultValue: '16px', onChange: (event: ChangeEvent<HTMLSelectElement>) => run(editor, { type: 'fontSize', value: event.target.value as TextEditorFontSize }) }, [...FONT_SIZES].map((value) => React.createElement('option', { key: value, value, className: 'muxui-text-editor__option' }, value.replace('px', '')))),
       Separator(),
     ) : null,
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'bold' }, label: 'Bold', icon: Bold }),
@@ -615,7 +615,7 @@ function BubbleMenu({ editor, disabled, callbacks }: PickerProps & { editor: Edi
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'bold' }, label: 'Bold', icon: Bold }),
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'italic' }, label: 'Italic', icon: Italic }),
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'underline' }, label: 'Underline', icon: Underline }),
-    React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, ...{ 'data-muxui-state-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert link', onActivate: requestLink }, React.createElement(LinkIcon, { size: 16, 'aria-hidden': 'true', focusable: 'false' })),
+    React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, ...{ 'data-muxui-state-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert link', onActivate: requestLink }, React.createElement(LinkIcon, { className: 'muxui-text-editor__icon', size: 16, 'aria-hidden': 'true', focusable: 'false' })),
   );
 }
 
@@ -1031,7 +1031,7 @@ function measureRange(editor: Editor, { from, to }: TextRange): Rect {
 const sameRect = (a: Rect | null, b: Rect | null) => a !== null && b !== null && a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
 
 const e = React.createElement;
-const barIcon = (Icon: LucideIcon) => e(Icon, { size: 16, 'aria-hidden': 'true', focusable: 'false' });
+const barIcon = (Icon: LucideIcon, ...extra: string[]) => e(Icon, { className: ['muxui-text-editor__icon', ...extra].join(' '), size: 16, 'aria-hidden': 'true', focusable: 'false' });
 
 type SelectionActionsProps = {
   editor: Editor;
@@ -1262,7 +1262,7 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
     const action = record!.request.type === 'action' ? actions.find(({ id }) => id === (record!.request as Extract<TextEditorSelectionRequest, { type: 'action' }>).id) : undefined;
     label = action?.pendingLabel ?? PENDING_LABEL;
     content = [
-      e('span', { key: 'pending', className: 'muxui-text-editor__selection-pending' }, barIcon(Sparkles), e('span', null, label)),
+      e('span', { key: 'pending', className: 'muxui-text-editor__selection-pending' }, barIcon(Sparkles), e('span', { className: 'muxui-text-editor__selection-label' }, label)),
       button('cancel', { onActivate: () => leave(() => controller.cancel(record!)) }, 'Cancel'),
     ];
   } else if (phase === 'review') {
@@ -1270,7 +1270,7 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
     content = [
       // The text stays selected, so keep the bar closed until the selection changes.
       button('keep', { variant: 'primary', onActivate: () => leave(() => { dismissSelection(); controller.keep(record!); }) }, barIcon(Check), 'Keep'),
-      button('discard', { onActivate: () => leave(() => controller.discard(record!)) }, barIcon(X), 'Discard'),
+      button('discard', { onActivate: () => leave(() => controller.discard(record!)) }, barIcon(X, 'muxui-text-editor__discard-icon'), 'Discard'),
       e('div', { key: 'divider', className: 'muxui-text-editor__separator', 'aria-hidden': 'true' }),
       iconButton('retry', 'Try again', RotateCw, { onActivate: () => controller.retry(record!) }),
     ];
@@ -1330,6 +1330,7 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
       // A new element per position makes the popover measure its anchor again.
       key: anchorKey,
       ref: setAnchorElement,
+      className: 'muxui-text-editor__selection-anchor',
       'aria-hidden': 'true',
       style: { position: 'fixed', left: anchor.left, top: anchor.top, width: anchor.width, height: anchor.height, visibility: 'hidden', pointerEvents: 'none' },
     }), document.body) : null,
@@ -1529,7 +1530,7 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   toolbar ? React.createElement(Toolbar, { editor, disabled: disabled ? disabled : readOnly, variant, floating: isFloating, callbacks }) : null,
   editor && bubbleMenu ? React.createElement(BubbleMenu, { editor, disabled: disabled ? disabled : readOnly, callbacks }) : null,
   React.createElement('div', { className: 'muxui-text-editor__content' },
-    editor ? React.createElement(EditorContent, { editor }) : null,
+    editor ? React.createElement(EditorContent, { editor, className: 'muxui-text-editor__surface' }) : null,
     editor && typeof onSelectionRequest === 'function'
       ? React.createElement(SelectionActions, { editor, enabled: !disabled && !readOnly, actions: selectionActions, instruction: selectionInstruction, onRequest: onSelectionRequest, limitRef })
       : null),

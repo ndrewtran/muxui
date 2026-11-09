@@ -109,6 +109,7 @@ const datePopoverMotionSource = await readFile(resolve(packageRoot, 'src/date-po
 const dialogMotionSource = await readFile(resolve(packageRoot, 'src/dialog-motion.mjs'), 'utf8');
 const motionSource = await readFile(resolve(packageRoot, 'src/motion.mjs'), 'utf8');
 const motionGeometrySource = await readFile(resolve(packageRoot, 'src/motion-geometry.mjs'), 'utf8');
+const hoverLayerMotionSource = await readFile(resolve(packageRoot, 'src/hover-layer-motion.mjs'), 'utf8');
 const motionComponentsSource = await readFile(resolve(packageRoot, 'src/motion-components.mjs'), 'utf8');
 const candidateMotionSource = await readFile(resolve(packageRoot, 'src/supplemental/candidate-motion.mjs'), 'utf8');
 const popoverMotionSource = await readFile(resolve(packageRoot, 'src/popover-motion.mjs'), 'utf8');
@@ -995,6 +996,7 @@ const outputs = new Map([
   ['dialog-motion.mjs', shippedModule('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
   ['motion.mjs', shippedModule('packages/react/src/motion.mjs', motionSource)],
   ['motion-geometry.mjs', shippedModule('packages/react/src/motion-geometry.mjs', motionGeometrySource)],
+  ['hover-layer-motion.mjs', shippedModule('packages/react/src/hover-layer-motion.mjs', hoverLayerMotionSource)],
   ['motion-components.mjs', shippedModule('packages/react/src/motion-components.mjs', motionComponentsSource)],
   ['candidate-motion.mjs', shippedModule('packages/react/src/supplemental/candidate-motion.mjs', candidateMotionSource)],
   ['code-block-highlight.mjs', shippedModule('packages/react/src/supplemental/code-block-highlight.mjs', await readFile(resolve(packageRoot, 'src/supplemental/code-block-highlight.mjs'), 'utf8'))],

@@ -17,7 +17,8 @@
 .muxui-message__source-index { color: var(--muxui-semantic-content-default); }
 .muxui-message__sources a { text-decoration-thickness: 1px; text-underline-offset: 0.15em; }
 .muxui-message__sources a.muxui-link:hover { color: var(--muxui-semantic-content-link-hover); }
-.muxui-message__sources a.muxui-link:active { color: var(--muxui-semantic-content-link-pressed); }
+/* :not(.muxui-button) matches Link's own rules and outranks the dark-scheme native :hover rule, which a source link would otherwise keep while pressed. */
+.muxui-message__sources a.muxui-link:not(.muxui-button):active { color: var(--muxui-semantic-content-link-pressed); }
 .muxui-message__source-description { display: block; color: var(--muxui-semantic-content-default); font-size: var(--muxui-semantic-typography-text-xs-font-size); }
 .muxui-message__follow-ups { display: flex; align-items: flex-start; flex-direction: column; gap: var(--muxui-semantic-layout-micro-gap); margin-block-start: var(--muxui-semantic-layout-section-gap); }
 .muxui-message__follow-up-label { color: var(--muxui-semantic-content-default); font-size: var(--muxui-semantic-typography-text-s-font-size); }

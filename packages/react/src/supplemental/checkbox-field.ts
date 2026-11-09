@@ -70,9 +70,9 @@ function makeCheckboxField() {
     const renderProps = React.useContext(CheckboxFieldIndicatorContext);
     const content = children === undefined || children === null
       ? renderProps?.isIndeterminate
-        ? h(MinusIcon, { 'aria-hidden': true, focusable: 'false', size: 12 })
+        ? h(MinusIcon, { className: 'muxui-checkbox-field__indicator-icon', 'aria-hidden': true, focusable: 'false', size: 12 })
         : renderProps?.isSelected
-          ? h(CheckIcon, { 'aria-hidden': true, focusable: 'false', size: 12 })
+          ? h(CheckIcon, { className: 'muxui-checkbox-field__indicator-icon', 'aria-hidden': true, focusable: 'false', size: 12 })
           : null
       : children;
     return nativePart('span', 'muxui-checkbox-field__indicator', props, ref, content);

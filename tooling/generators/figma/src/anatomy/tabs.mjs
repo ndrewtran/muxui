@@ -31,7 +31,7 @@ export default {
       parent: 'selected',
       node: 'FRAME',
       selector: '.muxui-tabs__motion-underline',
-      bind: ['fill', 'radius'],
+      bind: ['fill', 'radius', 'shadow'],
       layout: { placement: 'fill' },
       when: filled,
     },

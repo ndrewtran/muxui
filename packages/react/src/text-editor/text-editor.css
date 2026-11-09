@@ -90,6 +90,28 @@
   margin-top: var(--muxui-semantic-layout-control-gap);
 }
 
+/* The document is the component's own content. Its nodes take the surface's typography, never the host's rules for `p`, `li`,
+   `blockquote`, `a`, ... Zero specificity, so the rules below still win; a heading keeps its role from base.css, and a code block
+   keeps the browser's monospace face, stated here so a host rule for `pre` cannot replace it. */
+:where(.muxui-text-editor__content .ProseMirror) :where(:not(h1, h2, h3, h4, h5, h6, pre)) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.muxui-text-editor__content .ProseMirror pre {
+  font-family: monospace;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* A horizontal rule keeps the margins the browser gives it, which a host's `* { margin: 0 }` would replace. Zero specificity, so the
+   stack margin above still wins. */
+:where(.muxui-text-editor__content .ProseMirror) :where(hr) {
+  margin-block: 0.5em;
+  margin-inline: auto;
+}
+
 .muxui-text-editor__content .ProseMirror p {
   margin: 0;
 }

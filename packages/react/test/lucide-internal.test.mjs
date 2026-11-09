@@ -58,6 +58,34 @@ function moduleSpecifiers(source, lang = 'js') {
   visit(parseAst(source, { lang }));
   return specifiers;
 }
+
+// Lucide draws an X at 2 of its 24 viewBox units, so the line follows the icon's size. base.css draws the shapes of a list of part
+// classes at 1.5px. `xIconUses` reads a source: how many times it references the imported X icon, and the `muxui-` classes in the
+// arguments of the calls that render it, so the list can be held to the icons the sources render.
+const xIconModule = 'lucide-react/dist/esm/icons/x.mjs';
+function xIconUses(source, lang) {
+  const ast = parseAst(source, { lang });
+  const binding = ast.body.find((node) => node.type === 'ImportDeclaration' && node.source.value === xIconModule)?.specifiers[0].local.name;
+  let references = 0;
+  const classes = [];
+  const visit = (node) => {
+    if (Array.isArray(node)) return node.forEach(visit);
+    if (node === null || typeof node !== 'object') return undefined;
+    if (node.type === 'Identifier' && node.name === binding) references += 1;
+    if (node.type === 'CallExpression' && node.arguments.some((argument) => argument.type === 'Identifier' && argument.name === binding)) {
+      classes.push(...source.slice(node.start, node.end).match(/muxui-[a-z0-9_-]+/gu) ?? []);
+    }
+    return Object.values(node).forEach(visit);
+  };
+  if (binding !== undefined) visit(ast.body.filter((node) => node.type !== 'ImportDeclaration'));
+  return { references, classes };
+}
+/** The classes whose shapes base.css draws at 1.5px, sorted. */
+function xIconStrokeList(css) {
+  const rule = css.match(/:where\(([^)]*)\) > \* \{\s*stroke-width: 1\.5;\s*vector-effect: non-scaling-stroke;\s*\}/u);
+  assert.ok(rule, 'base.css has the X stroke rule');
+  return rule[1].split(',').map((name) => name.trim().replace(/^\./u, '')).sort();
+}
 const lucideSpecifiers = (source, lang) => moduleSpecifiers(source, lang).filter((specifier) => specifier.startsWith('lucide-react'));
 // Deep default imports keep unbundled Node consumers off the full icon barrel.
 const nonDeepLucideImports = (source, lang) => lucideSpecifiers(source, lang).filter((specifier) => !/^lucide-react\/dist\/esm\/icons\/[a-z0-9-]+\.mjs$/u.test(specifier));
@@ -68,6 +96,13 @@ test('the Lucide import scan reads syntax, not source formatting', () => {
   assert.deepEqual(nonDeepLucideImports("export { Bell } from\n'lucide-react';\nexport * from 'lucide-react/dist/esm/lucide-react.mjs';"), ['lucide-react', 'lucide-react/dist/esm/lucide-react.mjs']);
   assert.deepEqual(nonDeepLucideImports("const icons = await import(\n'lucide-react');"), ['lucide-react']);
   assert.deepEqual(nonDeepLucideImports("import type { LucideProps } from 'lucide-react';\nconst size: number = 1;", 'ts'), ['lucide-react']);
+});
+
+test('the X icon scan reads the class of each use, and the stroke rule is read as a list', () => {
+  const source = `import XIcon from '${xIconModule}';\nh(XIcon, { className: 'muxui-a__x-icon', size: 12 }); bar(XIcon, 'muxui-b__x-icon');`;
+  assert.deepEqual(xIconUses(source), { references: 2, classes: ['muxui-a__x-icon', 'muxui-b__x-icon'] });
+  assert.deepEqual(xIconUses("import Check from 'lucide-react/dist/esm/icons/check.mjs';\nh(Check, { className: 'muxui-c__icon' });"), { references: 0, classes: [] });
+  assert.deepEqual(xIconStrokeList(':where(\n  .muxui-b__x-icon,\n  .muxui-a__x-icon\n) > * {\n  stroke-width: 1.5;\n  vector-effect: non-scaling-stroke;\n}'), ['muxui-a__x-icon', 'muxui-b__x-icon']);
 });
 
 test('Lucide stays an exact internal, tree-shakeable dependency with no public leakage', async () => {
@@ -82,13 +117,20 @@ test('Lucide stays an exact internal, tree-shakeable dependency with no public l
   const sourceFiles = (await readdir(sourceRoot, { recursive: true }))
     .filter((file) => /\.(?:mjs|ts)$/u.test(file) && !file.endsWith('.d.ts') && file !== 'generate.mjs');
   let lucideImports = 0;
+  const xIconClasses = [];
   for (const file of sourceFiles.sort()) {
     const source = await readFile(resolve(sourceRoot, file), 'utf8');
     const lang = file.endsWith('.ts') ? 'ts' : 'js';
     lucideImports += lucideSpecifiers(source, lang).length;
     assert.deepEqual(nonDeepLucideImports(source, lang), [], `${file} imports Lucide only through per-icon modules`);
+    const xIcons = xIconUses(source, lang);
+    assert.equal(xIcons.classes.length, xIcons.references, `${file} gives each of its ${xIcons.references} X icons one part class`);
+    xIconClasses.push(...xIcons.classes);
   }
   assert.ok(lucideImports > 0, 'renderer sources import Lucide icons');
+  // base.css draws the shapes of exactly the X icons the sources render at 1.5px, so a new X icon joins its list.
+  assert.ok(xIconClasses.length >= 13, 'the sources render X icons');
+  assert.deepEqual(xIconStrokeList(await readFile(resolve(sourceRoot, 'styles/base.css'), 'utf8')), [...new Set(xIconClasses)].sort());
 
   const generatedRoot = resolve(packageRoot, 'generated');
   const generatedFiles = await readdir(generatedRoot);

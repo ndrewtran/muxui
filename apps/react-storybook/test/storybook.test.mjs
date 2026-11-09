@@ -1991,7 +1991,7 @@ test('every States row renders exactly the args its state projects, so a user va
     .replace(/ (?:id|for|aria-labelledby|aria-describedby|aria-controls|aria-owns|name|form|aria-activedescendant|data-collection|data-key)="[^"]*"/gu, '')
     .replace(/_R_\w*_|react-aria[\w-]*/gu, '#')
     .replace(/muxui-storybook-lifecycle-[a-z0-9-]*/gu, '')
-    .replace(/<span hidden="" aria-hidden="true"><\/span>/gu, '')
+    .replace(/<span(?: class="muxui-[a-z-]+__motion-origin")? hidden="" aria-hidden="true"><\/span>/gu, '')
     .replace(/ class=" *"/gu, '')
     .replace(/class="([^"]*?) +"/gu, 'class="$1"')
     .replace(`Proposed token cleanup ${state}`, 'Proposed token cleanup')

@@ -133,7 +133,7 @@ export const TagGroup: ForwardRefExoticComponent<TagGroupProps & RefAttributes<H
       disabled: disabled ? disabled : item.disabled,
       className: 'muxui-tag-group__remove',
       // React Aria's ButtonContext names the remove button through its slot, which IconButtonProps, requiring an aria-label or aria-labelledby, cannot express.
-    } as IconButtonProps, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 12 })) : null),
+    } as IconButtonProps, React.createElement(XIcon, { className: 'muxui-tag-group__remove-icon', 'aria-hidden': 'true', focusable: 'false', size: 12 })) : null),
   }));
 });
 TagGroup.displayName = 'TagGroup';
