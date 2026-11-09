@@ -157,7 +157,7 @@ export const ThemePicker: ForwardRefExoticComponent<ThemePickerProps & RefAttrib
     'aria-labelledby': ariaLabelledby,
     className: cx('muxui-theme-picker', className),
     children: [
-      random && radio('random', 'Random', h('span', { className: 'muxui-theme-picker__swatch', 'aria-hidden': true }, h(Shuffle, { size: 14, 'aria-hidden': true, focusable: 'false' })), 'muxui-theme-picker__option--random'),
+      random && radio('random', 'Random', h('span', { className: 'muxui-theme-picker__swatch', 'aria-hidden': true }, h(Shuffle, { className: 'muxui-theme-picker__random-icon', size: 14, 'aria-hidden': true, focusable: 'false' })), 'muxui-theme-picker__option--random'),
       ...groups.map(({ collection, presets }) => h('div', { key: collection, className: 'muxui-theme-picker__group' },
         h('div', { className: 'muxui-theme-picker__heading' }, COLLECTION_LABELS[collection]),
         h('div', { className: 'muxui-theme-picker__grid' }, presets.map(({ id, name }) => radio(
