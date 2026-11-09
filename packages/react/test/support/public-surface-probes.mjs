@@ -259,11 +259,15 @@ export function applyAccepted(failures, accepted, run = {}) {
  * under each of `compilers` (`[{ label, tsc }]`) in both optional-property modes, and the result is
  * `{ baseline, current, runs: [{ label, loose, exact }] }` with each mode `{ failures, seconds }`.
  * `tamper` rewrites the member classification before it is probed, for the control that drops a member.
+ * `only` (a list of subject ids) probes just those subjects, for a control that needs a few; a subject
+ * that is not in both snapshots throws, so a misspelt id cannot pass for a clean probe.
  */
-export function comparePublicSurfaces(snapshots, compilers, { tamper } = {}) {
+export function comparePublicSurfaces(snapshots, compilers, { tamper, only } = {}) {
   const baseline = listSubjects(snapshots, snapshots.baseline);
   const current = listSubjects(snapshots, snapshots.current);
-  const common = commonSubjects(baseline, current);
+  const shared = commonSubjects(baseline, current);
+  const common = only === undefined ? shared : shared.filter(({ old }) => only.includes(old.id));
+  if (only !== undefined && common.length !== only.length) throw new Error(`not in both snapshots: ${only.filter((id) => !common.some(({ old }) => old.id === id)).join(', ')}`);
   const members = classifyMembers(snapshots, common);
   const probe = buildProbe(snapshots, common, tamper ? tamper(members) : members);
   return { baseline, current, runs: compilers.map(({ label, tsc }) => ({ label, ...runProbe(snapshots, probe, { tsc }) })) };

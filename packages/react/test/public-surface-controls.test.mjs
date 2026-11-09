@@ -459,24 +459,37 @@ test('a compiler that crashes, is killed, or prints nothing stops the check inst
 
 // A second optional prop on Popover, added to the real declarations, is a difference no accepted entry names. The accepted
 // entries for the Popover colorScheme prop state the diagnostics of that one addition, so they cannot absorb another one.
-// (That the real declarations alone leave nothing unaccepted and no entry stale is public-surface-baseline.test.mjs.)
-test('a second optional prop on Popover is an unaccepted difference under every compiler and mode', () => {
+// Only Popover's two subjects are probed, which is all the entries are about; the whole surface is
+// public-surface-baseline.test.mjs.
+test('a second optional prop on Popover is an unaccepted difference under every compiler and mode, and the real declarations leave none', () => {
+  const POPOVER = ['.:props:Popover', '.:type:PopoverProps'];
   const { accepted } = JSON.parse(readFileSync(join(import.meta.dirname, 'fixtures/public-surface-accepted.json'), 'utf8'));
   const current = loadCurrent();
   const declaration = 'export type PopoverOwnProps = {\n';
-  assert.equal(current.files['overlays.d.ts'].split(declaration).length, 2, 'the declaration to extend is there once');
-  const mutated = { ...current, files: { ...current.files, 'overlays.d.ts': current.files['overlays.d.ts'].replace(declaration, `${declaration}    rogue?: boolean;\n`) } };
-  const snapshots = createSnapshots({ baseline: loadBaseline(), current: mutated });
-  try {
-    const comparison = comparePublicSurfaces(snapshots, compilers);
-    assert.equal(comparison.runs.length, compilers.length);
-    for (const run of comparison.runs) {
-      for (const mode of ['loose', 'exact']) {
-        const { unaccepted } = applyAccepted(run[mode].failures, accepted, { compiler: run.label, mode });
-        assert.deepEqual([...new Set(unaccepted.map(({ subject }) => subject))].sort(), ['.:props:Popover', '.:type:PopoverProps'], `${run.label}, ${mode}: only Popover's own difference is left`);
-      }
+  const overlays = current.files['overlays.d.ts'];
+  assert.equal(overlays.split(declaration).length, 2, 'the declaration to extend is there once');
+  const probed = (text) => {
+    const snapshots = createSnapshots({ baseline: loadBaseline(), current: { ...current, files: { ...current.files, 'overlays.d.ts': text } } });
+    try {
+      return comparePublicSurfaces(snapshots, compilers, { only: POPOVER });
+    } finally {
+      snapshots.dispose();
     }
-  } finally {
-    snapshots.dispose();
+  };
+  const leftOver = (comparison) => comparison.runs.flatMap((run) => ['loose', 'exact'].map((mode) => ({ label: `${run.label}, ${mode}`, ...applyAccepted(run[mode].failures, accepted, { compiler: run.label, mode }) })));
+
+  // The real declarations: every difference is accepted, and no entry for these subjects is left unused.
+  const real = leftOver(probed(overlays));
+  assert.equal(real.length, compilers.length * 2);
+  for (const { label, unaccepted, stale } of real) {
+    assert.deepEqual(unaccepted, [], `${label}: nothing is unaccepted`);
+    assert.deepEqual(stale.filter(({ subject }) => POPOVER.includes(subject)), [], `${label}: no entry for Popover is stale`);
+  }
+
+  // A second optional prop leaves only Popover's own difference unaccepted, in every run.
+  const mutated = leftOver(probed(overlays.replace(declaration, `${declaration}    rogue?: boolean;\n`)));
+  assert.equal(mutated.length, compilers.length * 2);
+  for (const { label, unaccepted } of mutated) {
+    assert.deepEqual([...new Set(unaccepted.map(({ subject }) => subject))].sort(), POPOVER, `${label}: both Popover subjects have an unaccepted difference`);
   }
 });
