@@ -306,6 +306,10 @@ export const clientFixtures = [
  * @type {Readonly<Record<string, { name: string, element: (lib: any) => any }>>}
  */
 export const hookOnlyFixtures = {
+  'color-mode-picker.root': {
+    name: 'ColorModePicker',
+    element: ({ h, M }) => h(M.ColorModePicker),
+  },
   'lightbox.root': {
     name: 'Lightbox open',
     element: ({ h, M }) => h(M.Lightbox, { items: [{ key: 'one', label: 'One' }], defaultOpen: true, renderContent: (item) => h('p', null, item.label) },

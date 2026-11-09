@@ -877,6 +877,54 @@ test('color mode stories update controlled values and restore an independent unc
   }
 });
 
+test('the ColorModePicker preview keeps System once it is picked, and the toolbar follows the system scheme', async () => {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  // A system preference the test can flip, with the listeners the preview registers on it.
+  const listeners = new Set();
+  const system = { dark: false };
+  const idle = { matches: false, addEventListener() {}, removeEventListener() {} };
+  window.matchMedia = (query) => (query.includes('prefers-color-scheme') ? {
+    get matches() { return system.dark; },
+    addEventListener: (type, listener) => listeners.add(listener),
+    removeEventListener: (type, listener) => listeners.delete(listener),
+  } : idle);
+  const toolbarUpdates = [];
+  const story = createStory(currentRecord('ColorModePicker'), 'default');
+  const themed = (scheme) => React.createElement(StorybookThemeContext.Provider, { value: { scheme, setScheme: (value) => toolbarUpdates.push(value) } }, story.render(story.args));
+  const chosen = () => [...host.querySelectorAll('[role="radio"], input[type="radio"]')].filter((radio) => radio.checked || radio.getAttribute('aria-checked') === 'true').map((radio) => radio.value || radio.textContent);
+  const pick = (name) => act(async () => [...host.querySelectorAll('[role="radio"]')].find((radio) => radio.textContent === name).click());
+  try {
+    await act(async () => root.render(themed('light')));
+    assert.deepEqual(chosen(), ['Light'], 'the toolbar decides Light and Dark');
+    await pick('System');
+    assert.deepEqual([chosen(), toolbarUpdates], [['System'], ['light']], 'System moves the toolbar to the scheme the system resolves to');
+    await act(async () => root.render(themed('light')));
+    assert.deepEqual(chosen(), ['System'], 'an unrelated render keeps System');
+
+    // The system turns dark: the toolbar follows, and a render before it catches up does not turn System into Light.
+    system.dark = true;
+    await act(async () => listeners.forEach((listener) => listener()));
+    assert.deepEqual(toolbarUpdates, ['light', 'dark'], 'the toolbar follows the system');
+    await act(async () => root.render(themed('light')));
+    assert.deepEqual(chosen(), ['System'], 'System survives the render before the toolbar catches up');
+    await act(async () => root.render(themed('dark')));
+    assert.deepEqual(chosen(), ['System'], 'and the toolbar caught up');
+
+    // A toolbar pick of the other scheme ends System, and the toolbar stops following the system.
+    await act(async () => root.render(themed('light')));
+    assert.deepEqual(chosen(), ['Light'], 'the toolbar chose Light');
+    system.dark = false;
+    await act(async () => listeners.forEach((listener) => listener()));
+    assert.deepEqual([listeners.size, toolbarUpdates], [0, ['light', 'dark']], 'nothing follows the system any more');
+  } finally {
+    await act(async () => root.unmount());
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
 test('resize controlled and event harnesses preserve size records and change metadata', async () => {
   const env = installRuntimeDom();
   const host = document.querySelector('#root');
@@ -2371,7 +2419,7 @@ test('every Anatomy story prints its family\'s hooks block as a table: the same 
   }
 });
 
-test('the Live column counts distinct elements of the story, which a recount of the document reproduces for all 84 families', async () => {
+test('the Live column counts distinct elements of the story, which a recount of the document reproduces for all 86 families', async () => {
   let rows = 0;
   for (const record of manifest.families) {
     const binding = descriptorSource.bindings.find(({ export: name }) => name === record.family);
@@ -2388,8 +2436,8 @@ test('the Live column counts distinct elements of the story, which a recount of 
     }
     assert.equal(stamped, 0, `${record.family}: no element in the canvas carries the retired data-muxui-storybook-api-part stamp`);
   }
-  // 448 class rows, 264 catalog state and status rows, 84 interaction rows, 15 observed and 27 resolved CSS-selected rows, 36 reflected rows and 38 "not set by" rows.
-  assert.equal(rows, 448 + 264 + 84 + 15 + 27 + 36 + 38, 'every row of every table was compared');
+  // 457 class rows, 270 catalog state and status rows, 86 interaction rows, 16 observed and 27 resolved CSS-selected rows, 36 reflected rows and 38 "not set by" rows.
+  assert.equal(rows, 457 + 270 + 86 + 16 + 27 + 36 + 38, 'every row of every table was compared');
 });
 
 /** Mounts a family's Anatomy story in each of `hosts` containers of one page and returns the tables they print. */
@@ -2472,7 +2520,7 @@ test('the On cell of every row is what the document shows: its tags, each carryi
       }
     }
   }
-  assert.equal(cells, 912, 'every row of every table was compared');
+  assert.equal(cells, 930, 'every row of every table was compared');
 });
 
 // The expectation above is derived in the test from the document; these cells are written out, so it cannot drift with the code: a part in a
@@ -2554,7 +2602,7 @@ const interactionAndOverlayZero = Object.freeze([
   'RangeCalendar.focused', 'SelectNative.focused', 'TextEditor.focused', 'ToggleButton.pressed', 'Toolbar.focused', 'Tooltip.closing', 'Tooltip.open', 'Tooltip.opening',
 ]);
 const interactionNames = new Set(['focused', 'focus-visible', 'focus-within', 'hovered', 'pressed', 'dragging', 'drop-target', 'entering', 'exiting', 'open', 'opening', 'closing']);
-// The 25 catalog states and 6 statuses no documented hook shows in the canvas, each with the reason found by reading the family's source.
+// The 26 catalog states and 6 statuses no documented hook shows in the canvas, each with the reason found by reading the family's source.
 const notObservedInCanvas = Object.freeze([
   'Avatar data-muxui-loaded not-reached', 'Avatar data-muxui-fallback spelled-differently', 'Avatar data-muxui-error not-reached',
   'Image data-muxui-fallback not-reached', 'Image data-muxui-error not-reached', 'PromptComposer data-muxui-error spelled-differently',
@@ -2567,6 +2615,7 @@ const notObservedInCanvas = Object.freeze([
   'RadioField data-muxui-state-invalid not-reached', 'Resizable data-muxui-state-invalid not-reached', 'SelectNative data-muxui-state-empty no-writer-found',
   'Sidebar data-muxui-state-current not-reached', 'Sidebar data-muxui-state-expanded spelled-differently', 'TagSelect data-muxui-state-empty not-reached',
   'TagSelect data-muxui-state-selected spelled-differently', 'TextArea data-muxui-state-empty no-writer-found',
+  'ThemePicker data-muxui-state-selected not-reached',
 ]);
 // The 19 part-map rows that render no element (the part map's `none` rows), each with its reason.
 const noElementParts = Object.freeze([
@@ -2607,8 +2656,8 @@ test('every catalog state and enum is emitted on a family hook in the Anatomy ca
       }
     }
   }
-  assert.equal(states.live.length + states.interaction.length + states.pinned.length, 258, 'the 258 catalog state and enum pairs');
-  assert.equal(states.live.length, 202, 'emitted on a family hook in the canvas');
+  assert.equal(states.live.length + states.interaction.length + states.pinned.length, 264, 'the 264 catalog state and enum pairs');
+  assert.equal(states.live.length, 207, 'emitted on a family hook in the canvas');
   assert.equal(statuses.live.length + statuses.pinned.length, 6, 'the 6 status rows');
   assert.deepEqual(statuses.live, [], 'no status is emitted in the canvas');
   assert.deepEqual([...states.interaction].sort(), [...interactionAndOverlayZero].sort(), 'the interaction and overlay zero rows, both ways');

@@ -7,6 +7,7 @@ import { cssName, cssValue } from '@muxui/tokens/core';
 import source from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import {
   MUXUI_DEFAULT_THEME_PRESET_ID,
+  MUXUI_THEME_ACTION_BACKGROUNDS,
   MUXUI_THEME_PRESETS,
   MUXUI_THEME_PRESETS_BY_ID,
 } from '../generated/themes.mjs';
@@ -63,6 +64,22 @@ test('theme metadata exposes every canonical Scale preset and derived swatches',
       assert.match(metadata.swatch.secondary, /^#[0-9a-f]{6}$/u);
     }
   }
+});
+
+test('theme metadata gives every preset its action background in each color scheme, from the compiled theme', () => {
+  assert.deepEqual(Object.keys(MUXUI_THEME_ACTION_BACKGROUNDS).sort(), MUXUI_THEME_PRESETS.map(({ id }) => id).sort());
+  for (const [collection, presets] of collections) {
+    for (const { id } of presets) {
+      for (const colorScheme of ['light', 'dark']) {
+        // Contrast does not change the action background, so both contrast modes give the one value.
+        for (const contrast of ['standard', 'more']) {
+          const { compiled } = compileScalePresetTheme({ source, collection, presetId: id, modes: { colorScheme, contrast } });
+          assert.equal(MUXUI_THEME_ACTION_BACKGROUNDS[`${collection}-${id}`][colorScheme], cssValue(compiled.tokens['semantic.action.background']), `${collection}-${id} ${colorScheme} ${contrast}`);
+        }
+      }
+    }
+  }
+  assert.ok(Object.isFrozen(MUXUI_THEME_ACTION_BACKGROUNDS['standard-harbour']));
 });
 
 test('preset CSS covers all combined color and contrast modes without layout repainting', () => {

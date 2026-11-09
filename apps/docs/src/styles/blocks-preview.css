@@ -4,6 +4,7 @@
    pins its own box model, so the reset's border-box does not reach a Mux UI part. */
 @layer preview-reset, muxui.tokens, muxui.components, muxui.utilities;
 @import '@muxui/react/styles.css';
+@import '@muxui/react/themes.css';
 
 @layer preview-reset {
 	*,

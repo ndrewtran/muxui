@@ -1,7 +1,7 @@
 // Decision 0031 item 19: every documented class is emitted, on the right element, in a fixture of its own family. The part map says
-// which class each of the 448 anatomy entries carries; this test renders the family and looks for `selectorOf(row)` in what it
-// rendered. 19 rows have no element (`none`). The other 429 are proven by
-//   - the family's canonical examples, server-rendered (305 rows), or else
+// which class each of the 457 anatomy entries carries; this test renders the family and looks for `selectorOf(row)` in what it
+// rendered. 19 rows have no element (`none`). The other 438 are proven by
+//   - the family's canonical examples, server-rendered (314 rows), or else
 //   - an explicit fixture of support/styling-fixtures.mjs in the state that shows the part: invalid, open, with a selection (124 rows).
 // A fixture of another family never proves a row (a class on a DatePicker's button does not prove the button's own part), a
 // fixture that throws or logs a React error fails, and so does a row that no fixture reaches, an unknown row, and a fixture for a
@@ -101,11 +101,11 @@ function unprovenRows(rows, byFamily) {
 
 test('every part-map row with an element is emitted by a fixture of its own family', () => {
   assert.deepEqual(unprovenRows(partRows, observations), []);
-  // 429 rows with an element: 305 by canonical examples (including Sidebar's Divider, NavButton and FeatureCard), 124 by an explicit fixture.
+  // 438 rows with an element: 314 by canonical examples (including Sidebar's Divider, NavButton and FeatureCard), 124 by an explicit fixture.
   const withElement = partRows.filter((row) => row.disposition !== 'none');
   const byExample = withElement.filter((row) => exampleDocuments.some(({ family, document }) => family === row.family && document.querySelector(selectorOf(row)) !== null));
-  assert.deepEqual([withElement.length, byExample.length, withElement.length - byExample.length], [429, 305, 124]);
-  assert.equal(exampleDocuments.length, 217);
+  assert.deepEqual([withElement.length, byExample.length, withElement.length - byExample.length], [438, 314, 124]);
+  assert.equal(exampleDocuments.length, 219);
 });
 
 test('every row that has no element says why, and no fixture stands in for one', () => {

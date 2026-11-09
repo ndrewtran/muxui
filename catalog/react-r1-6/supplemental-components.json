@@ -101,6 +101,19 @@
       "styleSource": "packages/react/src/supplemental/code-block.css"
     },
     {
+      "family": "ColorModePicker",
+      "slug": "color-mode-picker",
+      "examples": [
+        "catalog/components/color-mode-picker/examples/react/basic.tsx"
+      ],
+      "export": {
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/color-mode-picker.ts",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
       "family": "ColorModeToggle",
       "slug": "color-mode-toggle",
       "examples": [
@@ -453,6 +466,19 @@
       },
       "runtimeSource": "packages/react/src/text-editor/index.ts",
       "styleSource": "packages/react/src/text-editor/text-editor.css"
+    },
+    {
+      "family": "ThemePicker",
+      "slug": "theme-picker",
+      "examples": [
+        "catalog/components/theme-picker/examples/react/basic.tsx"
+      ],
+      "export": {
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/theme-picker.ts",
+      "styleSource": "packages/react/src/supplemental/theme-picker.css"
     }
   ]
 }

@@ -1,4 +1,4 @@
-// The generated recipe (CSS Stage 2 PR 4a): copyable CSS for each of the 84 families, and the static proof that it is valid. Every
+// The generated recipe (CSS Stage 2 PR 4a): copyable CSS for each of the 86 families, and the static proof that it is valid. Every
 // recipe is checked against facts it was not derived from (the README's own text, the family's Hooks and token rows, a jsdom parse of
 // the Basic example), then two stylesheet mutants show the checks have teeth. That the changes work in a browser is the Chromium
 // test's job (browser/styling-recipes.test.mjs); this file proves what is true for every family without one.
@@ -163,11 +163,11 @@ const basicDocument = (slug) => new JSDOM(observations.find(({ family, source })
 const documentedHooks = (slug) => all.get(slug).hooks.groups.flatMap(({ rows }) => rows).filter(({ kind, hook }) => kind === 'class' && hook !== null).map(({ hook }) => hook);
 
 // ---------------------------------------------------------------------------------------------------------------------------
-// All 84 families.
+// All 86 families.
 // ---------------------------------------------------------------------------------------------------------------------------
 
-test('all 84 recipes are valid: the README\'s layer statement, wrapper-scoped rules, theme roles with a reader, real hooks and observed targets', () => {
-  assert.equal(slugs.length, 84);
+test('all 86 recipes are valid: the README\'s layer statement, wrapper-scoped rules, theme roles with a reader, real hooks and observed targets', () => {
+  assert.equal(slugs.length, 86);
   const failures = slugs.flatMap((slug) => failuresOf(slug));
   assert.deepEqual(failures, []);
   // Each family has a Basic example to take targets from.
@@ -238,7 +238,7 @@ test('the picks: which families get a token step and which of their roles, how m
   for (const slug of Object.keys(tokens)) assert.equal(tokenNote(slug), undefined, `${slug} has a token step and no such note`);
   assert.deepEqual(slugs.filter((slug) => all.get(slug).recipe.steps.length === 0), [], 'every family has a nonempty recipe');
   const steps = slugs.flatMap((slug) => all.get(slug).recipe.steps);
-  assert.deepEqual(['token', 'part', 'state'].map((kind) => steps.filter((step) => step.kind === kind).length), [10, 84, 54]);
+  assert.deepEqual(['token', 'part', 'state'].map((kind) => steps.filter((step) => step.kind === kind).length), [10, 86, 56]);
   assert.equal(steps.filter((step) => step.scope === 'unavailable').length, 41);
   assert.deepEqual(slugs.filter((slug) => !all.get(slug).recipe.preview), ['dialog', 'preview-trigger', 'toast', 'tooltip']);
 });

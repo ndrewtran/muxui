@@ -1,0 +1,154 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "color-mode-picker",
+  "sources": {
+    "color-mode": "packages/react/src/supplemental/color-mode.ts",
+    "color-mode-picker": "packages/react/src/supplemental/color-mode-picker.ts"
+  },
+  "exports": [
+    {
+      "name": "ColorModePicker",
+      "entry": ".",
+      "module": "color-mode-picker",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "mode",
+              "optional": true,
+              "type": "ColorModeChoice",
+              "values": ["light", "dark", "system"],
+              "refs": ["color-mode#ColorModeChoice"],
+              "doc": "The color mode, when the page controls it. System follows the operating system's preference."
+            },
+            {
+              "name": "defaultMode",
+              "optional": true,
+              "type": "ColorModeChoice",
+              "values": ["light", "dark", "system"],
+              "refs": ["color-mode#ColorModeChoice"],
+              "doc": "The mode the picker starts in, before a saved mode is read. Without one it starts on System."
+            },
+            {
+              "name": "storageKey",
+              "optional": true,
+              "type": "string",
+              "doc": "The localStorage key a light or dark choice is saved under, and System removes."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the picker and every option in it."
+            },
+            {
+              "name": "onModeChange",
+              "optional": true,
+              "type": "(mode: ColorModeChoice) => void",
+              "refs": ["color-mode#ColorModeChoice"],
+              "doc": "Called with the new mode when the user changes it."
+            },
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "aria-label", "optional": true, "type": "string" },
+            { "name": "aria-labelledby", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" }
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "color-mode#ColorMode",
+      "name": "ColorMode",
+      "module": "color-mode",
+      "public": [
+        { "entry": ".", "name": "ColorMode" }
+      ],
+      "owner": "color-mode-toggle",
+      "text": "type ColorMode = 'light' | 'dark';",
+      "values": ["light", "dark"]
+    },
+    {
+      "id": "color-mode#ColorModeChoice",
+      "name": "ColorModeChoice",
+      "module": "color-mode",
+      "public": [
+        { "entry": ".", "name": "ColorModeChoice" }
+      ],
+      "owner": "color-mode-picker",
+      "text": "type ColorModeChoice = ColorMode | 'system';",
+      "values": ["light", "dark", "system"],
+      "refs": ["color-mode#ColorMode"]
+    },
+    {
+      "id": "color-mode-picker#ColorModePickerOwnProps",
+      "name": "ColorModePickerOwnProps",
+      "module": "color-mode-picker",
+      "text": "type ColorModePickerOwnProps = {\n  mode?: ColorModeChoice;\n  defaultMode?: ColorModeChoice;\n  storageKey?: string;\n  disabled?: boolean;\n  onModeChange?: (mode: ColorModeChoice) => void;\n};",
+      "members": [
+        {
+          "name": "mode",
+          "optional": true,
+          "type": "ColorModeChoice",
+          "values": ["light", "dark", "system"],
+          "refs": ["color-mode#ColorModeChoice"],
+          "doc": "The color mode, when the page controls it. System follows the operating system's preference."
+        },
+        {
+          "name": "defaultMode",
+          "optional": true,
+          "type": "ColorModeChoice",
+          "values": ["light", "dark", "system"],
+          "refs": ["color-mode#ColorModeChoice"],
+          "doc": "The mode the picker starts in, before a saved mode is read. Without one it starts on System."
+        },
+        {
+          "name": "storageKey",
+          "optional": true,
+          "type": "string",
+          "doc": "The localStorage key a light or dark choice is saved under, and System removes."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the picker and every option in it."
+        },
+        {
+          "name": "onModeChange",
+          "optional": true,
+          "type": "(mode: ColorModeChoice) => void",
+          "refs": ["color-mode#ColorModeChoice"],
+          "doc": "Called with the new mode when the user changes it."
+        }
+      ],
+      "refs": ["color-mode#ColorModeChoice"]
+    },
+    {
+      "id": "color-mode-picker#ColorModePickerProps",
+      "name": "ColorModePickerProps",
+      "module": "color-mode-picker",
+      "public": [
+        { "entry": ".", "name": "ColorModePickerProps" }
+      ],
+      "owner": "color-mode-picker",
+      "extends": [
+        {
+          "type": "ColorModePickerOwnProps",
+          "refs": ["color-mode-picker#ColorModePickerOwnProps"]
+        }
+      ],
+      "text": "type ColorModePickerProps = ColorModePickerOwnProps & {\n  className?: string;\n  'aria-label'?: string;\n  'aria-labelledby'?: string;\n};",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "aria-label", "optional": true, "type": "string" },
+        { "name": "aria-labelledby", "optional": true, "type": "string" }
+      ],
+      "refs": ["color-mode-picker#ColorModePickerOwnProps"]
+    }
+  ]
+}

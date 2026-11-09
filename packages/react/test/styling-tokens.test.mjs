@@ -270,7 +270,7 @@ function hookOnlyRuleFailures(css, rows) {
 test('the hookOnly fixture stylesheet has one unlayered consumer rule for each hookOnly row and no other', async () => {
   const css = await readFile(new URL('./support/hook-only.css', import.meta.url), 'utf8');
   assert.deepEqual(hookOnlyRuleFailures(css, partRows), []);
-  assert.equal(partRows.filter((row) => row.hookOnly !== undefined).length, 12);
+  assert.equal(partRows.filter((row) => row.hookOnly !== undefined).length, 13);
   // Controls: a missing rule, an extra one, a layered one, a duplicate and a rule that paints something else each fail.
   const failures = (changed, rows = partRows) => hookOnlyRuleFailures(changed, rows).join('\n');
   assert.match(failures(css.replace('.muxui-menu__list { outline-color: rgb(1, 2, 3); }\n', '')), /\.muxui-menu__list: a hookOnly row without a fixture rule/u);

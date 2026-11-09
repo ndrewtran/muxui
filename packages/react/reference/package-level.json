@@ -30,6 +30,14 @@
       "refs": ["themes#MuxUIThemeId"]
     },
     {
+      "name": "MUXUI_THEME_ACTION_BACKGROUNDS",
+      "entry": "./themes",
+      "module": "themes",
+      "kind": "value",
+      "type": "Readonly<Record<MuxUIThemeId, { readonly light: string; readonly dark: string }>>",
+      "refs": ["themes#MuxUIThemeId"]
+    },
+    {
       "name": "MUXUI_THEME_PRESETS",
       "entry": "./themes",
       "module": "themes",

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:02425c95d5e5b3e4404384f881a75185b53fcf1b893a079660d2c8a2107fbf4e -->
+<!-- @generated-content-sha256: sha256:43fbe2c6c2b3c4362097ee13550baa5f813e8783deacaceae3068a7796efdef2 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -135,6 +135,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | CodeBlock | experimental | . | .muxui-code-block | mode, source, before, after, language, filename, lineNumbers, copyable, wrap |
 | ColorArea | experimental | . | .muxui-color-area | label, value, defaultValue, disabled, readOnly |
 | ColorField | experimental | . | .muxui-color-field | label, description, errorMessage, value, defaultValue, disabled, readOnly, required, invalid, size, name |
+| ColorModePicker | experimental | . | .muxui-color-mode-picker | mode, defaultMode, storageKey, disabled |
 | ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled |
 | ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly |
 | ColorSlider | experimental | . | .muxui-color-slider | label, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
@@ -195,6 +196,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TextArea | experimental | . | .muxui-text-area | value, defaultValue, disabled, invalid, required, readOnly, size |
 | TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, bubbleMenu, selectionActions, selectionInstruction |
 | TextField | experimental | . | .muxui-text-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, type, inputProps |
+| ThemePicker | experimental | . | .muxui-theme-picker | value, defaultValue, random, disabled |
 | TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |
 | Toast | experimental | . | .muxui-toast | message, title, variant, duration |
 | ToggleButton | experimental | . | .muxui-toggle-button | selected, defaultSelected, disabled, size |
