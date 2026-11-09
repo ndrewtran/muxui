@@ -806,8 +806,11 @@
   overflow: auto;
 }
 
+/* The list is a capped flex column that scrolls; without flex-shrink: 0 an overflowing list squeezes every option to
+   its minimum height, and taller options overflow their own box. */
 .muxui-list-box__item {
   position: relative;
+  flex-shrink: 0;
   background-color: transparent;
 }
 
@@ -2828,9 +2831,11 @@
   min-height: 0;
 }
 
+/* The icon matches the toggle's width: a wider one made Chromium and WebKit stretch the hidden toggle to 16px while
+   Firefox kept 12px. */
 .muxui-tree__toggle .muxui-icon-button__icon {
-  width: 1rem;
-  height: 1rem;
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 /* Keep the actual RAC chevron button over the visible indicator
