@@ -612,20 +612,33 @@ function readPresetScope(trigger: Element): PresetScope {
 
 /**
  * The preset attributes a scoped Popover carries while it is open: read when it opens, and again whenever one of
- * them changes on the trigger or an ancestor. The observer stops when the Popover closes or unmounts.
+ * them changes on the trigger or an ancestor. A trigger replaced while the Popover is open, as a keyed swap does,
+ * is noticed on the render that replaces it: its surroundings are read again and the observer moves to the new node.
+ * The observer stops when the Popover closes or unmounts.
  */
 function usePresetScope(triggerRef: RefObject<Element | null> | undefined, enabled: boolean): PresetScope {
   const [scope, setScope] = React.useState(NO_PRESET_SCOPE);
+  // The node being watched, and what stops the watching.
+  const watching = React.useRef<{ node: Element; stop: () => void } | null>(null);
+  // After every render, because a replaced trigger changes the ref's node and nothing else. The state it sets is
+  // guarded, so a render that finds the same node watched changes nothing and costs no further render.
   useIsomorphicLayoutEffect(() => {
-    const trigger = triggerRef?.current;
-    if (!enabled || !trigger) return undefined;
+    const node = enabled ? triggerRef?.current ?? null : null;
+    if ((watching.current?.node ?? null) === node) return;
+    watching.current?.stop();
+    watching.current = null;
+    if (!node) return;
     const sync = () => {
-      const next = readPresetScope(trigger);
+      const next = readPresetScope(node);
       setScope((current) => current.theme === next.theme && current.contrast === next.contrast ? current : next);
     };
     sync();
-    return observeAncestorAttributes([trigger, trigger.ownerDocument.documentElement], PRESET_ATTRIBUTES, sync);
-  }, [enabled, triggerRef]);
+    watching.current = { node, stop: observeAncestorAttributes([node, node.ownerDocument.documentElement], PRESET_ATTRIBUTES, sync) };
+  });
+  useIsomorphicLayoutEffect(() => () => {
+    watching.current?.stop();
+    watching.current = null;
+  }, []);
   return scope;
 }
 

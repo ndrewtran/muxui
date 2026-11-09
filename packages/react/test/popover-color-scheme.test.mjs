@@ -23,7 +23,7 @@ function markup({ root = '', scope = '' } = {}) {
 }
 
 // Renders an open Popover into a fresh page and passes the helpers a test needs; restores the page afterwards.
-async function withPopover({ props, ...page }, body) {
+async function withPopover({ props, strict = false, ...page }, body) {
   const { restore } = installDom(markup(page));
   // Count the observers that watch a preset attribute and have not been disconnected.
   const NativeObserver = globalThis.MutationObserver;
@@ -46,7 +46,10 @@ async function withPopover({ props, ...page }, body) {
     mounted = false;
     await act(async () => root.unmount());
   };
-  const render = (extra) => act(async () => root.render(h(Popover, { 'aria-label': 'Actions', trigger: h('button', { id: 'trigger' }, 'Open'), defaultOpen: true, ...props, ...extra }, 'Popover body')));
+  const render = (extra) => {
+    const popover = h(Popover, { 'aria-label': 'Actions', trigger: h('button', { id: 'trigger' }, 'Open'), defaultOpen: true, ...props, ...extra }, 'Popover body');
+    return act(async () => root.render(strict ? h(React.StrictMode, null, popover) : popover));
+  };
   try {
     await render();
     const positioner = () => document.querySelector('.muxui-popover__positioner');
@@ -163,5 +166,35 @@ test('the observer runs only while a scoped Popover is open, and stops on close 
 
     await unmount();
     assert.equal(observers(), 0, 'unmounted while open: the observer is disconnected');
+  });
+});
+
+test('a trigger replaced while the Popover is open is read again, and the new node is watched in place of the old one', async () => {
+  // The trigger carries its own theme, so a keyed swap puts the Popover under a different scope.
+  const trigger = (key, theme) => ({ trigger: h('button', { key, id: key, 'data-muxui-theme': theme }, 'Open') });
+  await withPopover({ props: { colorScheme: 'dark', ...trigger('first', 'standard-harbour') }, root: 'data-muxui-theme="monochrome-forest"' }, async ({ render, attributes, observers }) => {
+    assert.equal(attributes()['data-muxui-theme'], 'standard-harbour');
+    assert.equal(observers(), 1);
+
+    await render(trigger('second', 'standard-lagoon'));
+    assert.equal(document.getElementById('first'), null, 'the first trigger is gone');
+    assert.equal(attributes()['data-muxui-theme'], 'standard-lagoon', 'the new trigger\'s scope is read as soon as it replaces the old one');
+    assert.equal(observers(), 1, 'the old node is no longer watched');
+
+    await mutate(document.getElementById('second'), 'data-muxui-theme', 'standard-fern');
+    assert.equal(attributes()['data-muxui-theme'], 'standard-fern', 'a later change on the new trigger is followed');
+    await mutate(document.getElementById('second'), 'data-muxui-theme', null);
+    assert.equal(attributes()['data-muxui-theme'], 'monochrome-forest', 'and so is the new trigger losing it');
+  });
+});
+
+test('a scoped Popover watches one node while open under StrictMode, and none after it closes', async () => {
+  await withPopover({ props: { colorScheme: 'dark', defaultOpen: undefined, open: true }, strict: true, root: 'data-muxui-theme="standard-harbour"' }, async ({ render, attributes, observers }) => {
+    assert.equal(attributes()['data-muxui-theme'], 'standard-harbour');
+    assert.equal(observers(), 1);
+    await mutate(document.documentElement, 'data-muxui-theme', 'monochrome-forest');
+    assert.equal(attributes()['data-muxui-theme'], 'monochrome-forest');
+    await render({ open: false });
+    assert.equal(observers(), 0);
   });
 });
