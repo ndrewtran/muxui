@@ -1396,9 +1396,10 @@
   }
 
   /* The dot a radio draws before RadioGroup's motion dot takes over, which only a selected radio shows. Forced colours
-     would paint it Canvas on the Canvas box, so it takes the motion dot's CanvasText. */
-  .muxui-radio-group__indicator::after,
-  .muxui-radio-field__dot {
+     would paint it Canvas on the Canvas box, so it takes the motion dot's CanvasText. With forced-color-adjust none the
+     dot's own colour would show through, so these outrank the later radio blocks that set it, the dark @scope one too. */
+  .muxui-radio-group .muxui-radio-group__radio .muxui-radio-group__indicator::after,
+  .muxui-radio-field__indicator .muxui-radio-field__dot {
     background-color: CanvasText;
     forced-color-adjust: none;
   }

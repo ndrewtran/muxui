@@ -31,8 +31,8 @@ const groups = ['checkbox-group', 'radio-group', 'radio-field'];
 
 /**
  * What the control at `label` draws: its box (or track) colours, focus shadow and outline, whether its
- * mark (tick, dot, or thumb at the far end) shows, and whether it is `seen`: drawn in a colour other than
- * its box's, which forced colours can take away. Runs in the page.
+ * mark (tick, dot, or thumb at the far end) shows and in what colour, and whether it is `seen`: drawn in a
+ * colour other than its box's, which forced colours can take away. Runs in the page.
  */
 function paintOf(label) {
   const style = (node, pseudo) => (node ? getComputedStyle(node, pseudo) : null);
@@ -66,7 +66,7 @@ function paintOf(label) {
   return {
     background: value.backgroundColor, border: value.borderColor, shadow: value.boxShadow,
     outline: value.outlineStyle === 'none' ? 'none' : `${value.outlineStyle} ${value.outlineWidth} ${value.outlineColor}`,
-    mark: colours.length > 0, seen: colours.some((colour) => colour !== value.backgroundColor),
+    mark: colours.length > 0, colour: colours[0] ?? null, seen: colours.some((colour) => colour !== value.backgroundColor),
   };
 }
 
@@ -177,7 +177,7 @@ test('choice controls follow the native input before hydration and validate and 
       }
     };
     const results = {};
-    for (const [mode, scheme, forced] of [['light', 'light', false], ['dark', 'dark', false], ['forced colours', 'light', true]]) {
+    for (const [mode, scheme, forced] of [['light', 'light', false], ['dark', 'dark', false], ['forced colours', 'light', true], ['forced colours, dark', 'dark', true]]) {
       await t.test(`${mode}: without JavaScript a click draws the state the input is in`, async () => {
         const { page, close: done } = await open(`/${scheme}.html`, false, forced);
         results[mode] = await assertClicksFollow(page, `${mode}, no script`);
