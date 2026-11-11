@@ -331,6 +331,39 @@ test('DropZone root carries aria-disabled only while disabled', async () => {
   }
 });
 
+test('DropZone names its drop button from aria-label or aria-labelledby, with no empty or dangling reference', async () => {
+  const cases = [
+    [{}, undefined],
+    [{ 'aria-label': 'Upload' }, undefined],
+    [{ 'aria-labelledby': 'hint' }, ['self', 'hint']],
+    [{ 'aria-label': 'Upload', 'aria-labelledby': 'hint' }, ['self', 'hint']],
+  ];
+  const tree = (props) => React.createElement('div', null, React.createElement('span', { id: 'hint' }, 'Images only'), React.createElement(DropZone, props, 'Drop here'));
+  const references = (button) => {
+    const value = button.getAttribute('aria-labelledby');
+    return value === null ? undefined : value.split(' ').map((id) => id === button.id ? 'self' : id);
+  };
+  for (const [props, expected] of cases) {
+    const label = JSON.stringify(props);
+    // The server cannot know whether a label slot will render, so it must not point at one that never does.
+    const server = installDom(`<div id="root">${renderToString(tree(props))}</div>`);
+    try {
+      assert.deepEqual(references(document.querySelector('.muxui-drop-zone button')), expected, `${label} in server markup`);
+    } finally {
+      server.restore();
+    }
+    const env = installDom();
+    const root = createRoot(document.querySelector('#root'));
+    try {
+      await act(async () => root.render(tree(props)));
+      assert.deepEqual(references(document.querySelector('.muxui-drop-zone button')), expected, `${label} in the client DOM`);
+    } finally {
+      await act(async () => root.unmount());
+      env.restore();
+    }
+  }
+});
+
 // DropZone's onActivate identifies RAC's drop button by this structure.
 test('React Aria DropZone keeps its hidden drop button as the root\'s first grandchild', async () => {
   const env = installDom();
