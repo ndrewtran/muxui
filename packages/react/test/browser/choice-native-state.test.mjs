@@ -30,8 +30,9 @@ const singles = ['checkbox', 'switch', 'checkbox-field', 'switch-field'];
 const groups = ['checkbox-group', 'radio-group', 'radio-field'];
 
 /**
- * What the control at `label` draws: its box (or track) colours and focus shadow, and whether
- * its mark (tick, dot, or thumb at the far end) shows. Runs in the page.
+ * What the control at `label` draws: its box (or track) colours, focus shadow and outline, whether its
+ * mark (tick, dot, or thumb at the far end) shows, and whether it is `seen`: drawn in a colour other than
+ * its box's, which forced colours can take away. Runs in the page.
  */
 function paintOf(label) {
   const style = (node, pseudo) => (node ? getComputedStyle(node, pseudo) : null);
@@ -43,19 +44,26 @@ function paintOf(label) {
   if (label.matches('.muxui-switch')) {
     const track = style(label, '::before');
     const thumb = label.querySelector('.muxui-switch__indicator');
-    return { background: track.backgroundColor, border: track.borderColor, shadow: track.boxShadow, mark: new DOMMatrix(style(thumb).transform).m41 > 4, thumb: style(thumb).backgroundColor };
+    return { background: track.backgroundColor, border: track.borderColor, shadow: track.boxShadow, mark: new DOMMatrix(style(thumb).transform).m41 > 4, thumb: style(thumb).backgroundColor, seen: style(thumb).backgroundColor !== track.backgroundColor };
   }
   const box = label.querySelector('.muxui-checkbox__indicator, .muxui-checkbox-field__indicator, .muxui-radio-group__indicator, .muxui-radio-field__indicator');
   const value = style(box);
-  let mark;
+  // The colour each drawn mark paints in: the tick's stroke, or the background of a masked tick or a dot.
+  const colours = [];
   if (box.matches('.muxui-checkbox__indicator, .muxui-checkbox-field__indicator')) {
     const tick = box.querySelector('svg');
-    mark = (tick !== null && shown(tick)) || (shown(box, '::after') && style(box, '::after').maskImage !== 'none');
+    if (tick !== null && shown(tick)) colours.push(style(tick).color);
+    if (shown(box, '::after') && style(box, '::after').maskImage !== 'none') colours.push(style(box, '::after').backgroundColor);
   } else {
     // Before hydration the dot is the indicator's ::after or RadioField.Dot; after it, RadioGroup's motion dot may draw it.
-    mark = [...box.querySelectorAll('.muxui-radio-field__dot, .muxui-radio-group__motion-dot')].some((dot) => shown(dot)) || shown(box, '::after');
+    for (const dot of box.querySelectorAll('.muxui-radio-field__dot, .muxui-radio-group__motion-dot')) if (shown(dot)) colours.push(style(dot).backgroundColor);
+    if (shown(box, '::after')) colours.push(style(box, '::after').backgroundColor);
   }
-  return { background: value.backgroundColor, border: value.borderColor, shadow: value.boxShadow, mark };
+  return {
+    background: value.backgroundColor, border: value.borderColor, shadow: value.boxShadow,
+    outline: value.outlineStyle === 'none' ? 'none' : `${value.outlineStyle} ${value.outlineWidth} ${value.outlineColor}`,
+    mark: colours.length > 0, seen: colours.some((colour) => colour !== value.backgroundColor),
+  };
 }
 
 /**
@@ -121,8 +129,8 @@ test('choice controls follow the native input before hydration and validate and 
   let browser;
   try {
     browser = await launchBrowser();
-    const open = async (path, javaScriptEnabled) => {
-      const context = await browser.newContext({ javaScriptEnabled, viewport: { width: 1000, height: 900 } });
+    const open = async (path, javaScriptEnabled, forced = false) => {
+      const context = await browser.newContext({ javaScriptEnabled, forcedColors: forced ? 'active' : 'none', viewport: { width: 1000, height: 900 } });
       // An action that cannot happen fails in seconds, not at the file's timeout.
       context.setDefaultTimeout(10_000);
       const page = await context.newPage();
@@ -139,49 +147,67 @@ test('choice controls follow the native input before hydration and validate and 
       return { page, errors, close: () => context.close() };
     };
 
+    // In forced colours a box, tick and dot take system colours unless a rule keeps them apart, so every checkbox
+    // and radio that is on must show a mark of another colour than its box. Switch is left out of that check: its
+    // thumb takes the track's Canvas in forced colours after hydration too, which the notes report.
+    const assertMarksSeen = (paints, label) => {
+      for (const [name, paint] of Object.entries(paints)) {
+        if (!name.startsWith('switch') && paint.mark) assert.ok(paint.seen, `${label}: ${name} shows its mark`);
+      }
+    };
     const results = {};
-    for (const scheme of ['light', 'dark']) {
-      await t.test(`${scheme}: without JavaScript a click draws the state the input is in`, async () => {
-        const { page, close: done } = await open(`/${scheme}.html`, false);
-        results[scheme] = await assertClicksFollow(page, `${scheme}, no script`);
+    for (const [mode, scheme, forced] of [['light', 'light', false], ['dark', 'dark', false], ['forced colours', 'light', true]]) {
+      await t.test(`${mode}: without JavaScript a click draws the state the input is in`, async () => {
+        const { page, close: done } = await open(`/${scheme}.html`, false, forced);
+        results[mode] = await assertClicksFollow(page, `${mode}, no script`);
+        assertMarksSeen(results[mode].before, `${mode}, no script, as served`);
+        assertMarksSeen(results[mode].after, `${mode}, no script, clicked`);
         await done();
       });
 
-      await t.test(`${scheme}: after hydration the controls look as they did and as the native rules drew them`, async () => {
-        const { page, errors, close: done } = await open(`/${scheme}.html`, true);
-        const { before, after } = await assertClicksFollow(page, `${scheme}, hydrated`);
+      await t.test(`${mode}: after hydration the controls look as they did and as the native rules drew them`, async () => {
+        const { page, errors, close: done } = await open(`/${scheme}.html`, true, forced);
+        const { before, after } = await assertClicksFollow(page, `${mode}, hydrated`);
         // Hydration changes nothing the server drew, and React's state draws what the native input did.
-        assert.deepEqual(before, results[scheme].before);
-        assert.deepEqual(after, results[scheme].after);
+        assert.deepEqual(before, results[mode].before);
+        assert.deepEqual(after, results[mode].after);
         assert.deepEqual(await page.evaluate(() => window.__errors), []);
         assert.deepEqual(errors, [], errors.join('\n'));
         await done();
       });
     }
 
-    await t.test('keyboard focus draws the hydrated focus ring before hydration', async () => {
-      const rings = {};
-      for (const javaScriptEnabled of [false, true]) {
-        const { page, close: done } = await open('/light.html', javaScriptEnabled);
-        const seen = {};
-        await page.mouse.click(1, 1);
-        // Tab through the first row: Checkbox, Switch, CheckboxField, SwitchField.
-        for (const name of ['checkbox-off', 'switch-off', 'checkbox-field-off', 'switch-field-off']) {
-          await page.keyboard.press('Tab');
-          seen[name] = (await paints(page))[name].shadow;
+    for (const forced of [false, true]) {
+      await t.test(`keyboard focus draws the hydrated focus ring before hydration${forced ? ', in forced colours' : ''}`, async () => {
+        const rings = {};
+        for (const javaScriptEnabled of [false, true]) {
+          const { page, close: done } = await open('/light.html', javaScriptEnabled, forced);
+          const seen = {};
+          const ring = async (name) => {
+            const { shadow, outline } = (await paints(page))[name];
+            return { shadow, outline };
+          };
+          await page.mouse.click(1, 1);
+          // Tab through the first row: Checkbox, Switch, CheckboxField, SwitchField.
+          for (const name of ['checkbox-off', 'switch-off', 'checkbox-field-off', 'switch-field-off']) {
+            await page.keyboard.press('Tab');
+            seen[name] = await ring(name);
+          }
+          // Focus moved by script after a key press is keyboard focus for the browser and for React Aria.
+          for (const name of ['radio-group/0', 'radio-field/0']) {
+            const [probe, index] = name.split('/');
+            await page.evaluate(([group, nth]) => document.querySelectorAll(`[data-probe="${group}"] input`)[Number(nth)].focus(), [probe, index]);
+            seen[name] = await ring(name);
+          }
+          rings[javaScriptEnabled ? 'hydrated' : 'native'] = seen;
+          await done();
         }
-        // Focus moved by script after a key press is keyboard focus for the browser and for React Aria.
-        for (const name of ['radio-group/0', 'radio-field/0']) {
-          const [probe, index] = name.split('/');
-          await page.evaluate(([group, nth]) => document.querySelectorAll(`[data-probe="${group}"] input`)[Number(nth)].focus(), [probe, index]);
-          seen[name] = (await paints(page))[name].shadow;
-        }
-        rings[javaScriptEnabled ? 'hydrated' : 'native'] = seen;
-        await done();
-      }
-      for (const [name, shadow] of Object.entries(rings.hydrated)) assert.notEqual(shadow, 'none', `${name} has a hydrated ring`);
-      assert.deepEqual(rings.native, rings.hydrated);
-    });
+        // Forced colours drop box shadows, so there Checkbox, CheckboxField and the RadioGroup radios draw an outline.
+        const drawn = Object.entries(rings.hydrated).filter(([, { shadow, outline = 'none' }]) => shadow !== 'none' || outline !== 'none').map(([name]) => name);
+        assert.deepEqual(drawn, forced ? ['checkbox-off', 'checkbox-field-off', 'radio-group/0'] : Object.keys(rings.hydrated));
+        assert.deepEqual(rings.native, rings.hydrated);
+      });
+    }
 
     await t.test('a required box clears its invalid state and error when it is ticked', async () => {
       const { page, errors, close: done } = await open('/light.html', true);

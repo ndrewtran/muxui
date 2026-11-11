@@ -1358,6 +1358,14 @@
     forced-color-adjust: none;
   }
 
+  /* The dot a radio draws before RadioGroup's motion dot takes over, which only a selected radio shows. Forced colours
+     would paint it Canvas on the Canvas box, so it takes the motion dot's CanvasText. */
+  .muxui-radio-group__indicator::after,
+  .muxui-radio-field__dot {
+    background-color: CanvasText;
+    forced-color-adjust: none;
+  }
+
   :is(.muxui-checkbox, .muxui-checkbox-field__button):not([data-muxui-state-focused]):has(input:focus-visible) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator),
   .muxui-radio-group__radio:not([data-muxui-state-focused]):has(input:focus-visible) .muxui-radio-group__indicator {
     box-shadow: none;
