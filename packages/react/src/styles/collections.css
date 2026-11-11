@@ -1965,7 +1965,10 @@
   }
 }
 /* MuxUI component source: table.css */
+/* Positioned, so absolutely placed content in a cell, such as a visually hidden column label, is placed in the table
+   and scrolls with it inside a scrolling wrapper, rather than widening the page. */
 .muxui-table {
+  position: relative;
   width: 100%;
   border-collapse: collapse;
   font-family: var(--muxui-semantic-typography-text-font-family);
