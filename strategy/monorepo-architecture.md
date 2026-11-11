@@ -2164,7 +2164,7 @@ tools never rewrite source records silently while reading or querying them.
 Deprecated fields remain readable for their declared compatibility window and
 cannot be repurposed with new meaning.
 
-The current pre-release query surface supports only query API `2.1.0`.
+The current pre-release query surface supports only query API `3.0.0`.
 `@muxui/schema` owns its request/response grammar; `@muxui/catalog` owns
 current response semantics and bounded page selection. Token summaries expose
 counts, digests, provenance, and available sections; complete entries are
@@ -2235,7 +2235,7 @@ token; they do not require a source import, external checkout, or historical
 provenance record. Web CSS and native theme objects derive only from admitted
 Mux UI token facts, and native never parses CSS.
 
-Under current query API v2 behavior, complete token and crosswalk populations
+Under current query API v3 behavior, complete token and crosswalk populations
 are retrieved only through the versioned `tokens` and `source-crosswalk`
 sections of `getArtifact` / `muxui get`. Superseded inline query versions are
 unsupported during the current pre-release state. `@muxui/schema` owns the closed

@@ -485,10 +485,13 @@ It checks out only `src/npm-publication.mjs`, `src/release-set.mjs`, and
 
 Each package has its own version rule: `<base>-rc.N`, where a first publish
 (package absent) is its `rc.1` and a later one is the number after the rc `next`
-points at, on the same base version. `@muxui/react` stays `0.1.0-rc.N` (Roadmap R1
-exit) with its existing history. A new base version, a missing `latest` or `next`,
-or any other dist-tag stops for a decision. `registry-preflight` mode runs the same
-read-only classification for every version input and holds no credential.
+points at, on the same base version, or the `rc.1` of a strictly higher base
+version (Decision 0035). `@muxui/react` stays `0.1.0-rc.N` (Roadmap R1 exit) with
+its existing history, so it has no higher base. A lower or equal base outside
+that rule, a higher base that does not start at `rc.1`, a version already on the
+registry, a missing `latest` or `next`, or any other dist-tag stops for a decision.
+`registry-preflight` mode runs the same read-only classification for every version
+input and holds no credential.
 
 A failure prints the recovery plan of Decision 0023 amendment 01 and executes none
 of it. It reads the registry for each package the run attempted, because a failed

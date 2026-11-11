@@ -82,11 +82,12 @@ name: npm publish
 # Preflight, per package: the version must be absent from the registry. A first
 # publish (package absent) must be its rc.1. Otherwise the dist-tags must be
 # exactly latest and next, the version must be the next release candidate after
-# next (next = rc.N, the version rc.N+1, same base version), and latest is
-# recorded; after publishing, next must be the candidate and latest unchanged.
-# Any other state stops for a decision. The registry sets `latest` on a first
-# publish; nothing here claims or moves a dist-tag, and no deprecate,
-# unpublish, dist-tag, or owner command runs anywhere.
+# next (next = rc.N, the version rc.N+1, same base version) or the rc.1 of a
+# strictly higher base version (Decision 0035), and latest is recorded; after
+# publishing, next must be the candidate and latest unchanged. Any other state
+# stops for a decision. The registry sets `latest` on a first publish; nothing
+# here claims or moves a dist-tag, and no deprecate, unpublish, dist-tag, or
+# owner command runs anywhere.
 #
 # Record `tarball-sha512` from a dry run of this workflow, not a local run. The
 # archive is byte-stable across Linux runners, but Node's gzip header stores

@@ -1,5 +1,5 @@
 ---
-scopeVersion: 23.0.1
+scopeVersion: 23.0.2
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -499,7 +499,7 @@ example-purpose, limit, and cursor selectors. JSON writes one value to stdout;
 diagnostics and progress use stderr. Dense output is deterministic,
 section-selectable, token-budgeted, and round-trippable to the response object.
 
-Token-source retrieval currently supports query API `2.1.0` only. Full and
+Token-source retrieval currently supports query API `3.0.0` only. Full and
 compact token summaries expose counts, digests, provenance, and available-section
 metadata; complete populations use bounded `tokens` and `source-crosswalk`
 sections. `@muxui/schema` owns the current request/response and
@@ -513,7 +513,7 @@ requirements. The profile fixes the query API and lexer versions, canonical
 entry-cost/order rule, normalized worst-case envelope preimage/reserve,
 default/max limits, minimum progress, 2,048-token dense-page budget, and
 `MUXUI_QUERY_PAGE_ENTRY_TOO_LARGE`. Its canonical JSON enters the catalog
-digest, adding no revision axis. Each v2 page uses canonical ordering and a
+digest, adding no revision axis. Each v3 page uses canonical ordering and a
 cursor bound to query version, that catalog digest, token-source revision,
 section, selector state, and position. `limit` is an item ceiling; the catalog
 emits the greatest non-empty fitting prefix and rejects a single oversize entry
