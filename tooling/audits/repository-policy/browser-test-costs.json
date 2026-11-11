@@ -29,7 +29,7 @@
     "test/browser/date-picker.test.mjs": 11,
     "test/browser/date-popover-motion.test.mjs": 14,
     "test/browser/dialog-motion.test.mjs": 6,
-    "test/browser/disclosure-group.test.mjs": 2,
+    "test/browser/disclosure-group.test.mjs": 3,
     "test/browser/field-error-message.test.mjs": 3,
     "test/browser/field-states.test.mjs": 37,
     "test/browser/form-fields.test.mjs": 28,

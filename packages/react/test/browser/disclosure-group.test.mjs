@@ -187,3 +187,33 @@ test('DisclosureGroup gives the title node the label gap, and a plain-text title
     await browser.close();
   }
 });
+
+// A standalone Disclosure title wraps inside a narrow container instead of being cut off, an unbroken word included, and a
+// title that fits keeps the one-line box it had when the trigger did not wrap. Chromium only, static markup under the
+// published stylesheet.
+const wrapMarkup = renderToString(h('div', null, ...[
+  ['long', 'Ban from !community@a-very-long-host.example and remove their posts'],
+  ['short', 'Details'],
+].map(([id, title]) => h('div', { key: id, id, style: { inlineSize: '200px' } }, h(Disclosure, { title }, 'Body')))));
+
+test('a standalone Disclosure title wraps inside its container and a short title keeps its one-line box', { timeout: 60_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`<!doctype html><html data-muxui-color-scheme="light"><head><style>${styles}</style></head><body>${markup}${wrapMarkup}</body></html>`);
+    const measure = (id, nowrap) => page.evaluate(([scope, force]) => {
+      const column = document.getElementById(scope);
+      const trigger = column.querySelector('.muxui-disclosure__trigger');
+      trigger.style.whiteSpace = force ? 'nowrap' : '';
+      const [own, box] = [trigger.getBoundingClientRect(), column.getBoundingClientRect()];
+      return { width: own.width, height: own.height, right: own.right - box.right, overflow: trigger.scrollWidth - trigger.clientWidth, minHeight: parseFloat(getComputedStyle(trigger).minBlockSize) };
+    }, [id, nowrap]);
+    const long = await measure('long', false);
+    assert.ok(long.right <= 0.5, `the long title stays inside its column (${long.right}px past it)`);
+    assert.ok(long.overflow <= 0, `the long title is not clipped (${long.overflow}px)`);
+    assert.ok(long.height > long.minHeight + 1, `the long title wraps onto more lines (${long.height}px)`);
+    assert.deepEqual(await measure('short', false), await measure('short', true), 'a short title has the box it had on one line');
+  } finally {
+    await browser.close();
+  }
+});

@@ -447,7 +447,10 @@
     border-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
     color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
-  white-space: nowrap;
+  /* A title longer than its container wraps, breaking a long word if it must; one that fits stays on one line in the
+     same box. */
+  white-space: normal;
+  overflow-wrap: anywhere;
   user-select: none;
   padding-inline: var(--muxui-semantic-control-padding-inline);
   padding-block: max(0px, calc((var(--muxui-control-size-md) - 1em) / 2));
