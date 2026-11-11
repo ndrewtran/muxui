@@ -43,7 +43,7 @@
     "test/browser/image-avatar.test.mjs": 2,
     "test/browser/interaction-motion.test.mjs": 52,
     "test/browser/lightbox-motion.test.mjs": 8,
-    "test/browser/link.test.mjs": 5,
+    "test/browser/link.test.mjs": 9,
     "test/browser/listbox-motion.test.mjs": 6,
     "test/browser/menu.test.mjs": 43,
     "test/browser/message.test.mjs": 9,

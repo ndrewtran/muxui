@@ -2,15 +2,16 @@
 
 .muxui-breadcrumbs__list { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
 .muxui-breadcrumbs__item:not(:last-child)::after { color: var(--muxui-semantic-content-muted); content: '/'; }
-.muxui-breadcrumbs__link, .muxui-link { color: var(--muxui-semantic-content-link); text-underline-offset: 0.15em; transition: color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
-.muxui-breadcrumbs__link:hover, .muxui-link:hover { color: var(--muxui-semantic-content-link-hover); }
-.muxui-breadcrumbs__link[data-muxui-state-hovered], .muxui-link[data-muxui-state-hovered] { color: var(--muxui-semantic-content-link-hover); }
-.muxui-breadcrumbs__link[data-muxui-state-pressed], .muxui-link[data-muxui-state-pressed] { color: var(--muxui-semantic-content-link-pressed); }
-.muxui-breadcrumbs__link:focus-visible, .muxui-link:focus-visible { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: 2px; }
+/* A Link that carries Button's class is styled as a Button, so the link rules skip it; :where keeps their specificity. */
+.muxui-breadcrumbs__link { color: var(--muxui-semantic-content-link); text-underline-offset: 0.15em; transition: color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
+.muxui-breadcrumbs__link:hover, .muxui-link:where(:not(.muxui-button)):hover { color: var(--muxui-semantic-content-link-hover); }
+.muxui-breadcrumbs__link[data-muxui-state-hovered], .muxui-link:where(:not(.muxui-button))[data-muxui-state-hovered] { color: var(--muxui-semantic-content-link-hover); }
+.muxui-breadcrumbs__link[data-muxui-state-pressed], .muxui-link:where(:not(.muxui-button))[data-muxui-state-pressed] { color: var(--muxui-semantic-content-link-pressed); }
+.muxui-breadcrumbs__link:focus-visible, .muxui-link:where(:not(.muxui-button)):focus-visible { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: 2px; }
 .muxui-breadcrumbs__current { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
 .muxui-breadcrumbs__item[data-muxui-state-current] .muxui-breadcrumbs__current,
 .muxui-breadcrumbs__item[data-muxui-state-current] .muxui-breadcrumbs__link { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
-.muxui-link[data-muxui-state-current] { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
+.muxui-link:where(:not(.muxui-button))[data-muxui-state-current] { color: var(--muxui-semantic-content-strong); font-weight: var(--muxui-semantic-typography-label-weight); }
 
 .muxui-checkbox__label { line-height: var(--muxui-semantic-typography-text-line-height); }
 .muxui-checkbox__indicator { display: inline-grid; place-items: center; inline-size: 1.125rem; block-size: 1.125rem; flex: 0 0 auto; border: 1.5px solid var(--muxui-component-checkbox-indicator-border); border-radius: var(--muxui-semantic-shape-indicator-radius); background: var(--muxui-component-checkbox-indicator-background); color: var(--muxui-semantic-content-on-solid); font-size: var(--muxui-semantic-typography-tiny-size); font-weight: var(--muxui-semantic-typography-heading-weight); line-height: 1; }
@@ -74,6 +75,8 @@
   --muxui-button-border: transparent;
   --muxui-button-shadow: var(--muxui-semantic-elevation-control);
   position: relative;
+  /* What a button element already has, so a Link carrying the class sizes its box the same way. */
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -534,8 +537,12 @@
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
-  outline: none;
   cursor: pointer;
+}
+
+/* A Link carrying Button's class keeps Button's outline, which forced colours paint. */
+.muxui-link:where(:not(.muxui-button)) {
+  outline: none;
 }
 
 .muxui-link:not(.muxui-button) {
@@ -566,7 +573,7 @@
   color: var(--muxui-semantic-content-link-pressed);
 }
 
-.muxui-link[data-muxui-state-focus-visible] {
+.muxui-link:where(:not(.muxui-button))[data-muxui-state-focus-visible] {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -1250,8 +1257,8 @@
 /* Keyboard focus keeps the neutral inner/outer ring. */
 .muxui-toggle-button[data-muxui-state-focus-visible],
 .muxui-toggle-button:focus-visible,
-.muxui-link[data-muxui-state-focus-visible],
-.muxui-link:focus-visible,
+.muxui-link:where(:not(.muxui-button))[data-muxui-state-focus-visible],
+.muxui-link:where(:not(.muxui-button)):focus-visible,
 .muxui-disclosure__trigger[data-muxui-state-focus-visible],
 .muxui-disclosure__trigger:focus-visible {
   box-shadow:
