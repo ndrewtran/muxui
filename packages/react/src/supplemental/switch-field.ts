@@ -1,6 +1,5 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, LabelHTMLAttributes, RefAttributes } from 'react';
-import { FieldError as AriaFieldError } from 'react-aria-components';
 import { AriaSwitchField, AriaSwitchButton } from '../substrate.ts';
 import type { SwitchButtonProps as AriaSwitchButtonProps, SwitchButtonRenderProps, SwitchFieldProps as AriaSwitchFieldProps } from 'react-aria-components';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
@@ -8,6 +7,7 @@ import { SwitchMotionIndicator } from '../switch-motion.ts';
 import { h, cx } from './part-utils.ts';
 import type { PartProps } from './part-utils.ts';
 import { fieldText, mappedFieldProps } from './field-utils.ts';
+import { fieldError } from '../field-error.ts';
 
 /**
  * The props Mux UI defines for SwitchField.Root, the compound's root; the catalog's web.react
@@ -70,7 +70,7 @@ function makeSwitchField() {
     return h(SwitchMotionIndicator, { ...props, ref, className: cx('muxui-switch-field__thumb', className), isSelected: Boolean(state?.isSelected), isPressed: Boolean(state?.isPressed), isDisabled: Boolean(state?.isDisabled), isReadOnly: Boolean(state?.isReadOnly) });
   });
   const Description = /*#__PURE__*/ React.forwardRef<HTMLElement, SwitchFieldDescriptionProps>(function SwitchFieldDescription(props, ref) { return fieldText('description', 'muxui-switch-field__description muxui-field-description', props, ref); });
-  const Error = /*#__PURE__*/ React.forwardRef<HTMLElement, SwitchFieldErrorProps>(function SwitchFieldError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-switch-field__error muxui-field-error', props.className) }); });
+  const Error = /*#__PURE__*/ React.forwardRef<HTMLElement, SwitchFieldErrorProps>(function SwitchFieldError(props, ref) { return fieldError('muxui-switch-field__error muxui-field-error', props, ref); });
   return /*#__PURE__*/ Object.freeze({ Root, Button, Thumb, Description, Error });
 }
 

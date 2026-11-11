@@ -3,9 +3,10 @@ import type { Dispatch, ForwardRefExoticComponent, ForwardedRef, HTMLAttributes,
 import { Label as AriaLabel } from 'react-aria-components';
 import { AriaInput } from '../substrate.ts';
 import type { InputProps as AriaInputProps } from 'react-aria-components';
-import { h, cx } from './part-utils.ts';
+import { h, cx, useIsomorphicLayoutEffect } from './part-utils.ts';
 import type { PartProps } from './part-utils.ts';
 import { fieldText } from './field-utils.ts';
+import { useSlotPartId } from '../field-error.ts';
 import { InputAssociationContext, renderFieldRoot } from './field-root.ts';
 
 /**
@@ -40,22 +41,15 @@ export type InputLabelProps = PartProps<HTMLLabelElement>;
 export type InputDescriptionProps = PartProps<HTMLElement>;
 export type InputErrorProps = PartProps<HTMLElement>;
 
-function associatedFieldText(slot: string, className: string, props: PartProps<HTMLElement>, ref: ForwardedRef<HTMLElement>, register: Dispatch<SetStateAction<string | undefined>> | undefined) {
-  const association = React.useContext(InputAssociationContext);
-  const nodeRef = React.useRef<HTMLElement | null>(null);
-  const setRef = React.useCallback((node: HTMLElement | null) => {
-    nodeRef.current = node;
-    if (typeof ref === 'function') ref(node);
-    else if (ref) ref.current = node;
-    register?.(node?.id);
-  }, [ref, register]);
-  React.useLayoutEffect(() => {
-    register?.(nodeRef.current?.id);
-  }, [props.id, register]);
-  React.useEffect(() => {
-    return () => register?.(undefined);
-  }, [register]);
-  return fieldText(slot, className, props, setRef);
+// The part renders with React Aria's slot id, or with its own when it mounted after React Aria resolved the field's
+// ids, and registers the id it renders with, so Input.Input names it from the commit in which it appears.
+function associatedFieldText(slot: 'description' | 'errorMessage', className: string, props: PartProps<HTMLElement>, ref: ForwardedRef<HTMLElement>, register: Dispatch<SetStateAction<string | undefined>> | undefined) {
+  const { id } = useSlotPartId(slot, props.id);
+  useIsomorphicLayoutEffect(() => {
+    register?.(id);
+    return () => register?.((current) => current === id ? undefined : current);
+  }, [id, register]);
+  return fieldText(slot, className, { ...props, id }, ref);
 }
 
 const InputRoot = /*#__PURE__*/ React.forwardRef<HTMLDivElement, InputRootProps>(function InputRoot({ value, defaultValue, onChange, disabled, invalid, required, readOnly, size = 'md', className, children, ...props }, ref) {
