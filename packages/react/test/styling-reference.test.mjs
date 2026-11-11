@@ -49,7 +49,7 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
-  assert.equal(read('styles.css').rules.length, 2167);
+  assert.equal(read('styles.css').rules.length, 2172);
   const shared = readFileSync(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').trim();
   assert.equal(readStyleRules(shared).rules.length, 509);
   assert.equal(readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8').split(shared).length, 2, 'styles.css includes the shared stylesheet verbatim exactly once');
@@ -878,10 +878,10 @@ test('reduced motion: two public inputs and an internal marker, as motion.mjs re
 });
 
 test('!important counts are classified by selector and at-rule chain, per family, and agree with a second walk of the stylesheet', () => {
-  assert.deepEqual(facts.importantTotals, { declarations: 86, rules: 42 });
+  assert.deepEqual(facts.importantTotals, { declarations: 93, rules: 47 });
   const css = readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8');
   const walked = importantDeclarations(css);
-  assert.equal(walked.length, 86 + walked.filter(({ chain }) => chain.some((prelude) => prelude.startsWith('@layer muxui.tokens'))).length, 'the second walk finds the same declarations');
+  assert.equal(walked.length, 93 + walked.filter(({ chain }) => chain.some((prelude) => prelude.startsWith('@layer muxui.tokens'))).length, 'the second walk finds the same declarations');
   const hooksOf = (slug) => new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element', 'composed'].includes(row.disposition)).map((row) => row.hook));
   const classesIn = (text) => [...text.replace(/\[[^\]]*\]/gu, '').matchAll(/\.(muxui-[\w-]+)/gu)].map(([, name]) => name);
   let withImportant = 0;
@@ -901,8 +901,8 @@ test('!important counts are classified by selector and at-rule chain, per family
     assert.deepEqual(all.get(slug).overrides.important, expected, slug);
     if (total > 0) withImportant += 1;
   }
-  assert.equal(withImportant, 51);
-  assert.equal(slugs.length - withImportant, 35, '35 families have none on their own hooks');
+  assert.equal(withImportant, 52);
+  assert.equal(slugs.length - withImportant, 34, '34 families have none on their own hooks');
   // Button: 8 forced colors, 2 reduced motion by media query and 2 by the scope attribute (the v1 count called those two other).
   assert.deepEqual(all.get('button').overrides.important, { total: 12, byCause: { 'forced-colors': 8, 'reduced-motion-media': 2, 'reduced-motion-attribute': 2 } });
 });

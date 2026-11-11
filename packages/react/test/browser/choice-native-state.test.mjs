@@ -44,7 +44,11 @@ function paintOf(label) {
   if (label.matches('.muxui-switch')) {
     const track = style(label, '::before');
     const thumb = label.querySelector('.muxui-switch__indicator');
-    return { background: track.backgroundColor, border: track.borderColor, shadow: track.boxShadow, mark: new DOMMatrix(style(thumb).transform).m41 > 4, thumb: style(thumb).backgroundColor, seen: style(thumb).backgroundColor !== track.backgroundColor };
+    return {
+      background: track.backgroundColor, border: track.borderColor, shadow: track.boxShadow,
+      outline: track.outlineStyle === 'none' ? 'none' : `${track.outlineStyle} ${track.outlineWidth} ${track.outlineColor}`,
+      mark: new DOMMatrix(style(thumb).transform).m41 > 4, thumb: style(thumb).backgroundColor, seen: style(thumb).backgroundColor !== track.backgroundColor,
+    };
   }
   const box = label.querySelector('.muxui-checkbox__indicator, .muxui-checkbox-field__indicator, .muxui-radio-group__indicator, .muxui-radio-field__indicator');
   const value = style(box);
@@ -147,12 +151,29 @@ test('choice controls follow the native input before hydration and validate and 
       return { page, errors, close: () => context.close() };
     };
 
-    // In forced colours a box, tick and dot take system colours unless a rule keeps them apart, so every checkbox
-    // and radio that is on must show a mark of another colour than its box. Switch is left out of that check: its
-    // thumb takes the track's Canvas in forced colours after hydration too, which the notes report.
-    const assertMarksSeen = (paints, label) => {
+    // In forced colours a box, tick, dot and thumb take system colours unless a rule keeps them apart, so every
+    // checkbox and radio that is on must show a mark of another colour than its box, and every switch its thumb
+    // against its track: on or off, the thumb's place is the state. A disabled switch draws its thumb in GrayText.
+    const assertMarksSeen = async (page, paints, label) => {
+      const grayText = await page.evaluate(() => {
+        const probe = document.body.appendChild(document.createElement('span'));
+        probe.style.color = 'GrayText';
+        const colour = getComputedStyle(probe).color;
+        probe.remove();
+        return colour;
+      });
       for (const [name, paint] of Object.entries(paints)) {
-        if (!name.startsWith('switch') && paint.mark) assert.ok(paint.seen, `${label}: ${name} shows its mark`);
+        if (name.startsWith('switch')) {
+          assert.ok(paint.seen, `${label}: ${name} shows its thumb`);
+          assert.equal(paint.thumb === grayText, name.includes('-disabled-'), `${label}: ${name} thumb is GrayText only while disabled`);
+        } else if (paint.mark) assert.ok(paint.seen, `${label}: ${name} shows its mark`);
+      }
+      for (const kind of ['switch', 'switch-field']) {
+        for (const state of ['', '-invalid']) {
+          const [off, on] = [paints[`${kind}-off${state}`], paints[`${kind}-on${state}`]];
+          assert.notDeepEqual(off, on, `${label}: ${kind}${state} on and off differ`);
+        }
+        assert.notDeepEqual(paints[`${kind}-disabled-off`], paints[`${kind}-disabled-on`], `${label}: ${kind} disabled on and off differ`);
       }
     };
     const results = {};
@@ -160,14 +181,20 @@ test('choice controls follow the native input before hydration and validate and 
       await t.test(`${mode}: without JavaScript a click draws the state the input is in`, async () => {
         const { page, close: done } = await open(`/${scheme}.html`, false, forced);
         results[mode] = await assertClicksFollow(page, `${mode}, no script`);
-        assertMarksSeen(results[mode].before, `${mode}, no script, as served`);
-        assertMarksSeen(results[mode].after, `${mode}, no script, clicked`);
+        if (forced) {
+          await assertMarksSeen(page, results[mode].before, `${mode}, no script, as served`);
+          await assertMarksSeen(page, results[mode].after, `${mode}, no script, clicked`);
+        }
         await done();
       });
 
       await t.test(`${mode}: after hydration the controls look as they did and as the native rules drew them`, async () => {
         const { page, errors, close: done } = await open(`/${scheme}.html`, true, forced);
         const { before, after } = await assertClicksFollow(page, `${mode}, hydrated`);
+        if (forced) {
+          await assertMarksSeen(page, before, `${mode}, hydrated, as served`);
+          await assertMarksSeen(page, after, `${mode}, hydrated, clicked`);
+        }
         // Hydration changes nothing the server drew, and React's state draws what the native input did.
         assert.deepEqual(before, results[mode].before);
         assert.deepEqual(after, results[mode].after);
@@ -203,7 +230,7 @@ test('choice controls follow the native input before hydration and validate and 
           await done();
         }
         // Forced colours drop box shadows, so there Checkbox, CheckboxField and the RadioGroup radios draw an outline.
-        const drawn = Object.entries(rings.hydrated).filter(([, { shadow, outline = 'none' }]) => shadow !== 'none' || outline !== 'none').map(([name]) => name);
+        const drawn = Object.entries(rings.hydrated).filter(([, { shadow, outline }]) => shadow !== 'none' || outline !== 'none').map(([name]) => name);
         assert.deepEqual(drawn, forced ? ['checkbox-off', 'checkbox-field-off', 'radio-group/0'] : Object.keys(rings.hydrated));
         assert.deepEqual(rings.native, rings.hydrated);
       });

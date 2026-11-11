@@ -20,7 +20,7 @@ const probe = (name, control) => h('span', { key: name, 'data-probe': name }, co
 
 /**
  * Each choice control once unselected and once selected, valid and invalid, each in a
- * `[data-probe="<kind>-<off|on>[-invalid]"]`. The groups hold a selected first option and an
+ * `[data-probe="<kind>-<off|on>[-invalid]"]`, and each switch disabled, in `[data-probe="<kind>-disabled-<off|on>"]`. The groups hold a selected first option and an
  * unselected second, in `[data-probe="<kind>[-invalid]"]`.
  */
 export function ChoiceControls() {
@@ -47,6 +47,15 @@ export function ChoiceControls() {
       probe(`radio-field${suffix}`, h(RadioGroup, { label: 'RadioField', name: `radio-field${suffix}`, defaultValue: 'a', invalid },
         ...['a', 'b'].map((value) => h(RadioField.Root, { key: value, value },
           h(RadioField.Button, null, h(RadioField.Indicator, null, h(RadioField.Dot)), value.toUpperCase()))))),
+    );
+  }
+  // Disabled switches last, so the keyboard subtests' tab order through the first row is unchanged.
+  for (const on of [false, true]) {
+    const state = `disabled-${on ? 'on' : 'off'}`;
+    controls.push(
+      probe(`switch-${state}`, h(Switch, { label: 'Switch', name: `switch-${state}`, defaultSelected: on, disabled: true })),
+      probe(`switch-field-${state}`, h(SwitchField.Root, { name: `switch-field-${state}`, defaultChecked: on, disabled: true },
+        h(SwitchField.Button, null, h(SwitchField.Thumb), 'SwitchField'))),
     );
   }
   return h('form', { id: 'controls' }, controls);
