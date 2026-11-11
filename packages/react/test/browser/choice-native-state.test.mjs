@@ -229,9 +229,9 @@ test('choice controls follow the native input before hydration and validate and 
           rings[javaScriptEnabled ? 'hydrated' : 'native'] = seen;
           await done();
         }
-        // Forced colours drop box shadows, so there Checkbox, CheckboxField and the RadioGroup radios draw an outline.
-        const drawn = Object.entries(rings.hydrated).filter(([, { shadow, outline }]) => shadow !== 'none' || outline !== 'none').map(([name]) => name);
-        assert.deepEqual(drawn, forced ? ['checkbox-off', 'checkbox-field-off', 'radio-group/0'] : Object.keys(rings.hydrated));
+        // Every control draws a ring: a box shadow, or in forced colours, which drop shadows, an outline.
+        const drawn = Object.entries(rings.hydrated).filter(([, { shadow, outline }]) => (forced ? outline : shadow) !== 'none').map(([name]) => name);
+        assert.deepEqual(drawn, Object.keys(rings.hydrated));
         assert.deepEqual(rings.native, rings.hydrated);
       });
     }

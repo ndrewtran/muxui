@@ -606,6 +606,13 @@
   .muxui-switch[data-muxui-state-disabled]:has(input:checked) .muxui-switch__indicator {
     background-color: GrayText !important;
   }
+
+  /* Forced colours drop the box-shadow ring, so keyboard focus draws the outline Checkbox and RadioGroup draw. */
+  .muxui-switch[data-muxui-state-focus-visible]::before {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
 }
 
 /* MuxUI component source: text-field.css */
@@ -1397,7 +1404,9 @@
   }
 
   :is(.muxui-checkbox, .muxui-checkbox-field__button):not([data-muxui-state-focused]):has(input:focus-visible) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator),
-  .muxui-radio-group__radio:not([data-muxui-state-focused]):has(input:focus-visible) .muxui-radio-group__indicator {
+  .muxui-radio-group__radio:not([data-muxui-state-focused]):has(input:focus-visible) .muxui-radio-group__indicator,
+  .muxui-radio-field__button:not([data-muxui-state-focused]):has(input:focus-visible) .muxui-radio-field__indicator,
+  .muxui-switch:not([data-muxui-state-focused]):has(input:focus-visible)::before {
     box-shadow: none;
     outline: 2px solid Highlight;
     outline-offset: 1px;
