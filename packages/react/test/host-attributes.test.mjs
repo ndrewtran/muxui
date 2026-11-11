@@ -110,6 +110,22 @@ test('Button passes title and tabIndex to its button', () => {
   assert.deepEqual(pick(button, ['title', 'tabindex']), { title: 'Saves the draft', tabindex: '-1' });
 });
 
+test('Button leaves React Aria behaviour props such as preventFocusOnPress off its button', () => {
+  // TextEditor's bubble menu passes preventFocusOnPress through an untyped spread; React Aria reads it, the element must not.
+  const messages = [];
+  const { error } = console;
+  console.error = (...args) => messages.push(String(args[0]));
+  let button;
+  try {
+    button = serverElement(renderToString(h(Button, { ...{ preventFocusOnPress: true }, title: 'Explain' }, 'Explain')), 'button');
+  } finally {
+    console.error = error;
+  }
+  assert.equal(button.preventfocusonpress, undefined);
+  assert.equal(button.title, 'Explain');
+  assert.deepEqual(messages, []);
+});
+
 test('Disclosure puts its id on its root, alone and in a group, and the group still opens it by that id', async () => {
   const lone = serverElement(renderToString(h(Disclosure, { id: 'details', title: 'Details' }, 'Body')), '.muxui-disclosure');
   assert.equal(lone.id, 'details', 'a lone Disclosure');
