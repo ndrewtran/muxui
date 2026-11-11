@@ -12,7 +12,9 @@ import { pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 // a Link and a Button; item `b` is disabled. Runs in every engine named by
 // MUXUI_BROWSER_ENGINES (see harness.mjs). A Link in server markup that no script
 // has hydrated takes the hover colour from :hover alone, in both colour schemes. The
-// same holds for a Breadcrumbs link, which also shows the hover colour once hydrated.
+// same holds for a Breadcrumbs link, which also shows the hover colour once hydrated. A Link that carries Button's class
+// computes the same as a Button in every state, scheme and forced colours, and a colour-scheme change does not animate
+// a resting Link.
 
 const entry = `
 import React from 'react';
@@ -86,6 +88,42 @@ function Ready() {
 hydrateRoot(document.getElementById('root'), h(React.Fragment, null, h(Breadcrumbs, { 'aria-label': 'Trail', items: ${JSON.stringify(crumbItems)} }), h(Ready)));
 `;
 
+// One Button and one Link carrying Button's class, variant and size per variant, hydrated so React Aria writes its states.
+const variants = ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'];
+const pairPage = (scheme) => pageShell({
+  attributes: `data-muxui-color-scheme="${scheme}" data-muxui-motion="reduced"`,
+  head: '<link rel="stylesheet" href="/generated/styles.css">',
+  bodyAttributes: 'style="margin: 16px; background: var(--muxui-semantic-surface-canvas)"',
+  body: '<button id="before" tabindex="0">Before</button><div id="root"></div>',
+  entry: '/pair-entry.mjs',
+});
+const pairEntry = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Button } from '/src/button.ts';
+import { Link } from '/src/components.ts';
+
+const h = React.createElement;
+const label = (text) => h('span', { className: 'muxui-button__label' }, text);
+function Pairs() {
+  React.useEffect(() => { document.documentElement.setAttribute('data-pairs-ready', ''); }, []);
+  return h('div', { style: { display: 'grid', gap: '12px', justifyItems: 'start' } }, ${JSON.stringify(variants)}.map((variant) => h('div', { key: variant, 'data-pair': variant, style: { display: 'flex', gap: '12px' } },
+    h(Button, { variant, 'data-role': 'button' }, label('Submit')),
+    h(Link, { href: '#' + variant, className: 'muxui-button', 'data-muxui-variant': variant, 'data-muxui-size': 'md', 'data-role': 'link' }, label('Submit')))));
+}
+createRoot(document.getElementById('root')).render(h(Pairs));
+`;
+
+/** The computed properties that make a Button look like one. */
+const looks = ['display', 'box-sizing', 'width', 'height', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left', 'gap',
+  'border-top-left-radius', 'border-bottom-right-radius', 'border-top-width', 'background-color', 'color', 'font-family', 'font-size',
+  'font-weight', 'line-height', 'letter-spacing', 'text-decoration-line', 'text-underline-offset', 'white-space', 'box-shadow',
+  'outline-style', 'outline-width', 'outline-color', 'outline-offset', 'cursor'];
+const look = (locator) => locator.evaluate((node, names) => {
+  const style = getComputedStyle(node);
+  return Object.fromEntries(names.map((name) => [name, style.getPropertyValue(name)]));
+}, looks);
+
 /** A semantic content colour as the page resolves it, so a test writes no colour down. */
 const contentToken = (page, role) => page.evaluate((name) => {
   const probe = document.createElement('span');
@@ -104,8 +142,9 @@ for (const engine of browserEngines()) {
         '/link.html': page,
         '/link-static.html': (requested) => staticPage(requested.searchParams.get('scheme')),
         '/crumbs.html': (requested) => crumbsPage(requested.searchParams.get('scheme'), requested.searchParams.has('hydrate')),
+        '/pair.html': (requested) => pairPage(requested.searchParams.get('scheme')),
       },
-      modules: { '/link-entry.mjs': entry, '/crumbs-entry.mjs': crumbsEntry },
+      modules: { '/link-entry.mjs': entry, '/crumbs-entry.mjs': crumbsEntry, '/pair-entry.mjs': pairEntry },
     });
     let browser;
     try {
@@ -313,6 +352,71 @@ for (const engine of browserEngines()) {
         } finally {
           await touch.close();
         }
+      });
+
+      await t.test('a Link with Button\'s class computes the same as a Button at rest, hovered, pressed and focused, in both schemes and forced colours', async () => {
+        for (const [scheme, forcedColors] of [['light', 'none'], ['dark', 'none'], ['light', 'active']]) {
+          await tab.emulateMedia({ forcedColors });
+          await tab.goto(`${url}/pair.html?scheme=${scheme}`, { waitUntil: 'load' });
+          await tab.locator('html[data-pairs-ready]').waitFor({ state: 'attached' });
+          await awaitFontsAndFrames(tab);
+          // Keyboard focus, as a Tab gives it, so both :focus-visible and React Aria's focus-visible state apply.
+          const keyboardFocus = async (locator) => {
+            await locator.focus();
+            await tab.keyboard.press('Shift+Tab');
+            await tab.keyboard.press('Tab');
+            assert.equal(await locator.evaluate((node) => node === document.activeElement), true, 'the control has focus');
+          };
+          for (const variant of variants) {
+            const label = `${variant} ${scheme}${forcedColors === 'active' ? ' forced colours' : ''}`;
+            const pair = tab.locator(`[data-pair="${variant}"]`);
+            const [button, link] = [pair.locator('[data-role="button"]'), pair.locator('[data-role="link"]')];
+            await tab.mouse.move(0, 0);
+            assert.equal(await link.evaluate((node) => node.localName), 'a', `${label}: the Link stays an anchor`);
+            assert.deepEqual(await look(link), await look(button), `${label} at rest`);
+
+            await button.hover();
+            const hovered = await look(button);
+            await link.hover();
+            assert.deepEqual(await look(link), hovered, `${label} hovered`);
+
+            const pressed = async (locator) => {
+              await locator.hover();
+              await tab.mouse.down();
+              const seen = await look(locator);
+              // Let go away from the control, so the press activates nothing.
+              await tab.mouse.move(0, 0);
+              await tab.mouse.up();
+              return seen;
+            };
+            assert.deepEqual(await pressed(link), await pressed(button), `${label} pressed`);
+
+            await keyboardFocus(button);
+            const focused = await look(button);
+            await keyboardFocus(link);
+            assert.deepEqual(await look(link), focused, `${label} focused`);
+            await tab.locator('#before').focus();
+          }
+        }
+        await tab.emulateMedia({ forcedColors: 'none' });
+      });
+
+      // A colour scheme change must not run the Link's colour transition, while a hover still does.
+      await t.test('a colour scheme change repaints a resting Link at once, and hover still runs its colour transition', async () => {
+        await open('stack');
+        const link = row('a').locator('.muxui-link');
+        const transitions = (change) => link.evaluate((node, which) => {
+          if (which === 'dark') document.documentElement.setAttribute('data-muxui-color-scheme', 'dark');
+          if (which === 'hover') node.setAttribute('data-muxui-state-hovered', 'true');
+          getComputedStyle(node).color;
+          const running = node.getAnimations().map((animation) => animation.transitionProperty).filter(Boolean);
+          for (const animation of node.getAnimations()) animation.finish();
+          if (which === 'hover') node.removeAttribute('data-muxui-state-hovered');
+          return running;
+        }, change);
+        assert.deepEqual(await transitions('dark'), [], 'the scheme change starts no transition on the Link');
+        assert.equal(await link.evaluate((node) => getComputedStyle(node).color), await contentToken(tab, 'link'), 'the Link has the dark link colour at once');
+        assert.deepEqual(await transitions('hover'), ['color'], 'hovering still transitions the colour');
       });
 
       assert.deepEqual(errors, [], `page errors: ${errors.join('\n')}`);

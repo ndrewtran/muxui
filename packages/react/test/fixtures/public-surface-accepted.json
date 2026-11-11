@@ -200,6 +200,181 @@
       "message": "{ old: \"offset\" | \"open\" | \"className\" | \"aria-labelledby\" | \"defaultOpen\" | \"onOpenChange\" | \"dismissable\" | \"placement\" | \"crossOffset\" | \"shouldFlip\" | \"containerPadding\" | \"modal\" | \"anchorRef\"; new: \"offset\" | ... 12 more ... | \"anchorRef\"; } | { ...; }",
       "reason": "colorScheme accepts an explicit undefined literal like every other optional prop, so the literal-key list gains it; the loose run lists it and the exact run has no such probe. The entry states the diagnostic's text, as the optional entry does.",
       "tranche": "Popover colorScheme, opt-in colour scheme scope"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "keyof",
+      "compiler": "TypeScript 7",
+      "old": "keyof LinkProps | keyof RefAttributes<HTMLElement>",
+      "new": "keyof LinkProps | keyof RefAttributes<HTMLElement>",
+      "reason": "LinkProps now takes onClick, which it used to omit, and the native anchor attributes download, hrefLang, ping, referrerPolicy and type, so its keyof lists more keys; the printed key list is the same alias text before and after.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "optional",
+      "compiler": "TypeScript 7",
+      "old": "keyof LinkProps | keyof RefAttributes<HTMLElement>",
+      "new": "keyof LinkProps | keyof RefAttributes<HTMLElement>",
+      "reason": "The added keys (onClick, download, hrefLang, ping, referrerPolicy, type) are optional, so the optional-key list of the Link props gains them.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 7",
+      "mode": "loose",
+      "old": "keyof LinkProps | keyof RefAttributes<HTMLElement>",
+      "new": "keyof LinkProps | keyof RefAttributes<HTMLElement>",
+      "reason": "The added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) accept an explicit undefined literal like every other optional prop, so the literal-key list gains them; each compiler prints the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "handler:onClick",
+      "message": "{ \"new:exact\": [0, 1]; \"new:narrow:0\": [0, 1]; \"new:wide:0\": [0, 1]; }",
+      "reason": "onClick is new on Link: the baseline omitted it, so the handler probe finds a callback where there was none. It runs once per native click, before React Aria press handling, and is not called while the Link is disabled.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:type:LinkProps",
+      "assertion": "keyof",
+      "old": "keyof LinkProps",
+      "new": "keyof LinkProps",
+      "reason": "LinkProps now takes onClick, which it used to omit, and the native anchor attributes download, hrefLang, ping, referrerPolicy and type, so its keyof lists more keys; the printed key list is the same alias text before and after.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:type:LinkProps",
+      "assertion": "optional",
+      "old": "keyof LinkProps",
+      "new": "keyof LinkProps",
+      "reason": "The added keys (onClick, download, hrefLang, ping, referrerPolicy, type) are optional, so the optional-key list of the Link props gains them.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:type:LinkProps",
+      "assertion": "explicitUndefinedLiteral",
+      "mode": "loose",
+      "old": "keyof LinkProps",
+      "new": "keyof LinkProps",
+      "reason": "The added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) accept an explicit undefined literal like every other optional prop, so the literal-key list gains them; each compiler prints the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:type:LinkProps",
+      "assertion": "handler:onClick",
+      "message": "{ \"new:exact\": [0, 1]; \"new:narrow:0\": [0, 1]; \"new:wide:0\": [0, 1]; }",
+      "reason": "onClick is new on Link: the baseline omitted it, so the handler probe finds a callback where there was none. It runs once per native click, before React Aria press handling, and is not called while the Link is disabled.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "explicitUndefined",
+      "compiler": "TypeScript 7",
+      "mode": "exact",
+      "old": "\"about\" | \"accessKey\" | \"aria-activedescendant\" | \"aria-atomic\" | \"aria-autocomplete\" | \"aria-braillelabel\" | \"aria-brailleroledescription\" | \"aria-busy\" | \"aria-checked\" | ... 267 more ... | \"vocab\"",
+      "new": "\"about\" | ... 280 more ... | \"vocab\"",
+      "reason": "With exactOptionalPropertyTypes the added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) join the list of keys that accept an explicit undefined; each compiler prints and elides the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 7",
+      "mode": "exact",
+      "old": "\"about\" | \"accessKey\" | \"aria-activedescendant\" | \"aria-atomic\" | \"aria-autocomplete\" | \"aria-braillelabel\" | \"aria-brailleroledescription\" | \"aria-busy\" | \"aria-checked\" | ... 267 more ... | \"vocab\"",
+      "new": "\"about\" | ... 280 more ... | \"vocab\"",
+      "reason": "The added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) accept an explicit undefined literal like every other optional prop, so the literal-key list gains them; each compiler prints the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:type:LinkProps",
+      "assertion": "explicitUndefined",
+      "compiler": "TypeScript 7",
+      "mode": "exact",
+      "old": "\"about\" | \"accessKey\" | \"aria-activedescendant\" | \"aria-atomic\" | \"aria-autocomplete\" | \"aria-braillelabel\" | \"aria-brailleroledescription\" | \"aria-busy\" | \"aria-checked\" | ... 265 more ... | \"vocab\"",
+      "new": "\"about\" | ... 278 more ... | \"vocab\"",
+      "reason": "With exactOptionalPropertyTypes the added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) join the list of keys that accept an explicit undefined; each compiler prints and elides the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:type:LinkProps",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 7",
+      "mode": "exact",
+      "old": "\"about\" | \"accessKey\" | \"aria-activedescendant\" | \"aria-atomic\" | \"aria-autocomplete\" | \"aria-braillelabel\" | \"aria-brailleroledescription\" | \"aria-busy\" | \"aria-checked\" | ... 265 more ... | \"vocab\"",
+      "new": "\"about\" | ... 278 more ... | \"vocab\"",
+      "reason": "The added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) accept an explicit undefined literal like every other optional prop, so the literal-key list gains them; each compiler prints the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "keyof",
+      "compiler": "TypeScript 6",
+      "old": "keyof RefAttributes<HTMLElement> | keyof LinkProps",
+      "new": "keyof RefAttributes<HTMLElement> | keyof LinkProps",
+      "reason": "LinkProps now takes onClick, which it used to omit, and the native anchor attributes download, hrefLang, ping, referrerPolicy and type, so its keyof lists more keys; the printed key list is the same alias text before and after.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "optional",
+      "compiler": "TypeScript 6",
+      "old": "keyof RefAttributes<HTMLElement> | keyof LinkProps",
+      "new": "keyof RefAttributes<HTMLElement> | keyof LinkProps",
+      "reason": "The added keys (onClick, download, hrefLang, ping, referrerPolicy, type) are optional, so the optional-key list of the Link props gains them.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 6",
+      "mode": "loose",
+      "old": "keyof RefAttributes<HTMLElement> | keyof LinkProps",
+      "new": "keyof RefAttributes<HTMLElement> | keyof LinkProps",
+      "reason": "The added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) accept an explicit undefined literal like every other optional prop, so the literal-key list gains them; each compiler prints the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "explicitUndefined",
+      "compiler": "TypeScript 6",
+      "mode": "exact",
+      "old": "\"key\" | \"id\" | \"results\" | \"color\" | \"content\" | \"translate\" | \"hidden\" | \"slot\" | \"style\" | \"title\" | \"dir\" | \"accessKey\" | \"draggable\" | \"inert\" | \"lang\" | \"popover\" | \"part\" | ... 259 more ... | \"onTransitionStartCapture\"",
+      "new": "\"type\" | ... 280 more ... | \"referrerPolicy\"",
+      "reason": "With exactOptionalPropertyTypes the added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) join the list of keys that accept an explicit undefined; each compiler prints and elides the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:props:Link",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 6",
+      "mode": "exact",
+      "old": "\"key\" | \"id\" | \"results\" | \"color\" | \"content\" | \"translate\" | \"hidden\" | \"slot\" | \"style\" | \"title\" | \"dir\" | \"accessKey\" | \"draggable\" | \"inert\" | \"lang\" | \"popover\" | \"part\" | ... 259 more ... | \"onTransitionStartCapture\"",
+      "new": "\"type\" | ... 280 more ... | \"referrerPolicy\"",
+      "reason": "The added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) accept an explicit undefined literal like every other optional prop, so the literal-key list gains them; each compiler prints the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:type:LinkProps",
+      "assertion": "explicitUndefined",
+      "compiler": "TypeScript 6",
+      "mode": "exact",
+      "old": "\"id\" | \"results\" | \"color\" | \"content\" | \"translate\" | \"hidden\" | \"slot\" | \"style\" | \"title\" | \"dir\" | \"accessKey\" | \"draggable\" | \"inert\" | \"lang\" | \"popover\" | \"part\" | \"prefix\" | ... 257 more ... | \"onTransitionStartCapture\"",
+      "new": "\"type\" | ... 278 more ... | \"referrerPolicy\"",
+      "reason": "With exactOptionalPropertyTypes the added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) join the list of keys that accept an explicit undefined; each compiler prints and elides the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:type:LinkProps",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 6",
+      "mode": "exact",
+      "old": "\"id\" | \"results\" | \"color\" | \"content\" | \"translate\" | \"hidden\" | \"slot\" | \"style\" | \"title\" | \"dir\" | \"accessKey\" | \"draggable\" | \"inert\" | \"lang\" | \"popover\" | \"part\" | \"prefix\" | ... 257 more ... | \"onTransitionStartCapture\"",
+      "new": "\"type\" | ... 278 more ... | \"referrerPolicy\"",
+      "reason": "The added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) accept an explicit undefined literal like every other optional prop, so the literal-key list gains them; each compiler prints the list its own way.",
+      "tranche": "Link passes its native attributes and onClick through"
     }
   ]
 }
