@@ -13,7 +13,8 @@ import { pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 // MUXUI_BROWSER_ENGINES (see harness.mjs). A Link in server markup that no script
 // has hydrated takes the hover colour from :hover alone, in both colour schemes. The
 // same holds for a Breadcrumbs link, which also shows the hover colour once hydrated. A Link that carries Button's class
-// computes the same as a Button in every state, scheme and forced colours.
+// computes the same as a Button in every state, scheme and forced colours, and a colour-scheme change does not animate
+// a resting Link.
 
 const entry = `
 import React from 'react';
@@ -398,6 +399,24 @@ for (const engine of browserEngines()) {
           }
         }
         await tab.emulateMedia({ forcedColors: 'none' });
+      });
+
+      // A colour scheme change must not run the Link's colour transition, while a hover still does.
+      await t.test('a colour scheme change repaints a resting Link at once, and hover still runs its colour transition', async () => {
+        await open('stack');
+        const link = row('a').locator('.muxui-link');
+        const transitions = (change) => link.evaluate((node, which) => {
+          if (which === 'dark') document.documentElement.setAttribute('data-muxui-color-scheme', 'dark');
+          if (which === 'hover') node.setAttribute('data-muxui-state-hovered', 'true');
+          getComputedStyle(node).color;
+          const running = node.getAnimations().map((animation) => animation.transitionProperty).filter(Boolean);
+          for (const animation of node.getAnimations()) animation.finish();
+          if (which === 'hover') node.removeAttribute('data-muxui-state-hovered');
+          return running;
+        }, change);
+        assert.deepEqual(await transitions('dark'), [], 'the scheme change starts no transition on the Link');
+        assert.equal(await link.evaluate((node) => getComputedStyle(node).color), await contentToken(tab, 'link'), 'the Link has the dark link colour at once');
+        assert.deepEqual(await transitions('hover'), ['color'], 'hovering still transitions the colour');
       });
 
       assert.deepEqual(errors, [], `page errors: ${errors.join('\n')}`);

@@ -553,12 +553,14 @@
   text-decoration: none;
   text-underline-offset: 0.2em;
   border-radius: var(--muxui-semantic-shape-indicator-radius);
-  transition: color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   text-decoration: underline;
 }
 
+/* The colour transition belongs to the hovered and pressed states only, so a colour scheme change repaints a resting
+   Link at once instead of animating it. */
 .muxui-link:not(.muxui-button)[data-muxui-state-hovered] {
   color: var(--muxui-semantic-content-link-hover);
+  transition: color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
 /* Native :hover paints server markup before hydration writes the hovered state. It is limited to hovering devices because
@@ -566,11 +568,13 @@
 @media (hover: hover) {
   .muxui-link:not(.muxui-button):hover {
     color: var(--muxui-semantic-content-link-hover);
+    transition: color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   }
 }
 
 .muxui-link:not(.muxui-button)[data-muxui-state-pressed] {
   color: var(--muxui-semantic-content-link-pressed);
+  transition: color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
 .muxui-link:where(:not(.muxui-button))[data-muxui-state-focus-visible] {
