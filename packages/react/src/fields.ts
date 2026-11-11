@@ -13,7 +13,7 @@ import type {
   RefObject,
 } from 'react';
 import { CalendarHeightMotion } from './calendar-height-motion.mjs';
-import { Autocomplete as AriaAutocomplete, CalendarGrid as AriaCalendarGrid, CalendarGridBody as AriaCalendarGridBody, CalendarGridHeader as AriaCalendarGridHeader, CalendarHeaderCell as AriaCalendarHeaderCell, CalendarHeading as AriaCalendarHeading, Dialog as AriaDialog, FieldError as AriaFieldError, Form as AriaForm, InputContext as AriaInputContext, Label as AriaLabel, Text as AriaText } from 'react-aria-components';
+import { Autocomplete as AriaAutocomplete, CalendarGrid as AriaCalendarGrid, CalendarGridBody as AriaCalendarGridBody, CalendarGridHeader as AriaCalendarGridHeader, CalendarHeaderCell as AriaCalendarHeaderCell, CalendarHeading as AriaCalendarHeading, Dialog as AriaDialog, Form as AriaForm, InputContext as AriaInputContext, Label as AriaLabel, Text as AriaText } from 'react-aria-components';
 import { AriaCalendar, AriaCalendarCell, AriaCheckboxGroup, AriaDateField, AriaDateInput, AriaDatePicker, AriaDateRangePicker, AriaDateSegment, AriaGroup, AriaInput, AriaListBox, AriaListBoxItem, AriaNumberField, AriaRangeCalendar, AriaSearchField, AriaSwitchButton, AriaSwitchField, AriaTextField, AriaTimeField } from './substrate.ts';
 import type { DateValue, FormProps as AriaFormProps, InputProps as AriaInputProps, Key, TimeValue } from 'react-aria-components';
 import { parseDate, parseTime } from '@internationalized/date';
@@ -29,6 +29,7 @@ import { PopoverMotion } from './popover-motion.mjs';
 import { RangeSelectionMotion } from './range-selection-motion.mjs';
 import { SwitchMotionIndicator } from './switch-motion.ts';
 import { IconButton } from './supplemental/icon-button.ts';
+import { FieldErrorText, lateErrorScope } from './field-error.ts';
 import type { IconButtonProps } from './supplemental/icon-button.ts';
 
 // React Aria hands the attributes its types do not name, such as the data-* hooks the styles read,
@@ -617,7 +618,7 @@ function fieldDescription(description: ReactNode) {
 }
 
 function fieldError(errorMessage: ReactNode) {
-  return React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage);
+  return React.createElement(FieldErrorText, { className: 'muxui-field-error' }, errorMessage);
 }
 
 // Keep the calendar geometry Mux UI-owned instead of importing a newer glyph.
@@ -650,8 +651,9 @@ interface FieldChildrenParts {
   input?: ReactNode;
 }
 
+// The scope adds an error that appears after the field mounted to the aria-describedby React Aria gives the input.
 function fieldChildren({ label, description, errorMessage, children, input }: FieldChildrenParts) {
-  return React.createElement(React.Fragment, null,
+  return lateErrorScope(AriaInputContext,
     fieldLabel(label),
     input,
     children,

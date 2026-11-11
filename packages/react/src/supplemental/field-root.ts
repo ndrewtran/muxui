@@ -1,10 +1,12 @@
 import React from 'react';
 import type { Context, Dispatch, ForwardedRef, ReactElement, ReactNode, SetStateAction } from 'react';
+import { InputContext as AriaInputContext, TextAreaContext as AriaTextAreaContext } from 'react-aria-components';
 import { AriaTextField } from '../substrate.ts';
 import type { TextFieldProps as AriaTextFieldProps, TextFieldRenderProps as AriaTextFieldRenderProps } from 'react-aria-components';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { h, cx } from './part-utils.ts';
 import { mappedFieldProps } from './field-utils.ts';
+import { lateErrorScope } from '../field-error.ts';
 
 /** What Input and TextArea's description and error parts tell the field's input to describe itself by. */
 export interface InputAssociation {
@@ -52,6 +54,11 @@ export function renderFieldRoot(
     errorId,
     size: resolvedSize,
   }), [descriptionId, errorId, resolvedSize]);
-  const renderChildren = (renderProps: AriaTextFieldRenderProps & { defaultChildren: ReactNode | undefined }): ReactNode => h(InputAssociationContext.Provider, { value: { ...association, invalid: Boolean(invalid || renderProps?.isInvalid) } }, typeof children === 'function' ? children(renderProps) : children as ReactNode);
+  const renderChildren = (renderProps: AriaTextFieldRenderProps & { defaultChildren: ReactNode | undefined }): ReactNode => {
+    const content = typeof children === 'function' ? children(renderProps) : children as ReactNode;
+    // The scope links a late TextArea.Error through the textarea's context; Input.Error links through the association.
+    return h(InputAssociationContext.Provider, { value: { ...association, invalid: Boolean(invalid || renderProps?.isInvalid) } },
+      componentName === 'TextArea' ? lateErrorScope(AriaTextAreaContext, content) : lateErrorScope(AriaInputContext, content));
+  };
   return h(AriaTextField, { ...(mappedFieldProps({ disabled, invalid, required, readOnly, ...props }) as AriaTextFieldProps), ref, ...{ 'data-muxui-size': resolvedSize }, className: cx(rootClass, resolvedSize !== 'md' && `${rootClass}--${resolvedSize}`, className), children: renderChildren });
 }

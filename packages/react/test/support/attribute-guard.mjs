@@ -94,10 +94,10 @@ export const reviewedRacImports = Object.freeze([
   'Autocomplete', 'Breadcrumbs', 'ButtonContext', 'CalendarGrid', 'CalendarGridBody', 'CalendarGridHeader', 'CalendarHeaderCell',
   'CalendarHeading', 'CalendarStateContext', 'Collection', 'ColorAreaContext', 'ColorFieldStateContext', 'ColorPicker',
   'ColorPickerStateContext', 'ColorSliderStateContext', 'ColorSwatch', 'DEFAULT_SLOT', 'Dialog', 'DialogContext', 'DialogTrigger',
-  'DisclosurePanel', 'FieldError', 'FieldInputContext', 'FileTrigger', 'Focusable', 'Form', 'GridLayout', 'Header', 'Heading',
+  'DisclosurePanel', 'FieldError', 'FieldErrorContext', 'FieldInputContext', 'FileTrigger', 'Focusable', 'Form', 'GridLayout', 'Header', 'Heading',
   'I18nProvider', 'InputContext', 'Label', 'ListBoxSection', 'ListLayout', 'MenuSection', 'MenuTrigger', 'OverlayTriggerStateContext',
   'PopoverContext', 'Pressable', 'PreviewTrigger', 'ProgressBar', 'RadioGroupStateContext', 'RangeCalendarStateContext',
-  'RootMenuTriggerStateContext', 'RouterProvider', 'Separator', 'Size', 'SubmenuTrigger', 'TabPanels', 'TagGroup', 'Text', 'TextContext',
+  'RootMenuTriggerStateContext', 'RouterProvider', 'Separator', 'Size', 'SubmenuTrigger', 'TabPanels', 'TagGroup', 'Text', 'TextAreaContext', 'TextContext',
   'TokenFieldValue', 'TooltipContext', 'TooltipTrigger', 'TreeItemContent', 'UNSTABLE_ToastContent', 'UNSTABLE_ToastQueue',
   'Virtualizer', 'VisuallyHidden', 'parseColor', 'useFilter', 'useLocale', 'useSlottedContext',
 ]);
