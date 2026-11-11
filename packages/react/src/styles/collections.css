@@ -1472,6 +1472,36 @@
   box-shadow: var(--muxui-semantic-elevation-indicator);
 }
 
+/* Until the motion code measures it (in server markup, before hydration, with scripts off), the underline is drawn
+   where the measured one lands, so it takes over without a jump: under the label's width on the list's bottom border,
+   or beside the label on the vertical list's end border. The offset is the tab's own block padding. */
+.muxui-tabs__motion[data-muxui-tabs-variant='underline']:not([data-muxui-tabs-ready]) .muxui-tabs__tab[data-muxui-state-selected] .muxui-tabs__tab-label {
+  position: relative;
+}
+
+.muxui-tabs__motion[data-muxui-tabs-variant='underline']:not([data-muxui-tabs-ready]) .muxui-tabs__tab[data-muxui-state-selected] .muxui-tabs__tab-label::after,
+.muxui-tabs__motion[data-muxui-tabs-variant='underline'][data-muxui-state-orientation='vertical']:not([data-muxui-tabs-ready]) .muxui-tabs__tab[data-muxui-state-selected]::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: calc(-2px - max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1lh) / 2)));
+  block-size: 2px;
+  border-radius: var(--muxui-semantic-shape-radius-xs);
+  background-color: var(--muxui-semantic-selection-track);
+  pointer-events: none;
+}
+
+.muxui-tabs__motion[data-muxui-tabs-variant='underline'][data-muxui-state-orientation='vertical']:not([data-muxui-tabs-ready]) .muxui-tabs__tab[data-muxui-state-selected] .muxui-tabs__tab-label::after {
+  content: none;
+}
+
+.muxui-tabs__motion[data-muxui-tabs-variant='underline'][data-muxui-state-orientation='vertical']:not([data-muxui-tabs-ready]) .muxui-tabs__tab[data-muxui-state-selected]::after {
+  inset-inline: auto -2px;
+  inset-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1lh) / 2));
+  inline-size: 2px;
+  block-size: auto;
+}
+
 .muxui-tabs__motion-foreground {
   position: absolute;
   inset: 0;
