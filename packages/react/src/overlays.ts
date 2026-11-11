@@ -256,6 +256,21 @@ export interface DropZoneProps extends DropZoneOwnProps {
   'aria-labelledby'?: string;
 }
 
+type DropButtonProps = { id?: string; 'aria-labelledby'?: string };
+
+// RAC labels its hidden drop button by a label slot (and, with aria-labelledby, the button itself). Mux renders no such
+// slot, so that id dangles in server markup and becomes an empty aria-labelledby once mounted. The button keeps only
+// the references the DropZone was given, and the button itself when they combine with its aria-label.
+function withOwnLabels(children: ReactNode, ariaLabelledby: string | undefined): ReactNode[] {
+  if (!Array.isArray(children) || !React.isValidElement<{ children?: ReactNode }>(children[0])) return [children];
+  const [hidden, ...rest] = children;
+  const button = hidden.props.children;
+  if (!React.isValidElement<DropButtonProps>(button)) return children;
+  const given = new Set(ariaLabelledby?.trim().split(/\s+/u) ?? []);
+  const kept = (button.props['aria-labelledby'] ?? '').split(/\s+/u).filter((id) => given.has(id) || (given.size > 0 && id === button.props.id));
+  return [React.cloneElement(hidden, undefined, React.cloneElement(button, { 'aria-labelledby': kept.length > 0 ? kept.join(' ') : undefined })), ...rest];
+}
+
 /**
  * MuxUI owns the public callback shape while RAC owns drop, clipboard, hover, and focus semantics.
  */
@@ -280,12 +295,13 @@ export const DropZone: ForwardRefExoticComponent<DropZoneProps & RefAttributes<H
     if (event.target !== dropButton || dropButton.tagName !== 'BUTTON' || disabledRef.current) return;
     onActivate?.({ type: 'activate', x: event.clientX ?? 0, y: event.clientY ?? 0 });
   }, [onActivate]);
+  const ariaLabelledby = props['aria-labelledby'];
   // RAC sets data-muxui-state-disabled on the root but does not forward aria-disabled, so the render function adds it.
   return React.createElement(AriaDropZone, {
     ...props,
     ref,
     isDisabled: disabled,
-    render: (domProps) => React.createElement('div', { ...domProps, 'aria-disabled': disabled ? disabled : undefined }),
+    render: (domProps) => React.createElement('div', { ...domProps, 'aria-disabled': disabled ? disabled : undefined }, ...withOwnLabels(domProps.children, ariaLabelledby)),
     onDrop: handleDrop,
     onClickCapture: handleActivate,
     className: classNames('muxui-drop-zone', className),

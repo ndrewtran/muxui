@@ -227,3 +227,54 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     await close();
   }
 });
+
+/** The selected tab's mark: the measured indicator once the motion is ready, else the CSS stand-in; runs in the page. */
+function readSelectedMark(selector) {
+  const root = document.querySelector(selector);
+  const motion = root.querySelector('.muxui-tabs__motion');
+  const tab = root.querySelector('[role="tab"][aria-selected="true"]');
+  const paint = (style, box) => ({ box: Object.fromEntries(Object.entries(box).map(([key, value]) => [key, Math.round(value * 10) / 10])), color: style.backgroundColor, radius: style.borderTopLeftRadius });
+  // Each place the stand-in can be drawn, and whether it is drawn there.
+  const standIns = [tab.querySelector('.muxui-tabs__tab-label'), tab].map((host) => ({ host, style: getComputedStyle(host, '::after') }))
+    .filter(({ style }) => style.content !== 'none' && style.content !== 'normal');
+  if (motion.hasAttribute('data-muxui-tabs-ready')) {
+    const indicator = root.querySelector('.muxui-tabs__motion-underline');
+    const { left, top, width, height } = indicator.getBoundingClientRect();
+    return { ready: true, standIns: standIns.length, opacity: getComputedStyle(indicator).opacity, ...paint(getComputedStyle(indicator), { left, top, width, height }) };
+  }
+  if (standIns.length !== 1) return { ready: false, standIns: standIns.length };
+  const [{ host, style }] = standIns;
+  const base = host.getBoundingClientRect();
+  return { ready: false, standIns: 1, opacity: style.opacity, ...paint(style, { left: base.left + parseFloat(style.left), top: base.top + parseFloat(style.top), width: parseFloat(style.width), height: parseFloat(style.height) }) };
+}
+
+test('an underline Tabs marks its selected tab in server markup, where the measured indicator then lands', { timeout: 90_000 }, async () => {
+  const { url, close } = await startServer({ entries: ['src/collections.mjs'], pages: { '/tabs-motion.html': documentHtml } });
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const open = async (hydrate) => {
+      const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+      // Without its entry module the page stays the server markup, as a reader meets it before hydration or with scripts off.
+      if (!hydrate) await page.route('**/tabs-motion-browser-entry.mjs', (route) => route.abort());
+      await page.goto(`${url}/tabs-motion.html`, { waitUntil: 'load' });
+      if (hydrate) await page.waitForFunction(() => document.querySelector('#primary-tabs .muxui-tabs__motion')?.hasAttribute('data-muxui-tabs-ready'));
+      await awaitFontsAndFrames(page);
+      return page;
+    };
+    const server = await open(false);
+    const hydrated = await open(true);
+    for (const selector of ['#primary-tabs', '#vertical-tabs']) {
+      const before = await server.evaluate(readSelectedMark, selector);
+      const after = await hydrated.evaluate(readSelectedMark, selector);
+      assert.equal(before.ready, false, `${selector} has no motion before hydration`);
+      assert.equal(before.standIns, 1, `${selector} draws one selected mark before hydration`);
+      assert.equal(after.standIns, 0, `${selector} drops the stand-in once the indicator is ready`);
+      assert.deepEqual([before.opacity, after.opacity], ['1', '1'], `${selector} shows both marks`);
+      assert.deepEqual({ box: before.box, color: before.color, radius: before.radius }, { box: after.box, color: after.color, radius: after.radius }, `${selector} indicator lands exactly on the server mark`);
+    }
+  } finally {
+    await browser?.close();
+    await close();
+  }
+});
