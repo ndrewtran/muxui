@@ -11,7 +11,7 @@ import type {
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
-import { Breadcrumbs as AriaBreadcrumbs, DisclosurePanel as AriaDisclosurePanel, Label as AriaLabel, ProgressBar as AriaProgressBar, Separator as AriaSeparator } from 'react-aria-components';
+import { Breadcrumbs as AriaBreadcrumbs, DisclosurePanel as AriaDisclosurePanel, Label as AriaLabel, ProgressBar as AriaProgressBar, Separator as AriaSeparator, useLocale } from 'react-aria-components';
 import { AriaBreadcrumb, AriaCheckbox, AriaDisclosure, AriaDisclosureGroup, AriaGroup, AriaLink, AriaToggleButton, AriaButton } from './substrate.ts';
 import type { CheckboxProps as AriaCheckboxProps, LinkProps as AriaLinkProps, PressEvent, ToggleButtonProps as AriaToggleButtonProps } from 'react-aria-components';
 import type { ButtonPointerType } from './button.ts';
@@ -493,10 +493,11 @@ export const Meter: ForwardRefExoticComponent<MeterProps & RefAttributes<HTMLDiv
   const externalLabel = props['aria-label'];
   const externalLabelledby = props['aria-labelledby'];
   const labelId = React.useId();
+  const { locale } = useLocale();
   const boundedValue = Math.min(maxValue, Math.max(minValue, value));
   const percentage = maxValue === minValue ? 0 : ((boundedValue - minValue) / (maxValue - minValue)) * 100;
   // A conditional, not ??: the percent format is the omitted formatOptions' behaviour, not a default the block states.
-  const formatter = new Intl.NumberFormat(undefined, formatOptions == null ? { style: 'percent' } : formatOptions);
+  const formatter = new Intl.NumberFormat(locale, formatOptions == null ? { style: 'percent' } : formatOptions);
   const valueText = formatter.format(!formatOptions || formatOptions.style === 'percent' ? percentage / 100 : boundedValue);
   return React.createElement('div', {
     ...props,

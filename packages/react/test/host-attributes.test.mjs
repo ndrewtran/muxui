@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import React, { act } from 'react';
+import { I18nProvider } from 'react-aria-components';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { Button } from '../src/button.ts';
-import { Disclosure, DisclosureGroup, Link } from '../src/components.ts';
+import { Disclosure, DisclosureGroup, Link, Meter } from '../src/components.ts';
 import { createDom } from './support/dom.mjs';
 
 // The native and ARIA attributes Link, Button and Disclosure accept in their types reach the element they render, in
@@ -127,12 +128,20 @@ test('Disclosure puts its id on its root, alone and in a group, and the group st
   }
 });
 
+test('Meter formats its value text in the provider locale', () => {
+  const output = (locale, props) => serverElement(renderToString(h(I18nProvider, { locale }, h(Meter, { label: 'Storage', ...props }))), '[role="meter"]')['aria-valuetext'];
+  assert.equal(output('de-DE', { value: 1234.5, maxValue: 10_000, formatOptions: { style: 'decimal' } }), new Intl.NumberFormat('de-DE').format(1234.5));
+  assert.equal(output('de-DE', { value: 12.5 }), new Intl.NumberFormat('de-DE', { style: 'percent' }).format(0.125));
+  assert.equal(output('en-US', { value: 12.5 }), new Intl.NumberFormat('en-US', { style: 'percent' }).format(0.125));
+});
+
 test('server markup with the passed-through attributes hydrates without a mismatch', async () => {
   const element = h('div', null,
     h(Link, { href: '/notes.txt', ...linkAttributes, onClick: () => {} }, 'Notes'),
     h(Link, { title: 'Unavailable' }, 'Nowhere'),
     h(Button, { title: 'Saves the draft' }, 'Save'),
-    h(Disclosure, { id: 'details', title: 'Details', 'aria-describedby': 'hint' }, 'Body'));
+    h(Disclosure, { id: 'details', title: 'Details', 'aria-describedby': 'hint' }, 'Body'),
+    h(I18nProvider, { locale: 'de-DE' }, h(Meter, { label: 'Storage', value: 12.5 })));
   const markup = renderToString(element);
   const env = createDom();
   const errors = [];
