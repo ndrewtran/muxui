@@ -81,6 +81,18 @@ export function usePendingSubmitProps(pending: boolean | undefined, type: Button
   };
 }
 
+/**
+ * Lays the caller's host attributes under the DOM props a React Aria component renders. React Aria's DOM filter keeps
+ * ids, data-* attributes, its own handlers and a few named attributes, so a title, a tabIndex or most aria-* attributes
+ * the component accepts in its types would never reach the element. Whatever React Aria renders still wins, with one
+ * exception: the caller's tabIndex replaces React Aria's default one. autoFocus stays React Aria's, which focuses the
+ * element itself.
+ */
+export function withHostAttributes<DomProps extends object>(caller: object, domProps: DomProps): DomProps {
+  const { autoFocus: _autoFocus, tabIndex, ...attributes } = caller as { autoFocus?: unknown; tabIndex?: number };
+  return { ...attributes, ...domProps, ...(tabIndex === undefined ? {} : { tabIndex }) };
+}
+
 // Untyped callers can pass anything; Object.hasOwn alone would coerce ['primary'] or a String object to a key.
 function assertButtonOption(name: string, value: unknown, allowed: Readonly<Record<string, true>>) {
   if (typeof value !== 'string' || !Object.hasOwn(allowed, value)) {
@@ -158,7 +170,7 @@ export const Button: ForwardRefExoticComponent<ButtonProps & RefAttributes<HTMLB
     type,
     className: ['muxui-button', className].filter(Boolean).join(' '),
     render: (domProps) => React.createElement('button', {
-      ...domProps,
+      ...withHostAttributes(props, domProps),
       ...(labelPendingContent && !callerNamesButton
         ? { 'aria-labelledby': pendingContentLabelId }
         : {}),

@@ -1,5 +1,6 @@
 import React from 'react';
 import type {
+  AnchorHTMLAttributes,
   ButtonHTMLAttributes,
   ForwardRefExoticComponent,
   HTMLAttributes,
@@ -14,6 +15,7 @@ import { Breadcrumbs as AriaBreadcrumbs, DisclosurePanel as AriaDisclosurePanel,
 import { AriaBreadcrumb, AriaCheckbox, AriaDisclosure, AriaDisclosureGroup, AriaGroup, AriaLink, AriaToggleButton, AriaButton } from './substrate.ts';
 import type { CheckboxProps as AriaCheckboxProps, LinkProps as AriaLinkProps, PressEvent, ToggleButtonProps as AriaToggleButtonProps } from 'react-aria-components';
 import type { ButtonPointerType } from './button.ts';
+import { withHostAttributes } from './button.ts';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
@@ -301,6 +303,8 @@ export const Disclosure: ForwardRefExoticComponent<DisclosureProps & RefAttribut
       ...props,
       ref,
       className: classNames('muxui-disclosure', className),
+      // React Aria takes the id as the Disclosure's key in a group and leaves it off the element, so the root gets it here.
+      render: (domProps) => React.createElement('div', withHostAttributes({ ...props, id }, domProps)),
       id,
       isExpanded: expanded,
       defaultExpanded,
@@ -398,9 +402,11 @@ export interface LinkOwnProps {
   onActivate?: (event: LinkActivationEvent) => void;
 }
 
-export interface LinkProps extends LinkOwnProps, Omit<HTMLAttributes<HTMLElement>, keyof LinkOwnProps | 'children' | 'className' | 'onClick'> {
+export interface LinkProps extends LinkOwnProps, Omit<HTMLAttributes<HTMLElement>, keyof LinkOwnProps | 'children' | 'className'>, Pick<AnchorHTMLAttributes<HTMLAnchorElement>, 'hrefLang' | 'ping' | 'referrerPolicy' | 'type'> {
   children?: ReactNode;
   className?: string;
+  /** The native download attribute: true downloads the destination, a string also names the saved file. React types it any. */
+  download?: boolean | string;
 }
 
 /** A link to another location. */
@@ -413,12 +419,14 @@ export const Link: ForwardRefExoticComponent<LinkProps & RefAttributes<HTMLEleme
   rel,
   className,
   onActivate,
+  onClick,
   ...props
 }, ref) {
   // Like Button, an undefined disabled inherits a disabled GridList item; an explicit false still
   // wins. A Link without an href is always disabled, and an empty href is not forwarded because
   // React warns about it. The RAC Link always gets an explicit isDisabled.
   const inheritedDisabled = React.useContext(GridListItemDisabledContext);
+  const isDisabled = !href || (disabled == null ? inheritedDisabled : disabled);
   return React.createElement(AriaLink, {
     // React Aria passes the native attributes it does not own through to the <a>; its focus and
     // keyboard handler types name Element where React's name HTMLElement.
@@ -427,12 +435,24 @@ export const Link: ForwardRefExoticComponent<LinkProps & RefAttributes<HTMLEleme
     ref: ref as React.Ref<HTMLAnchorElement>,
     // Conditionals, not || and ??: extraction reads a fallback on an owned prop as an executed default.
     href: href ? href : undefined,
-    isDisabled: !href || (disabled == null ? inheritedDisabled : disabled),
+    isDisabled,
     target,
     rel,
     className: classNames('muxui-link', className),
     ...{ 'aria-current': current ? 'page' : undefined },
     onPress: (event: PressEvent) => onActivate?.(activationEvent(event, event.target as HTMLAnchorElement)),
+    // The element React Aria would render: an anchor while the Link can be followed, otherwise a span.
+    render: (domProps) => React.createElement(isDisabled ? 'span' : 'a', {
+      ...withHostAttributes(props, domProps),
+      // onClick goes on the element, not to React Aria: React Aria would also call it for a keyboard press, after the
+      // browser has already followed the link, with a copy of the event whose preventDefault does nothing. Here it runs
+      // once per native click (pointer, Enter, element.click()) before React Aria's press handling, and its
+      // preventDefault keeps the Link from navigating. onActivate still reports the activation.
+      onClick: (event: React.MouseEvent<HTMLAnchorElement>) => {
+        if (!isDisabled) onClick?.(event);
+        domProps.onClick?.(event);
+      },
+    }),
   }, children);
 });
 
