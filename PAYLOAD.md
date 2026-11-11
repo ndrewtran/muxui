@@ -1,7 +1,8 @@
 # Payload note for the peblish release candidate
 
-Candidate `@muxui/react@0.1.0-rc.6` (a local build of this branch, not published) against the published `0.1.0-rc.5`. Sizes are
-kB of 1000 bytes.
+Measured on candidate `@muxui/react@0.1.0-rc.6` (a local build of this branch, not published) against the published `0.1.0-rc.5`. Sizes are
+kB of 1000 bytes. This branch now builds `0.1.0-rc.7`, which adds main up to #477 and three fix branches, and was not re-measured: only the
+font slices are as measured here; its JavaScript and stylesheet also carry what main and the fixes added.
 
 ## How it was measured
 
