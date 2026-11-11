@@ -3,11 +3,13 @@ import {
   Breadcrumbs,
   Button,
   Calendar,
-  Card,
   Checkbox,
   ColorArea,
+  ColorModeToggle,
   ColorSlider,
+  Dialog,
   Disclosure,
+  FileTrigger,
   GridList,
   Link,
   Meter,
@@ -17,6 +19,8 @@ import {
   RadioGroup,
   SearchField,
   Select,
+  SelectNative,
+  Slider,
   Separator,
   Switch,
   Table,
@@ -29,7 +33,7 @@ import {
 } from '@muxui/react';
 import '@muxui/react/styles.css';
 import {
-  BACKGROUNDS,
+  CONTRAST_METHODS,
   DEFAULT_SETTINGS,
   MONO_PRESETS,
   NAMED_STEPS,
@@ -37,7 +41,6 @@ import {
   RADIUS_SETTINGS,
   RADIUS_TOKENS,
   STANDARD_PRESETS,
-  TYPOGRAPHY_METRIC_GROUPS,
   TYPOGRAPHY_ROLES,
   TYPOGRAPHY_TOKEN_DEFAULTS,
   createScaleDocument,
@@ -138,22 +141,30 @@ function colorStringToHex(value) {
   return null;
 }
 
-function HeaderBackgrounds({ value, modes, onChange }) {
-  return <div className="background-selector" aria-label="Preview background">
+function HeaderColorMode({ value, modes, onChange }) {
+  return <ColorModeToggle aria-label="Preview dark mode" mode={value} storageKey="muxui-scale:color-mode:v1" disabled={!modes.includes(value === 'light' ? 'dark' : 'light')} onModeChange={(mode) => { onChange(mode); writePreference('background', mode); }} />;
+}
 
-    <div className="background-options">
-      {BACKGROUNDS.map(([id, label]) => <button
-        key={id}
-        type="button"
-        className={`background-option background-${id}${value === id ? ' is-selected' : ''}`}
-        aria-label={`${label} background`}
-        aria-pressed={value === id}
-        disabled={!modes.includes(id === 'light' ? 'light' : 'dark')}
-        title={label}
-        onClick={() => { onChange(id); writePreference('background', id); }}
-      />)}
-    </div>
-  </div>;
+function ScaleIcon({ name }) {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {name === 'colours' ? <><circle cx="9" cy="9" r="5" /><circle cx="15" cy="9" r="5" /><circle cx="12" cy="15" r="5" /></> : name === 'typography' ? <><path d="M4 5h16M12 5v15M8 20h8" /></> : <path d="M5 20V9a5 5 0 0 1 5-5h10M5 20h15V4" />}
+  </svg>;
+}
+
+function PresetMenu({ family, settings, chromeAttributes, onSelect }) {
+  const presets = family === 'standard' ? STANDARD_PRESETS : MONO_PRESETS;
+  const current = presets.find(([id]) => settings.family === family && settings.presetId === id);
+  const label = family === 'standard' ? 'Standard themes' : 'Monochrome themes';
+  return <Menu.Root>
+    <Menu.Trigger className={`preset-trigger preset-${family}`} aria-label={label}>{current?.[1] ?? (family === 'standard' ? 'Standard themes' : 'Monochrome')}<span aria-hidden="true">⌄</span></Menu.Trigger>
+    <Menu.Popup className="scale-chrome scale-preset-popup" {...chromeAttributes}>
+      <Menu.List aria-label={label}>
+        {presets.map(([id, name, namedColor, neutralColor]) => <Menu.Item key={id} id={id} textValue={name} onAction={() => onSelect(family, id)}>
+          <span className="preset-swatches" aria-hidden="true"><i style={{ background: namedColor }} /><i style={{ background: neutralColor ?? namedColor }} /></span>{name}
+        </Menu.Item>)}
+      </Menu.List>
+    </Menu.Popup>
+  </Menu.Root>;
 }
 
 function ModePreferences({ values, modes, onChange }) {
@@ -164,10 +175,10 @@ function ModePreferences({ values, modes, onChange }) {
       ['density', 'Density'],
     ].map(([axis, label]) => <label key={axis}>
       <span>{label}</span>
-      <select value={values[axis] ?? 'auto'} onChange={(event) => onChange(axis, event.target.value)} aria-label={`${label} preference`}>
+      <SelectNative size="sm" value={values[axis] ?? 'auto'} onChange={(event) => onChange(axis, event.target.value)} aria-label={`${label} preference`}>
         <option value="auto">Auto</option>
         {(modes[axis] ?? []).map((value) => <option key={value} value={value}>{value}</option>)}
-      </select>
+      </SelectNative>
     </label>)}
   </div>;
 }
@@ -192,11 +203,12 @@ function previewModesFor(settings, embedded) {
   return { modes, unsupported };
 }
 
-function ThemeCard({ name, namedColor, neutralColor, selected, onClick }) {
-  return <Card.Button className="theme-card" variant="outlined" padding="sm" selected={selected} onActivate={onClick} aria-pressed={selected}>
-    <span className="theme-swatches" aria-hidden="true"><span style={{ backgroundColor: namedColor }} /><span style={{ backgroundColor: neutralColor }} /></span>
-    <span className="theme-name">{name}</span>
-  </Card.Button>;
+function themeModeAttributes(compiled) {
+  return Object.fromEntries(Object.entries(compiled.modes).map(([axis, value]) => [`data-muxui-${axis === 'colorScheme' ? 'color-scheme' : axis}`, value]));
+}
+
+function isEditorNavigation(target) {
+  return target instanceof Element && Boolean(target.closest('.scale-rail'));
 }
 
 function HexColorInput({ label, value, onChange }) {
@@ -211,7 +223,7 @@ function HexColorInput({ label, value, onChange }) {
     <span className="field-label">{label}</span>
     <span className="base-color-value">
       <span aria-hidden="true">#</span>
-      <input aria-label={`${label} hex`} type="text" value={draft.replace(/^#/u, '')} maxLength={6} spellCheck="false" onChange={(event) => setDraft(`#${event.target.value.replace(/^#/u, '')}`)} onBlur={commit} onKeyDown={(event) => { if (event.key === 'Enter') commit(); }} />
+      <input aria-label={`${label} hex`} type="text" value={draft.replace(/^#/u, '')} maxLength={6} spellCheck="false" onChange={(event) => setDraft(`#${event.target.value.replace(/^#/u, '')}`)} onBlur={(event) => { if (!isEditorNavigation(event.relatedTarget)) commit(); }} onKeyDown={(event) => { if (event.key === 'Enter') commit(); }} />
     </span>
   </label>;
 }
@@ -230,24 +242,46 @@ function MainColorSelector({ label, value, onChange }) {
   </div>;
 }
 
-function PaletteRow({ title, compiled, kind, steps, onCopy }) {
-  const palette = previewSwatches(compiled, kind, steps);
+// A shade with no computable score (translucent) has no badge.
+function scoreText(label, badge) {
+  return badge ? `${label} · ${badge}` : label;
+}
+
+function PaletteRow({ title, compiled, kind, steps, contrastPivot, contrastAlgorithm, onCopy }) {
+  const [selectedStep, setSelectedStep] = React.useState(60);
+  const palette = previewSwatches(compiled, kind, steps, { pivot: contrastPivot, algorithm: contrastAlgorithm });
+  const selected = palette.find(({ step }) => step === selectedStep) ?? palette.find(({ step }) => step === 60) ?? palette[0];
   return <div className="palette-group">
-    <div className="palette-heading"><span>{title}</span><span>{steps.length} steps</span></div>
-    <div className="palette-row" role="list" aria-label={`${title} colour scale`}>
-      {palette.map(({ step, value, background, foreground, ratio, badge }) => <button className="palette-swatch" key={step} type="button" title={`Copy ${title} ${step}`} aria-label={`Copy ${title} ${step}, ${value}, ${ratio.toFixed(2)} to 1, ${badge}`} onClick={() => onCopy(value)}><span className="palette-swatch-color" style={{ backgroundColor: background, color: foreground }}><span className="swatch-shade">{step}</span>{step === 60 ? <span className="swatch-base" aria-label="Base shade" /> : null}<span className="swatch-ag">Ag</span><span className="swatch-ratio">{ratio.toFixed(2)}:1</span><span className="swatch-badge">{badge}</span></span><span className="palette-swatch-label">{value}</span></button>)}
+    <div className="palette-row" role="group" aria-label={`${title} colour scale`}>
+      {palette.map(({ step, value, background, foreground, label, badge }, index) => {
+        // Auto reports compiled foreground changes; it has no single configured pivot.
+        const boundary = contrastPivot === 'auto'
+          ? index > 0 && foreground !== palette[index - 1].foreground
+          : step >= contrastPivot && (index === 0 || palette[index - 1].step < contrastPivot);
+        const markerLabel = boundary ? contrastPivot === 'auto' ? 'Automatic foreground boundary' : `Contrast pivot ${contrastPivot}` : '';
+        return <button className="palette-swatch" key={step} type="button" aria-pressed={selected.step === step} title={`Copy ${title} ${step}, ${scoreText(label, badge)}${markerLabel ? `; ${markerLabel}` : ''}`} aria-label={`Copy ${title} ${step}, ${value}, ${[label.replace(/:1$/u, ' to 1'), badge].filter(Boolean).join(', ')}${markerLabel ? `, ${markerLabel}` : ''}`} onClick={() => { setSelectedStep(step); onCopy(value); }}><span className="palette-swatch-color" style={{ backgroundColor: background }} />{boundary ? <svg className="swatch-pivot" viewBox="0 0 12 10" aria-hidden="true"><path d="M1 1H11L6 9Z" /></svg> : null}<span className="swatch-shade">{step}</span></button>;
+      })}
     </div>
+    <dl className="palette-details"><div><dt>{title} {selected.step}</dt><dd>{selected.value}</dd></div></dl>
+    <ul className="contrast-methods" aria-label={`Text on ${title} ${selected.step}`}>
+      {selected.methods.map(({ algorithm, name, text, label, badge }) => <li key={algorithm} data-active={algorithm === contrastAlgorithm ? 'true' : undefined} aria-current={algorithm === contrastAlgorithm ? 'true' : undefined}>
+        <span className="contrast-method-name">{name}</span>
+        <span className="contrast-chip" style={text ? { color: text, backgroundColor: selected.background } : { visibility: 'hidden' }} aria-hidden="true">Aa</span>
+        <span className="contrast-method-text">{text}</span>
+        <span className="contrast-method-score">{scoreText(label, badge)}</span>
+      </li>)}
+    </ul>
   </div>;
 }
 
+function ContrastMethodSelector({ value, onChange }) {
+  return <div className="method-selector"><span>Contrast method</span><ToggleButtonGroup aria-label="Contrast method" selectionMode="single" selectedIds={[value]} disallowEmptySelection onSelectionChange={([next]) => onChange(next)}>{CONTRAST_METHODS.map(([id, name]) => <ToggleButton key={id} id={id} size="sm">{name}</ToggleButton>)}</ToggleButtonGroup></div>;
+}
+
 function PivotSelector({ value, onChange }) {
-  return <div className="pivot-selector">
-    <span className="field-label">Light text from</span>
-    <ToggleButtonGroup aria-label="Contrast pivot" selectionMode="single" selectedIds={[String(value)]} onSelectionChange={([next]) => { if (next) onChange(next === 'auto' ? 'auto' : Number(next)); }}>
-      <ToggleButton id="auto" size="sm">Auto</ToggleButton>
-      {NAMED_STEPS.map((step) => <ToggleButton key={step} id={String(step)} size="sm">{step}</ToggleButton>)}
-    </ToggleButtonGroup>
-  </div>;
+  return <label className="pivot-selector"><span>Contrast pivot</span><SelectNative aria-label="Contrast pivot" size="sm" value={String(value)} onChange={(event) => onChange(event.target.value === 'auto' ? 'auto' : Number(event.target.value))}>
+    <option value="auto">Auto</option>{NAMED_STEPS.map((step) => <option key={step} value={step}>{step}</option>)}
+  </SelectNative></label>;
 }
 
 const TYPOGRAPHY_METRIC_FIELDS = Object.freeze([
@@ -331,7 +365,7 @@ function TypographyMetricInput({ field, value, mixed = false, disabled = false, 
     placeholder={mixed ? 'Mixed' : undefined}
     disabled={disabled}
     onChange={(event) => { setDraft(event.target.value); setDirty(true); }}
-    onBlur={commit}
+    onBlur={(event) => { if (!isEditorNavigation(event.relatedTarget)) commit(); }}
     onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
   />;
 }
@@ -374,10 +408,9 @@ function TypographySpecimens({ settings, previewAvailable = true }) {
   </section>;
 }
 
-function TypographyMatrix({ settings, onOverridesChange, onError, previewAvailable = true }) {
+function TypographyMatrix({ settings, onOverridesChange, onError }) {
   const [selectedIds, setSelectedIds] = React.useState(() => TYPOGRAPHY_ROLES.slice(0, 3).map(({ id }) => id));
   const selectedRoles = TYPOGRAPHY_ROLES.filter(({ id }) => selectedIds.includes(id));
-  const selectedGroupIds = [...new Set(selectedRoles.map(({ metricGroup }) => metricGroup))];
   const sharedTextMetricsSelected = selectedRoles.some(({ id, metricGroup }) => id === 'expressive' || metricGroup === 'text');
 
   const bulkValue = (key) => {
@@ -412,33 +445,19 @@ function TypographyMatrix({ settings, onOverridesChange, onError, previewAvailab
   };
 
   return <section className="typography-editor" aria-labelledby="typography-editor-title">
-    <div className="typography-editor-heading">
-      <div>
-        <span className="section-kicker">Typography</span>
-        <h2 id="typography-editor-title">Role matrix</h2>
-        <p>Select roles, edit shared metrics, and check the result in the live specimens.</p>
-      </div>
-      <div className="typography-editor-meta" aria-label="Typography source summary">
-        <span><strong>{TYPOGRAPHY_ROLES.length}</strong> roles</span>
-        <span><strong>{TYPOGRAPHY_METRIC_GROUPS.length}</strong> metric groups</span>
-        <span><strong>{TYPOGRAPHY_ROLES.reduce((count, role) => count + role.variants.length, 0)}</strong> size variants</span>
-      </div>
-    </div>
+    <h2 id="typography-editor-title">Typography</h2><p className="inspector-description">Shared roles across all components</p>
     <div className="typography-matrix-layout">
       <aside className="typography-selection" aria-label="Typography role selection">
-        <div className="typography-selection-heading"><h3>Selection</h3><button type="button" className="quiet-button" onClick={() => setSelectedIds([])} disabled={!selectedIds.length}>Clear</button></div>
-        <p className="typography-selection-note">Bulk edits write explicit values to the selected metric tokens.</p>
+        <div className="typography-selection-heading"><h3>Roles</h3><span>{selectedIds.length} selected</span><Button variant="ghost" size="sm" onActivate={() => setSelectedIds([])} disabled={!selectedIds.length}>Clear</Button></div>
         <div className="typography-selection-list">
-          {TYPOGRAPHY_ROLES.map((role) => <label className={`typography-selection-row${selectedIds.includes(role.id) ? ' is-selected' : ''}`} key={role.id}>
-            <input type="checkbox" checked={selectedIds.includes(role.id)} aria-label={`Select ${role.id} role`} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, role.id] : current.filter((id) => id !== role.id))} />
+          {TYPOGRAPHY_ROLES.map((role) => <Checkbox className={`typography-selection-row${selectedIds.includes(role.id) ? ' is-selected' : ''}`} key={role.id} checked={selectedIds.includes(role.id)} aria-label={`Select ${role.id} role`} onChange={(checked) => setSelectedIds((current) => checked ? [...current, role.id] : current.filter((id) => id !== role.id))}>
             <span className="typography-selection-name">{role.id}</span>
-            <span className="typography-selection-group">{role.metricGroup}</span>
-          </label>)}
+            </Checkbox>)}
         </div>
       </aside>
       <div className="typography-workspace">
         <div className="typography-bulk-panel">
-          <div className="typography-bulk-heading"><strong>Bulk edit</strong><span>{selectedRoles.length ? `${selectedRoles.length} role${selectedRoles.length === 1 ? '' : 's'} selected · ${selectedGroupIds.length} metric group${selectedGroupIds.length === 1 ? '' : 's'}` : 'Select at least one role'}</span></div>
+          <div className="typography-bulk-heading"><strong>{selectedRoles.length ? `Edit ${selectedRoles.length} roles` : 'Select at least one role'}</strong></div>
           <div className="typography-bulk-controls">
             {TYPOGRAPHY_METRIC_FIELDS.map((field) => {
               const value = bulkValue(field.key);
@@ -449,7 +468,7 @@ function TypographyMatrix({ settings, onOverridesChange, onError, previewAvailab
             })}
           </div>
         </div>
-        <div className="typography-table-scroll">
+        <Disclosure title="Individual role metrics" className="individual-metrics"><div className="typography-table-scroll">
           <div className="typography-matrix-table" role="table" aria-label="Typography role matrix">
             <div className="typography-matrix-row typography-matrix-head" role="row">
               <span role="columnheader">Role</span><span role="columnheader">Size</span>{TYPOGRAPHY_METRIC_FIELDS.map((field) => <span role="columnheader" key={field.key}>{field.label}</span>)}<span role="columnheader">State</span>
@@ -465,7 +484,7 @@ function TypographyMatrix({ settings, onOverridesChange, onError, previewAvailab
                   const tokenId = typographyMetricTokenId(role, field.key);
                   const value = typographyMetricValue(settings, role, field.key);
                   return <span className={`typography-metric-cell${linked ? ' is-linked' : ''}`} role="cell" key={field.key}>
-                    {linked ? <span className="typography-linked-value" aria-label={`${role.id} ${field.label.toLowerCase()} linked to body`}>{formatTypographyValue(tokenId, value)}</span> : <TypographyMetricInput field={field} value={value} ariaLabel={`${role.id} ${field.label.toLowerCase()}`} onCommit={(raw) => commitMetric([role], field.key, raw)} />}
+                    {linked ? <><span className="typography-metric-label">{field.label}</span><span className="typography-linked-value" aria-label={`${role.id} ${field.label.toLowerCase()} linked to body`}>{formatTypographyValue(tokenId, value)}</span></> : <label className="typography-role-metric" htmlFor={`typography-${role.id}-${field.key}`}><span className="typography-metric-label">{field.label}</span><TypographyMetricInput id={`typography-${role.id}-${field.key}`} field={field} value={value} ariaLabel={`${role.id} ${field.label.toLowerCase()}`} onCommit={(raw) => commitMetric([role], field.key, raw)} /></label>}
                   </span>;
                 })}
                 <span className={`typography-state typography-state-${state}`} role="cell">
@@ -476,44 +495,28 @@ function TypographyMatrix({ settings, onOverridesChange, onError, previewAvailab
             })}
           </div>
         </div>
-        <p className="typography-matrix-note"><strong>Linked metrics</strong> Expressive keeps its own family and reads the body/text size, weight, leading, and tracking tokens.</p>
+        </Disclosure><p className="typography-matrix-note"><strong>Linked metrics</strong> Expressive keeps its own family and reads the body/text size, weight, leading, and tracking tokens.</p>
       </div>
     </div>
-    <TypographySpecimens settings={settings} previewAvailable={previewAvailable} />
+
   </section>;
 }
 
-function ComponentPreview({ settings }) {
-  const previewMode = settings.background === 'light' ? 'light' : 'dark';
-  return <section className="component-preview" aria-labelledby="component-preview-title">
-    <div className="output-heading"><h2 id="component-preview-title">Component Preview</h2><span>{previewMode} mode</span></div>
+function ComponentPreview({ compiled }) {
+  return <section className="component-preview" aria-label="Component Preview">
     <div className="preview-canvas">
-      <div className="preview-group preview-actions">
-        <Button variant="primary" size="sm" onActivate={() => {}}>Primary</Button>
-        <Button variant="neutral" size="sm" onActivate={() => {}}>Neutral</Button>
-        <Button variant="ghost" size="sm" onActivate={() => {}}>Ghost</Button>
-        <ToggleButton size="sm" defaultSelected>Toggle</ToggleButton>
-        <ToggleButtonGroup aria-label="Preview alignment" defaultSelectedIds={['center']} selectionMode="single">
-          <ToggleButton id="left" size="sm">Left</ToggleButton>
-          <ToggleButton id="center" size="sm">Center</ToggleButton>
-          <ToggleButton id="right" size="sm">Right</ToggleButton>
-        </ToggleButtonGroup>
-      </div>
-      <div className="preview-form">
-        <TextField aria-label="Preview theme name" placeholder="Theme name" />
-        <div className="preview-choice-row"><Checkbox defaultChecked>Include dark mode</Checkbox><Switch label="Accent" defaultSelected /></div>
-        <ProgressBar label="Contrast target" value={68} />
-        <Meter label="Storage" value={40} />
-      </div>
-      <div className="preview-grid">
-        <div className="preview-block"><span className="preview-label">Search and number fields</span><SearchField aria-label="Preview search" placeholder="Search…" /><NumberField aria-label="Preview quantity" defaultValue={5} minValue={0} maxValue={100} /></div>
-        <div className="preview-block"><span className="preview-label">Radio and select</span><RadioGroup aria-label="Preview choices" defaultValue="b" options={[{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }, { value: 'c', label: 'C' }]} /><Select aria-label="Preview fruit" placeholder="Choose…" items={['Apple', 'Banana', 'Cherry']} /></div>
-        <div className="preview-block"><span className="preview-label">Tabs and disclosure</span><Tabs aria-label="Preview sections" defaultValue="overview" items={[{ id: 'overview', label: 'Overview' }, { id: 'details', label: 'Details' }, { id: 'settings', label: 'Settings' }]} /><Disclosure title="Show details" defaultExpanded>Additional details revealed on expand.</Disclosure></div>
-        <div className="preview-block"><span className="preview-label">Tags and grid list</span><TagGroup aria-label="Preview tags" items={['Design', 'Development', 'Docs']} /><GridList aria-label="Preview items" items={['Design tokens', 'Components', 'Documentation']} defaultSelectedIds={['Components']} selectionMode="multiple" /></div>
-        <div className="preview-block"><span className="preview-label">Calendar</span><Calendar aria-label="Preview calendar" /></div>
-        <div className="preview-block"><span className="preview-label">Menu and tooltip</span><Menu aria-label="Preview menu" items={['Edit', 'Duplicate', 'Delete']} /><Tooltip content="Tooltip content" trigger={<Button variant="neutral" size="sm">Hover me</Button>} /></div>
+      <div className="preview-top-row"><div className="preview-group preview-actions">
+        <Button variant="primary" size="sm" onActivate={() => {}}>Primary</Button><Button variant="neutral" size="sm" onActivate={() => {}}>Neutral</Button><Button variant="ghost" size="sm" onActivate={() => {}}>Ghost</Button><ToggleButton size="sm" defaultSelected>Toggle</ToggleButton>
+        <ToggleButtonGroup aria-label="Preview alignment" defaultSelectedIds={['center']} selectionMode="single"><ToggleButton id="left" size="sm">Left</ToggleButton><ToggleButton id="center" size="sm">Center</ToggleButton><ToggleButton id="right" size="sm">Right</ToggleButton></ToggleButtonGroup>
+      </div><div className="preview-choice-row"><Checkbox defaultChecked>Include dark mode</Checkbox><Switch label="Accent" defaultSelected /></div></div>
+      <div className="preview-grid preview-primary-grid">
+        <div className="preview-block"><TextField aria-label="Preview theme name" placeholder="Theme name" /><SearchField aria-label="Preview search" placeholder="Search…" /><NumberField aria-label="Preview quantity" defaultValue={5} minValue={0} maxValue={100} /></div>
+        <div className="preview-block"><RadioGroup aria-label="Preview choices" defaultValue="b" options={[{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }, { value: 'c', label: 'C' }]} /><Select.Root aria-label="Preview fruit" placeholder="Choose…"><Select.Trigger><Select.Value /></Select.Trigger><Select.Popup className="muxui-scale-preview" {...themeModeAttributes(compiled)}><Select.List items={['Apple', 'Banana', 'Cherry']} /></Select.Popup></Select.Root></div>
+        <div className="preview-block"><Tabs aria-label="Preview sections" defaultValue="overview" items={[{ id: 'overview', label: 'Overview' }, { id: 'details', label: 'Details' }, { id: 'settings', label: 'Settings' }]} /><Disclosure title="Show details" defaultExpanded>Additional details revealed on expand.</Disclosure><TagGroup aria-label="Preview tags" items={['Design', 'Development', 'Docs']} /></div>
+        <div className="preview-block"><Calendar aria-label="Preview calendar" /></div>
       </div>
       <Table aria-label="Preview people" columns={[{ id: 'name', label: 'Name', isRowHeader: true }, { id: 'role', label: 'Role' }, { id: 'status', label: 'Status' }]} rows={[{ id: 'r1', values: { name: 'Alice', role: 'Engineer', status: 'Active' } }, { id: 'r2', values: { name: 'Bob', role: 'Designer', status: 'Active' } }]} />
+      <div className="preview-grid preview-extra-grid"><div className="preview-block"><span className="preview-label">Progress and meter</span><ProgressBar label="Contrast target" value={68} /><Meter label="Storage" value={40} /></div><div className="preview-block"><span className="preview-label">Grid list</span><GridList aria-label="Preview items" items={['Design tokens', 'Components', 'Documentation']} defaultSelectedIds={['Components']} selectionMode="multiple" /></div><div className="preview-block"><span className="preview-label">Menu and tooltip</span><Menu aria-label="Preview menu" items={['Edit', 'Duplicate', 'Delete']} /><Tooltip className="muxui-scale-preview" {...themeModeAttributes(compiled)} content="Tooltip content" trigger={<Button variant="neutral" size="sm">Hover me</Button>} /></div></div>
       <div className="preview-footer"><Breadcrumbs aria-label="Preview breadcrumbs" items={[{ id: 'home', label: 'Home', href: '#' }, { id: 'library', label: 'Library', href: '#' }, { id: 'current', label: 'Current' }]} /><Separator /><Link href="#" onActivate={() => {}}>Learn more</Link></div>
     </div>
   </section>;
@@ -527,8 +530,12 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
   const [status, setStatus] = React.useState({ tone: initial.error ? 'error' : 'idle', text: initial.error ?? (embedded ? 'Draft changes stay here until you apply them.' : 'Draft changes stay in this browser until you save them.') });
   const [appliedTheme, setAppliedTheme] = React.useState(() => embedded ? getAppliedThemeStatus().theme : null);
   const [appliedError, setAppliedError] = React.useState(() => embedded ? getAppliedThemeStatus().error : null);
-  const [importInputKey, setImportInputKey] = React.useState(0);
   const [mode, setMode] = React.useState('named');
+  // Editor navigation never enters the persisted theme document. Hidden panels keep pending edits.
+  const [section, setSection] = React.useState('colours');
+  const [previewTab, setPreviewTab] = React.useState('components');
+  const [mobileView, setMobileView] = React.useState('editor');
+  const [exportOpen, setExportOpen] = React.useState(false);
   const [siteColorMode, setSiteColorMode] = React.useState(() => embedded && document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
   const [modePreferences, setModePreferences] = React.useState(() => embedded ? getModePreferences() : {});
   const [rootModeSignature, setRootModeSignature] = React.useState(readRootModeSignature);
@@ -629,14 +636,13 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
       const link = window.document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `${slug}.json`; link.click(); URL.revokeObjectURL(link.href); setStatus({ tone: 'success', text: 'Exported a validated theme source.' });
     } catch (error) { setStatus({ tone: 'error', text: error.message }); }
   };
-  const importJson = async (event) => {
-    const file = event.target.files?.[0]; if (!file) return;
+  const importJson = async (files) => {
+    const file = files[0]; if (!file) return;
     try {
       if (file.size > 256 * 1024) throw new Error('Theme files must be no larger than 256 KiB.');
       const document = JSON.parse(await file.text()); validateScaleDocument(document); const nextSettings = settingsForScope(settingsFromDocument(document), embedded); setSettings(nextSettings);
       setSlug(document.id.slice('muxui:theme:'.length)); setRevision(null); setStatus({ tone: 'success', text: embedded ? 'Imported and validated theme source. Apply to site when ready.' : 'Imported and validated theme source. Save to persist it.' });
     } catch (error) { setStatus({ tone: 'error', text: `${embedded ? 'Import unavailable for this site' : 'Import rejected'}: ${error.message}` }); }
-    finally { setImportInputKey((value) => value + 1); }
   };
 
   // Only the embedded Apply flow reads the draft document and its signature.
@@ -717,31 +723,66 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
   const reset = () => { setSettings(settingsForScope({ ...DEFAULT_SETTINGS }, embedded)); setStatus({ tone: 'idle', text: 'Draft reset.' }); };
 
   const previewUnavailable = embedded && previewState.unsupported.length > 0;
-  return <div className={`scale-app muxui-scale-preview${embedded ? ' is-embedded' : ''}`} data-preview-background={settings.background} {...(previewUnavailable ? {} : { 'data-muxui-color-scheme': compiled.modes.colorScheme, 'data-muxui-contrast': compiled.modes.contrast, 'data-muxui-motion': compiled.modes.motion, 'data-muxui-density': compiled.modes.density, 'data-muxui-direction': compiled.modes.direction })}>
+  const chromeMotion = embedded ? document.documentElement.dataset.muxuiMotion ?? compiled.modes.motion : compiled.modes.motion;
+  const chrome = React.useMemo(() => previewTheme({ ...DEFAULT_SETTINGS, family: 'mono', presetId: 'custom', namedColor: '#000000', neutralColor: '#000000', whiteAnchor: true, colorMode: settings.colorMode }, { selector: '.scale-chrome', modes: { colorScheme: settings.colorMode, motion: chromeMotion } }), [settings.colorMode, chromeMotion]);
+  const chromeAttributes = {
+    'data-muxui-color-scheme': settings.colorMode,
+    'data-muxui-contrast': compiled.modes.contrast,
+    'data-muxui-motion': chromeMotion,
+    'data-muxui-density': compiled.modes.density,
+    'data-muxui-direction': compiled.modes.direction,
+  };
+  const presetName = [...STANDARD_PRESETS, ...MONO_PRESETS].find(([id]) => id === settings.presetId)?.[1] ?? 'Custom';
+  const selectSection = (next) => { setSection(next); setPreviewTab(next === 'typography' ? 'typography' : 'components'); };
+  const AppRoot = embedded ? 'div' : 'main';
+  return <AppRoot aria-labelledby={embedded ? undefined : 'theme-playground-title'} className={`scale-app muxui-scale-preview${embedded ? ' is-embedded' : ''}`} data-mobile-view={mobileView} data-preview-background={settings.background} {...(previewUnavailable ? {} : { 'data-muxui-color-scheme': compiled.modes.colorScheme, 'data-muxui-contrast': compiled.modes.contrast, 'data-muxui-motion': compiled.modes.motion, 'data-muxui-density': compiled.modes.density, 'data-muxui-direction': compiled.modes.direction })}>
     {previewUnavailable ? null : <style data-muxui-scale-theme>{compiled.css}</style>}
-    <header className="scale-header"><div className="header-copy">{embedded ? <h2 id="theme-playground-title">Theme Playground</h2> : <h1 id="theme-playground-title">Theme Playground</h1>}<p>Generate named and neutral colour scales from a base colour. Preview how they look across components, copy the CSS tokens, and fine-tune contrast pivot points.</p></div><div className="header-tools">{embedded ? <><span className="site-mode">Site follows {siteColorMode}</span><ModePreferences values={modePreferences} modes={settings.themeModes} onChange={updateModePreference} /></> : <HeaderBackgrounds modes={settings.themeModes.colorScheme} value={settings.background} onChange={(background) => update({ background, colorMode: background === 'light' ? 'light' : 'dark' })} />}<div className="header-actions"><span className={`status status-${status.tone}`} role="status">{status.text}</span>{embedded ? <><span className={`draft-state${hasUnappliedChanges ? ' draft-state-unapplied' : ''}`}>{hasUnappliedChanges ? 'Draft only' : 'Applied'}</span><button className="apply-action" type="button" onClick={apply} disabled={!hasUnappliedChanges}>Apply to site</button><button className="text-action" type="button" onClick={resetApplied}>Reset applied</button></> : <><button className="text-action" type="button" onClick={() => copy(window.location.href)}>Share URL</button><button className="text-action" type="button" onClick={load}>Load</button><button className="text-action" type="button" onClick={save}>Save</button></>}</div></div></header>
-    <div className="main-wrapper">
-      <section className="theme-section" aria-labelledby="standard-themes-title"><div className="theme-section-heading"><h2 id="standard-themes-title">Standard themes</h2><span>Distinct brand + neutral scales from paired anchors</span></div><div className="theme-grid">{STANDARD_PRESETS.map(([id, name, namedColor, neutralColor]) => <ThemeCard key={id} name={name} namedColor={namedColor} neutralColor={neutralColor} selected={settings.family === 'standard' && settings.presetId === id} onClick={() => applyPreset('standard', id)} />)}</div></section>
-      <section className="theme-section" aria-labelledby="mono-themes-title"><div className="theme-section-heading"><h2 id="mono-themes-title">Monochrome themes</h2><span>Shared brand + neutral scales from one colour anchor</span></div><div className="theme-grid">{MONO_PRESETS.map(([id, name, color]) => <ThemeCard key={id} name={name} namedColor={color} neutralColor={color} selected={settings.family === 'mono' && settings.presetId === id} onClick={() => applyPreset('mono', id)} />)}</div></section>
-      <section className="toolbar-row" aria-label="Scale controls">
-        <ToggleButtonGroup aria-label="Palette" selectionMode="single" selectedIds={[mode]} onSelectionChange={([next]) => { if (next) setMode(next); }}>
-          <ToggleButton id="named" size="sm">Named</ToggleButton>
-          <ToggleButton id="neutral" size="sm">Neutral</ToggleButton>
-        </ToggleButtonGroup>
-        <Button variant="neutral" size="sm" onActivate={() => randomize(false)}>Randomize</Button>
-        <Button variant="neutral" size="sm" onActivate={() => randomize(true)}>Randomize both</Button>
-        <Button variant="ghost" size="sm" onActivate={reset}>{embedded ? 'Reset draft' : 'Reset to defaults'}</Button>
-        {mode === 'neutral' ? <>
-          <ToggleButton size="sm" selected={settings.whiteAnchor} onChange={(whiteAnchor) => update({ whiteAnchor })}>White at neutral-5</ToggleButton>
-          <ToggleButton size="sm" selected={settings.family === 'mono'} onChange={(monochrome) => update({ family: monochrome ? 'mono' : 'standard', presetId: 'custom', ...(monochrome ? { neutralColor: settings.namedColor } : {}) })}>Monochrome theme</ToggleButton>
-        </> : null}
-      </section>
-      <TypographyMatrix settings={settings} previewAvailable={!previewUnavailable} onOverridesChange={updateTypographyOverrides} onError={(message) => setStatus({ tone: 'error', text: message })} />
-      {embedded && appliedError ? <p className="status status-error embedded-theme-error" role="alert">{appliedError}</p> : null}
-      <section className="scale-editor" aria-label="Theme scale editor"><div className="editor-controls"><MainColorSelector label="BASE colour (–60)" value={activeColor} onChange={updateColor} />{mode === 'named' && settings.family !== 'mono' ? <HexColorInput label="Neutral anchor" value={settings.neutralColor} onChange={(neutralColor) => update({ neutralColor, presetId: 'custom' })} /> : null}</div><PivotSelector value={settings.contrastPivot} onChange={(contrastPivot) => update({ contrastPivot })} /><PaletteRow title={mode === 'named' ? 'Named' : 'Neutral'} compiled={compiled} kind={mode} steps={mode === 'named' ? NAMED_STEPS : NEUTRAL_STEPS} onCopy={copy} />
-        <div className="radius-section"><div className="radius-header"><span>Border radius</span><input aria-label="Border radius factor" type="range" min={RADIUS_SETTINGS.minimum} max={RADIUS_SETTINGS.maximum} step={RADIUS_SETTINGS.step} value={settings.curvature} onChange={(event) => update({ curvature: Number(event.target.value) })} /><output>{settings.curvature.toFixed(2)}x{settings.curvature === RADIUS_SETTINGS.default ? ' (default)' : ''}</output><button type="button" className="quiet-button" onClick={() => update({ curvature: RADIUS_SETTINGS.default })}>Reset</button></div><div className="radius-row">{RADIUS_TOKENS.map(([name, multiplier]) => <div className="radius-item" key={name}><span className="radius-box" style={{ borderRadius: radiusValue(multiplier, settings.curvature) }} /><b>{name}</b><small>{radiusValue(multiplier, settings.curvature)}</small></div>)}</div></div>
-        <div className="output-row"><section className="css-column"><div className="output-heading"><h2 id="css-tokens-title">CSS tokens</h2><button type="button" className="quiet-button" onClick={() => copy(css)}>Copy CSS</button></div><pre className="css-output" aria-label="Generated CSS"><code>{css}</code></pre><div className="source-controls"><label>Theme slug<input value={slug} onChange={(event) => setSlug(event.target.value)} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><button type="button" className="secondary-button" onClick={exportJson}>Export JSON</button><label className="secondary-button file-action">Import JSON<input key={importInputKey} type="file" accept="application/json" onChange={importJson} /></label></div></section>{previewUnavailable ? <section className="component-preview preview-unavailable" aria-label="Component Preview"><div className="output-heading"><h2 id="component-preview-title">Component Preview unavailable</h2></div><p>This draft does not provide the site’s requested {previewState.unsupported.join(', ')} mode. Apply will be rejected until the draft supports it.</p></section> : <ComponentPreview settings={settings} />}</div>
+    <style data-scale-chrome-theme>{chrome.css}</style>
+    <header className="scale-header scale-chrome" {...chromeAttributes}>
+      {embedded ? <h2 id="theme-playground-title">Scale</h2> : <h1 id="theme-playground-title">Scale</h1>}
+      <div className="preset-controls"><PresetMenu family="standard" settings={settings} chromeAttributes={chromeAttributes} onSelect={applyPreset} /><PresetMenu family="mono" settings={settings} chromeAttributes={chromeAttributes} onSelect={applyPreset} /></div>
+      <div className="header-actions">{embedded ? <><span className={`draft-state${hasUnappliedChanges ? ' draft-state-unapplied' : ''}`}>{hasUnappliedChanges ? 'Draft only' : 'Applied'}</span><Button size="sm" onActivate={apply} disabled={!hasUnappliedChanges}>Apply to site</Button><Button variant="ghost" size="sm" onActivate={resetApplied}>Reset applied</Button></> : <HeaderColorMode modes={settings.themeModes.colorScheme} value={settings.colorMode} onChange={(colorMode) => update({ background: colorMode, colorMode })} />}
+        <Dialog title="Export theme" open={exportOpen} onOpenChange={setExportOpen} className="scale-chrome scale-export-dialog" panelClassName="scale-export-panel" {...chromeAttributes} trigger={<Button variant="neutral" size="sm">Export <span aria-hidden="true">⌄</span></Button>}>
+          <div className="export-layout"><div className="output-heading"><h3 id="css-tokens-title">CSS tokens</h3><Button variant="neutral" size="sm" onActivate={() => copy(css)}>Copy CSS</Button></div><p className="export-note">CSS uses the current preview mode. JSON preserves every represented mode.</p><pre className="css-output" aria-label="Generated CSS"><code>{css}</code></pre>
+            <TextField label="Theme slug" value={slug} onChange={setSlug} inputProps={{ pattern: '[a-z0-9]+(?:-[a-z0-9]+)*' }} />
+            <div className="source-controls"><Button variant="neutral" size="sm" onActivate={exportJson}>Export JSON</Button><FileTrigger acceptedFileTypes={['application/json']} onSelect={importJson}><Button variant="neutral" size="sm">Import JSON</Button></FileTrigger>{!embedded ? <><Button variant="neutral" size="sm" onActivate={save} disabled={!saveTheme}>Save</Button><Button variant="neutral" size="sm" onActivate={load} disabled={!loadTheme}>Load</Button></> : null}<Button variant="neutral" size="sm" onActivate={() => copy(window.location.href)}>Share URL</Button><Button variant="ghost" size="sm" onActivate={reset}>{embedded ? 'Reset draft' : 'Reset to defaults'}</Button></div>
+            {embedded ? <><span className="site-mode">Site follows {siteColorMode}</span><ModePreferences values={modePreferences} modes={settings.themeModes} onChange={updateModePreference} /></> : <SelectNative label="Preview canvas" size="sm" value={settings.background} onChange={(event) => update({ background: event.target.value, colorMode: event.target.value === 'light' ? 'light' : 'dark' })}>{['light', 'dark', 'accent'].map((value) => <option key={value} value={value} disabled={!settings.themeModes.colorScheme.includes(value === 'light' ? 'light' : 'dark')}>{value}</option>)}</SelectNative>}
+            <p className={`status status-${status.tone}`} role="status">{status.text}</p>
+          </div>
+        </Dialog>
+      </div>
+    </header>
+    <div className="mobile-switch scale-chrome" {...chromeAttributes}><ToggleButtonGroup aria-label="Workbench view" selectedIds={[mobileView]} disallowEmptySelection onSelectionChange={([next]) => setMobileView(next)}><ToggleButton id="editor" size="sm">Editor</ToggleButton><ToggleButton id="preview" size="sm">Preview</ToggleButton></ToggleButtonGroup></div>
+    <div className="workbench">
+      <nav className="scale-rail scale-chrome" {...chromeAttributes} aria-label="Theme editors" style={{ '--scale-rail-index': ['colours', 'typography', 'radius'].indexOf(section) }}>
+        <div className="rail-options">
+          {['colours', 'typography', 'radius'].map((id) => <Button key={id} className="rail-button" variant="ghost" size="sm" aria-pressed={section === id} aria-label={`${id === 'colours' ? 'Colours' : id === 'typography' ? 'Typography' : 'Radius'} editor`} onActivate={() => selectSection(id)}><span className="rail-button-content"><ScaleIcon name={id} /><span>{id === 'colours' ? 'Colours' : id === 'typography' ? 'Type' : 'Radius'}</span></span></Button>)}
+        </div>
+      </nav>
+      <aside className="scale-inspector scale-chrome" {...chromeAttributes} aria-label="Theme inspector">
+        <section className="inspector-panel colours-panel" hidden={section !== 'colours'} aria-labelledby="colours-editor-title">
+          <h2 id="colours-editor-title">Colours</h2>
+          <ToggleButtonGroup className="palette-selector" aria-label="Palette" selectionMode="single" selectedIds={[mode]} disallowEmptySelection onSelectionChange={([next]) => setMode(next)}><ToggleButton id="named" size="sm">Named <small>11</small></ToggleButton><ToggleButton id="neutral" size="sm">Neutral <small>27</small></ToggleButton></ToggleButtonGroup>
+          <MainColorSelector label="BASE colour (–60)" value={activeColor} onChange={updateColor} />
+          <div className="neutral-controls">{mode === 'named' && settings.family !== 'mono' ? <HexColorInput label="Neutral anchor" value={settings.neutralColor} onChange={(neutralColor) => update({ neutralColor, presetId: 'custom' })} /> : null}
+            {mode === 'neutral' ? <><Checkbox checked={settings.whiteAnchor} onChange={(whiteAnchor) => update({ whiteAnchor })}>White at neutral-5</Checkbox><Checkbox checked={settings.family === 'mono'} onChange={(monochrome) => update({ family: monochrome ? 'mono' : 'standard', presetId: 'custom', ...(monochrome ? { neutralColor: settings.namedColor } : {}) })}>Monochrome theme</Checkbox></> : null}
+          </div>
+          <PivotSelector value={settings.contrastPivot} onChange={(contrastPivot) => update({ contrastPivot })} />
+          <ContrastMethodSelector value={settings.contrastAlgorithm} onChange={(contrastAlgorithm) => update({ contrastAlgorithm })} />
+          <PaletteRow title={mode === 'named' ? 'Named' : 'Neutral'} compiled={compiled} kind={mode} steps={mode === 'named' ? NAMED_STEPS : NEUTRAL_STEPS} contrastPivot={settings.contrastPivot} contrastAlgorithm={settings.contrastAlgorithm} onCopy={copy} />
+          <div className="inspector-actions"><Button variant="neutral" size="sm" onActivate={() => randomize(false)}>Randomize</Button><Button variant="ghost" size="sm" onActivate={() => randomize(true)}>Randomize both</Button></div>
+        </section>
+        <div className="inspector-panel" hidden={section !== 'typography'}><TypographyMatrix settings={settings} onOverridesChange={updateTypographyOverrides} onError={(message) => setStatus({ tone: 'error', text: message })} /></div>
+        <section className="inspector-panel radius-section" hidden={section !== 'radius'} aria-labelledby="radius-editor-title"><h2 id="radius-editor-title">Radius</h2><p className="inspector-description">Shared curvature across components</p><Slider label="Border radius factor" min={RADIUS_SETTINGS.minimum} max={RADIUS_SETTINGS.maximum} step={RADIUS_SETTINGS.step} value={settings.curvature} onChange={(curvature) => update({ curvature })} /><div className="radius-header"><output>{settings.curvature.toFixed(2)}x{settings.curvature === RADIUS_SETTINGS.default ? ' (default)' : ''}</output><Button variant="ghost" size="sm" onActivate={() => update({ curvature: RADIUS_SETTINGS.default })}>Reset</Button></div><div className="radius-row">{RADIUS_TOKENS.map(([name, multiplier]) => <div className="radius-item" key={name}><span className="radius-box" style={{ borderRadius: radiusValue(multiplier, settings.curvature) }} /><b>{name}</b><small>{radiusValue(multiplier, settings.curvature)}</small></div>)}</div></section>
+        <div className="inspector-status">{embedded && appliedError ? <p className="status status-error" role="alert">{appliedError}</p> : null}<p className={`status status-${status.tone}`} role={exportOpen ? undefined : 'status'}>{status.text}</p></div>
+      </aside>
+      <section className="preview-workspace" aria-labelledby="component-preview-title">
+        <div className="preview-toolbar scale-chrome" {...chromeAttributes}><h2 id="component-preview-title">Preview</h2><span className="preview-caption">{presetName} / {settings.colorMode === 'light' ? 'Light' : 'Dark'}</span></div>
+        <Tabs className="preview-tabs scale-chrome" {...chromeAttributes} aria-label="Preview content" variant="underline" value={previewTab} onChange={setPreviewTab} items={[
+          { id: 'components', label: 'Components', panel: previewUnavailable ? <section className="preview-unavailable"><h3>Component Preview unavailable</h3><p>This draft does not provide the site’s requested {previewState.unsupported.join(', ')} mode. Apply will be rejected until the draft supports it.</p></section> : <div className="preview-surface muxui-scale-preview" data-preview-panel="components" {...themeModeAttributes(compiled)}><ComponentPreview compiled={compiled} /></div> },
+          { id: 'typography', label: 'Typography', panel: previewUnavailable ? <TypographySpecimens settings={settings} previewAvailable={false} /> : <div className="preview-surface muxui-scale-preview" data-preview-panel="typography" {...themeModeAttributes(compiled)}><TypographySpecimens settings={settings} /></div> },
+        ]} />
       </section>
     </div>
-  </div>;
+  </AppRoot>;
 }

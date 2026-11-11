@@ -114,7 +114,15 @@ test('E-BL1-01: a variant imports Markdown from its subpath only when the patter
   const { bundle } = await compileFixtureCatalog({ minimal: true, edit: (files) => { importMarkdown(files); declareMarkdown(files); } });
   assert.ok(bundle.artifacts.find(({ id }) => id === cssId).sourceText.startsWith("import { Markdown } from '@muxui/react/markdown';"), 'the variant keeps its exact source');
   const subpath = await compileFailure({ edit: (files) => files.set(cssPath, "import { TextEditor } from '@muxui/react/text-editor';\n") });
-  assert.match(subpath.issues[0].message, /subpath import of '@muxui\/react\/text-editor', outside the one allowed subpath @muxui\/react\/markdown/u);
+  assert.match(subpath.issues[0].message, /subpath import of '@muxui\/react\/text-editor', outside the allowed subpaths @muxui\/react\/markdown and @muxui\/react\/themes/u);
+});
+
+test('E-BL1-01: a variant imports the theme presets from the themes subpath with no participant to declare', async () => {
+  const source = "import { MUXUI_THEME_PRESETS } from '@muxui/react/themes';\n";
+  const { bundle } = await compileFixtureCatalog({ minimal: true, edit: (files) => files.set(cssPath, `${source}${files.get(cssPath)}`) });
+  assert.ok(bundle.artifacts.find(({ id }) => id === cssId).sourceText.startsWith(source), 'the variant keeps its exact source');
+  const error = await compileFailure({ edit: (files) => files.set(cssPath, "import * as themes from '@muxui/react/themes';\n") });
+  assert.match(error.issues[0].message, /namespace import of '@muxui\/react\/themes'/u);
 });
 
 test('E-BL1-01 negative: a non-canonical @muxui/react reference fails the compile closed', async () => {
@@ -276,6 +284,10 @@ test('E-BL1-01: the import scanner accepts only the canonical static named impor
     ['the markdown subpath with an alias, a type, and a constant', "import { Markdown as M, type MarkdownProps, MARKDOWN_SOURCE_LIMIT } from '@muxui/react/markdown';", ['Markdown', 'MARKDOWN_SOURCE_LIMIT']],
     ['the markdown subpath beside @muxui/react', "import { GridList } from '@muxui/react';\nimport {\n  Markdown,\n} from '@muxui/react/markdown';", ['GridList', 'Markdown']],
     ['import type from the markdown subpath is ignored', "import type { Markdown } from '@muxui/react/markdown';", []],
+    ['the themes subpath as a named import', "import { MUXUI_THEME_PRESETS } from '@muxui/react/themes';", ['MUXUI_THEME_PRESETS']],
+    ['the themes subpath with an alias and a type', "import { MUXUI_THEME_PRESETS as PRESETS, type MuxUIThemeId } from '@muxui/react/themes';", ['MUXUI_THEME_PRESETS']],
+    ['the themes subpath beside @muxui/react', "import { ThemePicker } from '@muxui/react';\nimport {\n  MUXUI_DEFAULT_THEME_PRESET_ID,\n} from '@muxui/react/themes';", ['ThemePicker', 'MUXUI_DEFAULT_THEME_PRESET_ID']],
+    ['import type from the themes subpath is ignored', "import type { MuxUIThemeId } from '@muxui/react/themes';", []],
     ['an unpaired JSX apostrophe is text', `${header}export const x = <p>Don't</p>;`, ['GridList']],
     // Unmapped export names stay unchecked: they belong to no component record.
     ['unmapped exports', "import { GridListItem, useDragAndDrop, useToast, ToastProvider } from '@muxui/react';", ['GridListItem', 'useDragAndDrop', 'useToast', 'ToastProvider']],
@@ -321,6 +333,13 @@ test('E-BL1-01 negative: every other @muxui/react reference fails closed with a 
     ['markdown subpath string specifier', "import { 'Markdown' as M } from '@muxui/react/markdown';", /unsupported import specifier from '@muxui\/react\/markdown'/u],
     ['markdown subpath dynamic import', "const m = import('@muxui/react/markdown');", /dynamic import/u],
     ['markdown subpath export from', "export { Markdown } from '@muxui/react/markdown';", /export \.\.\. from/u],
+    ['themes subpath default import', "import themes from '@muxui/react/themes';", /default import of '@muxui\/react\/themes'/u],
+    ['themes subpath default specifier', "import { default as themes } from '@muxui/react/themes';", /default import from '@muxui\/react\/themes'/u],
+    ['themes subpath namespace import', "import * as themes from '@muxui/react/themes';", /namespace import of '@muxui\/react\/themes'/u],
+    ['themes subpath side-effect import', "import '@muxui/react/themes';", /side-effect import of '@muxui\/react\/themes'/u],
+    ['themes subpath string specifier', "import { 'MUXUI_THEME_PRESETS' as P } from '@muxui/react/themes';", /unsupported import specifier from '@muxui\/react\/themes'/u],
+    ['themes subpath dynamic import', "const t = import('@muxui/react/themes');", /dynamic import/u],
+    ['themes subpath export from', "export { MUXUI_THEME_PRESETS } from '@muxui/react/themes';", /export \.\.\. from/u],
     ['dynamic import', "const m = import('@muxui/react');", /dynamic import/u],
     ['dynamic import of another module', "const m = import('./other');", /dynamic import/u],
     ['export named from', "export { GridList } from '@muxui/react';", /export \.\.\. from/u],
@@ -366,6 +385,13 @@ test('E-BL1-01: a Markdown import from its subpath needs the markdown participan
   assert.equal(issuesFor("import { Markdown } from '@muxui/react';").length, 1);
 });
 
+test('E-BL1-01: the themes subpath exports no component, so it adds no participant, and a component name from it is still held to one', () => {
+  // The preset data and types belong to no component record, so a variant that imports only them declares nothing.
+  assert.deepEqual(issuesFor("import { MUXUI_THEME_PRESETS, MUXUI_THEME_PRESETS_BY_ID, MUXUI_DEFAULT_THEME_PRESET_ID } from '@muxui/react/themes';"), []);
+  const [undeclared] = issuesFor("import { Button } from '@muxui/react/themes';");
+  assert.match(undeclared.message, /^variant\.tsx:1 imports Button, which pattern\.participants does not declare for /u);
+});
+
 test('E-BL1-01 negative: every import must sit in the leading header', () => {
   for (const [label, text, line] of [
     ['after a statement', `const a = 1;\n${header}`, 2],
@@ -385,7 +411,7 @@ test('E-BL1-01 negative: every import must sit in the leading header', () => {
   assert.deepEqual(issuesFor(`/** doc */\n\n// note\n${header}\n/* more */\nimport React from 'react';\n\nconst a = 1;`), []);
 });
 
-test('E-BL1-01 negative: the header admits only react, react/jsx-runtime, @muxui/react, and @muxui/react/markdown', () => {
+test('E-BL1-01 negative: the header admits only react, react/jsx-runtime, @muxui/react, @muxui/react/markdown, and @muxui/react/themes', () => {
   for (const [label, text, message] of [
     ['relative specifier', "import { a } from './a';", "an import of './a'"],
     ['parent specifier', "import { a } from '../a';", "an import of '../a'"],
@@ -400,6 +426,11 @@ test('E-BL1-01 negative: the header admits only react, react/jsx-runtime, @muxui
     ['the generated markdown file', "import { x } from '@muxui/react/generated/markdown.js';", "a subpath import of '@muxui/react/generated/markdown.js'"],
     ['the markdown subpath with an extension', "import { x } from '@muxui/react/markdown.js';", "a subpath import of '@muxui/react/markdown.js'"],
     ['a lookalike of the markdown subpath', "import { x } from '@muxui/react-markdown';", "an import of '@muxui/react-markdown'"],
+    ['a path under the themes subpath', "import { x } from '@muxui/react/themes/internal';", "a subpath import of '@muxui/react/themes/internal'"],
+    ['the generated themes file', "import { x } from '@muxui/react/generated/themes.mjs';", "a subpath import of '@muxui/react/generated/themes.mjs'"],
+    ['the themes stylesheet', "import { x } from '@muxui/react/themes.css';", "a subpath import of '@muxui/react/themes.css'"],
+    ['the themes subpath with an extension', "import { x } from '@muxui/react/themes.mjs';", "a subpath import of '@muxui/react/themes.mjs'"],
+    ['a lookalike of the themes subpath', "import { x } from '@muxui/react-themes';", "an import of '@muxui/react-themes'"],
   ]) {
     const issues = issuesFor(text);
     assert.equal(issues.length, 1, `${label}: ${JSON.stringify(issues)}`);

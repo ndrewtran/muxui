@@ -34,7 +34,10 @@ window.__submits = [];
 document.addEventListener('submit', (event) => window.__submits.push(event.defaultPrevented));
 // \`?copies=2\` mounts the example twice, to prove its ids stay unique across instances.
 const copies = Number(new URLSearchParams(location.search).get('copies') ?? 1);
-createRoot(document.getElementById('root')).render(React.createElement(React.Fragment, null, Array.from({ length: copies }, (_, index) => React.createElement(Example, { key: index }))));
+const root = createRoot(document.getElementById('root'));
+root.render(React.createElement(React.Fragment, null, Array.from({ length: copies }, (_, index) => React.createElement(Example, { key: index }))));
+// Lets a test unmount the block, to prove what it leaves on the document.
+window.__unmount = () => root.unmount();
 `;
 
 /**
@@ -46,20 +49,25 @@ export function startVariantServer(variant) {
   return startServer({
     root: 'repository',
     aliasReact: true,
-    // The subpath comes first: an alias matches by prefix, so the package name alone would swallow it.
+    // The subpaths come first: an alias matches by prefix, so the package name alone would swallow them.
     alias: {
       '@muxui/react/markdown': resolve(packageRoot, 'generated/markdown.js'),
+      '@muxui/react/themes': resolve(packageRoot, 'generated/themes.mjs'),
       '@muxui/react': resolve(packageRoot, 'generated/index.mjs'),
     },
-    entries: ['packages/react/generated/index.mjs', 'packages/react/generated/markdown.js', variant.source],
+    entries: ['packages/react/generated/index.mjs', 'packages/react/generated/markdown.js', 'packages/react/generated/themes.mjs', variant.source],
     pages: {
-      '/block.html': (url) => pageShell({
-        attributes: `data-muxui-color-scheme="${url.searchParams.get('scheme') === 'dark' ? 'dark' : 'light'}" data-muxui-motion="full"`,
-        head: '<link rel="stylesheet" href="/packages/react/generated/styles.css">',
-        bodyAttributes: 'style="margin: 0; background: var(--muxui-semantic-surface-canvas)"',
-        body: '<button id="before" tabindex="0">Before</button><div id="root"></div><button id="after" tabindex="0">After</button>',
-        entry: '/block-entry.mjs',
-      }),
+      '/block.html': (url) => {
+        // `?theme=<id>` puts a preset on the document root first, as a host page that already has one would.
+        const theme = /^[a-z-]+$/u.test(url.searchParams.get('theme') ?? '') ? ` data-muxui-theme="${url.searchParams.get('theme')}"` : '';
+        return pageShell({
+          attributes: `data-muxui-color-scheme="${url.searchParams.get('scheme') === 'dark' ? 'dark' : 'light'}" data-muxui-motion="full"${theme}`,
+          head: '<link rel="stylesheet" href="/packages/react/generated/styles.css">',
+          bodyAttributes: 'style="margin: 0; background: var(--muxui-semantic-surface-canvas)"',
+          body: '<button id="before" tabindex="0">Before</button><div id="root"></div><button id="after" tabindex="0">After</button>',
+          entry: '/block-entry.mjs',
+        });
+      },
     },
     modules: { '/block-entry.mjs': entry(variant) },
   });
@@ -67,15 +75,16 @@ export function startVariantServer(variant) {
 
 /**
  * Opens a block page in a fresh context. The context collects page and console
- * errors in `errors`; the caller closes the context.
+ * errors in `errors`; the caller closes the context. `hostTheme` is a theme preset
+ * ID the page carries on its root before the block mounts.
  */
-export async function openBlock(browser, url, { width = 1280, height = 900, scheme = 'light', copies = 1 } = {}) {
+export async function openBlock(browser, url, { width = 1280, height = 900, scheme = 'light', copies = 1, hostTheme } = {}) {
   const context = await browser.newContext({ locale: 'en-US', viewport: { width, height } });
   const tab = await context.newPage();
   const errors = [];
   tab.on('pageerror', (error) => errors.push(error.message));
   tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-  await tab.goto(`${url}/block.html?scheme=${scheme}${copies > 1 ? `&copies=${copies}` : ''}`, { waitUntil: 'load' });
+  await tab.goto(`${url}/block.html?scheme=${scheme}${copies > 1 ? `&copies=${copies}` : ''}${hostTheme ? `&theme=${hostTheme}` : ''}`, { waitUntil: 'load' });
   await tab.locator('#root > *').first().waitFor({ timeout: 15_000 });
   await awaitFontsAndFrames(tab);
   return { context, tab, errors };

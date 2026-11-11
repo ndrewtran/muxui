@@ -70,23 +70,8 @@ const NEUTRAL_DARK_END_SHADE = 96;
 const getNeutralShadeProgress = (shade) =>
   ((shade - 60) / 40) * ((NEUTRAL_DARK_END_SHADE - 60) / 40);
 
-/**
- * Generate a tonal palette from a base hex (treated as the -60 shade).
- *
- * @param {string} baseHex  - hex string including '#'
- * @param {'named'|'neutral'} mode
- * @param {object} [options]
- * @param {boolean} [options.whiteAnchor=false] - Neutral only: force shade-5 to pure
- *   white (#ffffff).
- * @param {number[]} [options.shades] - Optional shade list override.
- * @param {number} [options.darkLRatio] - Optional shade-100 lightness ratio override.
- * @param {number} [options.darkCRatio] - Optional shade-100 chroma ratio override.
- * @param {boolean} [options.useTypeB=true] - Named only: use the light-base Type B curve.
- * @param {boolean} [options.useNeutralTintSteps=false] - Use neutral tint lightness
- *   spacing without neutral chroma clamping.
- * @returns {Array<{shade: number, hex: string}>}
- */
-export const generatePalette = (
+// The raw ladder, before tuning. See `generatePalette` for the options.
+const buildLadder = (
   baseHex,
   mode,
   {
@@ -201,9 +186,41 @@ export const generatePalette = (
   });
 };
 
-export const generateMonochromePalette = (baseHex, { whiteAnchor = false } = {}) => {
-  const tonePalette = generatePalette(baseHex, 'neutral', { shades: NEUTRAL_SHADES });
-  const chromaPalette = generatePalette(baseHex, 'named', {
+/**
+ * Generate a tonal palette from a base hex (treated as the -60 shade), tuned so
+ * every shade has endpoint text that passes WCAG 2 and APCA (`tuneScalePalette`).
+ *
+ * @param {string} baseHex  - hex string including '#'
+ * @param {'named'|'neutral'} mode
+ * @param {object} [options]
+ * @param {boolean} [options.whiteAnchor=false] - Neutral only: force shade-5 to pure
+ *   white (#ffffff).
+ * @param {number[]} [options.shades] - Optional shade list override.
+ * @param {number} [options.darkLRatio] - Optional shade-100 lightness ratio override.
+ * @param {number} [options.darkCRatio] - Optional shade-100 chroma ratio override.
+ * @param {boolean} [options.useTypeB=true] - Named only: use the light-base Type B curve.
+ * @param {boolean} [options.useNeutralTintSteps=false] - Use neutral tint lightness
+ *   spacing without neutral chroma clamping.
+ * @param {boolean} [options.tune=true] - false returns the raw ladder.
+ * @returns {Array<{shade: number, hex: string}>}
+ */
+export const generatePalette = (baseHex, mode, { tune = true, ...ladder } = {}) => {
+  const palette = buildLadder(baseHex, mode, ladder);
+  return tune ? tuneScalePalette(palette, mode, { whiteAnchor: mode === 'neutral' && Boolean(ladder.whiteAnchor) }) : palette;
+};
+
+/**
+ * Monochrome palette: neutral tone with the base colour's chroma and hue. One
+ * palette serves both the named and neutral stops, so it is tuned as a neutral.
+ *
+ * @param {string} baseHex
+ * @param {object} [options]
+ * @param {boolean} [options.whiteAnchor=false] - Force shade-5 to pure white.
+ * @param {boolean} [options.tune=true] - false returns the raw ladder.
+ */
+export const generateMonochromePalette = (baseHex, { whiteAnchor = false, tune = true } = {}) => {
+  const tonePalette = buildLadder(baseHex, 'neutral', { shades: NEUTRAL_SHADES });
+  const chromaPalette = buildLadder(baseHex, 'named', {
     shades: NEUTRAL_SHADES,
     darkLRatio: MONOCHROME_DARK_L_RATIO,
     darkCRatio: MONOCHROME_DARK_C_RATIO,
@@ -212,7 +229,7 @@ export const generateMonochromePalette = (baseHex, { whiteAnchor = false } = {})
   });
   const getTone = (shade) => tonePalette.find((p) => p.shade === shade)?.hex;
 
-  return chromaPalette.map(({ shade, hex }) => {
+  const palette = chromaPalette.map(({ shade, hex }) => {
     if (whiteAnchor && shade === 5) {
       return { shade, hex: '#ffffff' };
     }
@@ -230,6 +247,7 @@ export const generateMonochromePalette = (baseHex, { whiteAnchor = false } = {})
 
     return { shade, hex: matchedHex };
   });
+  return tune ? tuneScalePalette(palette, 'neutral', { whiteAnchor }) : palette;
 };
 
 /**
@@ -248,6 +266,145 @@ export const getContrastRatio = (hex1, hex2) => {
   const lighter = Math.max(L1, L2);
   const darker = Math.min(L1, L2);
   return (lighter + 0.05) / (darker + 0.05);
+};
+
+// APCA 0.0.98G-4g (sRGB), written inline so authoring stays dependency-light.
+// Luminance uses a plain 2.4 power per channel, not the WCAG piecewise curve.
+const OPAQUE_HEX = /^#[0-9a-f]{6}$/iu;
+const getApcaLuminance = (hex, name) => {
+  // APCA scores opaque pairs only; an alpha channel would be silently dropped.
+  if (typeof hex !== 'string' || !OPAQUE_HEX.test(hex)) throw new TypeError(`MUXUI_THEME_COLOR_INVALID: ${name}`);
+  const h = hex.replace('#', '');
+  const channel = (offset) => Math.pow(parseInt(h.slice(offset, offset + 2), 16) / 255, 2.4);
+  const y = 0.2126729 * channel(0) + 0.7151522 * channel(2) + 0.072175 * channel(4);
+  // Soft clamp keeps near-black luminance from over-reporting contrast.
+  return y <= 0.022 ? y + Math.pow(0.022 - y, 1.414) : y;
+};
+
+/**
+ * Signed APCA lightness contrast (Lc) of text on a background. Positive means
+ * dark text on a lighter background, negative means light text on a darker one;
+ * use the absolute value to compare against a threshold. Both colours must be
+ * opaque #rrggbb; anything else throws MUXUI_THEME_COLOR_INVALID.
+ */
+export const getApcaContrast = (textHex, backgroundHex) => {
+  const text = getApcaLuminance(textHex, 'textHex');
+  const background = getApcaLuminance(backgroundHex, 'backgroundHex');
+  if (Math.abs(background - text) < 0.0005) return 0;
+  if (background > text) {
+    const s = (Math.pow(background, 0.56) - Math.pow(text, 0.57)) * 1.14;
+    return (s < 0.1 ? 0 : s - 0.027) * 100;
+  }
+  const s = (Math.pow(background, 0.65) - Math.pow(text, 0.62)) * 1.14;
+  return (s > -0.1 ? 0 : s + 0.027) * 100;
+};
+
+// Palette tuning. The raw ladder leaves shades whose best endpoint text misses WCAG 2
+// 4.5:1 or APCA |Lc| 60. Tuning first strengthens the two ends, then moves each failing
+// shade along OKLCH lightness until Auto text passes both methods in every scheme it shows in.
+const TUNED_LIGHT_L = 0.985; // shade 5 lightness
+const TUNED_LIGHT_C_RATIO = 0.6; // share of shade 5's chroma kept
+const TUNED_DARK_L_RATIO = 0.9; // share of shade 100's lightness kept
+const MIN_WCAG_RATIO = 4.5;
+const MIN_APCA_LC = 60;
+const SEARCH_STEP = 0.001;
+const SEARCH_STEPS = 400; // up to 0.4 away
+const NEIGHBOUR_MARGIN = 0.004; // a moved shade stays this far from each neighbour's lightness
+const FIXED_SHADES = [5, 10, 60, 100]; // the endpoint texts (5, 100), the neutral dark text (10) and the base (60)
+
+/** Weight of shade 100 in the dark neutral canvas; the rest is black. */
+export const BLACKEN_WEIGHT = 0.85;
+
+/**
+ * The dark neutral canvas: shade 100 with each RGB channel scaled by
+ * `BLACKEN_WEIGHT`. Dark neutral palettes use it as shade 5 and the tuner uses it
+ * as that scheme's dark text, so both call this one function.
+ */
+export const blackenHex = (hex) =>
+  `#${[1, 3, 5]
+    .map((offset) =>
+      Math.round(Number.parseInt(hex.slice(offset, offset + 2), 16) * BLACKEN_WEIGHT)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
+
+const shadeHex = (palette, shade) => palette.find((entry) => entry.shade === shade)?.hex;
+
+// Auto text on `hex` passes when the better endpoint reaches both thresholds.
+const isReadable = (hex, endpoints) =>
+  Math.max(...endpoints.map((text) => getContrastRatio(hex, text))) >= MIN_WCAG_RATIO &&
+  Math.max(...endpoints.map((text) => Math.abs(getApcaContrast(text, hex)))) >= MIN_APCA_LC;
+
+// The endpoint texts a shade is judged against, one pair per scheme. A named palette's
+// dark scheme is its reverse, so both schemes use (5, 100). A neutral dark scheme swaps in
+// the blackened shade 100 and shade 10.
+const endpointPairs = (palette, kind) => {
+  const light = [shadeHex(palette, 5), shadeHex(palette, 100)];
+  return kind === 'neutral' ? [light, [blackenHex(light[1]), shadeHex(palette, 10)]] : [light];
+};
+
+// The nearest lightness to `hex` (original chroma and hue) that passes, between the neighbours.
+// Gamut clamping and hex rounding shift the emitted lightness, so the bounds and the pass
+// criteria are checked on the emitted hex, not only on the candidate.
+const findReadableHex = (hex, pairs, lowerL, upperL) => {
+  const { l, c, h } = toOklch(hex);
+  for (let step = 1; step <= SEARCH_STEPS; step += 1) {
+    const distance = step * SEARCH_STEP;
+    if (l - distance <= lowerL && l + distance >= upperL) break;
+    for (const candidate of [l - distance, l + distance]) {
+      if (candidate <= lowerL || candidate >= upperL) continue;
+      const next = oklchToHex(candidate, c, h);
+      const emitted = toOklch(next).l;
+      if (emitted <= lowerL || emitted >= upperL) continue;
+      if (pairs.every((pair) => isReadable(next, pair))) return next;
+    }
+  }
+  return hex;
+};
+
+/**
+ * Tune a light-scheme palette so every shade has endpoint text that passes WCAG 2
+ * (4.5:1) and APCA (|Lc| 60) under Auto.
+ *
+ * 1. Shade 5 becomes OKLCH L 0.985 at 0.6x chroma (kept as is when `whiteAnchor`), and
+ *    shade 100 becomes 0.9x its lightness.
+ * 2. Walking light to dark, a shade that fails in any scheme moves to the nearest
+ *    lightness (up to 0.4 away, lighter after darker at equal distance) that passes,
+ *    staying strictly between its neighbours. A shade with no passing position stays.
+ *    Shades 5, 10, 60 and 100 never move.
+ *
+ * @param {Array<{shade: number, hex: string}>} palette - needs shades 5 and 100, and 10 for a neutral
+ * @param {'named'|'neutral'} kind - neutral palettes also serve the dark scheme
+ * @param {{ whiteAnchor?: boolean }} [options]
+ * @returns {Array<{shade: number, hex: string}>}
+ */
+export const tuneScalePalette = (palette, kind, { whiteAnchor = false } = {}) => {
+  if (palette.length === 0) return [];
+  if (![5, 100, ...(kind === 'neutral' ? [10] : [])].every((shade) => shadeHex(palette, shade))) {
+    throw new TypeError('MUXUI_THEME_SCALE_PALETTE_INVALID');
+  }
+  const tuned = palette.map((entry) => {
+    const { shade, hex } = entry;
+    if (shade === 5 && !whiteAnchor) {
+      const { c, h } = toOklch(hex);
+      return { shade, hex: oklchToHex(TUNED_LIGHT_L, c * TUNED_LIGHT_C_RATIO, h) };
+    }
+    if (shade === 100) {
+      const { l, c, h } = toOklch(hex);
+      return { shade, hex: oklchToHex(l * TUNED_DARK_L_RATIO, c, h) };
+    }
+    return { ...entry };
+  });
+  const pairs = endpointPairs(tuned, kind);
+  for (let index = 1; index < tuned.length - 1; index += 1) {
+    const { shade, hex } = tuned[index];
+    if (FIXED_SHADES.includes(shade) || pairs.every((pair) => isReadable(hex, pair))) continue;
+    const upperL = toOklch(tuned[index - 1].hex).l - NEIGHBOUR_MARGIN;
+    const lowerL = toOklch(tuned[index + 1].hex).l + NEIGHBOUR_MARGIN;
+    tuned[index].hex = findReadableHex(hex, pairs, lowerL, upperL);
+  }
+  return tuned;
 };
 
 /**

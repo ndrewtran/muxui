@@ -1,4 +1,4 @@
-// The generated recipe (CSS Stage 2 PR 4a): copyable CSS for each of the 84 families, and the static proof that it is valid. Every
+// The generated recipe (CSS Stage 2 PR 4a): copyable CSS for each of the 86 families, and the static proof that it is valid. Every
 // recipe is checked against facts it was not derived from (the README's own text, the family's Hooks and token rows, a jsdom parse of
 // the Basic example), then two stylesheet mutants show the checks have teeth. That the changes work in a browser is the Chromium
 // test's job (browser/styling-recipes.test.mjs); this file proves what is true for every family without one.
@@ -163,11 +163,11 @@ const basicDocument = (slug) => new JSDOM(observations.find(({ family, source })
 const documentedHooks = (slug) => all.get(slug).hooks.groups.flatMap(({ rows }) => rows).filter(({ kind, hook }) => kind === 'class' && hook !== null).map(({ hook }) => hook);
 
 // ---------------------------------------------------------------------------------------------------------------------------
-// All 84 families.
+// All 86 families.
 // ---------------------------------------------------------------------------------------------------------------------------
 
-test('all 84 recipes are valid: the README\'s layer statement, wrapper-scoped rules, theme roles with a reader, real hooks and observed targets', () => {
-  assert.equal(slugs.length, 84);
+test('all 86 recipes are valid: the README\'s layer statement, wrapper-scoped rules, theme roles with a reader, real hooks and observed targets', () => {
+  assert.equal(slugs.length, 86);
   const failures = slugs.flatMap((slug) => failuresOf(slug));
   assert.deepEqual(failures, []);
   // Each family has a Basic example to take targets from.
@@ -204,15 +204,15 @@ test('the picks: which families get a token step and which of their roles, how m
   });
   // A family with roles and no token step says why, and the reason is the one that holds: Activity's only role is a transition, which is
   // never a step; for seven others no rule that reads a color or size role matches an element the Basic example renders (checked against
-  // the example by jsdom in the notes test below); and for DataDiff, Switch, Tabs and TextField the roles are ones the recipe leaves out.
+  // the example by jsdom in the notes test below); and for DataDiff, Switch, SwitchField, Tabs and TextField the roles are ones the recipe leaves out.
   const reachless = slugs.filter((slug) => all.get(slug).tokens.groups.some(({ id }) => id === 'component') && declarations(slug, 'token').length === 0);
-  assert.deepEqual(reachless, ['activity', 'code-block', 'data-diff', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar', 'switch', 'tabs', 'text-field']);
+  assert.deepEqual(reachless, ['activity', 'code-block', 'data-diff', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar', 'switch', 'switch-field', 'tabs', 'text-field']);
   const tokenNote = (slug) => all.get(slug).recipe.notes.find((note) => note.startsWith('No token step:'));
   const droppedNote = (slug) => all.get(slug).recipe.notes.find((note) => note.startsWith('No token step for '));
   assert.equal(tokenNote('activity'), 'No token step: Activity has no color or size role that a Mux rule reads.');
   const roles = (slug) => all.get(slug).tokens.groups.flatMap(({ id, rows }) => (id === 'component' ? rows : []));
   assert.deepEqual(roles('activity').map(({ type }) => type), ['transition']);
-  const leftOut = ['data-diff', 'switch', 'tabs', 'text-field'];
+  const leftOut = ['data-diff', 'switch', 'switch-field', 'tabs', 'text-field'];
   for (const slug of reachless.filter((candidate) => !['activity', ...leftOut].includes(candidate))) {
     assert.match(tokenNote(slug), /^No token step: no rule that reads [A-Za-z]+'s color or size roles matches an element its Basic example renders \(for example .+\), so a role assigned on a wrapper would change nothing there\.$/u, slug);
     assert.equal(droppedNote(slug), undefined, slug);
@@ -234,11 +234,11 @@ test('the picks: which families get a token step and which of their roles, how m
     'No token step for --muxui-component-switch-selected-thumb (background-color of .muxui-switch[data-muxui-state-selected] .muxui-switch__indicator): it paints a part that holds no text, and the generator cannot tell what that part is drawn on (a track, a fill or the page), so it cannot choose a color that stands apart from it in both schemes.',
   ]);
   // A family that keeps another step still says which role it left out; the rest say nothing of the kind.
-  assert.deepEqual(slugs.filter((slug) => droppedNote(slug) !== undefined), ['data-diff', 'disclosure-group', 'switch', 'tabs', 'tag-group', 'text-field']);
+  assert.deepEqual(slugs.filter((slug) => droppedNote(slug) !== undefined), ['data-diff', 'disclosure-group', 'switch', 'switch-field', 'tabs', 'tag-group', 'text-field']);
   for (const slug of Object.keys(tokens)) assert.equal(tokenNote(slug), undefined, `${slug} has a token step and no such note`);
   assert.deepEqual(slugs.filter((slug) => all.get(slug).recipe.steps.length === 0), [], 'every family has a nonempty recipe');
   const steps = slugs.flatMap((slug) => all.get(slug).recipe.steps);
-  assert.deepEqual(['token', 'part', 'state'].map((kind) => steps.filter((step) => step.kind === kind).length), [10, 84, 54]);
+  assert.deepEqual(['token', 'part', 'state'].map((kind) => steps.filter((step) => step.kind === kind).length), [10, 86, 56]);
   assert.equal(steps.filter((step) => step.scope === 'unavailable').length, 41);
   assert.deepEqual(slugs.filter((slug) => !all.get(slug).recipe.preview), ['dialog', 'preview-trigger', 'toast', 'tooltip']);
 });

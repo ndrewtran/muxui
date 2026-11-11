@@ -60,6 +60,13 @@ export type PartRow = {
   /** The family whose root class shares the element: the control is also a `muxui-button`. Applies to the element Mux renders. */
   readonly composedOf?: string;
   /**
+   * Another class the element also carries and that styles it, beside or in place of a rule on the hook: another family's root
+   * class (`muxui-switch`) or part class (`muxui-switch__indicator`), or a shared field class (`muxui-field-description`). The
+   * styling reference reads that class's rules as the part's own: the states they select are the part's, and the files that
+   * hold them style the family. `composedOf` alone only says the element shares another family's root class and attributes nothing.
+   */
+  readonly styledThrough?: string;
+  /**
    * Why `composedOf` is conditional: the element can be one the caller supplies, and a native element carries the hook but not the
    * `composedOf` root class. Only a Mux component the caller passes (a `Button`) brings its own root class.
    */
@@ -159,6 +166,8 @@ export const partRows: readonly PartRow[] = [
   { family: 'color-field', part: 'input', disposition: 'field', hook: 'muxui-field-input' },
   { family: 'color-field', part: 'description', disposition: 'field', hook: 'muxui-field-description' },
   { family: 'color-field', part: 'error', disposition: 'field', hook: 'muxui-field-error' },
+  { family: 'color-mode-picker', part: 'root', disposition: 'class', hook: 'muxui-color-mode-picker', hookOnly: 'ToggleButtonGroup supplies the whole look and no authored rule selects the picker class, which only names the group.' },
+  { family: 'color-mode-picker', part: 'option', disposition: 'composed', hook: 'muxui-toggle-button', composedOf: 'button' },
   { family: 'color-mode-toggle', part: 'root', disposition: 'class', hook: 'muxui-color-mode-toggle' },
   { family: 'color-picker', part: 'root', disposition: 'class', hook: 'muxui-color-picker' },
   { family: 'color-picker', part: 'field', disposition: 'composed', hook: 'muxui-color-field' },
@@ -451,10 +460,10 @@ export const partRows: readonly PartRow[] = [
   { family: 'switch', part: 'description', disposition: 'field', hook: 'muxui-field-description', selector: '.muxui-switch-field .muxui-field-description' },
   { family: 'switch', part: 'error', disposition: 'field', hook: 'muxui-field-error', selector: '.muxui-switch-field .muxui-field-error' },
   { family: 'switch-field', part: 'root', disposition: 'class', hook: 'muxui-switch-field' },
-  { family: 'switch-field', part: 'button', disposition: 'class', hook: 'muxui-switch-field__button' },
-  { family: 'switch-field', part: 'thumb', disposition: 'class', hook: 'muxui-switch-field__thumb' },
-  { family: 'switch-field', part: 'description', disposition: 'class', hook: 'muxui-switch-field__description' },
-  { family: 'switch-field', part: 'error', disposition: 'class', hook: 'muxui-switch-field__error' },
+  { family: 'switch-field', part: 'button', disposition: 'class', hook: 'muxui-switch-field__button', styledThrough: 'muxui-switch' },
+  { family: 'switch-field', part: 'thumb', disposition: 'class', hook: 'muxui-switch-field__thumb', styledThrough: 'muxui-switch__indicator' },
+  { family: 'switch-field', part: 'description', disposition: 'class', hook: 'muxui-switch-field__description', styledThrough: 'muxui-field-description' },
+  { family: 'switch-field', part: 'error', disposition: 'class', hook: 'muxui-switch-field__error', styledThrough: 'muxui-field-error' },
   { family: 'table', part: 'root', disposition: 'class', hook: 'muxui-table' },
   { family: 'table', part: 'header', disposition: 'class', hook: 'muxui-table__header' },
   { family: 'table', part: 'column', disposition: 'class', hook: 'muxui-table__column' },
@@ -512,6 +521,13 @@ export const partRows: readonly PartRow[] = [
   { family: 'time-field', part: 'segment', disposition: 'internal', hook: 'muxui-date-segment' },
   { family: 'time-field', part: 'description', disposition: 'field', hook: 'muxui-field-description' },
   { family: 'time-field', part: 'error', disposition: 'field', hook: 'muxui-field-error' },
+  { family: 'theme-picker', part: 'root', disposition: 'class', hook: 'muxui-theme-picker' },
+  { family: 'theme-picker', part: 'group', disposition: 'class', hook: 'muxui-theme-picker__group' },
+  { family: 'theme-picker', part: 'heading', disposition: 'class', hook: 'muxui-theme-picker__heading' },
+  { family: 'theme-picker', part: 'grid', disposition: 'class', hook: 'muxui-theme-picker__grid' },
+  { family: 'theme-picker', part: 'option', disposition: 'class', hook: 'muxui-theme-picker__option' },
+  { family: 'theme-picker', part: 'swatch', disposition: 'class', hook: 'muxui-theme-picker__swatch' },
+  { family: 'theme-picker', part: 'name', disposition: 'class', hook: 'muxui-theme-picker__name' },
   { family: 'toast', part: 'region', disposition: 'class', hook: 'muxui-toast__region' },
   { family: 'toast', part: 'toast', disposition: 'root-element', hook: 'muxui-toast' },
   { family: 'toast', part: 'title', disposition: 'class', hook: 'muxui-toast__title' },

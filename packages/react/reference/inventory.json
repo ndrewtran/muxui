@@ -162,7 +162,27 @@
           "name": "ColorMode",
           "kind": "type",
           "owner": "color-mode-toggle",
-          "module": "color-mode-toggle"
+          "module": "color-mode",
+          "reason": "the light and dark modes ColorModeToggle takes, declared beside the hook ColorModePicker shares"
+        },
+        {
+          "name": "ColorModeChoice",
+          "kind": "type",
+          "owner": "color-mode-picker",
+          "module": "color-mode",
+          "reason": "the light, dark and system modes ColorModePicker takes, declared beside the hook ColorModeToggle shares"
+        },
+        {
+          "name": "ColorModePicker",
+          "kind": "value",
+          "owner": "color-mode-picker",
+          "module": "color-mode-picker"
+        },
+        {
+          "name": "ColorModePickerProps",
+          "kind": "type",
+          "owner": "color-mode-picker",
+          "module": "color-mode-picker"
         },
         {
           "name": "ColorModeToggle",
@@ -1239,6 +1259,24 @@
         { "name": "TextSize", "kind": "type", "owner": "text", "module": "text" },
         { "name": "TextVariant", "kind": "type", "owner": "text", "module": "text" },
         { "name": "TextVisualProps", "kind": "type", "owner": "text", "module": "text" },
+        {
+          "name": "ThemePicker",
+          "kind": "value",
+          "owner": "theme-picker",
+          "module": "theme-picker"
+        },
+        {
+          "name": "ThemePickerProps",
+          "kind": "type",
+          "owner": "theme-picker",
+          "module": "theme-picker"
+        },
+        {
+          "name": "ThemePickerValue",
+          "kind": "type",
+          "owner": "theme-picker",
+          "module": "theme-picker"
+        },
         { "name": "TimeField", "kind": "value", "owner": "time-field", "module": "fields" },
         { "name": "TimeFieldProps", "kind": "type", "owner": "time-field", "module": "fields" },
         { "name": "Toast", "kind": "value", "owner": "toast", "module": "overlays" },
@@ -1361,6 +1399,13 @@
       "exports": [
         {
           "name": "MUXUI_DEFAULT_THEME_PRESET_ID",
+          "kind": "value",
+          "owner": "package-level",
+          "module": "themes",
+          "reason": "theme presets belong to the package, not to a component family"
+        },
+        {
+          "name": "MUXUI_THEME_ACTION_BACKGROUNDS",
           "kind": "value",
           "owner": "package-level",
           "module": "themes",
@@ -1676,6 +1721,7 @@
     "code-block": "code-block.json",
     "color-area": "color-area.json",
     "color-field": "color-field.json",
+    "color-mode-picker": "color-mode-picker.json",
     "color-mode-toggle": "color-mode-toggle.json",
     "color-picker": "color-picker.json",
     "color-slider": "color-slider.json",
@@ -1738,6 +1784,7 @@
     "text-area": "text-area.json",
     "text-editor": "text-editor.json",
     "text-field": "text-field.json",
+    "theme-picker": "theme-picker.json",
     "time-field": "time-field.json",
     "toast": "toast.json",
     "toggle-button": "toggle-button.json",

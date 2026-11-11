@@ -2,9 +2,10 @@ import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, LabelHTMLAttributes, RefAttributes } from 'react';
 import { FieldError as AriaFieldError } from 'react-aria-components';
 import { AriaSwitchField, AriaSwitchButton } from '../substrate.ts';
-import type { SwitchButtonProps as AriaSwitchButtonProps, SwitchFieldProps as AriaSwitchFieldProps } from 'react-aria-components';
+import type { SwitchButtonProps as AriaSwitchButtonProps, SwitchButtonRenderProps, SwitchFieldProps as AriaSwitchFieldProps } from 'react-aria-components';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
-import { h, cx, nativePart } from './part-utils.ts';
+import { SwitchMotionIndicator } from '../switch-motion.ts';
+import { h, cx } from './part-utils.ts';
 import type { PartProps } from './part-utils.ts';
 import { fieldText, mappedFieldProps } from './field-utils.ts';
 
@@ -48,18 +49,28 @@ export type SwitchFieldThumbProps = PartProps<HTMLSpanElement>;
 export type SwitchFieldDescriptionProps = PartProps<HTMLElement>;
 export type SwitchFieldErrorProps = PartProps<HTMLElement>;
 
+// The state Button reads from React Aria, for Thumb to follow.
+const SwitchFieldThumbContext = React.createContext<SwitchButtonRenderProps | null>(null);
+
+// SwitchField draws Switch's switch: Button and Thumb carry Switch's `muxui-switch` and `muxui-switch__indicator` classes beside
+// their own, and Thumb is Switch's motion indicator, so the stylesheet block and the motion that make a Switch also make this one.
+// Description and Error carry the field classes Switch's text uses. Only the part classes and the root layout are SwitchField's.
 function makeSwitchField() {
   const Root = /*#__PURE__*/ React.forwardRef<HTMLDivElement, SwitchFieldRootProps>(function SwitchFieldRoot({ checked, defaultChecked, onChange, name, value, disabled, invalid, required, readOnly, size = 'md', className, ...props }, ref) {
     const resolvedSize = normalizeChoiceControlSize(size, 'SwitchField');
     // React Aria's props type the handlers on Element, and these on the div; the rest is the div's native attributes.
     return h(AriaSwitchField, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...(props as AriaSwitchFieldProps) }), ref, isSelected: checked, defaultSelected: defaultChecked, onChange, name, value, ...{ 'data-muxui-size': resolvedSize }, className: cx('muxui-switch-field', className) });
   });
-  const Button = /*#__PURE__*/ React.forwardRef<HTMLLabelElement, SwitchFieldButtonProps>(function SwitchFieldButton({ disabled, className, ...props }, ref) {
-    return h(AriaSwitchButton, { ...(props as AriaSwitchButtonProps), ref, ...{ isDisabled: disabled }, className: cx('muxui-switch-field__button', className) });
+  const Button = /*#__PURE__*/ React.forwardRef<HTMLLabelElement, SwitchFieldButtonProps>(function SwitchFieldButton({ disabled, className, children, ...props }, ref) {
+    return h(AriaSwitchButton, { ...(props as AriaSwitchButtonProps), ref, ...{ isDisabled: disabled }, className: cx('muxui-switch', 'muxui-switch-field__button', className),
+      children: (renderProps) => h(SwitchFieldThumbContext.Provider, { value: renderProps }, children) });
   });
-  const Thumb = /*#__PURE__*/ React.forwardRef<HTMLSpanElement, SwitchFieldThumbProps>(function SwitchFieldThumb(props, ref) { return nativePart('span', 'muxui-switch-field__thumb', props, ref); });
-  const Description = /*#__PURE__*/ React.forwardRef<HTMLElement, SwitchFieldDescriptionProps>(function SwitchFieldDescription(props, ref) { return fieldText('description', 'muxui-switch-field__description', props, ref); });
-  const Error = /*#__PURE__*/ React.forwardRef<HTMLElement, SwitchFieldErrorProps>(function SwitchFieldError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-switch-field__error', props.className) }); });
+  const Thumb = /*#__PURE__*/ React.forwardRef<HTMLSpanElement, SwitchFieldThumbProps>(function SwitchFieldThumb({ className, ...props }, ref) {
+    const state = React.useContext(SwitchFieldThumbContext);
+    return h(SwitchMotionIndicator, { ...props, ref, className: cx('muxui-switch-field__thumb', className), isSelected: Boolean(state?.isSelected), isPressed: Boolean(state?.isPressed), isDisabled: Boolean(state?.isDisabled), isReadOnly: Boolean(state?.isReadOnly) });
+  });
+  const Description = /*#__PURE__*/ React.forwardRef<HTMLElement, SwitchFieldDescriptionProps>(function SwitchFieldDescription(props, ref) { return fieldText('description', 'muxui-switch-field__description muxui-field-description', props, ref); });
+  const Error = /*#__PURE__*/ React.forwardRef<HTMLElement, SwitchFieldErrorProps>(function SwitchFieldError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-switch-field__error muxui-field-error', props.className) }); });
   return /*#__PURE__*/ Object.freeze({ Root, Button, Thumb, Description, Error });
 }
 

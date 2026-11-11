@@ -818,14 +818,31 @@
   "added": {
     ".": {
       "types": [
-        "MuxProviderProps"
+        "ColorModeChoice",
+        "ColorModePickerProps",
+        "MuxProviderProps",
+        "ThemePickerProps",
+        "ThemePickerValue"
       ],
       "values": [
-        "MuxProvider"
+        "ColorModePicker",
+        "MuxProvider",
+        "ThemePicker"
       ],
       "components": [
-        "MuxProvider"
+        "ColorModePicker",
+        "MuxProvider",
+        "ThemePicker"
       ],
+      "parts": [],
+      "partValues": []
+    },
+    "./themes": {
+      "types": [],
+      "values": [
+        "MUXUI_THEME_ACTION_BACKGROUNDS"
+      ],
+      "components": [],
       "parts": [],
       "partValues": []
     }

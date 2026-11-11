@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:theme-settings-popover",
+  "kind": "example",
+  "name": "Popover",
+  "summary": "A Theme icon button that opens a dark popover with a colour mode, a theme grid with Random, and the current theme's name.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/theme-settings/examples/react/popover.tsx"
+}

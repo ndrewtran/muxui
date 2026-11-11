@@ -263,6 +263,9 @@ const ancestors = (node) => {
 
 const documentedDispositions = ['class', 'root-element', 'field', 'composed'];
 
+/** The classes a rule can select a row's element by: its hook, and the class the row says it is styled through. */
+const hooksOfRow = (row) => (row.styledThrough === undefined ? [row.hook] : [row.hook, row.styledThrough]);
+
 /** The family's part-map rows, and the hook each documented row has (null where it has none). */
 function expectedClassRows(sources, slug) {
 	const { partRows, selectorOf } = sources.partMap;
@@ -336,7 +339,7 @@ function expectedHooks({ sources, slug, artifact, binding, classRows, exampleNod
 	const selectedOf = (attribute) => {
 		const byClass = selection.get(attribute);
 		if (byClass === undefined) return { parts: [], internal: [], companion: null };
-		const own = documented.filter(({ row }) => byClass.has(row.hook)).map(({ part }) => part);
+		const own = documented.filter(({ row }) => hooksOfRow(row).some((hook) => byClass.has(hook))).map(({ part }) => part);
 		const internal = unique(classRows.filter(({ disposition, row }) => disposition === 'internal' && byClass.has(row.hook)).map(({ part }) => part));
 		const found = companions.find((hook) => byClass.has(hook));
 		const companion = found !== undefined && rootRow !== undefined && !own.includes(rootRow.part) ? found : null;
@@ -344,7 +347,7 @@ function expectedHooks({ sources, slug, artifact, binding, classRows, exampleNod
 		return { parts: order.filter((part) => parts.includes(part)), internal, companion };
 	};
 	const declared = catalogAttributes(sources, artifact.states);
-	const hooksOf = (dispositions) => new Set([...classRows.filter(({ disposition, row }) => dispositions.includes(disposition) && row.hook !== undefined).map(({ row }) => row.hook), ...companions]);
+	const hooksOf = (dispositions) => new Set([...classRows.filter(({ disposition, row }) => dispositions.includes(disposition) && row.hook !== undefined).flatMap(({ row }) => hooksOfRow(row)), ...companions]);
 	const styledOn = (hooks) => [...selection].filter(([attribute, byClass]) => attribute.startsWith('data-muxui-state-') && [...byClass.keys()].some((name) => hooks.has(name))).map(([attribute]) => attribute);
 	const styledOwn = styledOn(hooksOf(['class', 'root-element']));
 	const styledWide = styledOn(hooksOf(documentedDispositions));
@@ -463,7 +466,7 @@ function importantOf(sources, slug) {
 export function expectedStylingSources(sources, { slug, root: pageRoot }) {
 	const exampleNodes = exampleElements(pageRoot);
 	const rows = expectedClassRows(sources, slug);
-	const hooks = new Set([...rows.filter(({ row }) => documentedDispositions.includes(row.disposition) && row.hook !== undefined).map(({ row }) => row.hook), ...companionClasses(sources, slug, rows, exampleNodes)]);
+	const hooks = new Set([...rows.filter(({ row }) => documentedDispositions.includes(row.disposition) && row.hook !== undefined).flatMap(({ row }) => hooksOfRow(row)), ...companionClasses(sources, slug, rows, exampleNodes)]);
 	const styles = sources.authored.filter(({ rules }) => rules.some(({ selector }) => subjectClasses(selector).some((name) => hooks.has(name) || [...hooks].some((hook) => name.startsWith(`${hook}--`))))).map(({ path }) => path);
 	return [partMapPath, referencePath, ...styles, tokenRecordPath, readmePath, 'catalog/guides/foundations-component-tokens.md'];
 }
@@ -750,6 +753,8 @@ export function checkStyling({ sources, slug, artifact, root, route, measureUrl 
 			if ((entry.hook === null) !== row.noHook) report(`Hooks row ${row.hook} ${row.noHook ? 'shows no hook' : 'shows a hook'}, the part map's disposition is ${entry.disposition}.`);
 			if (entry.row.hookOnly !== undefined && !/Hook only/u.test(row.notes)) report(`Hooks row ${row.hook} does not say that no Mux rule styles it (the part map marks it hook-only).`);
 			if (entry.row.hookOnly === undefined && /Hook only/u.test(row.notes)) report(`Hooks row ${row.hook} says no Mux rule styles it, and the part map does not mark it hook-only.`);
+			if (entry.row.styledThrough !== undefined && !row.notes.includes(`Styled through .${entry.row.styledThrough}, which the element also carries`)) report(`Hooks row ${row.hook} does not say it is styled through .${entry.row.styledThrough} (the part map names it).`);
+			if (entry.row.styledThrough === undefined && /Styled through \./u.test(row.notes)) report(`Hooks row ${row.hook} says it is styled through another class, and the part map names none.`);
 			if (entry.row.callerSupplied !== undefined && !row.notes.includes('caller') && !/native/iu.test(row.notes)) report(`Hooks row ${row.hook} drops the condition the part map records for it (${entry.row.callerSupplied.slice(0, 60)}).`);
 			if (clientOnly || !documentedDispositions.includes(entry.disposition) || entry.row.callerSupplied !== undefined) continue;
 			// The tags are those of the elements the hook selects in the page's own examples, exactly; "in root" holds for all of them or the cell does not say it.

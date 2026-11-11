@@ -267,14 +267,14 @@ test('the anchors of a page are unique, and every family page shows its owner\'s
 		for (const type of api.types) assert.ok(type.imports.length > 0 && type.imports.every((line) => line.startsWith('import type { ')), `${slug} ${type.name}`);
 		types += api.types.length;
 	}
-	assert.equal(types, 288, 'the 319 exported types less the 24 shared and 7 package-level');
+	assert.equal(types, 292, 'the 323 exported types less the 24 shared and 7 package-level');
 });
 
 test('the package exports page lists every entry of the export map, the package-level exports and the shared types with their reasons', () => {
 	const exported = buildPackageExports(reference, facts.packageName);
 	assert.deepEqual(exported.entries.map(({ key }) => key), ['.', './compatibility', './styles.css', './themes', './themes.css', './testing', './text-editor', './markdown']);
 	assert.deepEqual(exported.entries.filter(({ untyped }) => untyped !== undefined).map(({ key }) => key), ['./compatibility', './styles.css', './themes.css', './testing']);
-	assert.deepEqual(exported.packageLevel.map(({ name }) => name), ['MuxProvider', 'reactCompatibility', 'supplementalFamilies', 'MUXUI_DEFAULT_THEME_PRESET_ID', 'MUXUI_THEME_PRESETS', 'MUXUI_THEME_PRESETS_BY_ID']);
+	assert.deepEqual(exported.packageLevel.map(({ name }) => name), ['MuxProvider', 'reactCompatibility', 'supplementalFamilies', 'MUXUI_DEFAULT_THEME_PRESET_ID', 'MUXUI_THEME_ACTION_BACKGROUNDS', 'MUXUI_THEME_PRESETS', 'MUXUI_THEME_PRESETS_BY_ID']);
 	assert.ok(exported.packageLevel.every(({ reason }) => reason !== undefined));
 	assert.equal(exported.packageTypes.length, 7);
 	assert.equal(exported.sharedTypes.length, 24);

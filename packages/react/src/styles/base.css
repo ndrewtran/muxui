@@ -385,11 +385,18 @@
 :where(body) {
   min-height: 100vh;
   color: var(--muxui-semantic-typography-text-color, var(--muxui-semantic-content-default));
-  font-family: var(--muxui-semantic-typography-text-font-family);
-  font-size: var(--muxui-semantic-typography-text-m-font-size, var(--muxui-semantic-typography-body-size));
   font-weight: var(--muxui-semantic-typography-text-font-weight, var(--muxui-semantic-typography-body-weight));
-  line-height: var(--muxui-semantic-typography-text-line-height, var(--muxui-semantic-typography-body-line-height));
   letter-spacing: var(--muxui-semantic-typography-text-letter-spacing, normal);
+}
+
+/* Mux UI sizes its parts under the browser's own box model: content-box for most elements, border-box for the ones the browser
+   styles that way (buttons, tables, native fields). A host reset such as `* { box-sizing: border-box }` would resize them, so each
+   Mux UI element and its generated content reverts to the browser's value, which also drops any author-origin value set below
+   Mux UI's layers. Zero specificity, and ahead of the family rules: every `box-sizing` a family declares still wins. */
+:where([class^='muxui-'], [class*=' muxui-']),
+:where([class^='muxui-'], [class*=' muxui-'])::before,
+:where([class^='muxui-'], [class*=' muxui-'])::after {
+  box-sizing: revert;
 }
 
 :where(button, [type='button'], [type='reset'], [type='submit']) {
@@ -407,6 +414,32 @@
   appearance: none;
   color: inherit;
   font: inherit;
+}
+
+/* A Mux UI part takes its text size, family and line height from Mux UI, never from the page it sits in. Every Mux UI element
+   inherits them, so an element-type rule of the host (`li`, `tr`, `summary`, `span`, ...) cannot reach a part, whichever element a
+   component renders it with: that is why every element a component renders carries a Mux UI class. A library wrapper that cannot take
+   a class and holds text or content (a collection cell, a token segment, a document node) inherits the same way by a rule in its
+   family's section; the list is test/support/unclassed-elements.mjs. Zero specificity, so a family's rule, or a `:where()` heading
+   or text role later in this layer, still wins; it comes after the form-control `font: inherit` resets and before the boundary rule
+   below. */
+:where([class^='muxui-'], [class*=' muxui-']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* The boundary: the body and every Mux UI element whose parent is not a Mux UI element (the outermost part, a portaled part, a
+   component inside consumer content that is itself inside another Mux UI part) take the body defaults, and the parts below them
+   inherit those. After the rule above, so a boundary takes the defaults and not its parent's, and after the form-control resets so
+   a Mux UI button or field takes them too. The wrappers a library renders around a part without a className (a calendar's td, an
+   overlay's container) are such parents: the part below one takes the defaults, so a family that needs its own typography there
+   declares it. An inline part such as Link declares `inherit` itself. */
+:where(body),
+:where([class^='muxui-'], [class*=' muxui-']):not(:where([class^='muxui-'], [class*=' muxui-']) > *) {
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-m-font-size, var(--muxui-semantic-typography-body-size));
+  line-height: var(--muxui-semantic-typography-text-line-height, var(--muxui-semantic-typography-body-line-height));
 }
 
 :where(h1, h2, h3, h4, h5, h6) {
@@ -831,7 +864,6 @@
 :where(
   .muxui-checkbox-field__label,
   .muxui-radio-field__label,
-  .muxui-switch-field__label,
   .muxui-input__label,
   .muxui-text-area__label,
   .muxui-input-tags__label,
@@ -1072,7 +1104,6 @@
 :where(
   .muxui-checkbox-field__description,
   .muxui-radio-field__description,
-  .muxui-switch-field__description,
   .muxui-input__description,
   .muxui-text-area__description,
   .muxui-input-tags__description,
@@ -1096,7 +1127,6 @@
 :where(
   .muxui-checkbox-field__error,
   .muxui-radio-field__error,
-  .muxui-switch-field__error,
   .muxui-input__error,
   .muxui-text-area__error,
   .muxui-input-tags__error,
@@ -1283,6 +1313,30 @@
 .muxui-icon--sm {
   width: 1rem;
   height: 1rem;
+}
+
+/* Lucide draws its X at 2 units of a 24-unit viewBox, so the line grows and shrinks with the icon: 1px at 12px, about 1.33px at 16px.
+   The shapes of each X below draw a 1.5px line at the size the icon renders, whatever its `size` prop or the CSS that resizes it.
+   This is the only rule that sets an X's stroke, so a new X joins the list (lucide-internal.test.mjs holds the list to the X icons
+   the sources render). `vector-effect` is not inherited, so both declarations sit on the svg's children, its paths. The rule has
+   zero specificity, so a consumer's rule on the shapes wins. */
+:where(
+  .muxui-alert-dialog__close-icon,
+  .muxui-command-palette__chip-remove-icon,
+  .muxui-command-palette__close-icon,
+  .muxui-dialog__close-icon,
+  .muxui-header-nav__mobile-close-icon,
+  .muxui-lightbox__close-icon,
+  .muxui-prompt-composer__remove-icon,
+  .muxui-search-field__clear-icon,
+  .muxui-sidebar__mobile-close-icon,
+  .muxui-tag-group__remove-icon,
+  .muxui-tag-select__remove-icon,
+  .muxui-text-editor__discard-icon,
+  .muxui-toast__dismiss-icon
+) > * {
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
 }
 
 .muxui-date-trigger:hover:not([data-muxui-state-disabled]) {

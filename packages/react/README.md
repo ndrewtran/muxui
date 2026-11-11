@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:1cc7fc8823a5dc10228dd616f70d320c3c54214954b5183a9b14caf56fc4d5d8 -->
+<!-- @generated-content-sha256: sha256:31dd1c4cd1dd0c4e97e2466e6d93019e03ef9d4b8f38c6453bcb654a977832d2 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -147,6 +147,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | CodeBlock | experimental | . | .muxui-code-block | mode, source, before, after, language, filename, lineNumbers, copyable, wrap |
 | ColorArea | experimental | . | .muxui-color-area | label, value, defaultValue, disabled, readOnly |
 | ColorField | experimental | . | .muxui-color-field | label, description, errorMessage, value, defaultValue, disabled, readOnly, required, invalid, size, name |
+| ColorModePicker | experimental | . | .muxui-color-mode-picker | mode, defaultMode, storageKey, disabled |
 | ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled |
 | ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly |
 | ColorSlider | experimental | . | .muxui-color-slider | label, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
@@ -182,7 +183,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | MultiSelect | experimental | . | .muxui-multi-select | size, label, placeholder, description, errorMessage, disabled, required, invalid, supportingText, emptyStateTitle, emptyStateDescription, items, selectedKeys, defaultSelectedKeys, showSearch, showFooter, selectedCountFormatter; item: disabled, textValue |
 | NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |
 | PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, invalid, required, readOnly, size; card-icon: cardType |
-| Popover | experimental | . | .muxui-popover | trigger, open, defaultOpen, dismissable, placement, offset, crossOffset, shouldFlip, containerPadding, modal |
+| Popover | experimental | . | .muxui-popover | trigger, open, defaultOpen, dismissable, placement, offset, crossOffset, shouldFlip, containerPadding, modal, colorScheme |
 | PreviewTrigger | experimental | . | .muxui-preview-trigger | trigger, delay, closeDelay, open, defaultOpen, disabled, placement, offset, crossOffset, shouldFlip, containerPadding |
 | ProgressBar | experimental | . | .muxui-progress-bar | value, minValue, maxValue, label |
 | ProgressCircle | experimental | . | .muxui-progress-circle | value, minValue, maxValue, size, label |
@@ -207,6 +208,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TextArea | experimental | . | .muxui-text-area | value, defaultValue, disabled, invalid, required, readOnly, size |
 | TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, bubbleMenu, selectionActions, selectionInstruction |
 | TextField | experimental | . | .muxui-text-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, type, inputProps |
+| ThemePicker | experimental | . | .muxui-theme-picker | value, defaultValue, random, disabled |
 | TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |
 | Toast | experimental | . | .muxui-toast | message, title, variant, duration |
 | ToggleButton | experimental | . | .muxui-toggle-button | selected, defaultSelected, disabled, size |
@@ -420,6 +422,12 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `c
 - Entering modal mode focuses the dialog surface when focus is outside it.
 - Keep the muxui-popover__positioner and muxui-popover selectors, and the data-muxui-state-placement and transition state attributes.
 - data-muxui-modal on the positioner exposes the modal setting for consumer styling.
+- colorScheme makes the open Popover a scope of that color scheme: data-muxui-color-scheme is set on the positioner that wraps the surface, so tokens and Mux UI components inside resolve as they do on a page of that scheme, whatever the page uses.
+- A scoped Popover's surface is that scheme's raised popup surface with the scheme's default text, not the strong surface an unscoped Popover has, because that surface is inverted against its page and Mux UI components inside would not read on it.
+- A scoped Popover also carries the data-muxui-theme and data-muxui-contrast of the nearest element at or above its trigger that has each, read when it opens and falling back to the document root, because a preset palette is chosen from the attributes on the scope element and the portal sits outside the trigger's surroundings.
+- While the Popover is open, a change to either attribute on the trigger or on one of its ancestors, the document root included, re-themes the open Popover without reopening it; an attribute that nothing carries is absent from the Popover, and watching stops when it closes.
+- A trigger node replaced while the Popover is open is picked up on the Popover's next render or the next time it opens.
+- With colorScheme unset, the Popover adds none of these attributes, renders no extra element, and looks and behaves as before.
 - A dismissable non-modal Popover also closes on an outside press, and on Escape while focus is on the trigger.
 - With dismissable set to false, Escape, an outside press, and the trigger do not close the Popover, in modal and non-modal mode.
 - A button with slot="close" in the content still closes it.

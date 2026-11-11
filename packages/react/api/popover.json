@@ -15,7 +15,8 @@
       "crossOffset",
       "shouldFlip",
       "containerPadding",
-      "modal"
+      "modal",
+      "colorScheme"
     ],
     "events": [
       "openChange"
@@ -116,6 +117,18 @@
         },
         "required": false,
         "description": "Whether the Popover contains focus until it closes. When false, it is non-blocking: it has no focus containment, outside-content exclusion, or scroll locking."
+      },
+      "colorScheme": {
+        "type": {
+          "kind": "reference",
+          "name": "ColorMode"
+        },
+        "required": false,
+        "enum": [
+          "light",
+          "dark"
+        ],
+        "description": "Makes the open Popover a scope of this color scheme, whatever the page's. Its surface is that scheme's raised popup surface, not the strong surface an unscoped Popover has, and its text and any Mux UI component inside follow the scheme. Unset leaves the Popover as the page styles it. A scoped Popover also carries the data-muxui-theme and data-muxui-contrast it reads from its trigger's nearest scope, or from the document root, when it opens. While it is open it follows a change to either on the trigger or its ancestors, and it picks up a replaced trigger node on its next render or the next time it opens."
       }
     },
     "eventDetails": {
@@ -141,6 +154,21 @@
       }
     },
     "types": {
+      "ColorMode": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "light"
+            },
+            {
+              "kind": "literal",
+              "value": "dark"
+            }
+          ]
+        }
+      },
       "MuxUIPlacement": {
         "type": {
           "kind": "union",

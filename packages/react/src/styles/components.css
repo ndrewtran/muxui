@@ -35,7 +35,7 @@
   color: var(--muxui-semantic-typography-text-color);
 }
 .muxui-value-label { color: var(--muxui-progress-label-color); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
-.muxui-switch__label { color: var(--muxui-component-switch-label); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
+.muxui-switch__label { color: var(--muxui-component-switch-label); font-weight: var(--muxui-semantic-typography-control-weight); }
 .muxui-meter__track, .muxui-progress-bar__track { position: relative; inline-size: 100%; min-block-size: 0.5rem; overflow: hidden; border-radius: var(--muxui-semantic-shape-pill-radius); background: var(--muxui-semantic-surface-pressed); }
 .muxui-meter__fill, .muxui-progress-bar__fill { min-block-size: inherit; border-radius: inherit; background: var(--muxui-semantic-selection-track); transition: inline-size var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing); }
 .muxui-progress-bar[data-muxui-state-indeterminate] .muxui-progress-bar__fill {
@@ -675,6 +675,7 @@
 /* MuxUI component source: separator.css */
 .muxui-separator {
   display: block;
+  margin: 0;
   border: none;
   background-color: var(--muxui-semantic-color-neutral-20);
   width: 100%;
@@ -800,7 +801,9 @@
 }
 
 /* A single-select group paints one measured fill while its real buttons keep
-   owning state, focus, keyboard behavior, and the accessible name. */
+   owning state, focus, keyboard behavior, and the accessible name. Layers, low
+   to high: real buttons (1), the fill (2) so it covers their divider borders,
+   then the clipped label copies (3) so the label stays readable on the fill. */
 .muxui-toggle-button-group[data-muxui-toggle-motion='single'] {
   position: relative;
   isolation: isolate;
@@ -841,7 +844,7 @@
 
 .muxui-toggle-button-group__motion-indicator {
   position: absolute;
-  z-index: 0;
+  z-index: 2;
   pointer-events: none;
   border-radius: 0;
   background-color: var(--muxui-toggle-button-group-motion-fill);
@@ -851,7 +854,7 @@
 .muxui-toggle-button-group__motion-foreground {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 3;
   overflow: hidden;
   pointer-events: none;
 }
@@ -870,9 +873,56 @@
   transition: none !important;
 }
 
+/* A moving hover layer paints the hover fill of unselected buttons in every group, single or
+   multiple. Layers, low to high: the hover layer (0), the buttons (1), the single-select fill (2),
+   its label copies (3). Selected buttons keep their own hover and paint over the layer, which
+   crosses them out of sight. Hover text and outline stay on the button; only its fill moves. */
+.muxui-toggle-button-group[data-muxui-toggle-hover-ready] {
+  position: relative;
+  isolation: isolate;
+}
+
+.muxui-toggle-button-group[data-muxui-toggle-hover-ready] > .muxui-toggle-button {
+  position: relative;
+  z-index: 1;
+}
+
+.muxui-toggle-button-group__hover {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  display: none;
+  box-sizing: border-box;
+  width: 0;
+  height: 0;
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
+}
+
+.muxui-toggle-button-group[data-muxui-toggle-hover-ready] > .muxui-toggle-button-group__hover {
+  display: block;
+}
+
+.muxui-toggle-button-group__hover[data-muxui-hover-reduced] {
+  transition: none;
+}
+
+@media (forced-colors: none) {
+  .muxui-toggle-button-group[data-muxui-toggle-hover-ready] > .muxui-toggle-button:hover:not([data-muxui-state-disabled], [data-muxui-state-selected]) {
+    background-color: transparent;
+  }
+}
+
 @media (forced-colors: active) {
   .muxui-toggle-button-group__motion-indicator,
   .muxui-toggle-button-group__motion-foreground {
+    display: none;
+  }
+
+  .muxui-toggle-button-group[data-muxui-toggle-hover-ready] > .muxui-toggle-button-group__hover {
     display: none;
   }
 

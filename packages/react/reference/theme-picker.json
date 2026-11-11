@@ -1,0 +1,295 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "theme-picker",
+  "sources": {
+    "theme-picker": "packages/react/src/supplemental/theme-picker.ts",
+    "themes": "packages/react/src/generate.mjs"
+  },
+  "exports": [
+    {
+      "name": "ThemePicker",
+      "entry": ".",
+      "module": "theme-picker",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "value",
+              "optional": true,
+              "type": "ThemePickerValue",
+              "values": [
+                "standard-harbour",
+                "standard-lagoon",
+                "standard-blueprint",
+                "standard-violet-dusk",
+                "standard-wildflower",
+                "standard-terracotta",
+                "standard-amber-grove",
+                "standard-fern",
+                "monochrome-antique",
+                "monochrome-forest",
+                "monochrome-mauve",
+                "monochrome-mountain-meadow",
+                "monochrome-rosewater",
+                "monochrome-teal",
+                "monochrome-terracotta",
+                "random"
+              ],
+              "refs": ["theme-picker#ThemePickerValue"],
+              "doc": "The selected theme ID, or random, when the page controls it."
+            },
+            {
+              "name": "defaultValue",
+              "optional": true,
+              "type": "ThemePickerValue",
+              "values": [
+                "standard-harbour",
+                "standard-lagoon",
+                "standard-blueprint",
+                "standard-violet-dusk",
+                "standard-wildflower",
+                "standard-terracotta",
+                "standard-amber-grove",
+                "standard-fern",
+                "monochrome-antique",
+                "monochrome-forest",
+                "monochrome-mauve",
+                "monochrome-mountain-meadow",
+                "monochrome-rosewater",
+                "monochrome-teal",
+                "monochrome-terracotta",
+                "random"
+              ],
+              "refs": ["theme-picker#ThemePickerValue"],
+              "doc": "The theme ID, or random, that starts selected, when the picker controls itself."
+            },
+            {
+              "name": "onChange",
+              "optional": true,
+              "type": "(value: ThemePickerValue) => void",
+              "refs": ["theme-picker#ThemePickerValue"],
+              "doc": "Called with the theme ID, or random, each time the user selects an option."
+            },
+            {
+              "name": "random",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Adds a Random option before the presets. The picker only reports random; the page chooses the theme."
+            },
+            {
+              "name": "disabled",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Disables the picker and every option in it."
+            },
+            { "name": "className", "optional": true, "type": "string" },
+            { "name": "aria-label", "optional": true, "type": "string" },
+            { "name": "aria-labelledby", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLDivElement" }
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "theme-picker#ThemePickerOwnProps",
+      "name": "ThemePickerOwnProps",
+      "module": "theme-picker",
+      "text": "type ThemePickerOwnProps = {\n  value?: ThemePickerValue;\n  defaultValue?: ThemePickerValue;\n  onChange?: (value: ThemePickerValue) => void;\n  random?: boolean;\n  disabled?: boolean;\n};",
+      "members": [
+        {
+          "name": "value",
+          "optional": true,
+          "type": "ThemePickerValue",
+          "values": [
+            "standard-harbour",
+            "standard-lagoon",
+            "standard-blueprint",
+            "standard-violet-dusk",
+            "standard-wildflower",
+            "standard-terracotta",
+            "standard-amber-grove",
+            "standard-fern",
+            "monochrome-antique",
+            "monochrome-forest",
+            "monochrome-mauve",
+            "monochrome-mountain-meadow",
+            "monochrome-rosewater",
+            "monochrome-teal",
+            "monochrome-terracotta",
+            "random"
+          ],
+          "refs": ["theme-picker#ThemePickerValue"],
+          "doc": "The selected theme ID, or random, when the page controls it."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "ThemePickerValue",
+          "values": [
+            "standard-harbour",
+            "standard-lagoon",
+            "standard-blueprint",
+            "standard-violet-dusk",
+            "standard-wildflower",
+            "standard-terracotta",
+            "standard-amber-grove",
+            "standard-fern",
+            "monochrome-antique",
+            "monochrome-forest",
+            "monochrome-mauve",
+            "monochrome-mountain-meadow",
+            "monochrome-rosewater",
+            "monochrome-teal",
+            "monochrome-terracotta",
+            "random"
+          ],
+          "refs": ["theme-picker#ThemePickerValue"],
+          "doc": "The theme ID, or random, that starts selected, when the picker controls itself."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(value: ThemePickerValue) => void",
+          "refs": ["theme-picker#ThemePickerValue"],
+          "doc": "Called with the theme ID, or random, each time the user selects an option."
+        },
+        {
+          "name": "random",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Adds a Random option before the presets. The picker only reports random; the page chooses the theme."
+        },
+        {
+          "name": "disabled",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Disables the picker and every option in it."
+        }
+      ],
+      "refs": ["theme-picker#ThemePickerValue"]
+    },
+    {
+      "id": "theme-picker#ThemePickerProps",
+      "name": "ThemePickerProps",
+      "module": "theme-picker",
+      "public": [
+        { "entry": ".", "name": "ThemePickerProps" }
+      ],
+      "owner": "theme-picker",
+      "extends": [
+        {
+          "type": "ThemePickerOwnProps",
+          "refs": ["theme-picker#ThemePickerOwnProps"]
+        }
+      ],
+      "text": "type ThemePickerProps = ThemePickerOwnProps & {\n  className?: string;\n  'aria-label'?: string;\n  'aria-labelledby'?: string;\n};",
+      "members": [
+        { "name": "className", "optional": true, "type": "string" },
+        { "name": "aria-label", "optional": true, "type": "string" },
+        { "name": "aria-labelledby", "optional": true, "type": "string" }
+      ],
+      "refs": ["theme-picker#ThemePickerOwnProps"]
+    },
+    {
+      "id": "theme-picker#ThemePickerValue",
+      "name": "ThemePickerValue",
+      "module": "theme-picker",
+      "public": [
+        { "entry": ".", "name": "ThemePickerValue" }
+      ],
+      "owner": "theme-picker",
+      "text": "type ThemePickerValue = MuxUIThemeId | 'random';",
+      "values": [
+        "standard-harbour",
+        "standard-lagoon",
+        "standard-blueprint",
+        "standard-violet-dusk",
+        "standard-wildflower",
+        "standard-terracotta",
+        "standard-amber-grove",
+        "standard-fern",
+        "monochrome-antique",
+        "monochrome-forest",
+        "monochrome-mauve",
+        "monochrome-mountain-meadow",
+        "monochrome-rosewater",
+        "monochrome-teal",
+        "monochrome-terracotta",
+        "random"
+      ],
+      "refs": ["themes#MuxUIThemeId"]
+    },
+    {
+      "id": "themes#MuxUIMonochromeThemeId",
+      "name": "MuxUIMonochromeThemeId",
+      "module": "themes",
+      "public": [
+        { "entry": "./themes", "name": "MuxUIMonochromeThemeId" }
+      ],
+      "owner": "package-level",
+      "text": "type MuxUIMonochromeThemeId = 'monochrome-antique' | 'monochrome-forest' | 'monochrome-mauve' | 'monochrome-mountain-meadow' | 'monochrome-rosewater' | 'monochrome-teal' | 'monochrome-terracotta';",
+      "values": [
+        "monochrome-antique",
+        "monochrome-forest",
+        "monochrome-mauve",
+        "monochrome-mountain-meadow",
+        "monochrome-rosewater",
+        "monochrome-teal",
+        "monochrome-terracotta"
+      ]
+    },
+    {
+      "id": "themes#MuxUIStandardThemeId",
+      "name": "MuxUIStandardThemeId",
+      "module": "themes",
+      "public": [
+        { "entry": "./themes", "name": "MuxUIStandardThemeId" }
+      ],
+      "owner": "package-level",
+      "text": "type MuxUIStandardThemeId = 'standard-harbour' | 'standard-lagoon' | 'standard-blueprint' | 'standard-violet-dusk' | 'standard-wildflower' | 'standard-terracotta' | 'standard-amber-grove' | 'standard-fern';",
+      "values": [
+        "standard-harbour",
+        "standard-lagoon",
+        "standard-blueprint",
+        "standard-violet-dusk",
+        "standard-wildflower",
+        "standard-terracotta",
+        "standard-amber-grove",
+        "standard-fern"
+      ]
+    },
+    {
+      "id": "themes#MuxUIThemeId",
+      "name": "MuxUIThemeId",
+      "module": "themes",
+      "public": [
+        { "entry": "./themes", "name": "MuxUIThemeId" }
+      ],
+      "owner": "package-level",
+      "text": "type MuxUIThemeId = MuxUIStandardThemeId | MuxUIMonochromeThemeId;",
+      "values": [
+        "standard-harbour",
+        "standard-lagoon",
+        "standard-blueprint",
+        "standard-violet-dusk",
+        "standard-wildflower",
+        "standard-terracotta",
+        "standard-amber-grove",
+        "standard-fern",
+        "monochrome-antique",
+        "monochrome-forest",
+        "monochrome-mauve",
+        "monochrome-mountain-meadow",
+        "monochrome-rosewater",
+        "monochrome-teal",
+        "monochrome-terracotta"
+      ],
+      "refs": ["themes#MuxUIStandardThemeId", "themes#MuxUIMonochromeThemeId"]
+    }
+  ]
+}

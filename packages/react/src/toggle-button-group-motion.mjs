@@ -1,10 +1,13 @@
 import React from 'react';
 import { animate } from 'motion/react';
+import { observeHoverLayer } from './hover-layer-motion.mjs';
 import { sameGeometry, useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const BUTTON_SELECTOR = '.muxui-toggle-button';
 const SELECTED_SELECTOR = '[data-muxui-state-selected], [aria-checked="true"], [aria-pressed="true"]';
+const UNAVAILABLE_SELECTOR = '[data-muxui-state-disabled], [aria-disabled="true"], [disabled]';
+const HOVER_READY_ATTRIBUTE = 'data-muxui-toggle-hover-ready';
 const READY_ATTRIBUTE = 'data-muxui-toggle-motion-ready';
 const REDUCED_ATTRIBUTE = 'data-muxui-toggle-motion-reduced';
 const INTERNAL_ATTRIBUTE = 'data-muxui-toggle-motion-internal';
@@ -152,7 +155,7 @@ function observeToggleButtonSelection(root, selectionMode) {
   root.setAttribute('data-muxui-toggle-motion', 'single');
 
   let active = true;
-  let reduced = false;
+  let reduced = null;
   let controls = null;
   let pendingFrame = null;
   let currentKey = null;
@@ -217,7 +220,7 @@ function observeToggleButtonSelection(root, selectionMode) {
     const button = selectedButton(root);
     const nextKey = buttonKey(button);
     const target = geometry(root, button);
-    const selectedIsDisabled = button?.matches('[data-muxui-state-disabled], [aria-disabled="true"], [disabled]');
+    const selectedIsDisabled = button?.matches(UNAVAILABLE_SELECTOR);
     if (selectedIsDisabled) {
       currentKey = nextKey;
       settle(null);
@@ -302,6 +305,7 @@ function observeToggleButtonSelection(root, selectionMode) {
 
   const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => scheduleSync(true, true));
   const disconnectReduced = observeReducedMotion(root, null, (nextReduced) => {
+    if (reduced === nextReduced) return;
     reduced = nextReduced;
     root.toggleAttribute(REDUCED_ATTRIBUTE, nextReduced);
     if (nextReduced) stop();
@@ -351,6 +355,30 @@ function observeToggleButtonSelection(root, selectionMode) {
   };
 }
 
+/**
+ * The hover layer of a group in either selection mode. It lands on any enabled
+ * button, selected ones included: the single-select fill and a multi-select
+ * button's solid background paint over it, so it crosses them out of sight.
+ */
+function observeToggleButtonHover(root) {
+  if (!root) return undefined;
+
+  const layer = root.ownerDocument.createElement('span');
+  layer.className = 'muxui-toggle-button-group__hover';
+  layer.setAttribute('aria-hidden', 'true');
+  layer.setAttribute(INTERNAL_ATTRIBUTE, 'true');
+  // First, so the last button stays the group's last child for its divider rule.
+  root.prepend(layer);
+  const stop = observeHoverLayer({ root, layer, items: () => directButtons(root) });
+  root.setAttribute(HOVER_READY_ATTRIBUTE, 'true');
+
+  return () => {
+    stop();
+    layer.remove();
+    root.removeAttribute(HOVER_READY_ATTRIBUTE);
+  };
+}
+
 export const ToggleButtonGroupMotion = /*#__PURE__*/ (() => {
   const component = function ToggleButtonGroupMotion({ children, selectionMode = 'single', disabled = false, rootRef }) {
     const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
@@ -358,7 +386,13 @@ export const ToggleButtonGroupMotion = /*#__PURE__*/ (() => {
 
     useIsomorphicLayoutEffect(() => {
       if (disabled) return undefined;
-      return observeToggleButtonSelection(root, selectionMode);
+      // The hover layer joins first so the selection observer never sees it arrive, and leaves last.
+      const stopHover = observeToggleButtonHover(root);
+      const stopSelection = observeToggleButtonSelection(root, selectionMode);
+      return () => {
+        stopSelection?.();
+        stopHover?.();
+      };
     }, [root, selectionMode, disabled]);
 
     return React.cloneElement(children, { ref: setRootRef });

@@ -29,6 +29,15 @@
   display: table-row-group;
 }
 
+/* React Aria Components render the grid's rows and cells without a className. They take the grid's typography, not the host's
+   `tr` and `td` rules. */
+:where(.muxui-calendar__grid-header, .muxui-calendar__grid-body) > :where(tr),
+:where(.muxui-calendar__grid-body) > :where(tr) > :where(td) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-calendar__cell {
   display: inline-flex;
   align-items: center;
@@ -457,6 +466,14 @@
   transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
+/* React Aria Components wrap a row's content in a `display: contents` cell without a className. A data-driven label sits in it as
+   text, so the cell takes the row's typography, not the host's `div` rule. */
+:where(.muxui-grid-list__item) > :where([role='gridcell']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-grid-list__item[data-muxui-state-hovered]:not([data-muxui-state-selected], [data-muxui-state-disabled], [data-muxui-state-dragging], [data-muxui-state-drop-target]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent),
@@ -789,8 +806,11 @@
   overflow: auto;
 }
 
+/* The list is a capped flex column that scrolls; without flex-shrink: 0 an overflowing list squeezes every option to
+   its minimum height, and taller options overflow their own box. */
 .muxui-list-box__item {
   position: relative;
+  flex-shrink: 0;
   background-color: transparent;
 }
 
@@ -821,7 +841,7 @@
 
 .muxui-list-box .muxui-list-box__item:hover:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not([aria-disabled='true']),
 .muxui-list-box .muxui-list-box__item[data-muxui-state-hovered]:not([data-muxui-state-selected]):not([aria-selected='true']):not([data-muxui-state-disabled]):not([aria-disabled='true']) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
   color: var(--muxui-item-focus-color);
 }
 
@@ -1094,7 +1114,7 @@
 }
 
 .muxui-range-calendar__cell:hover:not([data-muxui-state-selected], [data-muxui-state-selection-start], [data-muxui-state-selection-end], [data-muxui-state-outside-month], [data-muxui-state-disabled], [data-muxui-state-unavailable]) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
 .muxui-range-calendar__cell[data-muxui-state-today] {
@@ -1272,8 +1292,45 @@
   transition: none;
 }
 
+/* Moving hover layer. It shares the selected shape's host and precedes it, so the
+   shape and the tab list paint over it, and it crosses the selected tab out of sight.
+   It stays hidden until the motion is ready; until then each tab paints its own hover. */
+.muxui-tabs__hover {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  display: none;
+  box-sizing: border-box;
+  width: 0;
+  height: 0;
+  border-radius: var(--muxui-semantic-shape-pill-radius);
+  background-color: var(--muxui-semantic-action-neutral-background-hover);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
+}
+
+.muxui-tabs__motion[data-muxui-tabs-ready] .muxui-tabs__hover {
+  display: block;
+}
+
+.muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__hover {
+  border-radius: var(--muxui-semantic-shape-option-radius);
+}
+
+/* Underline tabs have no radius, and a surface wash reads better than the faint tint they had. */
+.muxui-tabs__motion[data-muxui-tabs-variant='underline'] .muxui-tabs__hover {
+  border-radius: 0;
+  background-color: var(--muxui-semantic-surface-hover);
+}
+
+.muxui-tabs__hover[data-muxui-hover-reduced] {
+  transition: none;
+}
+
 /* Filled variants keep the selected shape behind the list; the fixed
-   foreground layer supplies inverse contrast only inside that shape. */
+   foreground layer supplies the selected text colour only inside that shape. */
 .muxui-tabs__motion[data-muxui-tabs-variant='pill'] > .muxui-tabs__list,
 .muxui-tabs__motion[data-muxui-tabs-variant='segment'] > .muxui-tabs__list,
 .muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__motion-overflow-content > .muxui-tabs__list {
@@ -1331,6 +1388,14 @@
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
+/* A rounded tab only takes the pointer inside its curve, which leaves gaps where neighbours meet.
+   Crossing one would count as leaving the tabs, so each tab takes the pointer across its full box. */
+.muxui-tabs__motion:not([data-muxui-tabs-variant='underline']) .muxui-tabs__tab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
 /* Standard Mux interaction states remain visible around the moving shape. */
 .muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab:hover:not([data-muxui-state-disabled]),
 .muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__tab:hover:not([data-muxui-state-disabled]),
@@ -1358,11 +1423,12 @@
 }
 
 /* Selected hover feedback stays in the background so the moving fill and
-   inverse foreground remain intact; active and pressed keep their own fill. */
+   foreground layer remain intact; active and pressed keep their own fill. A
+   faint wash of the selected text colour shades the light shape without matching the rail. */
 .muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]),
 .muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]),
 .muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-hover) 12%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-component-tabs-selected-foreground) 4%, transparent);
 }
 
 .muxui-tabs__motion[data-muxui-tabs-variant='underline'] .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]) {
@@ -1370,7 +1436,19 @@
 }
 
 .muxui-tabs__motion[data-muxui-tabs-variant='underline'] .muxui-tabs__tab:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true'], :active, [data-muxui-state-pressed]) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
+}
+
+/* Once the hover layer is live it paints hover, so the tab's own hover fill clears. The
+   selected filled tab keeps its wash above, and a pressed tab keeps its pressed fill. */
+@media (forced-colors: none) {
+  .muxui-tabs__motion[data-muxui-tabs-ready] .muxui-tabs__tab:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true'], :active, [data-muxui-state-pressed]) {
+    background: transparent;
+  }
+
+  .muxui-tabs__motion[data-muxui-tabs-ready][data-muxui-tabs-variant='underline'] .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']):is(:hover, [data-muxui-state-hovered]):not(:active, [data-muxui-state-disabled], [aria-disabled='true'], [data-muxui-state-pressed]) {
+    background-color: transparent;
+  }
 }
 
 .muxui-tabs .muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__tab:is(:focus-visible, [data-muxui-state-focus-visible]):not([data-muxui-state-selected], [aria-selected='true']),
@@ -1389,8 +1467,9 @@
 
 /* The selected state is also visible before hydration measures the shape. */
 .muxui-tabs__motion:not([data-muxui-tabs-ready]):not([data-muxui-tabs-variant='underline']) .muxui-tabs__tab[data-muxui-state-selected] {
-  background: var(--muxui-semantic-surface-emphasis);
-  color: var(--muxui-semantic-content-on-solid);
+  background: var(--muxui-component-tabs-selected-background);
+  color: var(--muxui-component-tabs-selected-foreground);
+  box-shadow: var(--muxui-semantic-elevation-indicator);
 }
 
 .muxui-tabs__motion-foreground {
@@ -1407,14 +1486,15 @@
 .muxui-tabs__motion-label {
   position: absolute;
   white-space: nowrap;
-  color: var(--muxui-semantic-content-on-solid);
+  color: var(--muxui-component-tabs-selected-foreground);
 }
 
 .muxui-tabs__motion[data-muxui-tabs-variant='pill'] .muxui-tabs__motion-underline,
 .muxui-tabs__motion[data-muxui-tabs-variant='segment'] .muxui-tabs__motion-underline,
 .muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__motion-underline {
   z-index: 0;
-  background: var(--muxui-semantic-surface-emphasis);
+  background: var(--muxui-component-tabs-selected-background);
+  box-shadow: var(--muxui-semantic-elevation-indicator);
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
@@ -1423,6 +1503,8 @@
 }
 
 .muxui-tabs__motion[data-muxui-tabs-variant='overflow'] {
+  /* The room a round scroll control takes at each end of the rail. */
+  --muxui-tabs-edge-gutter: calc(var(--muxui-control-target-size, var(--muxui-control-size-md)) + var(--muxui-semantic-layout-inset-tiny));
   max-inline-size: 100%;
   min-inline-size: 0;
   overflow: hidden;
@@ -1436,7 +1518,7 @@
   overflow-y: hidden;
   scrollbar-width: none;
   overscroll-behavior-inline: contain;
-  scroll-padding-inline: var(--muxui-semantic-control-size-md);
+  scroll-padding-inline: var(--muxui-tabs-edge-gutter);
 }
 
 .muxui-tabs__motion-overflow-viewport::-webkit-scrollbar {
@@ -1446,7 +1528,7 @@
 .muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__motion-overflow-viewport {
   border-radius: var(--muxui-semantic-shape-pill-radius);
   background: transparent;
-  padding-inline: var(--muxui-semantic-control-size-md);
+  padding-inline: var(--muxui-tabs-edge-gutter);
 }
 
 .muxui-tabs__motion-overflow-content {
@@ -1493,45 +1575,44 @@
   color: var(--muxui-semantic-content-strong);
 }
 
+/* A circle the size of a tab, set in from the end of the rail as far as the tabs are from its sides. */
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-tabs__motion-edge {
+  --muxui-icon-button-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  border-radius: var(--muxui-semantic-shape-pill-radius);
+}
+
 .muxui-tabs__motion-edge--left,
 .muxui-tabs__motion-edge--right {
   inset-block: 0;
-  inline-size: var(--muxui-semantic-control-size-md);
+  margin-block: auto;
 }
 
 .muxui-tabs__motion-edge--left {
-  left: 0;
-  border-top-left-radius: var(--muxui-semantic-shape-pill-radius);
-  border-bottom-left-radius: var(--muxui-semantic-shape-pill-radius);
+  left: var(--muxui-semantic-layout-inset-tiny);
 }
 
 .muxui-tabs__motion-edge--right {
-  right: 0;
-  border-top-right-radius: var(--muxui-semantic-shape-pill-radius);
-  border-bottom-right-radius: var(--muxui-semantic-shape-pill-radius);
+  right: var(--muxui-semantic-layout-inset-tiny);
 }
 
 .muxui-tabs__motion-edge--before,
 .muxui-tabs__motion-edge--after {
   inset-inline: 0;
-  block-size: var(--muxui-semantic-control-size-md);
+  margin-inline: auto;
 }
 
 .muxui-tabs__motion-edge--before {
-  inset-block-start: 0;
-  border-start-start-radius: var(--muxui-semantic-shape-pill-radius);
-  border-start-end-radius: var(--muxui-semantic-shape-pill-radius);
+  inset-block-start: var(--muxui-semantic-layout-inset-tiny);
 }
 
 .muxui-tabs__motion-edge--after {
-  inset-block-end: 0;
-  border-end-start-radius: var(--muxui-semantic-shape-pill-radius);
-  border-end-end-radius: var(--muxui-semantic-shape-pill-radius);
+  inset-block-end: var(--muxui-semantic-layout-inset-tiny);
 }
 
 .muxui-tabs__motion-edge:focus-visible {
   outline: 2px solid var(--muxui-semantic-focus-ring);
-  outline-offset: -4px;
+  outline-offset: -2px;
+  box-shadow: none;
 }
 
 .muxui-tabs__motion-edge:disabled {
@@ -1548,7 +1629,7 @@
 
 /* Keep scrolling tabs out from under the transparent arrow controls. */
 .muxui-tabs__motion[data-muxui-tabs-overflow] .muxui-tabs__motion-overflow-viewport {
-  clip-path: inset(0 var(--muxui-semantic-control-size-md));
+  clip-path: inset(0 var(--muxui-tabs-edge-gutter));
 }
 
 .muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__motion-overflow-viewport {
@@ -1556,13 +1637,13 @@
   max-block-size: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  scroll-padding-block: var(--muxui-semantic-control-size-md);
-  padding-block: var(--muxui-semantic-control-size-md);
+  scroll-padding-block: var(--muxui-tabs-edge-gutter);
+  padding-block: var(--muxui-tabs-edge-gutter);
   padding-inline: 0;
 }
 
 .muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__motion[data-muxui-tabs-overflow] .muxui-tabs__motion-overflow-viewport {
-  clip-path: inset(var(--muxui-semantic-control-size-md) 0);
+  clip-path: inset(var(--muxui-tabs-edge-gutter) 0);
 }
 
 .muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__motion-overflow-content {
@@ -1581,6 +1662,10 @@
     background: Highlight;
     color: HighlightText;
     forced-color-adjust: none;
+  }
+
+  .muxui-tabs__motion[data-muxui-tabs-ready] .muxui-tabs__hover {
+    display: none;
   }
 }
 
@@ -1902,6 +1987,13 @@
   box-shadow: inset 0 -2px var(--muxui-table-header-separator);
 }
 
+/* The header row comes from React Aria Components without a className. It takes the table's typography, not the host's `tr` rule. */
+:where(.muxui-table__header) > :where(tr) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-table__column {
   padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
   text-align: start;
@@ -1957,7 +2049,7 @@
 }
 
 .muxui-table__row[data-muxui-state-hovered] {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
 .muxui-table__row[data-muxui-state-selected] {
@@ -2036,6 +2128,7 @@
   white-space: nowrap;
   position: relative;
   gap: var(--muxui-semantic-layout-control-gap);
+  min-inline-size: 5rem;
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
 }
 
@@ -2145,6 +2238,20 @@
     background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
     color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
+}
+
+/* A removable tag ends in its round remove button, whose box already spaces the icon from the tag's end cap, so the tag drops
+   its end padding and the icon sits as far from the end as the label does from the start. */
+.muxui-tag-group__tag:has(.muxui-tag-group__remove) {
+  padding-inline-end: 0;
+}
+
+/* React Aria Components wrap a tag's content in a `display: contents` cell without a className. A data-driven label sits in it as
+   text, so the cell takes the tag's typography, not the host's `div` rule. */
+:where(.muxui-tag-group__tag) > :where([role='gridcell']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .muxui-tag-group__tag[data-muxui-color='brand'] {
@@ -2502,7 +2609,10 @@
   border-radius: 50%;
   background: transparent;
   color: currentcolor;
-  font: inherit;
+  /* The tag's own typography, declared here: the button sits under React Aria's unclassed gridcell, which a host's `div` rule reaches. */
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-small-size);
+  font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: 1;
   cursor: pointer;
   transition: background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing), color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
@@ -2619,6 +2729,14 @@
   transition: background-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
+/* React Aria Components wrap a row's content in a `display: contents` cell without a className. The cell takes the row's
+   typography, not the host's `div` rule. */
+:where(.muxui-tree__item) > :where([role='gridcell']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-tree__item[data-muxui-state-hovered] {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
@@ -2713,9 +2831,11 @@
   min-height: 0;
 }
 
+/* The icon matches the toggle's width: a wider one made Chromium and WebKit stretch the hidden toggle to 16px while
+   Firefox kept 12px. */
 .muxui-tree__toggle .muxui-icon-button__icon {
-  width: 1rem;
-  height: 1rem;
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 /* Keep the actual RAC chevron button over the visible indicator
@@ -2826,6 +2946,14 @@
   outline: none;
 }
 
+/* React Aria Components' TokenInput wraps each token, and the text typed around it, in a span without a className. The span takes the
+   input's typography, not the host's `span` rule: its line box holds the text and the zero-width spaces around a token. */
+:where(.muxui-token-field__input) > :where(span) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-token-field[data-muxui-state-disabled] .muxui-token-field__input,
 .muxui-token-field[aria-disabled='true'] .muxui-token-field__input {
   cursor: not-allowed;
@@ -2842,6 +2970,15 @@
   overflow: auto;
   border-radius: var(--muxui-semantic-control-radius);
   outline: none;
+}
+
+/* The box that sizes the scroll area and the box that places each item are React Aria Components' own, without a className. They take
+   the typography of the part that scrolls (a GridList in a grid Virtualizer scrolls itself), not the host's `div` rule. */
+:where(.muxui-virtualizer, .muxui-grid-list[data-muxui-virtualized]) > :where([role='presentation']),
+:where(.muxui-virtualizer, .muxui-grid-list[data-muxui-virtualized]) > :where([role='presentation']) > :where([role='presentation']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .muxui-virtualizer:focus-visible {

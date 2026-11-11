@@ -130,11 +130,11 @@ function inline(tokens: MarkdownToken[] | undefined, baseUrl: string | undefined
       output.push(Array.isArray(token.tokens) ? inline(token.tokens, baseUrl, depth + 1) : (token.text ?? ''));
       continue;
     }
-    if (token.type === 'strong') { output.push(React.createElement('strong', { key }, inline(token.tokens, baseUrl, depth + 1))); continue; }
-    if (token.type === 'em') { output.push(React.createElement('em', { key }, inline(token.tokens, baseUrl, depth + 1))); continue; }
+    if (token.type === 'strong') { output.push(React.createElement('strong', { key, className: 'muxui-markdown__strong' }, inline(token.tokens, baseUrl, depth + 1))); continue; }
+    if (token.type === 'em') { output.push(React.createElement('em', { key, className: 'muxui-markdown__emphasis' }, inline(token.tokens, baseUrl, depth + 1))); continue; }
     if (token.type === 'del') { output.push(inline(token.tokens, baseUrl, depth + 1)); continue; }
     if (token.type === 'codespan') { output.push(React.createElement('code', { key, className: 'muxui-markdown__code' }, token.text)); continue; }
-    if (token.type === 'br') { output.push(React.createElement('br', { key })); continue; }
+    if (token.type === 'br') { output.push(React.createElement('br', { key, className: 'muxui-markdown__break' })); continue; }
     if (token.type === 'image') {
       const src = safeUrl(token.href, HTTP_PROTOCOLS, baseUrl);
       output.push(src
@@ -170,21 +170,21 @@ function blocks(tokens: MarkdownToken[] | undefined, baseUrl: string | undefined
     if (counter.value > MARKDOWN_NODE_LIMIT) throw new Error('MARKDOWN_NODE_LIMIT_EXCEEDED');
     // A heading token always has a depth.
     if (token.type === 'heading') return React.createElement(`h${Math.min(6, Math.max(1, token.depth!))}`, { key, className: 'muxui-markdown__heading' }, inline(token.tokens, baseUrl, depth + 1));
-    if (token.type === 'paragraph' || token.type === 'text') return React.createElement('p', { key }, inline(token.tokens ?? [{ type: 'text', text: token.text }], baseUrl, depth + 1));
+    if (token.type === 'paragraph' || token.type === 'text') return React.createElement('p', { key, className: 'muxui-markdown__paragraph' }, inline(token.tokens ?? [{ type: 'text', text: token.text }], baseUrl, depth + 1));
     if (token.type === 'code') {
       if (!(typeof token.raw === 'string' && (token.raw.startsWith('```') || token.raw.startsWith('~~~')))) {
-        return React.createElement('p', { key }, token.text ?? '');
+        return React.createElement('p', { key, className: 'muxui-markdown__paragraph' }, token.text ?? '');
       }
       const language = typeof token.lang === 'string' ? token.lang.trim().split(/\s+/u, 1)[0].replace(/[^a-z0-9_-]/giu, '') : '';
-      return React.createElement('pre', { key, className: 'muxui-markdown__code-block', 'data-muxui-language': language || undefined }, React.createElement('code', null, token.text));
+      return React.createElement('pre', { key, className: 'muxui-markdown__code-block', 'data-muxui-language': language || undefined }, React.createElement('code', { className: 'muxui-markdown__code-block-content' }, token.text));
     }
     if (token.type === 'blockquote') return React.createElement('blockquote', { key, className: 'muxui-markdown__blockquote' }, blocks(token.tokens, baseUrl, depth + 1, counter));
     if (token.type === 'list') {
       const Tag = token.ordered ? 'ol' : 'ul';
-      return React.createElement(Tag, { key }, (token.items ?? []).map((item, itemIndex) => React.createElement('li', { key: itemIndex }, blocks(item.tokens, baseUrl, depth + 1, counter))));
+      return React.createElement(Tag, { key, className: 'muxui-markdown__list' }, (token.items ?? []).map((item, itemIndex) => React.createElement('li', { key: itemIndex, className: 'muxui-markdown__list-item' }, blocks(item.tokens, baseUrl, depth + 1, counter))));
     }
-    if (token.type === 'hr') return React.createElement('hr', { key });
-    if (Array.isArray(token.tokens)) return React.createElement('p', { key }, inline(token.tokens, baseUrl, depth + 1));
+    if (token.type === 'hr') return React.createElement('hr', { key, className: 'muxui-markdown__rule' });
+    if (Array.isArray(token.tokens)) return React.createElement('p', { key, className: 'muxui-markdown__paragraph' }, inline(token.tokens, baseUrl, depth + 1));
     return [];
   });
 }

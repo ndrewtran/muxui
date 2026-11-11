@@ -194,7 +194,7 @@ export const Checkbox: ForwardRefExoticComponent<CheckboxProps & RefAttributes<H
         'data-muxui-state-selected': isSelected || undefined,
         'data-muxui-state-indeterminate': isIndeterminate || undefined,
       }, isIndeterminate || isSelected
-        ? React.createElement(isIndeterminate ? MinusIcon : CheckIcon, { 'aria-hidden': 'true', focusable: 'false', size: 12 })
+        ? React.createElement(isIndeterminate ? MinusIcon : CheckIcon, { className: 'muxui-checkbox__indicator-icon', 'aria-hidden': 'true', focusable: 'false', size: 12 })
         : null),
       React.createElement('span', { className: 'muxui-checkbox__label' }, children)),
   });

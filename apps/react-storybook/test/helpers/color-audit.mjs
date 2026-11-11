@@ -1,14 +1,18 @@
-/** Runs in the browser. Audits authored paint values, not antialiased pixels. */
-export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints = [] }) {
+/**
+ * Runs in the browser. Audits authored paint values, not antialiased pixels.
+ *
+ * `tokens` is the canonical token graph of the page's colour scheme. `schemeTokens` (`{ light, dark }`, each a token graph)
+ * lets an element inside a nested `data-muxui-color-scheme` scope, such as a Popover with colorScheme, be read against the
+ * graph of its own scheme, because a token alias such as neutral-default-100 resolves to another colour there. An element
+ * outside any nested scope is read against `tokens`, as before.
+ */
+export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints = [], schemeTokens }) {
   const probe = document.createElement('span');
   probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none';
   document.body.append(probe);
   const problems = [];
   const paints = new Map();
   const media = new Set();
-  const canonical = new Map();
-  const effects = new Map();
-  const tokensById = new Map(Object.values(tokens).map((token) => [token.id, token]));
   // These exact Mux parts paint user-selected colors. Only their listed paint
   // properties may be dynamic; descendants and ordinary component chrome stay audited.
   const dynamicColorParts = [
@@ -19,6 +23,8 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     ['.muxui-color-wheel__track[data-muxui-color-paint="track"]', ['background-image']],
     ['.muxui-color-wheel__thumb-face[data-muxui-color-paint="sample"]', ['background-color']],
     ['.muxui-color-swatch[data-muxui-color-paint="sample"]', ['background-color', 'background-image']],
+    // A theme swatch paints the preset's own action background, which the preset carries inline.
+    ['.muxui-theme-picker__swatch[data-muxui-color-paint="sample"]', ['background-color']],
   ];
 
   function ownsDynamicColorPaint(element, pseudo, property) {
@@ -51,13 +57,13 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
       .concat(Math.round(alpha * 10000) / 10000).join(',');
   }
 
-  function tokenColorExpression(token, seen = new Set()) {
+  function tokenColorExpression(token, tokensById, seen = new Set()) {
     if (!token.mix) return token.value;
     if (seen.has(token.id)) throw new Error(`Cyclic token colour mix: ${token.id}`);
     const source = tokensById.get(token.mix.token);
     if (!source) throw new Error(`Missing token colour mix source: ${token.mix.token}`);
     const next = new Set(seen).add(token.id);
-    return `color-mix(in ${token.mix.space}, ${tokenColorExpression(source, next)} ${token.mix.weight * 100}%, ${token.mix.color})`;
+    return `color-mix(in ${token.mix.space}, ${tokenColorExpression(source, tokensById, next)} ${token.mix.weight * 100}%, ${token.mix.color})`;
   }
 
   function applyAlpha(key, alpha) {
@@ -68,26 +74,44 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     return normalize(`rgba(${channels.slice(0, 3).join(' ')} / ${combinedAlpha})`);
   }
 
-  for (const token of Object.values(tokens)) {
-    if (token.type === 'color') {
-      canonical.set(normalize(token.value), token.id);
-      // The token CSS generator emits mix tokens as color-mix(), which keeps
-      // fractional channels that the compiled hex token value rounds away.
-      if (token.mix) canonical.set(normalize(tokenColorExpression(token)), token.id);
-    }
-    if (token.type === 'effect' && token.value?.kind === 'shadow') {
-      for (const layer of token.value.layers) {
-        effects.set(applyAlpha(normalize(layer.color.value), layer.color.alpha ?? 1), token.id);
+  // The canonical colours and shadow effects one token graph allows.
+  function canonicalSetsOf(graph, name) {
+    const canonical = new Map();
+    const effects = new Map();
+    const tokensById = new Map(Object.values(graph).map((token) => [token.id, token]));
+    for (const token of Object.values(graph)) {
+      if (token.type === 'color') {
+        canonical.set(normalize(token.value), token.id);
+        // The token CSS generator emits mix tokens as color-mix(), which keeps
+        // fractional channels that the compiled hex token value rounds away.
+        if (token.mix) canonical.set(normalize(tokenColorExpression(token, tokensById)), token.id);
+      }
+      if (token.type === 'effect' && token.value?.kind === 'shadow') {
+        for (const layer of token.value.layers) {
+          effects.set(applyAlpha(normalize(layer.color.value), layer.color.alpha ?? 1), token.id);
+        }
       }
     }
+
+    // The authored 30% neutral focus glow is a canonical shadow effect, not a palette color.
+    for (const tokenId of ['semantic.focus.neutral-glow', 'semantic.color.neutral-60']) {
+      const token = graph[tokenId];
+      if (token?.type === 'color') {
+        effects.set(normalize(`color-mix(in srgb, ${token.value} 30%, transparent)`), token.id);
+      }
+    }
+    return { name, canonical, effects };
   }
 
-  // The authored 30% neutral focus glow is a canonical shadow effect, not a palette color.
-  for (const tokenId of ['semantic.focus.neutral-glow', 'semantic.color.neutral-60']) {
-    const token = tokens[tokenId];
-    if (token?.type === 'color') {
-      effects.set(normalize(`color-mix(in srgb, ${token.value} 30%, transparent)`), token.id);
-    }
+  const pageSets = canonicalSetsOf(tokens, 'page');
+  const { canonical } = pageSets;
+  const nestedSets = new Map(Object.entries(schemeTokens ?? {}).map(([scheme, graph]) => [scheme, canonicalSetsOf(graph, scheme)]));
+
+  // The sets an element is read against: its own scheme's inside a nested colour scheme scope, else the page's.
+  function setsFor(element) {
+    const owner = element.closest('[data-muxui-color-scheme]');
+    if (!owner || owner === document.documentElement) return pageSets;
+    return nestedSets.get(owner.getAttribute('data-muxui-color-scheme')) ?? pageSets;
   }
 
   function describe(element, pseudo) {
@@ -112,8 +136,9 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
       return;
     }
     if (key.endsWith(',0')) return;
-    const token = canonical.get(key) ?? (/shadow/iu.test(property) ? effects.get(key) : undefined);
-    const id = `${property}|${key}`;
+    const sets = setsFor(element);
+    const token = sets.canonical.get(key) ?? (/shadow/iu.test(property) ? sets.effects.get(key) : undefined);
+    const id = `${property}|${key}|${sets.name}`;
     const paint = paints.get(id) ?? { property, value, rgba: key, token, count: 0, examples: [] };
     paint.count += 1;
     if (paint.examples.length < 3) paint.examples.push(describe(element, pseudo));

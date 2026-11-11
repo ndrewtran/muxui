@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { parseJsonStrict } from '../../../../packages/schema/src/index.mjs';
-import { catalogAcrossCommit, legacyPlatformSafetyDefaults, normalizeLegacyPlatformSafety } from '../../../../tests/evidence/bl1/growth-scope.mjs';
+import { catalogAcrossCommit, legacyPlatformSafetyDefaults, normalizeLegacyPlatformSafety, normalizeLegacyScaleMetadata } from '../../../../tests/evidence/bl1/growth-scope.mjs';
 import { compileBundle } from '../../../../tests/evidence/bl1/regression.mjs';
 import { repositoryRoot } from './evidence-growth-repository.mjs';
 
@@ -58,6 +58,8 @@ test('the tree just before the defaults is rejected as committed and compiles, w
     // The current compiler reads each full declaration as an override, and the registry has no defaults to resolve it against.
     await assert.rejects(compileBundle(() => true, directory), (error) => error.issues?.some(({ path }) => path.includes('/platformSafety/')));
     await normalizeLegacyPlatformSafety(directory);
+    // The tree also predates the Scale block's current shape, which the token source schema would reject for a reason of its own.
+    await normalizeLegacyScaleMetadata(directory);
     const { bundle } = await compileBundle(() => true, directory);
     assert.deepEqual(compiledObligations(bundle), declared, 'every binding resolves to the dispositions it declared');
   });

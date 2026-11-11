@@ -390,6 +390,7 @@ test('Storybook colour audit accepts dynamic color data only on marked Mux paint
       <div id="wheel-track" class="muxui-color-wheel__track" data-muxui-color-paint="track" style="width:40px;height:40px;background-image:conic-gradient(rgb(25,26,27),rgb(28,29,30))"></div>
       <div id="wheel-thumb" class="muxui-color-wheel__thumb-face" data-muxui-color-paint="sample" style="width:12px;height:12px;background-color:rgb(31,32,33)"></div>
       <div id="swatch" class="muxui-color-swatch" data-muxui-color-paint="sample" style="width:16px;height:16px;background-color:rgb(34,35,36);background-image:linear-gradient(rgb(37,38,39),rgb(40,41,42))"></div>
+      <div id="theme-swatch" class="muxui-theme-picker__swatch" data-muxui-color-paint="sample" style="width:16px;height:16px;background-color:rgb(49,50,51);border:1px solid rgb(52,53,54)"></div>
       <div id="unowned-marker" data-muxui-color-paint="area" style="width:24px;height:16px;background-image:linear-gradient(rgb(43,44,45),rgb(46,47,48))"></div>
       <div id="wrong-blend" class="muxui-color-area" data-muxui-color-paint="area" style="width:24px;height:16px;background-blend-mode:multiply;mix-blend-mode:screen"></div>
     </body></html>`);
@@ -406,8 +407,9 @@ test('Storybook colour audit accepts dynamic color data only on marked Mux paint
     assert.ok(unowned('area-text', 'color'), 'ordinary descendant text remains token-audited');
     assert.ok(unowned('unowned-marker', 'background-image'), 'a marker without the owned part cannot opt out');
     assert.ok(!result.nonToken.some((paint) => ['background-color', 'background-image'].includes(paint.property)
-      && ['area', 'area-thumb', 'slider-track', 'slider-thumb', 'wheel-track', 'wheel-thumb', 'swatch']
+      && ['area', 'area-thumb', 'slider-track', 'slider-thumb', 'wheel-track', 'wheel-thumb', 'swatch', 'theme-swatch']
         .some((id) => paint.examples.some((example) => example.includes(`#${id}`)))), JSON.stringify(result.nonToken));
+    assert.ok(unowned('theme-swatch', 'border-top-color'), 'a theme swatch border remains token-audited');
   } finally {
     await browser.close();
   }
@@ -443,6 +445,35 @@ test('Storybook colour audit recognizes canonical token mixes and shadow-only fo
       && rgba.endsWith(',0.3') && [focusGlow.id, tokens['semantic.color.neutral-60'].id].includes(token)), JSON.stringify(result.paints));
     assert.ok(result.paints.some(({ property, rgba, token }) => property === 'box-shadow'
       && rgba.endsWith(',0.1') && token === datePopover.id), JSON.stringify(result.paints));
+  } finally {
+    await browser.close();
+  }
+});
+
+test('Storybook colour audit reads a nested colour scheme scope against its own scheme\'s tokens', async () => {
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    const page = await browser.newPage();
+    // A mix of a token whose value differs by scheme, so only the dark graph holds this colour.
+    const derived = graphs.dark['semantic.color.neutral-5'];
+    const source = graphs.dark[derived.mix.token];
+    const mix = `color-mix(in ${derived.mix.space}, ${source.value} ${derived.mix.weight * 100}%, ${derived.mix.color})`;
+    const html = (inside, outside = '') => `<html data-muxui-color-scheme="light"><body style="color:${graphs.light['semantic.content.strong'].value};background:${graphs.light['semantic.surface.canvas'].value}">
+      ${outside}<div data-muxui-color-scheme="dark" style="width:40px;height:24px;background:${inside}"><span id="nested-child" style="background:${inside}">x</span></div>
+    </body></html>`;
+    const flagged = (result) => result.nonToken.filter((paint) => paint.property === 'background-color' && paint.rgba === '14.45,13.6,12.75,1');
+
+    await page.setContent(html(mix));
+    assert.equal(flagged(await page.evaluate(collectStorybookPaints, { tokens: graphs.light })).length, 1, 'the light graph alone does not hold a dark mix');
+    const nested = await page.evaluate(collectStorybookPaints, { tokens: graphs.light, schemeTokens: graphs });
+    assert.deepEqual(flagged(nested), [], 'inside a dark scope the dark graph applies, for the scope and its descendants');
+    assert.ok(nested.paints.some(({ property, rgba, token }) => property === 'background-color' && rgba === '14.45,13.6,12.75,1' && graphs.dark[token]?.mix), JSON.stringify(nested.paints));
+
+    // The same colour on the light page itself, outside the scope, is still off the page's tokens.
+    await page.setContent(html('transparent', `<div id="outside" style="width:40px;height:24px;background:${mix}"></div>`));
+    const outside = await page.evaluate(collectStorybookPaints, { tokens: graphs.light, schemeTokens: graphs });
+    assert.equal(flagged(outside).length, 1);
+    assert.ok(flagged(outside)[0].examples.some((example) => example.includes('#outside')));
   } finally {
     await browser.close();
   }
@@ -1144,6 +1175,8 @@ async function runColourWorker({ browser, schemes, workerId }) {
       assert.equal(await locator.evaluate((element) => element.matches(':focus-visible')), true, `${label}: keyboard focus-visible`);
       await snapshot(scheme, `${label}/focus`);
     }
+    // Resolves to the settled paint. A component colour transitions for the state-transition duration after hover(), so a read
+    // straight after the hover samples a mid-transition frame: wait here (bounded) for the token instead of reading once.
     async function tokenPaint(scheme, locator, property, tokenId) {
       const result = await locator.evaluate(async (element, { property, value }) => {
         const probe = document.createElement('span');
@@ -1156,6 +1189,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
         return { actual: getComputedStyle(element)[property], expected };
       }, { property, value: graphs[scheme][tokenId].value });
       assert.equal(result.actual, result.expected, `${scheme}: ${property} must use ${tokenId}`);
+      return result.actual;
     }
     for (const scheme of schemes) {
       // Keep the manager's real loading overlay mounted by holding its index
@@ -1699,7 +1733,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
       await canvasLink.waitFor();
       const canvasLinkColor = await canvasLink.evaluate((element) => getComputedStyle(element).color);
       await canvasLink.hover();
-      const canvasLinkHoverColor = await canvasLink.evaluate((element) => getComputedStyle(element).color);
+      const canvasLinkHoverColor = await tokenPaint(scheme, canvasLink, 'color', 'semantic.content.link-hover');
       const docs = page.frameLocator('#storybook-preview-iframe');
       // Storybook 10.5 remounts Docs examples on globals updates. A pending
       // example teardown can reload the iframe and discard the next click.
@@ -1772,7 +1806,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
       assert.ok(link.token, 'Embedded component must retain its own Mux token context');
       assert.equal(link.color, canvasLinkColor, 'Docs chrome must not recolour the embedded component');
       await docs.locator('.muxui-breadcrumbs a').first().hover();
-      const docsLinkHoverColor = await docs.locator('.muxui-breadcrumbs a').first().evaluate((element) => getComputedStyle(element).color);
+      const docsLinkHoverColor = await tokenPaint(scheme, docs.locator('.muxui-breadcrumbs a').first(), 'color', 'semantic.content.link-hover');
       assert.equal(docsLinkHoverColor, canvasLinkHoverColor, 'Docs chrome must preserve component hover');
       report.states.push({ scheme, state: 'docs/embedded-component', ...link, hoverColor: docsLinkHoverColor });
     }

@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { TabsMotionFixture } from '../fixtures/tabs-motion-fixture.mjs';
 import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { assertEntersInPlace, assertFillClear, assertFollowsDirection, assertHiddenInForcedColors, assertIdle, assertJumped, assertLayerColor, assertParksWithoutFade, assertReentersFromFade, assertSkipsItem, assertTravelled, faded, travel } from './hover-layer-probes.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(TabsMotionFixture)));
@@ -57,6 +58,36 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     assert.ok(Math.abs(initial.indicator.width - initial.label.width) < 1, 'indicator uses label width');
     assert.ok(initial.trigger.width > initial.label.width + 8, 'variable trigger padding is not included in the indicator');
     assert.equal(await page.locator('#primary-tabs [role="tab"][aria-disabled="true"]').count(), 1);
+
+    // One hover layer follows the pointer between enabled tabs, on the same spring as the underline.
+    const hover = { page, layer: '#primary-tabs .muxui-tabs__hover', items: '#primary-tabs [role="tab"]' };
+    const setStateDuration = (duration) => page.evaluate((value) => {
+      for (const property of ['--muxui-semantic-motion-state-duration', '--muxui-semantic-motion-state-transition-duration', '--muxui-semantic-motion-state-transition-spring-visual-duration']) {
+        if (value) document.documentElement.style.setProperty(property, value);
+        else document.documentElement.style.removeProperty(property);
+      }
+    }, duration);
+    await setStateDuration('160ms');
+    assertTravelled(await travel(hover, 0, 1), 'underline hover');
+    await assertFillClear(hover, 1, 'hovered underline tab leaves its fill to the hover layer');
+    await assertLayerColor(hover, 'var(--muxui-semantic-surface-hover)', 'underline hover layer paints the surface hover colour');
+    await assertIdle(hover, 'underline hover');
+    await assertHiddenInForcedColors(hover, 'forced colors hide the underline hover layer');
+    await assertSkipsItem(hover, 1, 2, 'disabled tab');
+    await assertEntersInPlace(hover, 1, 0, 'underline hover entering the group');
+    await assertReentersFromFade(hover, 0, 1, 'underline hover re-entering during its fade');
+    await page.mouse.move(0, 0);
+    await faded(hover);
+    await assertFollowsDirection(hover, 0, 'underline hover');
+    await assertParksWithoutFade(hover, setStateDuration, 'underline hover');
+    await setStateDuration('160ms');
+    await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
+    await page.waitForFunction(() => document.querySelector('#primary-tabs .muxui-tabs__hover')?.hasAttribute('data-muxui-hover-reduced'));
+    assertJumped(await travel(hover, 0, 1), 'reduced underline hover');
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
+    await page.waitForFunction(() => !document.querySelector('#primary-tabs .muxui-tabs__hover')?.hasAttribute('data-muxui-hover-reduced'));
+    await setStateDuration();
 
     await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '800ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '800ms'); });
     await page.evaluate(() => window.__muxuiTabsSetSelected('long'));
@@ -180,6 +211,8 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
         && Math.abs(indicator.getBoundingClientRect().width - label.getBoundingClientRect().width) < 1;
     }, undefined, { timeout: 1000 });
     assert.ok(Date.now() - systemReducedStarted < 300, 'system reduced mode settles the active indicator immediately');
+    await page.waitForFunction(() => document.querySelector('#primary-tabs .muxui-tabs__hover')?.hasAttribute('data-muxui-hover-reduced'));
+    assertJumped(await travel(hover, 0, 1), 'system reduced underline hover');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-state-duration');
@@ -187,7 +220,7 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
       window.__muxuiTabsUnmount();
     });
     await page.locator('#tabs-unmounted').waitFor({ state: 'attached' });
-    assert.equal(await page.locator('.muxui-tabs__motion-underline').count(), 0, 'unmount removes per-instance indicator nodes');
+    assert.equal(await page.locator('.muxui-tabs__motion-underline, .muxui-tabs__hover').count(), 0, 'unmount removes per-instance indicator and hover nodes');
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();

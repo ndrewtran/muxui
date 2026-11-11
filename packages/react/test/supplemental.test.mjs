@@ -182,6 +182,7 @@ test('CheckboxField and SwitchField own controlled, default, disabled, and read-
   let root;
   try {
     const changes = [];
+    const thumbRef = React.createRef();
     function Fields() {
       const [checkboxChecked, setCheckboxChecked] = React.useState(false);
       const [switchChecked, setSwitchChecked] = React.useState(false);
@@ -190,7 +191,7 @@ test('CheckboxField and SwitchField own controlled, default, disabled, and read-
         React.createElement(CheckboxField.Root, { defaultChecked: true, indeterminate: true, name: 'indeterminate', value: 'mixed' }, React.createElement(CheckboxField.Button, null, React.createElement(CheckboxField.Indicator), 'Default checkbox')),
         React.createElement(CheckboxField.Root, { defaultChecked: true, readOnly: true, name: 'read-only-checkbox', value: 'locked' }, React.createElement(CheckboxField.Button, null, React.createElement(CheckboxField.Indicator), 'Read only checkbox')),
         React.createElement(CheckboxField.Root, { defaultChecked: true, disabled: true, name: 'disabled-checkbox', value: 'disabled' }, React.createElement(CheckboxField.Button, null, React.createElement(CheckboxField.Indicator), 'Disabled checkbox')),
-        React.createElement(SwitchField.Root, { checked: switchChecked, name: 'switch', value: 'controlled', onChange: (next) => { changes.push(['switch', next]); setSwitchChecked(next); } }, React.createElement(SwitchField.Button, null, React.createElement(SwitchField.Thumb), 'Controlled switch')),
+        React.createElement(SwitchField.Root, { checked: switchChecked, name: 'switch', value: 'controlled', onChange: (next) => { changes.push(['switch', next]); setSwitchChecked(next); } }, React.createElement(SwitchField.Button, null, React.createElement(SwitchField.Thumb, { ref: thumbRef, className: 'custom-thumb' }), 'Controlled switch')),
         React.createElement(SwitchField.Root, { defaultChecked: true, readOnly: true, name: 'read-only-switch', value: 'locked' }, React.createElement(SwitchField.Button, null, React.createElement(SwitchField.Thumb), 'Read only switch')),
         React.createElement(SwitchField.Root, { defaultChecked: true, disabled: true, name: 'disabled-switch', value: 'disabled' }, React.createElement(SwitchField.Button, null, React.createElement(SwitchField.Thumb), 'Disabled switch')),
       );
@@ -219,6 +220,11 @@ test('CheckboxField and SwitchField own controlled, default, disabled, and read-
     assert.equal(switchInputs[0].checked, false);
     assert.equal(switchInputs[1].checked, true);
     assert.equal(switchInputs[2].disabled, true);
+    // Thumb is Switch's motion indicator: it keeps the caller's ref and class beside Switch's, and follows the Button's state.
+    const thumbs = [...document.querySelectorAll('.muxui-switch-field__thumb')];
+    assert.equal(thumbRef.current, thumbs[0]);
+    assert.equal(thumbs[0].className, 'muxui-switch__indicator muxui-switch-field__thumb custom-thumb');
+    assert.deepEqual(thumbs.map((thumb) => thumb.hasAttribute('data-muxui-state-selected')), [false, true, true]);
     await act(async () => checkboxInputs[0].click());
     await act(async () => switchInputs[0].click());
     await act(async () => checkboxInputs[2].click());
@@ -229,6 +235,7 @@ test('CheckboxField and SwitchField own controlled, default, disabled, and read-
     assert.equal(checkboxInputs[0].checked, true);
     assert.equal(checkboxIndicators[0].querySelector('svg')?.classList.contains('lucide-check'), true);
     assert.equal(switchInputs[0].checked, true);
+    assert.equal(thumbs[0].hasAttribute('data-muxui-state-selected'), true);
     assert.equal(checkboxInputs[2].checked, true);
     assert.equal(switchInputs[1].checked, true);
     assert.deepEqual([...new dom.window.FormData(document.querySelector('form')).entries()], [

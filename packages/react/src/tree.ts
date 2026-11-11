@@ -143,7 +143,7 @@ function treeItem(item: NormalizedTreeItem, expansionTrigger: TreeExpansionTrigg
       children: ({ state }) => {
         rowExpansion.toggleKey = rowExpansionEnabled ? () => state.toggleKey(item.id) : undefined;
         return React.createElement('div', { className: 'muxui-tree__item-content' },
-          nested.length ? React.createElement(IconButton, { slot: 'chevron', 'aria-label': 'Toggle', disabled: item.disabled, className: 'muxui-tree__toggle' }, React.createElement(ChevronRightIcon, { 'aria-hidden': 'true', focusable: 'false', fill: 'currentColor', strokeWidth: 0, size: 16 })) : null,
+          nested.length ? React.createElement(IconButton, { slot: 'chevron', 'aria-label': 'Toggle', disabled: item.disabled, className: 'muxui-tree__toggle' }, React.createElement(ChevronRightIcon, { className: 'muxui-tree__toggle-icon', 'aria-hidden': 'true', focusable: 'false', fill: 'currentColor', strokeWidth: 0, size: 16 })) : null,
           React.createElement('span', { className: 'muxui-tree__item-label' }, item.label));
       },
     }),

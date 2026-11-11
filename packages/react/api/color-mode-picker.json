@@ -1,0 +1,119 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/color-mode-picker.ts",
+  "component": "muxui:component:color-mode-picker",
+  "binding": "web.react",
+  "export": "ColorModePicker",
+  "api": {
+    "props": [
+      "mode",
+      "defaultMode",
+      "storageKey",
+      "disabled"
+    ],
+    "events": [
+      "modeChange"
+    ],
+    "defaults": {
+      "storageKey": "muxui-color-mode",
+      "disabled": false
+    },
+    "propDetails": {
+      "mode": {
+        "type": {
+          "kind": "reference",
+          "name": "ColorModeChoice"
+        },
+        "required": false,
+        "enum": [
+          "light",
+          "dark",
+          "system"
+        ],
+        "description": "The color mode, when the page controls it. System follows the operating system's preference."
+      },
+      "defaultMode": {
+        "type": {
+          "kind": "reference",
+          "name": "ColorModeChoice"
+        },
+        "required": false,
+        "enum": [
+          "light",
+          "dark",
+          "system"
+        ],
+        "description": "The mode the picker starts in, before a saved mode is read. Without one it starts on System."
+      },
+      "storageKey": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The localStorage key a light or dark choice is saved under, and System removes."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the picker and every option in it."
+      }
+    },
+    "eventDetails": {
+      "modeChange": {
+        "prop": "onModeChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "mode",
+              "type": {
+                "kind": "reference",
+                "name": "ColorModeChoice"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the new mode when the user changes it."
+      }
+    },
+    "types": {
+      "ColorMode": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "light"
+            },
+            {
+              "kind": "literal",
+              "value": "dark"
+            }
+          ]
+        }
+      },
+      "ColorModeChoice": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "ColorMode"
+            },
+            {
+              "kind": "literal",
+              "value": "system"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -103,6 +103,8 @@ const audited = [
       ...expand(['button-group'], ['disabled', 'role']),
       // ColorModeToggle sent isDisabled to React Aria's Switch as its own value, false when omitted, before the move.
       ...expand(['color-mode-toggle'], ['disabled']),
+      // ColorModePicker and ThemePicker pass isDisabled to their React Aria group as their own value, false when omitted. They are new, so no context ever supplied it.
+      ...expand(['color-mode-picker', 'theme-picker'], ['disabled']),
       // ProgressCircle sent value (undefined for null), minValue and maxValue to React Aria's ProgressBar as its own values before the move.
       ...expand(['progress-circle'], ['value', 'minValue', 'maxValue']),
       // InputTags sent isDisabled and isInvalid to React Aria's Group as its own values, false when omitted, before the move.

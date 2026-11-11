@@ -5,7 +5,7 @@
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "7.0.0",
+  "tokenContractVersion": "8.0.0",
   "theme": {
     "name": "default",
     "modeAxes": {
@@ -309,7 +309,7 @@
       }
     },
     "scale": {
-      "algorithm": "muxui-oklch-v1",
+      "algorithm": "muxui-oklch-v2",
       "namedShades": [
         5,
         10,
@@ -477,7 +477,11 @@
         }
       },
       "contrast": {
-        "algorithm": "wcag2-endpoint-v1",
+        "algorithms": [
+          "wcag2-endpoint-v1",
+          "apca-endpoint-v1"
+        ],
+        "defaultAlgorithm": "wcag2-endpoint-v1",
         "defaultPivot": "auto",
         "pivots": [
           5,
@@ -2581,7 +2585,7 @@
       "alias": "semantic.content.muted",
       "modes": {
         "colorScheme.dark": {
-          "alias": "semantic.color.neutral-default-50"
+          "alias": "semantic.color.neutral-default-40"
         }
       }
     },
@@ -2608,6 +2612,32 @@
       "modes": {
         "colorScheme.dark": {
           "alias": "semantic.color.neutral-default-92"
+        }
+      }
+    },
+    "component.tabs.selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of the selected tab in pill, segment, and overflow tabs; both schemes use their lightest neutral.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-5",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-100"
+        }
+      }
+    },
+    "component.tabs.selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label color of the selected tab in pill, segment, and overflow tabs, paired with its fill.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-5-fg",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-100-fg"
         }
       }
     },

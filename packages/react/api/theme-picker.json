@@ -1,0 +1,220 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/theme-picker.ts",
+  "component": "muxui:component:theme-picker",
+  "binding": "web.react",
+  "export": "ThemePicker",
+  "api": {
+    "props": [
+      "value",
+      "defaultValue",
+      "random",
+      "disabled"
+    ],
+    "events": [
+      "change"
+    ],
+    "defaults": {
+      "random": false,
+      "disabled": false
+    },
+    "propDetails": {
+      "value": {
+        "type": {
+          "kind": "reference",
+          "name": "ThemePickerValue"
+        },
+        "required": false,
+        "enum": [
+          "standard-harbour",
+          "standard-lagoon",
+          "standard-blueprint",
+          "standard-violet-dusk",
+          "standard-wildflower",
+          "standard-terracotta",
+          "standard-amber-grove",
+          "standard-fern",
+          "monochrome-antique",
+          "monochrome-forest",
+          "monochrome-mauve",
+          "monochrome-mountain-meadow",
+          "monochrome-rosewater",
+          "monochrome-teal",
+          "monochrome-terracotta",
+          "random"
+        ],
+        "description": "The selected theme ID, or random, when the page controls it."
+      },
+      "defaultValue": {
+        "type": {
+          "kind": "reference",
+          "name": "ThemePickerValue"
+        },
+        "required": false,
+        "enum": [
+          "standard-harbour",
+          "standard-lagoon",
+          "standard-blueprint",
+          "standard-violet-dusk",
+          "standard-wildflower",
+          "standard-terracotta",
+          "standard-amber-grove",
+          "standard-fern",
+          "monochrome-antique",
+          "monochrome-forest",
+          "monochrome-mauve",
+          "monochrome-mountain-meadow",
+          "monochrome-rosewater",
+          "monochrome-teal",
+          "monochrome-terracotta",
+          "random"
+        ],
+        "description": "The theme ID, or random, that starts selected, when the picker controls itself."
+      },
+      "random": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Adds a Random option before the presets. The picker only reports random; the page chooses the theme."
+      },
+      "disabled": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Disables the picker and every option in it."
+      }
+    },
+    "eventDetails": {
+      "change": {
+        "prop": "onChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "value",
+              "type": {
+                "kind": "reference",
+                "name": "ThemePickerValue"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the theme ID, or random, each time the user selects an option."
+      }
+    },
+    "types": {
+      "MuxUIMonochromeThemeId": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "monochrome-antique"
+            },
+            {
+              "kind": "literal",
+              "value": "monochrome-forest"
+            },
+            {
+              "kind": "literal",
+              "value": "monochrome-mauve"
+            },
+            {
+              "kind": "literal",
+              "value": "monochrome-mountain-meadow"
+            },
+            {
+              "kind": "literal",
+              "value": "monochrome-rosewater"
+            },
+            {
+              "kind": "literal",
+              "value": "monochrome-teal"
+            },
+            {
+              "kind": "literal",
+              "value": "monochrome-terracotta"
+            }
+          ]
+        }
+      },
+      "MuxUIStandardThemeId": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "standard-harbour"
+            },
+            {
+              "kind": "literal",
+              "value": "standard-lagoon"
+            },
+            {
+              "kind": "literal",
+              "value": "standard-blueprint"
+            },
+            {
+              "kind": "literal",
+              "value": "standard-violet-dusk"
+            },
+            {
+              "kind": "literal",
+              "value": "standard-wildflower"
+            },
+            {
+              "kind": "literal",
+              "value": "standard-terracotta"
+            },
+            {
+              "kind": "literal",
+              "value": "standard-amber-grove"
+            },
+            {
+              "kind": "literal",
+              "value": "standard-fern"
+            }
+          ]
+        }
+      },
+      "MuxUIThemeId": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "MuxUIStandardThemeId"
+            },
+            {
+              "kind": "reference",
+              "name": "MuxUIMonochromeThemeId"
+            }
+          ]
+        }
+      },
+      "ThemePickerValue": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "reference",
+              "name": "MuxUIThemeId"
+            },
+            {
+              "kind": "literal",
+              "value": "random"
+            }
+          ]
+        },
+        "description": "The theme ID of a preset, or `random` for the Random option."
+      }
+    }
+  }
+}
