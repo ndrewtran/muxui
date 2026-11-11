@@ -183,7 +183,10 @@ export const Checkbox: ForwardRefExoticComponent<CheckboxProps & RefAttributes<H
     defaultSelected: defaultChecked,
     isDisabled: disabled,
     isIndeterminate: indeterminate,
-    isInvalid: invalid,
+    // React Aria reads isInvalid: false as controlled-valid, which would hide a failed required check after a blocked
+    // submit, so it is passed only when invalid is set, as the fields do. A conditional, not ||: extraction reads a
+    // fallback on an owned prop as an executed default.
+    isInvalid: invalid ? invalid : undefined,
     // Undefined lets a checkbox inherit its CheckboxGroup's required state.
     ...(required === undefined ? {} : { isRequired: required }),
     name,
