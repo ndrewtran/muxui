@@ -86,12 +86,19 @@ export function usePendingSubmitProps(pending: boolean | undefined, type: Button
  * ids, data-* attributes, its own handlers and a few named attributes, so a title, a tabIndex or most aria-* attributes
  * the component accepts in its types would never reach the element. Whatever React Aria renders still wins, with one
  * exception: the caller's tabIndex replaces React Aria's default one. autoFocus stays React Aria's, which focuses the
- * element itself.
+ * element itself. React Aria's behaviour props, which an internal caller such as TextEditor's bubble menu passes through
+ * an untyped spread, are React Aria's to read and never reach the element.
  */
 export function withHostAttributes<DomProps extends object>(caller: object, domProps: DomProps): DomProps {
   const { autoFocus: _autoFocus, tabIndex, ...attributes } = caller as { autoFocus?: unknown; tabIndex?: number };
+  for (const name of reactAriaBehaviourProps) delete (attributes as Record<string, unknown>)[name];
   return { ...attributes, ...domProps, ...(tabIndex === undefined ? {} : { tabIndex }) };
 }
+
+const reactAriaBehaviourProps = Object.freeze([
+  'preventFocusOnPress', 'excludeFromTabOrder', 'isDisabled', 'isPending', 'routerOptions',
+  'onPress', 'onPressStart', 'onPressEnd', 'onPressChange', 'onPressUp', 'onHoverStart', 'onHoverEnd', 'onHoverChange', 'onFocusChange',
+]);
 
 // Untyped callers can pass anything; Object.hasOwn alone would coerce ['primary'] or a String object to a key.
 function assertButtonOption(name: string, value: unknown, allowed: Readonly<Record<string, true>>) {
