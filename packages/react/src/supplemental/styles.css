@@ -3837,4 +3837,11 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   .muxui-checkbox-field[data-muxui-state-disabled] .muxui-checkbox-field__button {
     opacity: 1;
   }
+
+  /* Forced colours drop the box-shadow ring, so keyboard focus draws the outline Checkbox and RadioGroup draw. */
+  .muxui-radio-field__button[data-muxui-state-focus-visible] .muxui-radio-field__indicator {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
 }
