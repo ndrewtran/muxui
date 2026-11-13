@@ -258,8 +258,9 @@ test('an underline Tabs marks its selected tab in server markup, where the measu
   let browser;
   try {
     browser = await launchBrowser();
-    const open = async (hydrate) => {
+    const open = async (hydrate, forcedColors) => {
       const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+      await page.emulateMedia({ forcedColors });
       // Without its entry module the page stays the server markup, as a reader meets it before hydration or with scripts off.
       if (!hydrate) await page.route('**/tabs-motion-browser-entry.mjs', (route) => route.abort());
       await page.goto(`${url}/tabs-motion.html`, { waitUntil: 'load' });
@@ -267,18 +268,30 @@ test('an underline Tabs marks its selected tab in server markup, where the measu
       await awaitFontsAndFrames(page);
       return page;
     };
-    const server = await open(false);
-    const hydrated = await open(true);
-    // #unequal-tabs selects a plain tab beside a taller one, so its label sits above the row's bottom edge.
-    for (const selector of ['#primary-tabs', '#vertical-tabs', '#unequal-tabs']) {
-      const before = await server.evaluate(readSelectedMark, selector);
-      const after = await hydrated.evaluate(readSelectedMark, selector);
-      assert.equal(before.ready, false, `${selector} has no motion before hydration`);
-      assert.equal(before.standIns, 1, `${selector} draws one selected mark before hydration`);
-      assert.equal(after.standIns, 0, `${selector} drops the stand-in once the indicator is ready`);
-      assert.deepEqual([before.opacity, after.opacity], ['1', '1'], `${selector} shows both marks`);
-      assert.deepEqual({ box: before.box, color: before.color, radius: before.radius }, { box: after.box, color: after.color, radius: after.radius }, `${selector} indicator lands exactly on the server mark`);
-      assert.deepEqual(before.text, after.text, `${selector} label text stays where it was drawn`);
+    for (const forcedColors of ['none', 'active']) {
+      const server = await open(false, forcedColors);
+      const hydrated = await open(true, forcedColors);
+      // Forced colours repaint an author background as Canvas, which would cut the mark out of the rail; it is Highlight instead.
+      const highlight = forcedColors === 'active' ? await server.evaluate(() => {
+        const probe = document.body.appendChild(Object.assign(document.createElement('div'), { style: 'forced-color-adjust: none; background-color: Highlight' }));
+        const color = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return color;
+      }) : undefined;
+      // #unequal-tabs selects a plain tab beside a taller one, so its label sits above the row's bottom edge.
+      for (const selector of ['#primary-tabs', '#vertical-tabs', '#unequal-tabs']) {
+        const label = `${selector} (forced colours ${forcedColors})`;
+        const before = await server.evaluate(readSelectedMark, selector);
+        const after = await hydrated.evaluate(readSelectedMark, selector);
+        assert.equal(before.ready, false, `${label} has no motion before hydration`);
+        assert.equal(before.standIns, 1, `${label} draws one selected mark before hydration`);
+        assert.equal(after.standIns, 0, `${label} drops the stand-in once the indicator is ready`);
+        assert.deepEqual([before.opacity, after.opacity], ['1', '1'], `${label} shows both marks`);
+        assert.deepEqual({ box: before.box, color: before.color, radius: before.radius }, { box: after.box, color: after.color, radius: after.radius }, `${label} indicator lands exactly on the server mark`);
+        assert.deepEqual(before.text, after.text, `${label} label text stays where it was drawn`);
+        if (highlight) assert.equal(after.color, highlight, `${label} draws both marks in Highlight`);
+      }
+      await Promise.all([server.close(), hydrated.close()]);
     }
   } finally {
     await browser?.close();

@@ -1701,6 +1701,14 @@
   .muxui-tabs__motion[data-muxui-tabs-ready] .muxui-tabs__hover {
     display: none;
   }
+
+  /* A forced background turns Canvas and cuts the selected mark out of the rail, so the mark, measured or not, is Highlight. */
+  .muxui-tabs__motion[data-muxui-tabs-variant='underline'] .muxui-tabs__motion-underline,
+  .muxui-tabs__motion[data-muxui-tabs-variant='underline']:not([data-muxui-tabs-ready]) .muxui-tabs__tab[data-muxui-state-selected] .muxui-tabs__tab-label::after,
+  .muxui-tabs__motion[data-muxui-tabs-variant='underline'][data-muxui-state-orientation='vertical']:not([data-muxui-tabs-ready]) .muxui-tabs__tab[data-muxui-state-selected]::after {
+    background-color: Highlight;
+    forced-color-adjust: none;
+  }
 }
 
 .muxui-tabs[data-muxui-state-orientation='vertical'] .muxui-tabs__motion[data-muxui-tabs-variant='overflow'] .muxui-tabs__list {
