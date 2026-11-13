@@ -49,9 +49,9 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
-  assert.equal(read('styles.css').rules.length, 2138);
+  assert.equal(read('styles.css').rules.length, 2144);
   const shared = readFileSync(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').trim();
-  assert.equal(readStyleRules(shared).rules.length, 509);
+  assert.equal(readStyleRules(shared).rules.length, 510);
   assert.equal(readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8').split(shared).length, 2, 'styles.css includes the shared stylesheet verbatim exactly once');
   assert.equal(read('themes.css').rules.length, 60);
   // The shapes it models: grouping at-rules with a chain, statements, leaf at-rules it skips, !important, a block in a custom property.
@@ -442,7 +442,7 @@ test('the selection index is a second reading of the stylesheet, pair for pair, 
   const mine = new Set([...facts.selection].flatMap(([attribute, byClass]) => [...byClass.keys()].map((name) => `${attribute}|${name}`)));
   assert.deepEqual([...second].filter((pair) => !mine.has(pair)).sort(), [], 'a pair the second reading finds and the module lacks');
   assert.deepEqual([...mine].filter((pair) => !second.has(pair)).sort(), [], 'a pair the module holds and the second reading does not');
-  assert.equal(mine.size, 497);
+  assert.equal(mine.size, 498);
   // The scoping rules, on selectors written for them, by both readings. An attribute in :has() belongs to the element asked for;
   // each :where() / :is() branch stands alone; a :not() test counts for the element it is on; an ancestor's tests are its own.
   const cases = [
