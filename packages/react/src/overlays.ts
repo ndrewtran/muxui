@@ -266,7 +266,7 @@ function withOwnLabels(children: ReactNode, ariaLabelledby: string | undefined):
   const [hidden, ...rest] = children;
   const button = hidden.props.children;
   if (!React.isValidElement<DropButtonProps>(button)) return children;
-  const given = new Set(ariaLabelledby?.trim().split(/\s+/u) ?? []);
+  const given = new Set(ariaLabelledby?.split(/\s+/u).filter(Boolean));
   const kept = (button.props['aria-labelledby'] ?? '').split(/\s+/u).filter((id) => given.has(id) || (given.size > 0 && id === button.props.id));
   return [React.cloneElement(hidden, undefined, React.cloneElement(button, { 'aria-labelledby': kept.length > 0 ? kept.join(' ') : undefined })), ...rest];
 }

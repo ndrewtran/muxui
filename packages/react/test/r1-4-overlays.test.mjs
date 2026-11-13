@@ -337,6 +337,9 @@ test('DropZone names its drop button from aria-label or aria-labelledby, with no
     [{ 'aria-label': 'Upload' }, undefined],
     [{ 'aria-labelledby': 'hint' }, ['self', 'hint']],
     [{ 'aria-label': 'Upload', 'aria-labelledby': 'hint' }, ['self', 'hint']],
+    // An empty or blank aria-labelledby names nothing, so it adds no self-reference.
+    [{ 'aria-labelledby': '' }, undefined],
+    [{ 'aria-label': 'Upload', 'aria-labelledby': ' \t ' }, undefined],
   ];
   const tree = (props) => React.createElement('div', null, React.createElement('span', { id: 'hint' }, 'Images only'), React.createElement(DropZone, props, 'Drop here'));
   const references = (button) => {
