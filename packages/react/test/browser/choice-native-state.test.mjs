@@ -236,6 +236,29 @@ test('choice controls follow the native input before hydration and validate and 
       });
     }
 
+    await t.test('a small box ticked before hydration draws the small tick', async () => {
+      // The tick's box: the ::after a click draws from the native input, or the icon React renders.
+      const ticks = (page) => page.evaluate(() => ['checkbox-sm', 'checkbox-field-sm'].map((name) => {
+        const indicator = document.querySelector(`[data-probe="${name}"] :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator)`);
+        const after = getComputedStyle(indicator, '::after');
+        const icon = indicator.querySelector('svg');
+        return after.content !== 'none' && after.content !== 'normal' ? [after.inlineSize, after.blockSize] : [getComputedStyle(icon).inlineSize, getComputedStyle(icon).blockSize];
+      }));
+      const clickAll = async (page) => {
+        for (const name of ['checkbox-sm', 'checkbox-field-sm']) await page.locator(`[data-probe="${name}"] label`).click();
+      };
+      const native = await open('/light.html', false);
+      await clickAll(native.page);
+      const drawn = await ticks(native.page);
+      await native.close();
+      const hydrated = await open('/light.html', true);
+      await clickAll(hydrated.page);
+      await hydrated.page.waitForFunction(() => document.querySelectorAll('#small [data-muxui-state-selected]').length >= 2);
+      assert.deepEqual(drawn, await ticks(hydrated.page));
+      assert.deepEqual(drawn, [['9px', '9px'], ['9px', '9px']]);
+      await hydrated.close();
+    });
+
     await t.test('a required box clears its invalid state and error when it is ticked', async () => {
       const { page, errors, close: done } = await open('/light.html', true);
       // The plain Checkbox is left out: it passes isInvalid false to React Aria, so a blocked submit never marks it.

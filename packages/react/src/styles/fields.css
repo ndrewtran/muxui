@@ -1257,17 +1257,16 @@
 
 :is(.muxui-checkbox, .muxui-checkbox-field__button):not([data-muxui-state-selected], [data-muxui-state-indeterminate]):has(input:checked) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator)::after {
   content: '';
-  inline-size: 0.75rem;
-  block-size: 0.75rem;
+  inline-size: var(--muxui-checkbox-tick-size, 0.75rem);
+  block-size: var(--muxui-checkbox-tick-size, 0.75rem);
   background-color: var(--muxui-component-checkbox-selected-foreground);
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-/* The small tick's size; the box draws no ::after but the tick above. */
-.muxui-checkbox--sm .muxui-checkbox__indicator::after,
-.muxui-checkbox-field--sm .muxui-checkbox-field__indicator::after {
-  inline-size: 0.5625rem;
-  block-size: 0.5625rem;
+/* The small tick's size, set on the box, so it reaches the tick above whatever that rule's specificity. */
+.muxui-checkbox--sm .muxui-checkbox__indicator,
+.muxui-checkbox-field--sm .muxui-checkbox-field__indicator {
+  --muxui-checkbox-tick-size: 0.5625rem;
 }
 
 :is(.muxui-checkbox, .muxui-checkbox-field__button)[data-muxui-state-selected]:not([data-muxui-state-indeterminate]):has(input:not(:checked)) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator) {

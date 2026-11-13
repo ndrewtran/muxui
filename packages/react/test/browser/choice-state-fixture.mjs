@@ -105,6 +105,14 @@ export function LateErrors() {
   return h('div', null, Object.entries(errorFields).map(([name, field]) => h('section', { key: name, id: `late-${name}` }, field.render(shown ? `${name} needs a fix.` : null))));
 }
 
+/** A small Checkbox and CheckboxField, unticked, each in a `[data-probe="<kind>-sm"]`. */
+export function SmallChoices() {
+  return h('form', { id: 'small' },
+    probe('checkbox-sm', h(Checkbox, { name: 'checkbox-sm', size: 'sm' }, 'Checkbox')),
+    probe('checkbox-field-sm', h(CheckboxField.Root, { name: 'checkbox-field-sm', size: 'sm' },
+      h(CheckboxField.Button, null, h(CheckboxField.Indicator), 'CheckboxField'))));
+}
+
 /** The removable error fields, each showing its error from the first render until window.__showInitialErrors(false) runs. */
 export function InitialErrors() {
   const [shown, setShown] = React.useState(true);
@@ -115,5 +123,5 @@ export function InitialErrors() {
 }
 
 export function Page() {
-  return h('main', null, h(ChoiceControls), h(RequiredChoices), h(LateErrors), h(InitialErrors));
+  return h('main', null, h(ChoiceControls), h(RequiredChoices), h(LateErrors), h(InitialErrors), h(SmallChoices));
 }
