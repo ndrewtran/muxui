@@ -1144,8 +1144,9 @@ test('MuxUI styles bind states and public theme hooks', async () => {
   assert.match(css, /\.muxui-button\[data-muxui-state-pressed\]:not\(\[data-muxui-state-disabled\], \[data-muxui-state-pending\], \[aria-expanded='true'\]\)/u);
   assert.match(css, /\.muxui-button:active:not\(\[data-muxui-state-disabled\], \[data-muxui-state-pending\]\)/u);
 
-  assert.match(css, /\.muxui-link\[data-muxui-state-hovered\][\s\S]*var\(--muxui-semantic-content-link-hover\)/u);
-  assert.match(css, /\.muxui-link\[data-muxui-state-pressed\][\s\S]*var\(--muxui-semantic-content-link-pressed\)/u);
+  // The link states bind on a Link without Button's class; one that carries it is styled as a Button.
+  assert.match(css, /\.muxui-link:not\(\.muxui-button\)\[data-muxui-state-hovered\][\s\S]*var\(--muxui-semantic-content-link-hover\)/u);
+  assert.match(css, /\.muxui-link:not\(\.muxui-button\)\[data-muxui-state-pressed\][\s\S]*var\(--muxui-semantic-content-link-pressed\)/u);
   assert.match(css, /\.muxui-link[^\{]*\{[\s\S]*var\(--muxui-semantic-content-link\)/u);
   assert.match(css, /\.muxui-tabs__tab\[aria-selected='true'\][\s\S]*var\(--muxui-semantic-content-link\)/u);
   assert.match(css, /\.muxui-autocomplete__option\[aria-selected='true'\][\s\S]*var\(--muxui-semantic-content-link\)/u);
