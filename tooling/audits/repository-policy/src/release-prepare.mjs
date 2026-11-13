@@ -13,6 +13,7 @@ import {
   assertInstalledCandidate,
   assertPackedFileBoundary,
   assertNoPublicSurfaceLeaks,
+  assertPackedComponentStyles,
   assertSingleInstalledVersion,
   assertStylesheetAssetUrls,
   bundledModulePackage,
@@ -51,6 +52,7 @@ import { patternVariantExamples } from './pattern-variants.mjs';
 import { resolvePinnedTool as resolvePinnedToolIn } from './pinned-tool.mjs';
 import { fetchReusedTarball, fixForwardVersion, parseCandidateVersion } from './npm-publication.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
+import { partRows } from '../../../../packages/react/test/support/styling-parts.ts';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const packages = await discoverWorkspacePackages(repositoryRoot);
@@ -788,10 +790,7 @@ try {
   assertIncludes(notice, 'Lucide', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, '@internationalized/date', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, 'Copyright (c) 2013-present Cole Bemis', 'R1.5_PACK_NOTICE_INVALID');
-  for (const name of currentComponentExports) {
-    const slug = name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-    assertIncludes(styles, `.muxui-${slug}`, 'R1.5_PACK_STYLE_MISSING');
-  }
+  assertPackedComponentStyles({ stylesheet: styles, componentExports: currentComponentExports, partRows });
 
   const consumerManifest = `${JSON.stringify({
     name: 'muxui-r1-5-clean-consumer', private: true, type: 'module',

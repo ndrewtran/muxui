@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
+import * as cssTree from 'css-tree';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, posix } from 'node:path';
@@ -101,6 +102,32 @@ export function assertStylesheetAssetUrls({ stylesheet, stylesheetEntry, entries
     const size = entrySizes instanceof Map ? entrySizes.get(archiveEntry) : entrySizes?.[archiveEntry];
     if (!Number.isFinite(size) || size <= 0) fail('R1.5_PACK_STYLE_ASSET_MISSING', archiveEntry);
   }
+}
+
+/**
+ * Fails unless the packed stylesheet selects, as a whole class name, every hook the part map
+ * (`packages/react/test/support/styling-parts.ts`) says a Mux rule styles for each component: its `class` and `root-element`
+ * rows that are neither `hookOnly` nor `styledThrough`. A component whose rows have no such hook, such as one another family
+ * supplies the whole look of, needs no rule of its own; a component with no rows at all fails. Comments never count.
+ */
+export function assertPackedComponentStyles({ stylesheet, componentExports, partRows }) {
+  const selected = new Set();
+  cssTree.walk(cssTree.parse(stylesheet, { positions: false, parseValue: false }), {
+    visit: 'ClassSelector',
+    enter: (node) => selected.add(node.name),
+  });
+  const failures = componentExports.flatMap((name) => {
+    const slug = name.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
+    const rows = partRows.filter(({ family }) => family === slug);
+    if (rows.length === 0) return [`${name}: the part map has no rows for ${slug}`];
+    return rows
+      .filter(({ disposition, hook, hookOnly, styledThrough }) => (
+        ['class', 'root-element'].includes(disposition) && hook !== undefined && hookOnly === undefined && styledThrough === undefined
+      ))
+      .filter(({ hook }) => !selected.has(hook))
+      .map(({ hook }) => `${name}: no rule selects .${hook}`);
+  });
+  if (failures.length !== 0) fail('R1.5_PACK_STYLE_MISSING', failures.join('; '));
 }
 
 export function assertExactDependencyGraph(actual, expected) {

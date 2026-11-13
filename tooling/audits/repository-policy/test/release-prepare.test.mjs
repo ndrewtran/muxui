@@ -13,6 +13,7 @@ import {
   assertExactExportList,
   assertInstalledCandidate,
   assertNoPublicSurfaceLeaks,
+  assertPackedComponentStyles,
   assertPackedFileBoundary,
   assertSingleInstalledVersion,
   assertStylesheetAssetUrls,
@@ -39,6 +40,7 @@ import {
 } from '../src/release-proof.mjs';
 import { attestationDocument, statementOf } from './registry-fake.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
+import { partRows } from '../../../../packages/react/test/support/styling-parts.ts';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const packageRoot = join(repositoryRoot, 'packages/react');
@@ -142,6 +144,36 @@ test('release proof resolves every local stylesheet URL to a nonempty archive as
     }),
     /R1\.5_PACK_STYLE_ASSET_MISSING/u,
   );
+});
+
+test('the packed stylesheet selects every hook the part map says Mux styles', () => {
+  const historicalSnapshot = JSON.parse(readFileSync(join(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
+  const { currentComponentExports } = deriveCurrentExportSurface({
+    historicalFamilies: historicalSnapshot.families,
+    supplementalComponents: readSupplementalMapping(repositoryRoot),
+  });
+  const stylesheet = readFileSync(join(packageRoot, 'generated/styles.css'), 'utf8');
+  assert.ok(currentComponentExports.includes('ColorModePicker'), 'a component with no rule of its own is in the surface');
+  assertPackedComponentStyles({ stylesheet, componentExports: currentComponentExports, partRows });
+});
+
+test('the packed style check exempts hook-only hooks and needs every other hook as a whole class name', () => {
+  const rows = [
+    { family: 'picker', part: 'root', disposition: 'class', hook: 'muxui-picker', hookOnly: 'Another family supplies the look.' },
+    { family: 'picker', part: 'option', disposition: 'composed', hook: 'muxui-toggle', composedOf: 'button' },
+    { family: 'text', part: 'root', disposition: 'class', hook: 'muxui-text' },
+    { family: 'dialog', part: 'root', disposition: 'none', reason: 'provider' },
+    { family: 'dialog', part: 'popup', disposition: 'class', hook: 'muxui-dialog__popup' },
+    { family: 'dialog', part: 'label', disposition: 'class', hook: 'muxui-dialog__label', styledThrough: 'muxui-field-label' },
+  ];
+  const check = (stylesheet, componentExports = ['Picker', 'Text', 'Dialog']) => (
+    () => assertPackedComponentStyles({ stylesheet, componentExports, partRows: rows })
+  );
+  check('@layer muxui { .muxui-text { color: red } .muxui-dialog__popup:where([data-open]) { inset: 0 } }')();
+  assert.throws(check('.muxui-text-field { color: red } .muxui-dialog__popup { inset: 0 }'), /R1\.5_PACK_STYLE_MISSING: Text: no rule selects \.muxui-text$/u);
+  assert.throws(check('/* .muxui-text */ .muxui-dialog__popup { inset: 0 }'), /Text: no rule selects \.muxui-text$/u);
+  assert.throws(check('.muxui-text { color: red } .muxui-dialog__popup-icon { inset: 0 }'), /Dialog: no rule selects \.muxui-dialog__popup$/u);
+  assert.throws(check('.muxui-text { color: red }', ['Menu']), /Menu: the part map has no rows for menu/u);
 });
 
 test('release proof rejects missing bundled font, dependency, or license notice', () => {
