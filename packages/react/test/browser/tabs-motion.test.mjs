@@ -50,7 +50,7 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
     assert.match(await page.locator('#primary-tabs').getAttribute('class'), /tabs-primary/u);
-    assert.equal(await page.locator('.muxui-tabs__panels').count(), 2, 'SSR and hydration retain both tab panel trees');
+    assert.equal(await page.locator('.muxui-tabs__panels').count(), 3, 'SSR and hydration retain every tab panel tree');
 
     const initial = await readIndicator(page, '#primary-tabs');
     assert.equal(initial.selectedLabel, 'A');
@@ -233,7 +233,12 @@ function readSelectedMark(selector) {
   const root = document.querySelector(selector);
   const motion = root.querySelector('.muxui-tabs__motion');
   const tab = root.querySelector('[role="tab"][aria-selected="true"]');
-  const paint = (style, box) => ({ box: Object.fromEntries(Object.entries(box).map(([key, value]) => [key, Math.round(value * 10) / 10])), color: style.backgroundColor, radius: style.borderTopLeftRadius });
+  // Where the selected label's text is drawn, which the stand-in's layout must not move.
+  const range = document.createRange();
+  range.selectNodeContents(tab.querySelector('.muxui-tabs__tab-label'));
+  const { left: textLeft, top: textTop } = range.getBoundingClientRect();
+  const text = { left: Math.round(textLeft * 10) / 10, top: Math.round(textTop * 10) / 10 };
+  const paint = (style, box) => ({ text, box: Object.fromEntries(Object.entries(box).map(([key, value]) => [key, Math.round(value * 10) / 10])), color: style.backgroundColor, radius: style.borderTopLeftRadius });
   // Each place the stand-in can be drawn, and whether it is drawn there.
   const standIns = [tab.querySelector('.muxui-tabs__tab-label'), tab].map((host) => ({ host, style: getComputedStyle(host, '::after') }))
     .filter(({ style }) => style.content !== 'none' && style.content !== 'normal');
@@ -258,13 +263,14 @@ test('an underline Tabs marks its selected tab in server markup, where the measu
       // Without its entry module the page stays the server markup, as a reader meets it before hydration or with scripts off.
       if (!hydrate) await page.route('**/tabs-motion-browser-entry.mjs', (route) => route.abort());
       await page.goto(`${url}/tabs-motion.html`, { waitUntil: 'load' });
-      if (hydrate) await page.waitForFunction(() => document.querySelector('#primary-tabs .muxui-tabs__motion')?.hasAttribute('data-muxui-tabs-ready'));
+      if (hydrate) await page.waitForFunction(() => [...document.querySelectorAll('.muxui-tabs__motion')].every((motion) => motion.hasAttribute('data-muxui-tabs-ready')));
       await awaitFontsAndFrames(page);
       return page;
     };
     const server = await open(false);
     const hydrated = await open(true);
-    for (const selector of ['#primary-tabs', '#vertical-tabs']) {
+    // #unequal-tabs selects a plain tab beside a taller one, so its label sits above the row's bottom edge.
+    for (const selector of ['#primary-tabs', '#vertical-tabs', '#unequal-tabs']) {
       const before = await server.evaluate(readSelectedMark, selector);
       const after = await hydrated.evaluate(readSelectedMark, selector);
       assert.equal(before.ready, false, `${selector} has no motion before hydration`);
@@ -272,6 +278,7 @@ test('an underline Tabs marks its selected tab in server markup, where the measu
       assert.equal(after.standIns, 0, `${selector} drops the stand-in once the indicator is ready`);
       assert.deepEqual([before.opacity, after.opacity], ['1', '1'], `${selector} shows both marks`);
       assert.deepEqual({ box: before.box, color: before.color, radius: before.radius }, { box: after.box, color: after.color, radius: after.radius }, `${selector} indicator lands exactly on the server mark`);
+      assert.deepEqual(before.text, after.text, `${selector} label text stays where it was drawn`);
     }
   } finally {
     await browser?.close();

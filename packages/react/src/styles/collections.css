@@ -1474,9 +1474,13 @@
 
 /* Until the motion code measures it (in server markup, before hydration, with scripts off), the underline is drawn
    where the measured one lands, so it takes over without a jump: under the label's width on the list's bottom border,
-   or beside the label on the vertical list's end border. The offset is the tab's own block padding. */
+   or beside the label on the vertical list's end border. The label stretches to the tab's content box, with its text
+   still centred, so the mark sits on the tab's bottom edge when a taller tab makes the row taller than this label;
+   the offset is the tab's own block padding. */
 .muxui-tabs__motion[data-muxui-tabs-variant='underline']:not([data-muxui-tabs-ready]) .muxui-tabs__tab[data-muxui-state-selected] .muxui-tabs__tab-label {
   position: relative;
+  align-self: stretch;
+  align-content: center;
 }
 
 .muxui-tabs__motion[data-muxui-tabs-variant='underline']:not([data-muxui-tabs-ready]) .muxui-tabs__tab[data-muxui-state-selected] .muxui-tabs__tab-label::after,
