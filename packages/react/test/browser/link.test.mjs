@@ -111,6 +111,9 @@ function Pairs() {
     h(Button, { variant, 'data-role': 'button' }, label('Submit')),
     h(Link, { href: '#' + variant, className: 'muxui-button', 'data-muxui-variant': variant, 'data-muxui-size': 'md', 'data-role': 'link' }, label('Submit')))));
 }
+// The press test lets go away from the control. On a link, WebKit turns that into a native drag, which swallows the
+// release, so the next mouse down sends no pointerdown and React Aria never presses the next control.
+document.addEventListener('dragstart', (event) => event.preventDefault());
 createRoot(document.getElementById('root')).render(h(Pairs));
 `;
 
