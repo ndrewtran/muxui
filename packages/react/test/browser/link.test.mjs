@@ -364,7 +364,10 @@ for (const engine of browserEngines()) {
           await tab.locator('html[data-pairs-ready]').waitFor({ state: 'attached' });
           await awaitFontsAndFrames(tab);
           // Keyboard focus, as a Tab gives it, so both :focus-visible and React Aria's focus-visible state apply.
+          // A mouse press leaves WebKit unable to Shift+Tab away from the pressed button, so a click on the bare page
+          // corner, which activates nothing, clears it first.
           const keyboardFocus = async (locator) => {
+            await tab.mouse.click(0, 0);
             await locator.focus();
             await tab.keyboard.press('Shift+Tab');
             await tab.keyboard.press('Tab');
