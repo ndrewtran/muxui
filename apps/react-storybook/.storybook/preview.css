@@ -971,9 +971,12 @@ aside.sbdocs-toc--custom .toc-list-item.is-active-li::before {
     clip-path: inset(50%);
   }
 
+  /* Each cell keeps its own content's height, so a one-word cell beside a name that wraps, such as a part's kind, is not
+     stretched into a tall sliver. */
   .muxui-docs-table :is(tr[data-prop], tr[data-export], tr[data-part]) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
     column-gap: var(--muxui-semantic-layout-group-gap);
     padding-block: var(--muxui-semantic-layout-inset-tight);
   }

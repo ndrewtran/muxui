@@ -118,7 +118,7 @@ export const reviewedRacWriters = Object.freeze({
 /** The react-aria values (hooks and utilities, `module:name`) outside React Aria Components that Mux imports; none writes an attribute. */
 export const reviewedAriaImports = Object.freeze([
   'react-aria/FocusScope:FocusScope', 'react-aria/mergeRefs:mergeRefs', 'react-aria/private/focus/FocusScope:createFocusManager',
-  'react-aria/private/interactions/useFocusVisible:getInteractionModality', 'react-aria/private/utils/isFocusable:isFocusable',
+  'react-aria/private/interactions/PressResponder:ClearPressResponder', 'react-aria/private/interactions/useFocusVisible:getInteractionModality', 'react-aria/private/utils/isFocusable:isFocusable',
   'react-aria/private/utils/runAfterTransition:runAfterTransition', 'react-aria/useInteractOutside:useInteractOutside', 'react-aria:useField',
 ]);
 
