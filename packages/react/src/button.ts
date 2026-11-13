@@ -95,8 +95,12 @@ export function withHostAttributes<DomProps extends object>(caller: object, domP
   return { ...attributes, ...domProps, ...(tabIndex === undefined ? {} : { tabIndex }) };
 }
 
+// React Aria 1.20's props for Button, Link and Disclosure, and its press, hover and focusable hook options, less the DOM
+// attributes among them; allowFocusWhenDisabled is undocumented, and useButton reads it.
 const reactAriaBehaviourProps = Object.freeze([
-  'preventFocusOnPress', 'excludeFromTabOrder', 'isDisabled', 'isPending', 'routerOptions',
+  'preventFocusOnPress', 'excludeFromTabOrder', 'isDisabled', 'isPending', 'routerOptions', 'elementType', 'render',
+  'isPressed', 'allowFocusWhenDisabled', 'shouldCancelOnPointerExit', 'allowTextSelectionOnPress',
+  'isExpanded', 'defaultExpanded', 'onExpandedChange',
   'onPress', 'onPressStart', 'onPressEnd', 'onPressChange', 'onPressUp', 'onHoverStart', 'onHoverEnd', 'onHoverChange', 'onFocusChange',
 ]);
 

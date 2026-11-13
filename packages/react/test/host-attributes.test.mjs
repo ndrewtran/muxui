@@ -110,20 +110,34 @@ test('Button passes title and tabIndex to its button', () => {
   assert.deepEqual(pick(button, ['title', 'tabindex']), { title: 'Saves the draft', tabindex: '-1' });
 });
 
-test('Button leaves React Aria behaviour props such as preventFocusOnPress off its button', () => {
-  // TextEditor's bubble menu passes preventFocusOnPress through an untyped spread; React Aria reads it, the element must not.
-  const messages = [];
-  const { error } = console;
-  console.error = (...args) => messages.push(String(args[0]));
-  let button;
-  try {
-    button = serverElement(renderToString(h(Button, { ...{ preventFocusOnPress: true }, title: 'Explain' }, 'Explain')), 'button');
-  } finally {
-    console.error = error;
+test('Button, Link and Disclosure leave React Aria behaviour props off their element', () => {
+  // TextEditor's bubble menu passes preventFocusOnPress through an untyped spread; React Aria reads such props, the element must not.
+  // The list is React Aria's own: the press, hover and focus hook options, the undocumented allowFocusWhenDisabled useButton
+  // reads, and the component props (elementType, render, the expansion state) that are not DOM attributes.
+  const behaviour = {
+    preventFocusOnPress: true, isPressed: true, allowFocusWhenDisabled: true, shouldCancelOnPointerExit: true, allowTextSelectionOnPress: true,
+    excludeFromTabOrder: false, isExpanded: false, onExpandedChange() {}, render: () => null, routerOptions: {}, onHoverChange() {}, onFocusChange() {},
+  };
+  const cases = [
+    ['Button', h(Button, { ...behaviour, elementType: 'button', title: 'Explain' }, 'Explain'), 'button'],
+    ['Link', h(Link, { ...behaviour, elementType: 'a', href: '/help', title: 'Explain' }, 'Explain'), 'a'],
+    ['Disclosure', h(Disclosure, { ...behaviour, title: 'Details' }, 'Body'), '.muxui-disclosure'],
+  ];
+  for (const [name, element, selector] of cases) {
+    const messages = [];
+    const { error } = console;
+    console.error = (...args) => messages.push(args.map(String).join(' '));
+    let node;
+    try {
+      node = serverElement(renderToString(element), selector);
+    } finally {
+      console.error = error;
+    }
+    const leaked = [...Object.keys(behaviour), 'elementType'].map((prop) => prop.toLowerCase()).filter((attribute) => attribute in node);
+    assert.deepEqual(messages, [], `${name} React warnings`);
+    assert.deepEqual(leaked, [], `${name} element attributes`);
   }
-  assert.equal(button.preventfocusonpress, undefined);
-  assert.equal(button.title, 'Explain');
-  assert.deepEqual(messages, []);
+  assert.equal(serverElement(renderToString(cases[0][1]), 'button').title, 'Explain', 'a host attribute still reaches the button');
 });
 
 test('Disclosure puts its id on its root, alone and in a group, and the group still opens it by that id', async () => {
