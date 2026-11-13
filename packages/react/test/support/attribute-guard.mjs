@@ -93,12 +93,13 @@ export function substrateWrappers(text) {
 export const reviewedRacImports = Object.freeze([
   'Autocomplete', 'Breadcrumbs', 'ButtonContext', 'CalendarGrid', 'CalendarGridBody', 'CalendarGridHeader', 'CalendarHeaderCell',
   'CalendarHeading', 'CalendarStateContext', 'Collection', 'ColorAreaContext', 'ColorFieldStateContext', 'ColorPicker',
-  'ColorPickerStateContext', 'ColorSliderStateContext', 'ColorSwatch', 'DEFAULT_SLOT', 'Dialog', 'DialogContext', 'DialogTrigger',
-  'DisclosurePanel', 'FieldError', 'FieldInputContext', 'FileTrigger', 'Focusable', 'Form', 'GridLayout', 'Header', 'Heading',
+  'ColorPickerStateContext', 'ColorSliderStateContext', 'ColorSwatch', 'DEFAULT_SLOT', 'DateFieldContext', 'DatePickerContext',
+  'DateRangePickerContext', 'Dialog', 'DialogContext', 'DialogTrigger',
+  'DisclosurePanel', 'FieldError', 'FieldErrorContext', 'FieldInputContext', 'FileTrigger', 'Focusable', 'Form', 'GridLayout', 'Header', 'Heading',
   'InputContext', 'Label', 'ListBoxSection', 'ListLayout', 'MenuSection', 'MenuTrigger', 'OverlayTriggerStateContext',
   'PopoverContext', 'Pressable', 'PreviewTrigger', 'ProgressBar', 'RadioGroupStateContext', 'RangeCalendarStateContext',
-  'RootMenuTriggerStateContext', 'Separator', 'Size', 'SubmenuTrigger', 'TabPanels', 'TagGroup', 'Text', 'TextContext',
-  'TokenFieldValue', 'TooltipContext', 'TooltipTrigger', 'TreeItemContent', 'UNSTABLE_ToastContent', 'UNSTABLE_ToastQueue',
+  'RootMenuTriggerStateContext', 'Separator', 'Size', 'SubmenuTrigger', 'TabPanels', 'TagGroup', 'Text', 'TextAreaContext', 'TextContext',
+  'TimeFieldContext', 'TokenFieldValue', 'TooltipContext', 'TooltipTrigger', 'TreeItemContent', 'UNSTABLE_ToastContent', 'UNSTABLE_ToastQueue',
   'Virtualizer', 'VisuallyHidden', 'parseColor', 'useFilter', 'useLocale', 'useSlottedContext',
 ]);
 

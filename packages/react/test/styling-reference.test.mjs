@@ -49,9 +49,9 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
-  assert.equal(read('styles.css').rules.length, 2144);
+  assert.equal(read('styles.css').rules.length, 2180);
   const shared = readFileSync(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').trim();
-  assert.equal(readStyleRules(shared).rules.length, 510);
+  assert.equal(readStyleRules(shared).rules.length, 511);
   assert.equal(readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8').split(shared).length, 2, 'styles.css includes the shared stylesheet verbatim exactly once');
   assert.equal(read('themes.css').rules.length, 60);
   // The shapes it models: grouping at-rules with a chain, statements, leaf at-rules it skips, !important, a block in a custom property.
@@ -442,7 +442,7 @@ test('the selection index is a second reading of the stylesheet, pair for pair, 
   const mine = new Set([...facts.selection].flatMap(([attribute, byClass]) => [...byClass.keys()].map((name) => `${attribute}|${name}`)));
   assert.deepEqual([...second].filter((pair) => !mine.has(pair)).sort(), [], 'a pair the second reading finds and the module lacks');
   assert.deepEqual([...mine].filter((pair) => !second.has(pair)).sort(), [], 'a pair the module holds and the second reading does not');
-  assert.equal(mine.size, 498);
+  assert.equal(mine.size, 503);
   // The scoping rules, on selectors written for them, by both readings. An attribute in :has() belongs to the element asked for;
   // each :where() / :is() branch stands alone; a :not() test counts for the element it is on; an ancestor's tests are its own.
   const cases = [
@@ -484,14 +484,15 @@ test('catalog state rows: one per attribute and family, in catalog order, with t
   assert.match(orientation.note, /^Catalog states horizontal, vertical\./u);
   // 264 pairs. The plan counted 126 of them as selected on a class or root-element hook of the family, reading a test in :has() or in
   // another :where() branch as the outer class's (ToggleButtonGroup's disabled and selected, which are the buttons', landed on the
-  // group). Counted per compound by a second reading of the stylesheet, 126 are, and 138 are not. The module also counts shared field
+  // group). Counted per compound by a second reading of the stylesheet, 130 are, and 134 are not: the native choice state rules,
+  // which select focused on the choice controls, made four more of them. The module also counts shared field
   // hooks, composed roots and a root companion, which can only add pairs, and the extra ones are named.
   const pairs = catalogRows.filter(({ row }) => !isStatus(row));
   assert.equal(pairs.length, 264);
   const ownHooks = (slug) => new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element'].includes(row.disposition)).flatMap((row) => [row.hook, row.styledThrough].filter(Boolean)));
   const own = pairs.filter(({ slug, row }) => [...ownHooks(slug)].some((name) => secondHas(row.hook, name)));
-  assert.equal(own.length, 126, 'selected on a class or root-element hook of the family');
-  assert.equal(pairs.length - own.length, 138);
+  assert.equal(own.length, 130, 'selected on a class or root-element hook of the family');
+  assert.equal(pairs.length - own.length, 134);
   assert.ok(own.every(({ row }) => row.selectedOn.length > 0));
   // The two ToggleButtonGroup rows leave the first count and join this one: its buttons are composed Buttons, and Button's rules select them.
   // ColorModePicker's selected and disabled rows do the same, since its options are the group's ToggleButtons.
@@ -507,7 +508,7 @@ test('catalog state rows: one per attribute and family, in catalog order, with t
 
 test('interaction rows: per family, only for a state the CSS selects on the family\'s own class hooks, labelled as such', () => {
   const interaction = allRows(stateRowsOf).filter(({ row }) => row.origin === 'interaction');
-  assert.equal(interaction.length, 86);
+  assert.equal(interaction.length, 88);
   assert.equal(new Set(interaction.map(({ slug }) => slug)).size, 41);
   const names = interaction.map(({ row }) => row.hook.replace('data-muxui-state-', ''));
   assert.ok(names.every((name) => interactionStates.includes(name)));
@@ -527,7 +528,7 @@ test('interaction rows: per family, only for a state the CSS selects on the fami
       if (!declared.has(attribute) && [...hooks].some((hook) => secondHas(attribute, hook))) recount.push(`${slug} ${attribute}`);
     }
   }
-  assert.equal(recount.length, 86, 'the plan\'s 84 rows over 40 families, own class hooks, and the 2 rows ColorModePicker adds');
+  assert.equal(recount.length, 88, 'the plan\'s 84 rows over 40 families, own class hooks, the 2 rows ColorModePicker adds, and focused on Checkbox and Switch, which the native choice state rules select');
   assert.equal(new Set(recount.map((entry) => entry.split(' ')[0])).size, 41);
   const printed = new Set(interaction.map(({ slug, row }) => `${slug} ${row.hook}`));
   assert.deepEqual(recount.filter((entry) => !printed.has(entry)), []);
@@ -783,10 +784,10 @@ test('read-by: 196 roles are read by rules, one through structured parts and one
   const distinct = new Set();
   let entries = 0; const internalTokens = new Set();
   for (const [id, readBy] of components) for (const entry of readBy.selectors) { distinct.add(`${id}|${entry.selector}`); entries += 1; if (!entry.public) internalTokens.add(id); }
-  assert.equal(distinct.size, 242, '242 token and selector pairs');
+  assert.equal(distinct.size, 251, '251 token and selector pairs');
   const implementation = new Set();
   for (const [id, readBy] of components) for (const entry of readBy.selectors) if (!entry.public) implementation.add(`${id}|${entry.selector}`);
-  assert.equal(implementation.size, 15, '15 of the 242 are implementation selectors');
+  assert.equal(implementation.size, 15, '15 of the 251 are implementation selectors');
   assert.equal(internalTokens.size, 10, 'in 10 tokens');
   assert.ok(selectors.length >= distinct.size && entries === selectors.length);
   const buttonBackground = components.get('component.button.background');
@@ -877,10 +878,10 @@ test('reduced motion: two public inputs and an internal marker, as motion.mjs re
 });
 
 test('!important counts are classified by selector and at-rule chain, per family, and agree with a second walk of the stylesheet', () => {
-  assert.deepEqual(facts.importantTotals, { declarations: 86, rules: 42 });
+  assert.deepEqual(facts.importantTotals, { declarations: 93, rules: 47 });
   const css = readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8');
   const walked = importantDeclarations(css);
-  assert.equal(walked.length, 86 + walked.filter(({ chain }) => chain.some((prelude) => prelude.startsWith('@layer muxui.tokens'))).length, 'the second walk finds the same declarations');
+  assert.equal(walked.length, 93 + walked.filter(({ chain }) => chain.some((prelude) => prelude.startsWith('@layer muxui.tokens'))).length, 'the second walk finds the same declarations');
   const hooksOf = (slug) => new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element', 'composed'].includes(row.disposition)).map((row) => row.hook));
   const classesIn = (text) => [...text.replace(/\[[^\]]*\]/gu, '').matchAll(/\.(muxui-[\w-]+)/gu)].map(([, name]) => name);
   let withImportant = 0;
@@ -900,8 +901,8 @@ test('!important counts are classified by selector and at-rule chain, per family
     assert.deepEqual(all.get(slug).overrides.important, expected, slug);
     if (total > 0) withImportant += 1;
   }
-  assert.equal(withImportant, 51);
-  assert.equal(slugs.length - withImportant, 35, '35 families have none on their own hooks');
+  assert.equal(withImportant, 52);
+  assert.equal(slugs.length - withImportant, 34, '34 families have none on their own hooks');
   // Button: 8 forced colors, 2 reduced motion by media query and 2 by the scope attribute (the v1 count called those two other).
   assert.deepEqual(all.get('button').overrides.important, { total: 12, byCause: { 'forced-colors': 8, 'reduced-motion-media': 2, 'reduced-motion-attribute': 2 } });
 });
