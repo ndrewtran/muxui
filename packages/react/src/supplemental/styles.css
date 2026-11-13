@@ -3113,17 +3113,21 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     color: var(--muxui-semantic-color-neutral-100);
   }
 
+  :scope .muxui-sidebar__search-icon {
+    color: var(--muxui-semantic-color-neutral-40);
+  }
+
+  /* Navigation icons and marks are graphics a reader uses, so they meet non-text contrast against the sidebar. */
   :scope :is(
-    .muxui-sidebar__search-icon,
     .muxui-sidebar__nav-icon,
     .muxui-sidebar__nav-external,
     .muxui-sidebar__nav-chevron
   ) {
-    color: var(--muxui-semantic-color-neutral-40);
+    color: var(--muxui-semantic-color-neutral-60);
   }
 
-  /* Folded, the icon is the only name a sighted user has, so it needs non-text contrast on its own. */
-  :scope :where(.muxui-sidebar[data-muxui-collapsed]) :is(.muxui-sidebar__nav-icon, .muxui-sidebar__search-icon) {
+  /* Folded, the search icon is the only name a sighted user has, so it needs non-text contrast on its own. */
+  :scope :where(.muxui-sidebar[data-muxui-collapsed]) .muxui-sidebar__search-icon {
     color: var(--muxui-semantic-color-neutral-60);
   }
 
@@ -3832,5 +3836,12 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
   .muxui-checkbox-field[data-muxui-state-disabled] .muxui-checkbox-field__button {
     opacity: 1;
+  }
+
+  /* Forced colours drop the box-shadow ring, so keyboard focus draws the outline Checkbox and RadioGroup draw. */
+  .muxui-radio-field__button[data-muxui-state-focus-visible] .muxui-radio-field__indicator {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
   }
 }

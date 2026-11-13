@@ -2436,8 +2436,8 @@ test('the Live column counts distinct elements of the story, which a recount of 
     }
     assert.equal(stamped, 0, `${record.family}: no element in the canvas carries the retired data-muxui-storybook-api-part stamp`);
   }
-  // 457 class rows, 270 catalog state and status rows, 86 interaction rows, 16 observed and 27 resolved CSS-selected rows, 36 reflected rows and 38 "not set by" rows.
-  assert.equal(rows, 457 + 270 + 86 + 16 + 27 + 36 + 38, 'every row of every table was compared');
+  // 457 class rows, 270 catalog state and status rows, 88 interaction rows, 16 observed and 27 resolved CSS-selected rows, 36 reflected rows and 38 "not set by" rows.
+  assert.equal(rows, 457 + 270 + 88 + 16 + 27 + 36 + 38, 'every row of every table was compared');
 });
 
 /** Mounts a family's Anatomy story in each of `hosts` containers of one page and returns the tables they print. */
@@ -2520,7 +2520,7 @@ test('the On cell of every row is what the document shows: its tags, each carryi
       }
     }
   }
-  assert.equal(cells, 930, 'every row of every table was compared');
+  assert.equal(cells, 932, 'every row of every table was compared');
 });
 
 // The expectation above is derived in the test from the document; these cells are written out, so it cannot drift with the code: a part in a
