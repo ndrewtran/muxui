@@ -6,7 +6,7 @@ import type { InputProps as AriaInputProps } from 'react-aria-components';
 import { h, cx, useIsomorphicLayoutEffect } from './part-utils.ts';
 import type { PartProps } from './part-utils.ts';
 import { fieldText } from './field-utils.ts';
-import { useSlotPartId } from '../field-error.ts';
+import { useErrorLink, useSlotPartId } from '../field-error.ts';
 import { InputAssociationContext, renderFieldRoot } from './field-root.ts';
 
 /**
@@ -42,9 +42,12 @@ export type InputDescriptionProps = PartProps<HTMLElement>;
 export type InputErrorProps = PartProps<HTMLElement>;
 
 // The part renders with React Aria's slot id, or with its own when it mounted after React Aria resolved the field's
-// ids, and registers the id it renders with, so Input.Input names it from the commit in which it appears.
+// ids, and registers the id it renders with, so Input.Input names it from the commit in which it appears. Input.Input
+// then falls back to React Aria's aria-describedby, which keeps an error's id once the error is gone; useErrorLink
+// takes it out.
 function associatedFieldText(slot: 'description' | 'errorMessage', className: string, props: PartProps<HTMLElement>, ref: ForwardedRef<HTMLElement>, register: Dispatch<SetStateAction<string | undefined>> | undefined) {
-  const { id } = useSlotPartId(slot, props.id);
+  const { id, late } = useSlotPartId(slot, props.id);
+  useErrorLink(id, late, slot === 'errorMessage');
   useIsomorphicLayoutEffect(() => {
     register?.(id);
     return () => register?.((current) => current === id ? undefined : current);

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { Page, errorFields } from './choice-state-fixture.mjs';
+import { Page, errorFields, removableErrorFields } from './choice-state-fixture.mjs';
 import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Choice controls draw their state from the native input until React takes over, and field
@@ -262,20 +262,43 @@ test('choice controls follow the native input before hydration and validate and 
       await done();
     });
 
+    // Per field in `prefix` sections: whether its shown error describes every control, 'absent' when none is shown,
+    // and the ids every control names. Runs in the page.
+    const describes = (page, prefix, names) => page.evaluate(([fields, section]) => Object.fromEntries(Object.entries(fields).map(([name, { control, error }]) => {
+      const root = document.getElementById(`${section}-${name}`);
+      const shown = root.querySelector(error);
+      const named = [...root.querySelectorAll(control)].map((node) => node.getAttribute('aria-describedby')?.split(/\s+/u) ?? []);
+      return [name, { linked: shown ? Boolean(shown.id) && named.length > 0 && named.every((ids) => ids.includes(shown.id)) : 'absent', named: [...new Set(named.flat())] }];
+    })), [Object.fromEntries(names.map((name) => [name, { control: errorFields[name].control, error: errorFields[name].error }])), prefix]);
+
     await t.test('an error that appears after hydration describes its control', async () => {
       const { page, errors, close: done } = await open('/light.html', true);
-      const links = () => page.evaluate((fields) => Object.fromEntries(Object.entries(fields).map(([name, { control, error }]) => {
-        const section = document.getElementById(`late-${name}`);
-        const shown = section.querySelector(error);
-        const ids = section.querySelector(control)?.getAttribute('aria-describedby')?.split(/\s+/u) ?? [];
-        return [name, shown ? Boolean(shown.id) && ids.includes(shown.id) : 'absent'];
-      })), Object.fromEntries(Object.entries(errorFields).map(([name, { control, error }]) => [name, { control, error }])));
+      const links = async () => Object.fromEntries(Object.entries(await describes(page, 'late', Object.keys(errorFields))).map(([name, { linked }]) => [name, linked]));
       assert.ok(Object.values(await links()).every((link) => link === 'absent'));
       await page.evaluate(() => window.__showErrors(true));
       assert.deepEqual(await links(), Object.fromEntries(Object.keys(errorFields).map((name) => [name, true])));
       await page.evaluate(() => window.__showErrors(false));
       await page.evaluate(() => window.__showErrors(true));
       assert.deepEqual(await links(), Object.fromEntries(Object.keys(errorFields).map((name) => [name, true])));
+      assert.deepEqual(errors, [], errors.join('\n'));
+      await done();
+    });
+
+    await t.test('an error shown from the start and then removed leaves its control while the field stays invalid', async () => {
+      const { page, errors, close: done } = await open('/light.html', true);
+      const initial = await describes(page, 'initial', removableErrorFields);
+      const ids = await page.evaluate((names) => Object.fromEntries(names.map((name) => [name, document.querySelector(`#initial-${name} [slot="errorMessage"]`)?.id])), removableErrorFields);
+      assert.deepEqual(Object.fromEntries(Object.entries(initial).map(([name, { linked }]) => [name, linked])), Object.fromEntries(removableErrorFields.map((name) => [name, true])), 'linked as served');
+      await page.evaluate(() => window.__showInitialErrors(false));
+      const removed = await describes(page, 'initial', removableErrorFields);
+      for (const name of removableErrorFields) {
+        assert.equal(removed[name].linked, 'absent', `${name}: the error is gone`);
+        assert.ok(!removed[name].named.includes(ids[name]), `${name}: ${removed[name].named.join(' ')} no longer names the removed ${ids[name]}`);
+      }
+      assert.deepEqual(await page.evaluate((names) => names.map((name) => document.querySelector(`#initial-${name} [aria-invalid="true"], #initial-${name} [data-muxui-state-invalid]`) !== null), removableErrorFields), removableErrorFields.map(() => true), 'every field is still invalid');
+      await page.evaluate(() => window.__showInitialErrors(true));
+      const back = await describes(page, 'initial', removableErrorFields);
+      assert.deepEqual(Object.fromEntries(Object.entries(back).map(([name, { linked }]) => [name, linked])), Object.fromEntries(removableErrorFields.map((name) => [name, true])), 'linked again once it is back');
       assert.deepEqual(errors, [], errors.join('\n'));
       await done();
     });

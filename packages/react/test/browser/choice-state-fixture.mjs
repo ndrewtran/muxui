@@ -1,6 +1,7 @@
 import React from 'react';
+import { I18nProvider } from 'react-aria-components';
 import { Checkbox } from '../../src/components.ts';
-import { CheckboxGroup, Switch, TextField } from '../../src/fields.ts';
+import { CheckboxGroup, DateField, DatePicker, DateRangePicker, Switch, TextField, TimeField } from '../../src/fields.ts';
 import { RadioGroup } from '../../src/radio-group.ts';
 import { Select } from '../../src/select.ts';
 import { CheckboxField } from '../../src/supplemental/checkbox-field.ts';
@@ -84,7 +85,16 @@ export const errorFields = {
   SwitchField: { control: '.muxui-switch-field input', error: '.muxui-switch-field__error', render: (error) => h(SwitchField.Root, { invalid: true }, h(SwitchField.Button, null, h(SwitchField.Thumb), 'Alerts'), error && h(SwitchField.Error, null, error)) },
   Select: { control: '.muxui-select__trigger', error: '.muxui-select__error', render: (error) => h(Select, { label: 'Colour', invalid: true, items: [{ id: 'red', label: 'Red' }], errorMessage: error ?? undefined }) },
   TextField: { control: '.muxui-field-input', error: '.muxui-field-error', render: (error) => h(TextField, { label: 'Title', invalid: true, errorMessage: error ?? undefined }) },
+  // A date or time field's error describes its group and each segment, where assistive technology lands; a picker's
+  // date field is presentation, so its group and segments. A fixed 24-hour locale keeps server and browser segments the same (en-US puts a space before AM that Node and Chromium write differently).
+  DateField: { control: '[role="group"], [role="spinbutton"]', error: '.muxui-field-error', render: (error) => h(I18nProvider, { locale: 'en-GB' }, h(DateField, { label: 'Due', invalid: true, errorMessage: error ?? undefined })) },
+  TimeField: { control: '[role="group"], [role="spinbutton"]', error: '.muxui-field-error', render: (error) => h(I18nProvider, { locale: 'en-GB' }, h(TimeField, { label: 'At', invalid: true, errorMessage: error ?? undefined })) },
+  DatePicker: { control: '[role="group"], [role="spinbutton"]', error: '.muxui-field-error', render: (error) => h(I18nProvider, { locale: 'en-GB' }, h(DatePicker, { label: 'Day', invalid: true, errorMessage: error ?? undefined })) },
+  DateRangePicker: { control: '[role="group"], [role="spinbutton"]', error: '.muxui-field-error', render: (error) => h(I18nProvider, { locale: 'en-GB' }, h(DateRangePicker, { label: 'Stay', invalid: true, errorMessage: error ?? undefined })) },
 };
+
+/** The error fields whose control React Aria describes from inside its root, which can take a removed error back out. */
+export const removableErrorFields = ['Input', 'TextArea', 'PaymentInput', 'CheckboxField', 'SwitchField', 'Select', 'TextField'];
 
 /** Every error field, each in its own section, showing its error once window.__showErrors() runs. */
 export function LateErrors() {
@@ -95,6 +105,15 @@ export function LateErrors() {
   return h('div', null, Object.entries(errorFields).map(([name, field]) => h('section', { key: name, id: `late-${name}` }, field.render(shown ? `${name} needs a fix.` : null))));
 }
 
+/** The removable error fields, each showing its error from the first render until window.__showInitialErrors(false) runs. */
+export function InitialErrors() {
+  const [shown, setShown] = React.useState(true);
+  React.useEffect(() => {
+    window.__showInitialErrors = (next = true) => setShown(next);
+  }, []);
+  return h('div', null, removableErrorFields.map((name) => h('section', { key: name, id: `initial-${name}` }, errorFields[name].render(shown ? `${name} needs a fix.` : null))));
+}
+
 export function Page() {
-  return h('main', null, h(ChoiceControls), h(RequiredChoices), h(LateErrors));
+  return h('main', null, h(ChoiceControls), h(RequiredChoices), h(LateErrors), h(InitialErrors));
 }
