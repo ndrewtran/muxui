@@ -77,6 +77,11 @@ jobs:
           - job: storybook
             checks: pnpm --filter @muxui/react-storybook run generate:check
             storybook: other
+          # The published packages claim Node >=24.19.0 <27 but the toolchain is
+          # Node 24: pack the release candidate on it as the release does, then
+          # install and run it on the newest claimed Node (release-node-consumer.mjs).
+          - job: node-26-consumer
+            consumer-node: 26.13.1
     steps:
       - uses: actions/checkout@v4
         with:
@@ -201,6 +206,27 @@ jobs:
             done
           fi
           pnpm --filter @muxui/react-storybook exec node --test --test-concurrency=1 "${files[@]}"
+
+      - name: Pack release candidate
+        id: pack
+        if: ${{ !cancelled() && steps.generate.outcome == 'success' && matrix.consumer-node != '' }}
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          node tooling/audits/repository-policy/src/release-prepare.mjs 2>&1 | tee "$RUNNER_TEMP/release-prepare.log"
+          echo "dir=$(sed -n 's/^Release candidate written to //p' "$RUNNER_TEMP/release-prepare.log" | tail -n 1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.pack.outcome == 'success'
+        with:
+          node-version: ${{ matrix.consumer-node }}
+
+      - name: Release consumer on the newest claimed Node
+        if: steps.pack.outcome == 'success'
+        timeout-minutes: 20
+        env:
+          CANDIDATE_DIR: ${{ steps.pack.outputs.dir }}
+        run: node tooling/audits/repository-policy/src/release-node-consumer.mjs "$CANDIDATE_DIR"
 
       - name: Upload Storybook colour diagnostics
         if: always() && matrix.storybook != ''

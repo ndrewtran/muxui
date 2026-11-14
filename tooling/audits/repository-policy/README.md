@@ -53,6 +53,7 @@ every package in dependency order, then runs its own commands:
 | `browser scale` | Scale's `check:browser` and `check:browser:docs` |
 | `storybook-a11y` | `test/storybook-a11y.test.mjs`, the full audit |
 | `storybook` | Storybook `generate:check`, then every other top-level Storybook test |
+| `node-26-consumer` | `src/release-prepare.mjs` packs the release candidate on the toolchain's Node 24, then on Node 26.13.1 `src/release-node-consumer.mjs` installs the four tarballs with React into clean npm and pnpm projects, engine-strict, imports every entry, server-renders React, and runs `muxui --help` |
 
 `src/browser-test-files.mjs` lists the React browser tests: a file that calls
 the harness's `browserEngines()` is cross-engine, every other file is

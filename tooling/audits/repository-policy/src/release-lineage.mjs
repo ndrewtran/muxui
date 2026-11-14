@@ -90,6 +90,7 @@ export const CI_JOBS = Object.freeze([
   'browser scale',
   'storybook-a11y',
   'storybook',
+  'node-26-consumer',
   'check',
 ]);
 
