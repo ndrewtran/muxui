@@ -4240,16 +4240,80 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     rejects('P2_1_R1_EXIT_ROUTE_MISMATCH', { release: { ...release, packages: [{ ...release.packages[0], integrity: integrityOf(3) }] } });
     rejects('P2_1_R1_EXIT_ROUTE_MISMATCH', { release: { ...release, sourceRevision: 'b'.repeat(40) } });
     rejects('P2_1_R1_EXIT_ROUTE_MISSING', { release: { ...release, packages: [{ ...release.packages[0], version: '0.1.0-rc.99' }] } });
-    // A route captured only through its dry run and publish phases, or with a record that no longer matches its index.
+    // A route whose index lists only three records, or that a consistent capture left without its registry phase.
     const copy = await mkdtemp(join(tmpdir(), 'muxui-p2-1-sibling-'));
     try {
       await cp(join(repositoryRoot, routePath), copy, { recursive: true });
-      const { registry: _registry, ...phases } = r1.phases;
-      await writeFile(join(copy, 'verification.json'), JSON.stringify({ ...r1, phases }));
+      const index = JSON.parse(readFileSync(join(copy, 'index.json'), 'utf8'));
+      await writeFile(join(copy, 'index.json'), JSON.stringify({ ...index, records: index.records.slice(0, 3) }));
       rejects('P2_1_R1_EXIT_ROUTE_INCOMPLETE', { release, path: copy });
-      await writeFile(join(copy, 'verification.json'), JSON.stringify(r1));
+      const { registry: _registry, ...phases } = r1.phases;
+      const partial = JSON.stringify({ ...r1, phases });
+      await writeFile(join(copy, 'verification.json'), partial);
+      await writeFile(join(copy, 'index.json'), JSON.stringify({ ...index, validation: { ...index.validation, sha256: digest(partial) } }));
+      rejects('P2_1_R1_EXIT_ROUTE_INCOMPLETE', { release, path: copy });
+    } finally {
+      await rm(copy, { recursive: true, force: true });
+    }
+  });
+
+  // A route is trusted only through its index: a verification.json or record the index does not bind at its digest is refused before
+  // its release identity is read, even when that identity is the one this release expects.
+  test('a later P2.1 release refuses an R1 exit route whose verification or records are not the ones its index binds', async () => {
+    const routePath = 'tests/evidence/r1-exit-0.1.0-rc.5';
+    const r1 = JSON.parse(readFileSync(join(repositoryRoot, routePath, 'verification.json'), 'utf8'));
+    const integrity = r1.phases.dryRun.candidate.tarball.integrity;
+    const releaseFor = (version, runs = {}) => ({
+      sourceRevision: r1.sourceRevision,
+      dryRun: { runId: runs.dryRun ?? r1.phases.dryRun.execution.runId },
+      publish: { runId: runs.publish ?? r1.phases.publish.execution.runId },
+      packages: [{ name: '@muxui/react', version, integrity }],
+    });
+    const rejects = (expected, input) => assert.throws(() => p2.readSiblingR1Route(input), code(expected), expected);
+    const copy = await mkdtemp(join(tmpdir(), 'muxui-p2-1-stale-'));
+    try {
+      await cp(join(repositoryRoot, routePath), copy, { recursive: true });
+      // Fresh verification data for other runs beside the old index and records: refused for its digest, not read for its runs.
+      const fresh = (version) => ({ ...r1, phases: { ...r1.phases, dryRun: { ...r1.phases.dryRun, execution: { ...r1.phases.dryRun.execution, runId: 71 }, candidate: { ...r1.phases.dryRun.candidate, version } }, publish: { ...r1.phases.publish, execution: { ...r1.phases.publish.execution, runId: 72 } } } });
+      await writeFile(join(copy, 'verification.json'), JSON.stringify(fresh('0.1.0-rc.5')));
+      rejects('P2_1_R1_EXIT_ROUTE_CHANGED', { release: releaseFor('0.1.0-rc.5', { dryRun: 71, publish: 72 }), path: copy });
+      // The same next to rc.5's index for an rc.6 release: the index binds another route's files.
+      await writeFile(join(copy, 'verification.json'), JSON.stringify(fresh('0.1.0-rc.6')));
+      rejects('P2_1_R1_EXIT_ROUTE_MISMATCH', { release: releaseFor('0.1.0-rc.6', { dryRun: 71, publish: 72 }), path: copy });
+      // A record changed after its index was written.
+      await cp(join(repositoryRoot, routePath, 'verification.json'), join(copy, 'verification.json'));
       await writeFile(join(copy, 'records/E-R1-EXIT-04.json'), '{}');
-      rejects('P2_1_R1_EXIT_ROUTE_CHANGED', { release, path: copy });
+      rejects('P2_1_R1_EXIT_ROUTE_CHANGED', { release: releaseFor('0.1.0-rc.5'), path: copy });
+    } finally {
+      await rm(copy, { recursive: true, force: true });
+    }
+  });
+
+  // A rehearsal reads the R1 exit route from wherever it was written; the evidence still names the repository route.
+  test('a P2.1 rehearsal reads its R1 exit route from an absolute directory and retains the canonical route', async () => {
+    const routePath = 'tests/evidence/r1-exit-0.1.0-rc.5';
+    const r1 = JSON.parse(readFileSync(join(repositoryRoot, routePath, 'verification.json'), 'utf8'));
+    const tooling = retainedRoute('tests/evidence/p2.1-tooling-1.1.0-rc.2');
+    const react = tooling.release.packages.find(({ name }) => name === '@muxui/react');
+    // The tooling release's record with React published from rc.5's runs, so its README names the R1 exit route.
+    const release = {
+      ...tooling.release,
+      sourceRevision: r1.sourceRevision,
+      dryRun: { ...tooling.release.dryRun, runId: r1.phases.dryRun.execution.runId },
+      publish: { ...tooling.release.publish, runId: r1.phases.publish.execution.runId },
+      packages: tooling.release.packages.map((entry) => (entry === react ? { ...entry, role: 'published' } : entry)),
+    };
+    const copy = await mkdtemp(join(tmpdir(), 'muxui-p2-1-rehearsal-r1-'));
+    try {
+      await cp(join(repositoryRoot, routePath), copy, { recursive: true });
+      const read = p2.readSiblingR1Route({ release, path: copy, rehearsal: true });
+      assert.deepEqual([read.route, read.index.path], [routePath, `${routePath}/index.json`]);
+      assert.ok(!JSON.stringify(read).includes(copy), 'the lookup directory is not retained');
+      const files = p2.assembleRoute({ ...tooling, release, r1ExitRoute: read });
+      const readme = files.get(`${tooling.route}/README.md`);
+      assert.ok(readme.includes(`The R1 exit route of its React candidate, \`${routePath}\` (index ${read.index.sha256}), holds the`));
+      // Retaining the lookup directory instead is what the disclosure check refuses.
+      assert.throws(() => p2.assembleRoute({ ...tooling, release, r1ExitRoute: { ...read, route: copy } }), r1ExitCode('R1_EXIT_UNSANITIZED'));
     } finally {
       await rm(copy, { recursive: true, force: true });
     }

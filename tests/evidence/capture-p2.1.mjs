@@ -2245,34 +2245,53 @@ const r1ExitRecordIds = ['E-R1-EXIT-01', 'E-R1-EXIT-02', 'E-R1-EXIT-03', 'E-R1-E
 
 /**
  * The R1 exit route of the @muxui/react candidate a later release publishes (capture-r1-exit.mjs), read and checked so this route can
- * say it holds that candidate's E-R1-EXIT records: complete (dry run, publish run, and registry phases; all four records, each at the
- * digest its index lists), not a rehearsal unless this capture is one, and bound to this release's dry run and publish run, its
- * release commit, and the React version and integrity of its manifest. `path` is the route directory, by default `routeOf(version)`.
+ * say it holds that candidate's E-R1-EXIT records. Its index is the anchor: verification.json and all four records must be at the
+ * canonical route's paths with the digests the index lists before anything in them is trusted. Then it must be complete (dry run,
+ * publish run, and registry phases), not a rehearsal unless this capture is one, and bound to this release's dry run and publish run,
+ * its release commit, and the React version and integrity of its manifest. `path` is only where to look (a rehearsal's --out); the
+ * returned reference is always the canonical repository route, `routeOf(version)`.
  */
 export function readSiblingR1Route({ release, path, rehearsal = false }) {
   const react = release.packages.find(({ name }) => name === reactName);
-  const route = path ?? routeOf(react.version);
-  const directory = resolve(repositoryRoot, route);
+  const route = routeOf(react.version);
+  const directory = path ? resolve(repositoryRoot, path) : join(repositoryRoot, route);
   const command = `node tests/evidence/capture-r1-exit.mjs --version=${react.version} --capture-timestamp=<ISO-8601 UTC> --dry-run-run=${release.dryRun.runId} --publish-run=${release.publish.runId} --registry`;
   if (!existsSync(join(directory, 'verification.json')) || !existsSync(join(directory, 'index.json'))) fail('P2_1_R1_EXIT_ROUTE_MISSING', `${route} does not hold the R1 exit capture of @muxui/react@${react.version}; capture it first: ${command}`);
   const indexText = readFileSync(join(directory, 'index.json'), 'utf8');
   const index = JSON.parse(indexText);
-  const r1 = JSON.parse(readFileSync(join(directory, 'verification.json'), 'utf8'));
-  const { dryRun, publish, registry: observed } = r1.phases ?? {};
-  if (!dryRun || !publish || !observed) fail('P2_1_R1_EXIT_ROUTE_INCOMPLETE', `${route} lacks its ${[['dry-run', dryRun], ['publish', publish], ['registry', observed]].filter(([, phase]) => !phase).map(([name]) => name).join(', ')} phase; complete it: ${command}`);
-  if (r1.rehearsal && !rehearsal) fail('P2_1_R1_EXIT_ROUTE_INVALID', `${route} is a rehearsal capture`);
-  const facts = { dryRunId: dryRun.execution.runId, publishRunId: publish.execution.runId, sourceRevision: r1.sourceRevision, name: dryRun.candidate.name, version: dryRun.candidate.version, integrity: dryRun.candidate.tarball.integrity };
-  const expected = { dryRunId: release.dryRun.runId, publishRunId: release.publish.runId, sourceRevision: release.sourceRevision, name: reactName, version: react.version, integrity: react.integrity };
-  const differs = Object.keys(expected).filter((key) => facts[key] !== expected[key]);
-  if (differs.length > 0) fail('P2_1_R1_EXIT_ROUTE_MISMATCH', `${route} binds ${differs.map((key) => `${key} ${facts[key]}`).join(', ')}; this release has ${differs.map((key) => `${key} ${expected[key]}`).join(', ')}`);
+  // The files the index binds, at the canonical paths and the listed digests; a file the index does not bind is not read.
+  const indexed = (listed, relative) => {
+    if (listed?.path !== `${route}/${relative}`) fail('P2_1_R1_EXIT_ROUTE_MISMATCH', `${route}/index.json lists ${listed?.path ?? 'nothing'} where ${route}/${relative} belongs`);
+    const text = readFileSync(join(directory, relative), 'utf8');
+    if (sha256(text) !== listed.sha256) fail('P2_1_R1_EXIT_ROUTE_CHANGED', `${listed.path} no longer matches its index`);
+    return text;
+  };
+  const r1 = JSON.parse(indexed(index.validation, 'verification.json'));
   const records = r1ExitRecordIds.map((assertionId) => {
     const listed = index.records?.find((entry) => entry.assertionId === assertionId);
     if (!listed) fail('P2_1_R1_EXIT_ROUTE_INCOMPLETE', `${route}/index.json lists no ${assertionId}; complete it: ${command}`);
-    const text = readFileSync(join(directory, 'records', posix.basename(listed.path)), 'utf8');
-    if (sha256(text) !== listed.sha256) fail('P2_1_R1_EXIT_ROUTE_CHANGED', `${listed.path} no longer matches its index`);
-    return { assertionId, path: listed.path, sha256: listed.sha256, outcome: JSON.parse(text).outcome };
+    const record = JSON.parse(indexed(listed, `records/${assertionId}.json`));
+    return { assertionId, path: listed.path, sha256: listed.sha256, outcome: record.outcome, candidate: record.candidate, sourceRevision: record.sourceRevision };
   });
-  return { route, index: { path: `${route}/index.json`, sha256: sha256(indexText) }, records, dryRunId: facts.dryRunId, publishRunId: facts.publishRunId, candidate: { name: facts.name, version: facts.version, integrity: facts.integrity } };
+  const { dryRun, publish, registry: observed } = r1.phases ?? {};
+  if (!dryRun || !publish || !observed) fail('P2_1_R1_EXIT_ROUTE_INCOMPLETE', `${route} lacks its ${[['dry-run', dryRun], ['publish', publish], ['registry', observed]].filter(([, phase]) => !phase).map(([name]) => name).join(', ')} phase; complete it: ${command}`);
+  if (r1.rehearsal && !rehearsal) fail('P2_1_R1_EXIT_ROUTE_INVALID', `${route} is a rehearsal capture`);
+  const facts = { dryRunId: dryRun.execution.runId, publishRunId: publish.execution.runId, sourceRevision: r1.sourceRevision, indexRevision: index.sourceRevision, name: dryRun.candidate.name, version: dryRun.candidate.version, integrity: dryRun.candidate.tarball.integrity };
+  const expected = { dryRunId: release.dryRun.runId, publishRunId: release.publish.runId, sourceRevision: release.sourceRevision, indexRevision: release.sourceRevision, name: reactName, version: react.version, integrity: react.integrity };
+  const differs = Object.keys(expected).filter((key) => facts[key] !== expected[key]);
+  if (differs.length > 0) fail('P2_1_R1_EXIT_ROUTE_MISMATCH', `${route} binds ${differs.map((key) => `${key} ${facts[key]}`).join(', ')}; this release has ${differs.map((key) => `${key} ${expected[key]}`).join(', ')}`);
+  // Each record names the same candidate and release commit.
+  const candidate = { name: reactName, version: react.version, integrity: react.integrity };
+  const stray = records.filter((entry) => canonicalJson(entry.candidate) !== canonicalJson(candidate) || entry.sourceRevision !== release.sourceRevision).map(({ assertionId }) => assertionId);
+  if (stray.length > 0) fail('P2_1_R1_EXIT_ROUTE_MISMATCH', `${stray.join(', ')} of ${route} name another candidate or release commit`);
+  return {
+    route,
+    index: { path: `${route}/index.json`, sha256: sha256(indexText) },
+    records: records.map(({ assertionId, path: recordPath, sha256: digest, outcome }) => ({ assertionId, path: recordPath, sha256: digest, outcome })),
+    dryRunId: facts.dryRunId,
+    publishRunId: facts.publishRunId,
+    candidate,
+  };
 }
 
 export async function capture(options, github = createGitHub(), observe = viewPackage) {
