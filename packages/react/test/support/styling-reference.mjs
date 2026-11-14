@@ -1567,12 +1567,16 @@ const interactionPseudos = new Set(['hover', 'active', 'focus', 'focus-visible',
 
 /**
  * What a pseudo-class is on an element of the Basic example at rest. `:not()`, `:is()` and `:where()` are decided by their
- * arguments and an interaction pseudo-class is false. Every other one (`:disabled`, `:first-child`, `:has()`) is unknown, and unknown
- * stays unknown through `:not()` and `:is()`: a rule that depends on it is never read as not applying.
+ * arguments and an interaction pseudo-class is false. `:checked` on an input is its `checked` attribute, which the server markup
+ * writes, and `:has()` is decided when each of its selectors is one compound under a descendant or child combinator (the native
+ * choice state rules ask `:has(input:checked)`). Every other one (`:disabled`, `:first-child`, `:has()` of a sibling or a chain) is
+ * unknown, and unknown stays unknown through `:not()` and `:is()`: a rule that depends on it is never read as not applying.
  * @returns {boolean | null}
  */
 function atRest({ name, selectors }, element) {
   if (name === 'is' || name === 'where') return anyMatches(selectors, element);
+  if (name === 'checked' && element.tag === 'input') return element.attributes.has('checked');
+  if (name === 'has') return hasAtRest(selectors, element);
   if (name === 'not') {
     const found = anyMatches(selectors, element);
     return found === null ? null : !found;
@@ -1580,6 +1584,25 @@ function atRest({ name, selectors }, element) {
   // The example's elements are inside the body; none is the document element.
   if (name === 'root') return false;
   return interactionPseudos.has(name) ? false : null;
+}
+
+/** Whether `element` has a descendant (or, for `>`, a child) that one of the one-compound `selectors` matches at rest. */
+function hasAtRest(selectors, element) {
+  if (!selectors.every(({ compounds }) => compounds.length === 1 && [' ', '>'].includes(compounds[0].combinator))) return null;
+  let result = false;
+  const visit = (parent, depth) => {
+    for (const child of elementsOf(parent)) {
+      for (const { compounds: [compound] } of selectors) {
+        if (compound.combinator === '>' && depth > 0) continue;
+        const found = matchComplex({ compounds: [{ ...compound, combinator: ' ' }] }, child, atRest);
+        if (found === true) return true;
+        if (found === null) result = null;
+      }
+      if (visit(child, depth + 1)) return true;
+    }
+    return false;
+  };
+  return visit(element, 0) ? true : result;
 }
 
 /** Whether some selector of a list matches `element` at rest: true, false, or null when none does for sure and one may. */

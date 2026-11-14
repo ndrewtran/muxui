@@ -7,6 +7,12 @@ const items = [
   { id: 'disabled', label: 'Unavailable', panel: 'Disabled panel', disabled: true },
 ];
 
+// One label holds a block taller than a line, so the row is taller than the plain tab's label and its padding.
+const unequalItems = [
+  { id: 'plain', label: 'Plain', panel: 'Plain panel' },
+  { id: 'tall', label: React.createElement('span', { style: { display: 'inline-block', blockSize: '4rem', verticalAlign: 'middle' } }, 'Tall'), textValue: 'Tall', panel: 'Tall panel' },
+];
+
 export function TabsMotionFixture() {
   const [selected, setSelected] = React.useState('short');
   const [verticalSelected, setVerticalSelected] = React.useState('short');
@@ -53,5 +59,6 @@ export function TabsMotionFixture() {
         onChange: setVerticalSelected,
         'aria-label': 'Vertical sections',
       })),
+    React.createElement(Tabs, { id: 'unequal-tabs', items: unequalItems, defaultValue: 'plain', 'aria-label': 'Unequal sections' }),
   );
 }

@@ -1116,9 +1116,13 @@ consists of:
   keeps that policy only while the component's CSS reads the property and a test
   shows that setting it on a rendered instance changes the computed style.
 - **Style entry points.** One component stylesheet, `styles.css`, which holds
-  every family, including the editor and Markdown styles, and the optional
-  `themes.css`. Within a major, `styles.css` stays complete, so any finer entry
-  is added later only additively.
+  every family, including the editor and Markdown styles, and two optional theme
+  stylesheets, `themes.css` and `themes-apca.css`. They hold the same presets
+  with the same selectors, layer, and order, and differ only in how each shade's
+  text color is chosen: by WCAG 2 contrast ratio in `themes.css`, by APCA
+  endpoint selection in `themes-apca.css` (Decision 0036). Within a major,
+  `styles.css` stays complete, so any finer entry is added later only
+  additively.
 
 For supported published contracts, the compatibility promise is deliberately
 narrow and machine-enumerated:
@@ -1135,8 +1139,8 @@ component tokens and never raw palette values. A test in `@muxui/react` renders
 the exported components and checks the published surface. Every declared public
 class and state attribute is emitted in its applicable fixtures and has CSS
 coverage, every public custom property is read and changes computed style in a
-browser, the layers exist, `styles.css` and `themes.css` are the only style
-entries, and canonical examples rely on no internal hook. Internal classes and
+browser, the layers exist, `styles.css`, `themes.css`, and `themes-apca.css` are
+the only style entries, and canonical examples rely on no internal hook. Internal classes and
 substrate attributes may be emitted; they are not part of the contract. The
 catalog and that test expose only registered hooks and flag examples that rely
 on internal selectors. During the
@@ -2164,7 +2168,7 @@ tools never rewrite source records silently while reading or querying them.
 Deprecated fields remain readable for their declared compatibility window and
 cannot be repurposed with new meaning.
 
-The current pre-release query surface supports only query API `2.1.0`.
+The current pre-release query surface supports only query API `3.0.0`.
 `@muxui/schema` owns its request/response grammar; `@muxui/catalog` owns
 current response semantics and bounded page selection. Token summaries expose
 counts, digests, provenance, and available sections; complete entries are
@@ -2235,7 +2239,7 @@ token; they do not require a source import, external checkout, or historical
 provenance record. Web CSS and native theme objects derive only from admitted
 Mux UI token facts, and native never parses CSS.
 
-Under current query API v2 behavior, complete token and crosswalk populations
+Under current query API v3 behavior, complete token and crosswalk populations
 are retrieved only through the versioned `tokens` and `source-crosswalk`
 sections of `getArtifact` / `muxui get`. Superseded inline query versions are
 unsupported during the current pre-release state. `@muxui/schema` owns the closed

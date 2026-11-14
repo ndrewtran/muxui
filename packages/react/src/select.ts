@@ -11,7 +11,7 @@ import type {
   RefObject,
 } from 'react';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
-import { Label as AriaLabel, Text as AriaText, FieldError as AriaFieldError } from 'react-aria-components';
+import { ButtonContext as AriaButtonContext, Label as AriaLabel, Text as AriaText } from 'react-aria-components';
 import { AriaListBox, AriaListBoxItem, AriaSelect, AriaSelectValue } from './substrate.ts';
 import type {
   Key,
@@ -27,6 +27,7 @@ import { classNames, accessibleName } from './control-utils.ts';
 import { textContent, normalizeItems } from './collection-items.ts';
 import type { MuxUIItems, NormalizedItem } from './collection-items.ts';
 import { CollectionTrigger } from './collection-trigger.ts';
+import { fieldError, lateErrorScope } from './field-error.ts';
 import type { FieldValidationProps, MuxUIAccessibleName, NamedFieldProps } from './fields.ts';
 import type { MuxUIPlacement } from './overlays.ts';
 
@@ -222,10 +223,12 @@ export const Select: SelectComponent = /*#__PURE__*/ (() => {
         ...{ 'data-muxui-size': resolvedSize },
         'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
       },
-      label !== undefined ? React.createElement(Select.Label, null, label) : null,
-      children === undefined || children === null ? defaultChildren : children,
-      description !== undefined ? React.createElement(Select.Description, null, description) : null,
-      errorMessage !== undefined ? React.createElement(Select.Error, null, errorMessage) : null));
+      // The trigger reads React Aria's ButtonContext, so a late Select.Error is added to its aria-describedby there.
+      lateErrorScope(AriaButtonContext,
+        label !== undefined ? React.createElement(Select.Label, null, label) : null,
+        children === undefined || children === null ? defaultChildren : children,
+        description !== undefined ? React.createElement(Select.Description, null, description) : null,
+        errorMessage !== undefined ? React.createElement(Select.Error, null, errorMessage) : null)));
   }) as SelectComponent;
   Select.displayName = 'Select';
 
@@ -271,8 +274,8 @@ export const Select: SelectComponent = /*#__PURE__*/ (() => {
   Select.Description = React.forwardRef<HTMLSpanElement, HTMLAttributes<HTMLSpanElement>>(function SelectDescription({ children, className, ...props }, ref) {
     return React.createElement(AriaText, { ...props, ref, elementType: 'span', slot: 'description', className: classNames('muxui-field-description muxui-select__description', className) }, children);
   });
-  Select.Error = React.forwardRef<HTMLSpanElement, HTMLAttributes<HTMLSpanElement>>(function SelectError({ children, className, ...props }, ref) {
-    return React.createElement(AriaFieldError, { ...props, ref, elementType: 'span', className: classNames('muxui-field-error muxui-select__error', className) }, children);
+  Select.Error = React.forwardRef<HTMLSpanElement, HTMLAttributes<HTMLSpanElement>>(function SelectError(props, ref) {
+    return fieldError('muxui-field-error muxui-select__error', props, ref);
   });
   return Select;
 })();

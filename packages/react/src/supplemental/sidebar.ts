@@ -3,6 +3,7 @@ import type { AnchorHTMLAttributes, ChangeEventHandler, ComponentType, ForwardRe
 import { Dialog as AriaDialog, DialogTrigger as AriaDialogTrigger, Focusable as AriaFocusable, MenuTrigger as AriaMenuTrigger } from 'react-aria-components';
 import { AriaButton, AriaLink, AriaModal, AriaModalOverlay } from '../substrate.ts';
 import type { DialogTriggerProps as AriaDialogTriggerProps } from 'react-aria-components';
+import { ClearPressResponder } from 'react-aria/private/interactions/PressResponder';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import SearchIcon from 'lucide-react/dist/esm/icons/search.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
@@ -505,8 +506,10 @@ const SidebarMobileTrigger = function SidebarMobileTrigger({ children, logo }: S
   };
   // The drawer is always full size, so its navigation ignores the folded state of the desktop sidebar.
   // React Aria's DialogTrigger types its children as a prop, and takes the trigger and the overlay as two children.
+  // It hands its trigger's id, state and press handler to every pressable inside it, so the logo clears that: a link or
+  // button there keeps its own id and action instead of opening the drawer.
   return h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen } as AriaDialogTriggerProps,
-    h('header', { ref: header, className: 'muxui-sidebar__mobile-header' }, logo && h('div', { className: 'muxui-sidebar__mobile-logo' }, logo), h(IconButton, { ref: button, className: 'muxui-sidebar__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { className: 'muxui-sidebar__mobile-trigger-icon', 'aria-hidden': true, focusable: 'false' }))),
+    h('header', { ref: header, className: 'muxui-sidebar__mobile-header' }, logo && h('div', { className: 'muxui-sidebar__mobile-logo' }, h(ClearPressResponder, null, logo)), h(IconButton, { ref: button, className: 'muxui-sidebar__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { className: 'muxui-sidebar__mobile-trigger-icon', 'aria-hidden': true, focusable: 'false' }))),
     h(AriaModalOverlay, { className: 'muxui-sidebar__mobile-overlay' }, h(AriaModal, { className: 'muxui-sidebar__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-sidebar__mobile-dialog', children: ({ close }) => h(SidebarContext.Provider, { value: null }, h(SidebarDrawerExit, { exit }), h('div', { className: 'muxui-sidebar__mobile-close-row' }, h(IconButton, { size: 'sm', className: 'muxui-sidebar__mobile-close-btn', onActivate: close, 'aria-label': 'Close navigation' }, h(XIcon, { className: 'muxui-sidebar__mobile-close-icon', 'aria-hidden': true, focusable: 'false' }))), children) }))));
 };
 const SidebarFeatureCard = /*#__PURE__*/ React.forwardRef<HTMLDivElement, SidebarFeatureCardProps>(function SidebarFeatureCard({ title, description, dismissLabel, onDismiss, ...props }, ref) { return nativePart('div', 'muxui-sidebar__feature-card', props, ref, h(React.Fragment, null, title && h('div', { className: 'muxui-sidebar__feature-card-title' }, title), description && h('div', { className: 'muxui-sidebar__feature-card-description' }, description), props.children, onDismiss && h('button', { type: 'button', className: 'muxui-sidebar__feature-card-dismiss', onClick: onDismiss }, dismissLabel == null ? 'Dismiss' : dismissLabel))); });

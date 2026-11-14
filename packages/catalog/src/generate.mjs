@@ -160,7 +160,7 @@ const packageData = {
   catalogDigest: bundle.catalogDigest,
   queryApiVersion: bundle.apiVersion,
   supportedQueryApiVersions: bundle.supportedQueryApiVersions,
-  schemaRange: '^3.0.0',
+  schemaRange: `^${bundle.schemaVersion}`,
   sourceRevision: bundle.sourceRevision,
   tokenRequirementSets,
   platformSafetyContract: {

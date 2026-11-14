@@ -50,11 +50,18 @@ Import `@muxui/react/themes.css` after `@muxui/react/styles.css` to enable the p
 <div data-muxui-theme="standard-harbour" data-muxui-color-scheme="dark">{children}</div>
 ```
 
+`@muxui/react/themes-apca.css` holds the same presets with text colors chosen by APCA 0.0.98G-4g endpoint selection instead of the WCAG 2 contrast ratio. It has the same selectors, cascade layer, and rule order as `themes.css`, so import it in place of `themes.css`. If both load, the one imported last wins wherever they differ. Each shade's text is the light or dark endpoint of its palette, and the two files differ only in which endpoint they pick: `themes.css` takes the one with the higher WCAG 2 contrast ratio, `themes-apca.css` the one with the higher absolute APCA Lc score. Only the `*-fg` text tokens and the declarations that depend on them change, and `MUXUI_THEME_PRESETS` is the same for both. Choose it when your own tooling scores text with APCA; keep `themes.css` otherwise. Neither file promises a minimum score for every pair.
+
+```css
+@import '@muxui/react/styles.css';
+@import '@muxui/react/themes-apca.css';
+```
+
 [ThemePicker](/components/theme-picker/) lets people choose a preset from swatches grouped by collection, and can offer a Random option. It reports the chosen theme ID and changes nothing outside itself, so the application sets `data-muxui-theme` to that ID, and decides which theme Random means. Its swatches carry each preset's own colours for the color scheme in force, so the picker needs neither `themes.css` nor a theme scope. The component's generated reference lists its props, defaults, and events.
 
 ## Cascade layers
 
-`@muxui/react/styles.css` and `@muxui/react/themes.css` put every rule in the cascade layers `muxui.tokens`, `muxui.components`, and `muxui.utilities`, in that order. Tokens and theme presets sit in `muxui.tokens`, component styles in `muxui.components`, and `muxui.utilities` is declared and empty.
+`@muxui/react/styles.css`, `@muxui/react/themes.css`, and `@muxui/react/themes-apca.css` put every rule in the cascade layers `muxui.tokens`, `muxui.components`, and `muxui.utilities`, in that order. Tokens and theme presets sit in `muxui.tokens`, component styles in `muxui.components`, and `muxui.utilities` is declared and empty.
 
 For ordinary declarations, CSS outside any layer beats Mux UI, whatever its specificity, so your own unlayered rules override a component without `!important`. A rule in a layer ranked after `muxui.components` beats it too, and `muxui.utilities` is the place in Mux UI's own order for rules of yours that should outrank component defaults. To restyle by token, assign the `--muxui-semantic-*` and `--muxui-component-*` variables a component's styles read on a theme scope element, not on one rendered component. Declare your layer order once, before importing Mux UI, so a reset or framework sits below it and your layers sit above:
 

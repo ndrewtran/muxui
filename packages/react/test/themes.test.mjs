@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { compileScalePresetTheme } from '@muxui/tokens/authoring';
+import { compileTokenGraph } from '@muxui/tokens';
+import { compileScalePresetTheme, scaleForegrounds } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import source from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import {
@@ -17,6 +18,7 @@ const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'),
 const themeRuntime = await readFile(resolve(packageRoot, 'generated/themes.mjs'), 'utf8');
 const themeTypes = await readFile(resolve(packageRoot, 'generated/themes.d.ts'), 'utf8');
 const themeCss = await readFile(resolve(packageRoot, 'generated/themes.css'), 'utf8');
+const apcaThemeCss = await readFile(resolve(packageRoot, 'generated/themes-apca.css'), 'utf8');
 const baseCss = await readFile(resolve(packageRoot, 'generated/styles.css'), 'utf8');
 
 function cssSelector(collection, id, colorScheme, contrast) {
@@ -110,4 +112,113 @@ test('preset CSS covers all combined color and contrast modes without layout rep
   assert.doesNotMatch(themeCss, /--muxui-reference-dimension-/u);
   assert.doesNotMatch(themeCss, /--muxui-semantic-typography-[^:;]*(?:font-size|font-weight|line-height|letter-spacing):/u);
   assert.match(baseCss, /--muxui-component-button-background:/u);
+});
+
+// themes.css and themes-apca.css hold the same 60 blocks (15 presets x light/dark x standard/more) and differ in
+// the method that picks each shade's text color. The fixture compiles every block once per method.
+const WCAG2 = 'wcag2-endpoint-v1';
+const APCA = 'apca-endpoint-v1';
+const blockOrder = collections.flatMap(([collection, presets]) => presets.flatMap(({ id }) => ['light', 'dark'].flatMap(
+  (colorScheme) => ['standard', 'more'].map((contrast) => ({ collection, id, colorScheme, contrast, selector: cssSelector(collection, id, colorScheme, contrast) })),
+)));
+const compilations = Object.fromEntries([WCAG2, APCA].map((contrastAlgorithm) => [contrastAlgorithm, blockOrder.map((block) => compileScalePresetTheme({
+  source, collection: block.collection, presetId: block.id, contrastAlgorithm, modes: { colorScheme: block.colorScheme, contrast: block.contrast },
+}))]));
+
+/** Selector -> (custom property -> value), in file order. */
+function blocksOf(css) {
+  return new Map([...css.matchAll(/^(\[data-muxui-theme=[^\n]+) \{\n([\s\S]*?)\n\}$/gmu)].map(([, selector, body]) => [
+    selector, new Map([...body.matchAll(/^  (--[^:]+): (.+);$/gmu)].map(([, property, value]) => [property, value])),
+  ]));
+}
+const wcagBlocks = blocksOf(themeCss);
+const apcaBlocks = blocksOf(apcaThemeCss);
+
+// The tokens a preset re-declares: the color tokens its compile assigns and every color or effect token that reads one,
+// through the base token graph.
+const graph = compileTokenGraph(source);
+const dependents = new Map();
+for (const [id, dependencies] of Object.entries(graph.dependencies)) {
+  for (const dependency of dependencies) dependents.set(dependency, [...(dependents.get(dependency) ?? []), id]);
+}
+function withDependents(seeds) {
+  const found = new Set(seeds);
+  for (const id of found) for (const dependent of dependents.get(id) ?? []) found.add(dependent);
+  return found;
+}
+
+test('themes-apca.css is a second export, and each stylesheet is its own method compiled for every block', () => {
+  assert.equal(manifest.exports['./themes-apca.css'], './generated/themes-apca.css');
+  for (const [blocks, algorithm] of [[wcagBlocks, WCAG2], [apcaBlocks, APCA]]) {
+    assert.deepEqual([...blocks.keys()], blockOrder.map(({ selector }) => selector), `${algorithm}: selectors in rule order`);
+    blockOrder.forEach(({ selector }, index) => {
+      const { compiled, generated, preset } = compilations[algorithm][index];
+      const seeds = Object.keys(generated.assignments).filter((id) => source.tokens[id]?.type === 'color');
+      const expected = [...withDependents(seeds)].filter((id) => ['color', 'effect'].includes(compiled.tokens[id]?.type));
+      const block = blocks.get(selector);
+      // Each sheet is held to its own method's compile, so a property missing from both sheets still fails.
+      assert.deepEqual([...block.keys()].sort(), expected.map(cssName).sort(), `${algorithm}: ${selector} declares exactly the seeded tokens and what reads them`);
+      for (const id of expected) assert.equal(block.get(cssName(id)), cssValue(compiled.tokens[id]), `${algorithm}: ${selector} ${id}`);
+      assert.deepEqual(preset, MUXUI_THEME_PRESETS_BY_ID[preset.id], `${algorithm}: ${preset.id} metadata is method-independent`);
+    });
+  }
+});
+
+test('themes-apca.css differs from themes.css only in text tokens and the declarations that read them', () => {
+  const allowed = new Set([...withDependents(Object.keys(source.tokens).filter((id) => /^semantic\.color\.(?:color|neutral)-\d+-fg$/u.test(id)))].map(cssName));
+
+  assert.deepEqual([...apcaBlocks.keys()], [...wcagBlocks.keys()]);
+  let differing = 0;
+  for (const [selector, wcag] of wcagBlocks) {
+    const apca = apcaBlocks.get(selector);
+    assert.deepEqual([...apca.keys()], [...wcag.keys()], `${selector}: same properties in the same order`);
+    for (const [property, value] of apca) {
+      if (value === wcag.get(property)) continue;
+      differing += 1;
+      assert.ok(allowed.has(property), `${selector}: ${property} differs but is neither a text token nor reads one`);
+    }
+  }
+  assert.ok(differing > 0, 'the two methods choose a different text color somewhere');
+});
+
+test('APCA text colors are scaleForegrounds endpoints, including the blackened dark neutral', () => {
+  let blackened = 0;
+  blockOrder.forEach(({ selector, colorScheme }, index) => {
+    const { tokens } = compilations[APCA][index].compiled;
+    const block = apcaBlocks.get(selector);
+    for (const family of ['color', 'neutral']) {
+      const palette = Object.keys(tokens).flatMap((id) => {
+        const shade = new RegExp(`^semantic\\.color\\.${family}-(\\d+)-fg$`, 'u').exec(id)?.[1];
+        return shade === undefined ? [] : [{ shade: Number(shade), hex: tokens[`semantic.color.${family}-${shade}`].value }];
+      });
+      assert.ok(palette.length > 0, `${selector}: ${family} palette is found`);
+      const endpoint = `--muxui-semantic-color-${family}-5`;
+      for (const { shade, text } of scaleForegrounds(palette, { pivot: 'auto', algorithm: APCA })) {
+        const actual = block.get(`--muxui-semantic-color-${family}-${shade}-fg`);
+        // The dark neutral canvas is a color-mix of neutral-10 with black, so text that is that endpoint keeps the mix.
+        const isEndpoint = text === tokens[`semantic.color.${family}-5`].value;
+        assert.equal(actual, isEndpoint ? block.get(endpoint) : text, `${selector}: ${family}-${shade}-fg`);
+        if (colorScheme === 'dark' && family === 'neutral' && isEndpoint) {
+          assert.match(actual, /^color-mix\(in srgb, var\(--muxui-semantic-color-neutral-10\) 85%, #000000\)$/u, `${selector}: neutral-${shade}-fg keeps the blackened mix`);
+          blackened += 1;
+        } else {
+          assert.match(actual, /^#[0-9a-f]{6}$/u, `${selector}: ${family}-${shade}-fg is a plain color`);
+        }
+      }
+    }
+  });
+  assert.ok(blackened > 0, 'some dark neutral text is the blackened endpoint');
+});
+
+test('roles that alias a text token follow it in themes-apca.css', () => {
+  for (const { selector, colorScheme } of blockOrder) {
+    const block = apcaBlocks.get(selector);
+    const text = (shade) => block.get(`--muxui-semantic-color-color-${shade}-fg`);
+    const action = block.get('--muxui-semantic-action-foreground');
+    assert.equal(action, text(60), `${selector}: action foreground`);
+    for (const role of ['--muxui-semantic-action-foreground-hover', '--muxui-semantic-action-foreground-pressed', '--muxui-component-button-foreground', '--muxui-component-taggroup-brand-selected-foreground']) {
+      assert.equal(block.get(role), action, `${selector}: ${role}`);
+    }
+    assert.equal(block.get('--muxui-component-checkbox-selected-foreground-hover'), text(colorScheme === 'dark' ? 50 : 60), `${selector}: checkbox glyph`);
+  }
 });

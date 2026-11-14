@@ -24,6 +24,7 @@ export const UNTYPED_ENTRIES = Object.freeze({
   './compatibility': 'a JavaScript module the package ships without declarations',
   './styles.css': 'a stylesheet',
   './themes.css': 'a stylesheet',
+  './themes-apca.css': 'a stylesheet',
   './testing': 'a JavaScript module the package ships without declarations',
 });
 

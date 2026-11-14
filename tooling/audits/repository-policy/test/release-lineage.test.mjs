@@ -252,7 +252,7 @@ function zipOf(entries, { comment = Buffer.alloc(0), trailing = Buffer.alloc(0) 
 const tarballName = 'muxui-react-0.1.0-rc.5.tgz';
 const manifestName = PORTFOLIO_MANIFEST_FILE;
 const names = [tarballName, manifestName];
-const versionsText = '@muxui/schema=0.6.0-rc.1,@muxui/catalog=2.1.0-rc.1,@muxui/tooling=1.1.0-rc.1,@muxui/react=0.1.0-rc.5';
+const versionsText = '@muxui/schema=0.6.0-rc.1,@muxui/catalog=3.0.0-rc.1,@muxui/tooling=1.1.0-rc.1,@muxui/react=0.1.0-rc.5';
 const versions = parseReleaseVersions(versionsText, publishSet, readSourceVersions(publishSet));
 const good = [{ name: tarballName, data: 'tarball bytes' }, { name: manifestName, data: '{"manifest":true}', method: 8 }];
 const traversal = 'x/../../../../work/muxui/muxui/tooling/audits/repository-policy/src/release-lineage.mjs';
@@ -569,10 +569,10 @@ test('the lineage CLI reports in the lines the R1 exit capture reads, and writes
         `Promoted candidate ${publishedLine} from dry run 555 attempt 2`,
         'Dry run preparation: reused main CI run 101 attempt 1',
       ]);
-      assert.match(read('summary'), /### Promoted candidate\n\n- @muxui\/schema: `0\.6\.0-rc\.1` \(published\)\n- @muxui\/catalog: `2\.1\.0-rc\.1` \(published\)/u);
+      assert.match(read('summary'), /### Promoted candidate\n\n- @muxui\/schema: `0\.6\.0-rc\.1` \(published\)\n- @muxui\/catalog: `3\.0\.0-rc\.1` \(published\)/u);
       // The dry run reads its own candidate the same way, without the authorized digest.
       await main('prepared', { ...promoted, EXPECTED_SHA512: '' }, io(null, { readTree: () => tree, readCommitted }));
-      assert.match(take().at(-1), /^Prepared candidate set @muxui\/schema@0\.6\.0-rc\.1, @muxui\/catalog@2\.1\.0-rc\.1, @muxui\/tooling@1\.1\.0-rc\.1, @muxui\/react@0\.1\.0-rc\.5; release manifest sha256:[0-9a-f]{64}; published @muxui\/schema@0\.6\.0-rc\.1 sha512-.*, @muxui\/react@0\.1\.0-rc\.5 sha512-/u);
+      assert.match(take().at(-1), /^Prepared candidate set @muxui\/schema@0\.6\.0-rc\.1, @muxui\/catalog@3\.0\.0-rc\.1, @muxui\/tooling@1\.1\.0-rc\.1, @muxui\/react@0\.1\.0-rc\.5; release manifest sha256:[0-9a-f]{64}; published @muxui\/schema@0\.6\.0-rc\.1 sha512-.*, @muxui\/react@0\.1\.0-rc\.5 sha512-/u);
       await assert.rejects(main('prepared', { ...promoted, GITHUB_SHA: 'c'.repeat(40) }, io(null, { readTree: () => tree, readCommitted })), /the manifest source revision is a+, not c+/u);
       await assert.rejects(main('candidate', { ...promoted, EXPECTED_SHA512: 'sha512-other' }, io(null, { readTree: () => tree, readCommitted })), /The tarball-sha512 input lists/u);
       assert.deepEqual(take(), []);
@@ -648,7 +648,7 @@ test('a promoted candidate that reuses packages fetches them from the registry a
     ]);
     lines.length = 0;
     await main('prepared', { ...environment, EXPECTED_SHA512: '' }, io);
-    assert.match(lines[0], /^Prepared candidate set @muxui\/schema@0\.6\.0-rc\.1, @muxui\/catalog@2\.1\.0-rc\.1, @muxui\/tooling@1\.1\.0-rc\.2, @muxui\/react@0\.1\.0-rc\.5; release manifest sha256:[0-9a-f]{64}; published @muxui\/tooling@1\.1\.0-rc\.2 sha512-/u);
+    assert.match(lines[0], /^Prepared candidate set @muxui\/schema@0\.6\.0-rc\.1, @muxui\/catalog@3\.0\.0-rc\.1, @muxui\/tooling@1\.1\.0-rc\.2, @muxui\/react@0\.1\.0-rc\.5; release manifest sha256:[0-9a-f]{64}; published @muxui\/tooling@1\.1\.0-rc\.2 sha512-/u);
     // An input that disagrees with the manifest is refused: React is empty (reused), the manifest agrees; give it a version and it does not.
     await assert.rejects(main('candidate', { ...environment, MUXUI_RELEASE_VERSIONS: environment.MUXUI_RELEASE_VERSIONS.replace('@muxui/react=', '@muxui/react=0.1.0-rc.5') }, io), /Expected exactly the tarball of each published package/u);
   } finally {

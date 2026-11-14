@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { parseJsonStrict } from '../../../../packages/schema/src/index.mjs';
-import { catalogAcrossCommit, legacyPlatformSafetyDefaults, normalizeLegacyPlatformSafety, normalizeLegacyScaleMetadata } from '../../../../tests/evidence/bl1/growth-scope.mjs';
+import { catalogAcrossCommit, legacyPlatformSafetyDefaults, normalizeLegacyPlatformSafety, normalizeLegacyQueryApi, normalizeLegacyScaleMetadata } from '../../../../tests/evidence/bl1/growth-scope.mjs';
 import { compileBundle } from '../../../../tests/evidence/bl1/regression.mjs';
 import { repositoryRoot } from './evidence-growth-repository.mjs';
 
@@ -55,6 +55,8 @@ test('the tree just before the defaults is rejected as committed and compiles, w
   await withTree(preChange, async (directory) => {
     const declared = await authoredObligations(directory);
     assert.equal(declared.length, 96 * requirementIds.length, 'every binding declares each requirement');
+    // The tree names the previous query API, which the current compiler no longer reads, and that would fail the compile before the declarations do.
+    await normalizeLegacyQueryApi(directory);
     // The current compiler reads each full declaration as an override, and the registry has no defaults to resolve it against.
     await assert.rejects(compileBundle(() => true, directory), (error) => error.issues?.some(({ path }) => path.includes('/platformSafety/')));
     await normalizeLegacyPlatformSafety(directory);

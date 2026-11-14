@@ -354,7 +354,9 @@ assert.ok(MuxUI.Button, 'root runtime loads Button');
 assert.equal(themes.MUXUI_THEME_PRESETS.length, 15, 'packed theme metadata loads');
 const packageEntry = await import.meta.resolve('@muxui/react');
 if (!import.meta.resolve('@muxui/react/themes.css').endsWith('/generated/themes.css')) throw new Error('themes stylesheet resolution');
+if (!import.meta.resolve('@muxui/react/themes-apca.css').endsWith('/generated/themes-apca.css')) throw new Error('APCA themes stylesheet resolution');
 await access(fileURLToPath(new URL('../generated/themes.css', packageEntry)));
+await access(fileURLToPath(new URL('../generated/themes-apca.css', packageEntry)));
 await access(fileURLToPath(new URL('../generated/themes.mjs', packageEntry)));
 function PackedCommands() {
   const palette = MuxUI.useCommandPalette({ commands: [{ id: 'cafe', title: 'Café' }], defaultQuery: 'cafe' });

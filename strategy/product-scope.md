@@ -1,5 +1,5 @@
 ---
-scopeVersion: 23.0.1
+scopeVersion: 23.1.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -384,7 +384,7 @@ behavior, or implementation across platforms. No parity claim exists at R1.
 | `SCOPE-API-BINDING` | `committed` | Each binding record carries its exact Mux UI props/attributes, events, slots/parts, defaults, behavior, deviations, validation profile, and example relations. For `web.react` the API fields are authored once, as the component's TypeScript props type in `@muxui/react` source, and appear in the record as a block derived from it (Decision 0031). |
 | `SCOPE-API-COMPOSITION` | `committed` | Compound components expose explicit named parts, allowed parent/child relations, required labels/providers, and mutually exclusive structures without magical child inspection. |
 | `SCOPE-API-WEB-HOOKS` | `deferred` | Framework-free `web.html` hooks: public root classes, semantic slots, state attributes, DOM events, custom properties, and cascade layers are enumerated for W1.0; undocumented topology stays internal. The React successor is `SCOPE-API-REACT-CSS`. |
-| `SCOPE-API-REACT-CSS` | `committed` | The `web.react` public CSS contract is enumerated and owned by `@muxui/react`: cascade layers, root and part classes in one naming scheme, a closed set of Mux-owned state attributes, public custom properties that the CSS reads, and style entry points (one `styles.css` that holds every family, and the optional `themes.css`; a finer entry may be added later only additively). Undocumented topology stays internal. Adopted in two ordinary stages, with the split-entry stage retired (Decision 0031). |
+| `SCOPE-API-REACT-CSS` | `committed` | The `web.react` public CSS contract is enumerated and owned by `@muxui/react`: cascade layers, root and part classes in one naming scheme, a closed set of Mux-owned state attributes, public custom properties that the CSS reads, and style entry points (one `styles.css` that holds every family, and two optional theme stylesheets, `themes.css` and `themes-apca.css`, which hold the same presets with text colors chosen by WCAG 2 contrast ratio or by APCA endpoint selection; a finer entry may be added later only additively). Undocumented topology stays internal. Adopted in two ordinary stages, with the split-entry stage retired (Decision 0031) and the second theme stylesheet added (Decision 0036). |
 | `SCOPE-API-REACT-ERGONOMICS` | `committed` | `@muxui/react` TypeScript source owns the typed Mux UI props and composition, public ref semantics, controlled/uncontrolled observable state, host-type refinements, runtime state, effects, portals, and implementation. The `web.react` binding owns behavior, accessibility fulfillment, and deviations, and carries the API block derived from that source. |
 | `SCOPE-API-NATIVE-ERGONOMICS` | `deferred` | When N1 activates, native bindings may use platform-appropriate APIs and alternatives while preserving shared intent, tokens, applicable states, and accessibility obligations. |
 | `SCOPE-API-PASSTHROUGH` | `committed` | Renderer host passthrough uses named supported profiles and hand-authored type refinements; it cannot introduce undocumented Mux UI semantics. |
@@ -499,7 +499,7 @@ example-purpose, limit, and cursor selectors. JSON writes one value to stdout;
 diagnostics and progress use stderr. Dense output is deterministic,
 section-selectable, token-budgeted, and round-trippable to the response object.
 
-Token-source retrieval currently supports query API `2.1.0` only. Full and
+Token-source retrieval currently supports query API `3.0.0` only. Full and
 compact token summaries expose counts, digests, provenance, and available-section
 metadata; complete populations use bounded `tokens` and `source-crosswalk`
 sections. `@muxui/schema` owns the current request/response and
@@ -513,7 +513,7 @@ requirements. The profile fixes the query API and lexer versions, canonical
 entry-cost/order rule, normalized worst-case envelope preimage/reserve,
 default/max limits, minimum progress, 2,048-token dense-page budget, and
 `MUXUI_QUERY_PAGE_ENTRY_TOO_LARGE`. Its canonical JSON enters the catalog
-digest, adding no revision axis. Each v2 page uses canonical ordering and a
+digest, adding no revision axis. Each v3 page uses canonical ordering and a
 cursor bound to query version, that catalog digest, token-source revision,
 section, selector state, and position. `limit` is an item ceiling; the catalog
 emits the greatest non-empty fitting prefix and rejects a single oversize entry

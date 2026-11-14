@@ -48,7 +48,7 @@ test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts,
   assert.deepEqual(Object.keys(manifest).sort(), ['catalog', 'compatibility', 'contracts', 'descriptors', 'digest', 'evidence', 'id', 'packages', 'preparation', 'publication', 'react', 'reactCompatibility', 'rollback', 'schema', 'source']);
   assert.deepEqual(manifest.source, { revision: commit, tree });
   assert.deepEqual(manifest.packages.map(({ name, version, role }) => [name, version, role]), [
-    ['@muxui/schema', '0.6.0-rc.1', 'published'], ['@muxui/catalog', '2.1.0-rc.1', 'published'],
+    ['@muxui/schema', '0.6.0-rc.1', 'published'], ['@muxui/catalog', '3.0.0-rc.1', 'published'],
     ['@muxui/tooling', '1.1.0-rc.1', 'published'], ['@muxui/react', '0.1.0-rc.5', 'published'],
   ]);
   for (const record of manifest.packages) {
@@ -56,20 +56,20 @@ test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts,
     assert.deepEqual(record.provenance, { kind: 'release-commit', releaseId: manifest.id, sourceCommit: commit });
   }
   const catalogPackage = JSON.parse(readArchive(artifacts.get('@muxui/catalog')).get('package/generated/catalog-package.json'));
-  assert.deepEqual(manifest.catalog, { id: `@muxui/catalog@2.1.0-rc.1:${catalogPackage.catalogDigest}`, version: '2.1.0-rc.1', digest: catalogPackage.catalogDigest });
+  assert.deepEqual(manifest.catalog, { id: `@muxui/catalog@3.0.0-rc.1:${catalogPackage.catalogDigest}`, version: '3.0.0-rc.1', digest: catalogPackage.catalogDigest });
   assert.deepEqual(manifest.contracts, {
-    schemaVersion: '3.0.0', queryApiVersion: '2.1.0', supportedQueryApiVersions: ['2.1.0'], tokenContractVersion: '2.0.0', platformSafetyContractVersion: '1.0.0',
+    schemaVersion: '4.0.0', queryApiVersion: '3.0.0', supportedQueryApiVersions: ['3.0.0'], tokenContractVersion: '2.0.0', platformSafetyContractVersion: '1.0.0',
   });
   assert.deepEqual(manifest.descriptors.map(({ id, version, bindings }) => [id, version, bindings]), [['renderer:@muxui/react', '0.1.0-rc.5', 1]]);
   assert.deepEqual(manifest.compatibility.edges.map(({ from, to, range }) => `${from}>${to}@${range}`), [
-    '@muxui/catalog>@muxui/schema@^0.6.0-rc.1', '@muxui/tooling>@muxui/catalog@^2.1.0-rc.1', '@muxui/tooling>@muxui/schema@^0.6.0-rc.1',
+    '@muxui/catalog>@muxui/schema@^0.6.0-rc.1', '@muxui/tooling>@muxui/catalog@^3.0.0-rc.1', '@muxui/tooling>@muxui/schema@^0.6.0-rc.1',
   ]);
   assert.equal(manifest.reactCompatibility.schema, 'muxui-react-compatibility-v1');
   assert.deepEqual(manifest.evidence.capturedCiEvidence.map(({ milestone }) => milestone), ['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']);
   assert.deepEqual(manifest.evidence.retainedReviewEvidence[0].milestones, ['R1.2', 'R1.3', 'R1.4']);
   assert.deepEqual(manifest.evidence.activeExceptions, []);
   assert.deepEqual(manifest.rollback.packages.map(({ name, fixForward }) => [name, fixForward]), [
-    ['@muxui/schema', '0.6.0-rc.2'], ['@muxui/catalog', '2.1.0-rc.2'], ['@muxui/tooling', '1.1.0-rc.2'], ['@muxui/react', '0.1.0-rc.6'],
+    ['@muxui/schema', '0.6.0-rc.2'], ['@muxui/catalog', '3.0.0-rc.2'], ['@muxui/tooling', '1.1.0-rc.2'], ['@muxui/react', '0.1.0-rc.6'],
   ]);
   assert.equal(manifest.rollback.status, 'prepared-not-exercised');
   assert.equal(manifest.publication.mutationPerformed, false);
@@ -207,8 +207,8 @@ test('E-P2.1-03 contracts, evidence, exceptions, publication, and rollback are r
 
   // The schema package must declare the contract versions the catalog bundle implements.
   const schema = tupleFixture();
-  schema.files['@muxui/schema']['src/index.mjs'] = "export const SCHEMA_VERSION = '3.1.0';\nexport const API_VERSION = '2.1.0';\n";
-  assert.throws(() => manifestOf(artifactsOf(schema)), /P2_1_MANIFEST_CONTRACT_MISMATCH: @muxui\/schema declares schema 3\.1\.0 and query API 2\.1\.0/u);
+  schema.files['@muxui/schema']['src/index.mjs'] = "export const SCHEMA_VERSION = '4.1.0';\nexport const API_VERSION = '3.0.0';\n";
+  assert.throws(() => manifestOf(artifactsOf(schema)), /P2_1_MANIFEST_CONTRACT_MISMATCH: @muxui\/schema declares schema 4\.1\.0 and query API 3\.0\.0/u);
 });
 
 test('E-P2.1-03 the retained evidence is bound to the committed bytes, and must be committed', () => {
@@ -380,9 +380,9 @@ test('E-P2.1-03 a reused package is the record of the release that published it,
 
 test('E-P2.1-03 a reused package must still be compatible with the new tuple', () => {
   // Tooling asked for a catalog line the new tuple does not carry.
-  const incompatible = reuseScenario({ reuse: ['@muxui/tooling'], release: { versions: { '@muxui/catalog': '3.0.0-rc.1' } } });
+  const incompatible = reuseScenario({ reuse: ['@muxui/tooling'], release: { versions: { '@muxui/catalog': '4.0.0-rc.1' } } });
   const manifest = manifestOf(incompatible.artifacts, { reused: incompatible.reused });
-  assert.throws(() => verify(manifest, incompatible.artifacts, { priorManifests: incompatible.priorManifests }), /P2_1_MANIFEST_COMPATIBILITY_BROKEN: @muxui\/tooling requires @muxui\/catalog@\^2\.1\.0-rc\.1, and the tuple has 3\.0\.0-rc\.1/u);
+  assert.throws(() => verify(manifest, incompatible.artifacts, { priorManifests: incompatible.priorManifests }), /P2_1_MANIFEST_COMPATIBILITY_BROKEN: @muxui\/tooling requires @muxui\/catalog@\^3\.0\.0-rc\.1, and the tuple has 4\.0\.0-rc\.1/u);
 
   // The renderer still carries the requirement digests the catalog has since changed.
   const drifted = reuseScenario({ reuse: ['@muxui/react'], release: { catalogTokenDigest: digest('9') } });

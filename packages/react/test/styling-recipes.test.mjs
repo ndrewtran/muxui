@@ -175,7 +175,7 @@ test('all 86 recipes are valid: the README\'s layer statement, wrapper-scoped ru
 });
 
 test('the Mux layers the recipe relies on are as the README says: muxui.utilities is declared and empty in every shipped sheet', () => {
-  for (const name of ['styles.css', 'themes.css']) {
+  for (const name of ['styles.css', 'themes.css', 'themes-apca.css']) {
     const { rules } = readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
     assert.deepEqual(rules.filter(({ chain }) => chain.some((prelude) => prelude === '@layer muxui.utilities')).map(({ selector }) => selector), [], `${name} has no rule in muxui.utilities`);
   }
@@ -285,7 +285,7 @@ test('the recipe targets the Basic example, which is the first one, and not anot
 // The cascade model: what a pseudo-class is at rest, and what an order or a condition decides.
 // ---------------------------------------------------------------------------------------------------------------------------
 
-test('a selector at rest is true, false or unknown: interaction pseudo-classes are false, and unknown stays unknown through :not(), :is(), :where() and :has()', () => {
+test('a selector at rest is true, false or unknown: interaction pseudo-classes are false, :has() of one compound and :checked are decided, and unknown stays unknown through :not(), :is(), :where() and :has()', () => {
   const element = parseObservation('<div class="x"></div>').elements[0];
   const at = (selector) => matchAtRest(parseSelectorList(selector)[0], element);
   for (const [selector, expected] of [
@@ -295,9 +295,16 @@ test('a selector at rest is true, false or unknown: interaction pseudo-classes a
     ['.x:not(:hover)', true], ['.x:not(:focus-visible)', true], ['.x:not(.y)', true], ['.x:not(.x)', false],
     ['.x:not(:disabled)', null], ['.x:not(.y, :disabled)', null], ['.x:not(.x, :disabled)', false], ['.x:not(:not(:disabled))', null],
     ['.x:is(:disabled, .x)', true], ['.x:is(:disabled, .y)', null], ['.x:is(.y, :hover)', false], ['.x:where(:disabled)', null], ['.x:where(.x)', true],
-    ['.x:has(.y)', null], ['.x:not(:has(.y))', null], ['.x:is(:has(.y), .z)', null],
+    ['.x:has(.y)', false], ['.x:not(:has(.y))', true], ['.x:is(:has(.y), .z)', false],
+    ['.x:has(+ .y)', null], ['.x:has(.y .z)', null], ['.x:has(.y:disabled)', false],
     [':where(.x):not([data-muxui-state-invalid])', true],
   ]) assert.equal(at(selector), expected, selector);
+  // :has() of one compound looks at the descendants, or the children for >, and :checked at an input's checked attribute.
+  const box = parseObservation('<label class="x"><span><input type="checkbox" checked=""></span><i class="y"></i></label>').elements[0];
+  for (const [selector, expected] of [
+    ['.x:has(input:checked)', true], ['.x:has(input:not(:checked))', false], ['.x:has(> input)', false], ['.x:has(> .y)', true],
+    ['.x:has(input:focus-visible)', false], ['.x:has(input:disabled)', null], ['.x:has(.z, input:checked)', true],
+  ]) assert.equal(matchAtRest(parseSelectorList(selector)[0], box), expected, selector);
   assert.equal(matchAtRest(parseSelectorList(':where(.x):not([data-muxui-state-invalid])')[0], parseObservation('<div class="x" data-muxui-state-invalid=""></div>').elements[0]), false);
 });
 

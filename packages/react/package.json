@@ -43,6 +43,7 @@
       "default": "./generated/themes.mjs"
     },
     "./themes.css": "./generated/themes.css",
+    "./themes-apca.css": "./generated/themes-apca.css",
     "./testing": "./generated/testing.mjs",
     "./text-editor": {
       "types": "./generated/text-editor.d.ts",

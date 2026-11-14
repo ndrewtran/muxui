@@ -13,7 +13,7 @@ import type {
   RefObject,
 } from 'react';
 import { CalendarHeightMotion } from './calendar-height-motion.mjs';
-import { Autocomplete as AriaAutocomplete, CalendarGrid as AriaCalendarGrid, CalendarGridBody as AriaCalendarGridBody, CalendarGridHeader as AriaCalendarGridHeader, CalendarHeaderCell as AriaCalendarHeaderCell, CalendarHeading as AriaCalendarHeading, Dialog as AriaDialog, FieldError as AriaFieldError, Form as AriaForm, InputContext as AriaInputContext, Label as AriaLabel, Text as AriaText } from 'react-aria-components';
+import { Autocomplete as AriaAutocomplete, CalendarGrid as AriaCalendarGrid, CalendarGridBody as AriaCalendarGridBody, CalendarGridHeader as AriaCalendarGridHeader, CalendarHeaderCell as AriaCalendarHeaderCell, CalendarHeading as AriaCalendarHeading, DateFieldContext as AriaDateFieldContext, DatePickerContext as AriaDatePickerContext, DateRangePickerContext as AriaDateRangePickerContext, Dialog as AriaDialog, Form as AriaForm, InputContext as AriaInputContext, Label as AriaLabel, Text as AriaText, TimeFieldContext as AriaTimeFieldContext } from 'react-aria-components';
 import { AriaCalendar, AriaCalendarCell, AriaCheckboxGroup, AriaDateField, AriaDateInput, AriaDatePicker, AriaDateRangePicker, AriaDateSegment, AriaGroup, AriaInput, AriaListBox, AriaListBoxItem, AriaNumberField, AriaRangeCalendar, AriaSearchField, AriaSwitchButton, AriaSwitchField, AriaTextField, AriaTimeField } from './substrate.ts';
 import type { DateValue, FormProps as AriaFormProps, InputProps as AriaInputProps, Key, TimeValue } from 'react-aria-components';
 import { parseDate, parseTime } from '@internationalized/date';
@@ -29,6 +29,7 @@ import { PopoverMotion } from './popover-motion.mjs';
 import { RangeSelectionMotion } from './range-selection-motion.mjs';
 import { SwitchMotionIndicator } from './switch-motion.ts';
 import { IconButton } from './supplemental/icon-button.ts';
+import { FieldErrorText, lateErrorScope } from './field-error.ts';
 import type { IconButtonProps } from './supplemental/icon-button.ts';
 
 // React Aria hands the attributes its types do not name, such as the data-* hooks the styles read,
@@ -617,7 +618,7 @@ function fieldDescription(description: ReactNode) {
 }
 
 function fieldError(errorMessage: ReactNode) {
-  return React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage);
+  return React.createElement(FieldErrorText, { className: 'muxui-field-error' }, errorMessage);
 }
 
 // Keep the calendar geometry Mux UI-owned instead of importing a newer glyph.
@@ -650,14 +651,19 @@ interface FieldChildrenParts {
   input?: ReactNode;
 }
 
-function fieldChildren({ label, description, errorMessage, children, input }: FieldChildrenParts) {
-  return React.createElement(React.Fragment, null,
-    fieldLabel(label),
-    input,
-    children,
-    fieldDescription(description),
-    fieldError(errorMessage),
-  );
+function fieldParts({ label, description, errorMessage, children, input }: FieldChildrenParts): ReactNode[] {
+  return [fieldLabel(label), input, children, fieldDescription(description), fieldError(errorMessage)];
+}
+
+// The scope adds an error that appears after the field mounted to the aria-describedby React Aria gives the input.
+function fieldChildren(parts: FieldChildrenParts) {
+  return lateErrorScope(AriaInputContext, ...fieldParts(parts));
+}
+
+// A date or time field or picker describes its group and segments, not an input, from its root's props, so its scope
+// (lateErrorScope with the root's own context) sits outside the root.
+function fieldRootChildren(parts: FieldChildrenParts) {
+  return React.createElement(React.Fragment, null, ...fieldParts(parts));
 }
 
 // RAC's named validation context covers its own field serialization. These
@@ -1212,7 +1218,7 @@ export const DateField: ForwardRefExoticComponent<DateFieldProps & RefAttributes
   const parsedValue = React.useMemo(() => controlledTemporal(value, dateOrUndefined), [value]);
   const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
   const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-  return React.createElement(AriaDateField, {
+  return lateErrorScope(AriaDateFieldContext, React.createElement(AriaDateField, {
     ...props,
     ref,
     ...validationProps({ disabled, readOnly, required, invalid }),
@@ -1227,7 +1233,7 @@ export const DateField: ForwardRefExoticComponent<DateFieldProps & RefAttributes
     ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({ label, description, errorMessage, input: dateInput() }));
+  }, fieldRootChildren({ label, description, errorMessage, input: dateInput() })));
 });
 
 DateField.displayName = 'DateField';
@@ -1277,7 +1283,7 @@ export const TimeField: ForwardRefExoticComponent<TimeFieldProps & RefAttributes
   // Mux owns TimeField state, so RAC always receives a controlled value.
   const submittedValue = value !== undefined ? serializeTimeValue(parsedValue) : formValue;
   const effectiveParsedValue = React.useMemo(() => timeOrUndefined(submittedValue) ?? null, [submittedValue]);
-  return React.createElement(AriaTimeField, {
+  return lateErrorScope(AriaTimeFieldContext, React.createElement(AriaTimeField, {
     ...props,
     ref,
     ...validationProps({ disabled, readOnly, required, invalid: invalid ? invalid : externalValidation.isInvalid }),
@@ -1293,7 +1299,7 @@ export const TimeField: ForwardRefExoticComponent<TimeFieldProps & RefAttributes
     ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({
+  }, fieldRootChildren({
     label,
     description,
     errorMessage: effectiveErrorMessage,
@@ -1301,7 +1307,7 @@ export const TimeField: ForwardRefExoticComponent<TimeFieldProps & RefAttributes
     children: React.createElement(React.Fragment, null,
       formResetAnchor(resetInputRef),
       name ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name, value: submittedValue ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
-  }));
+  })));
 });
 
 TimeField.displayName = 'TimeField';
@@ -1339,7 +1345,7 @@ export const DatePicker: ForwardRefExoticComponent<DatePickerProps & RefAttribut
     const parsedValue = React.useMemo(() => controlledTemporal(value, dateOrUndefined), [value]);
     const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
     const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-    return React.createElement(AriaDatePicker, {
+    return lateErrorScope(AriaDatePickerContext, React.createElement(AriaDatePicker, {
       ...props,
       ref,
       ...validationProps({ disabled, readOnly, required, invalid }),
@@ -1357,13 +1363,13 @@ export const DatePicker: ForwardRefExoticComponent<DatePickerProps & RefAttribut
       ...{ 'data-muxui-size': resolvedSize },
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
-    }, fieldChildren({
+    }, fieldRootChildren({
       label,
       description,
       errorMessage,
       input: React.createElement(AriaGroup, { className: 'muxui-date-picker__control' }, dateInput(), React.createElement(IconButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
       children: datePopover(),
-    }));
+    })));
   });
   component.displayName = 'DatePicker';
   return component;
@@ -1425,7 +1431,7 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
     const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue) ?? null, [formValue?.start, formValue?.end]);
     // Mux owns range state, so RAC always receives a controlled value.
     const effectiveValueObject = value !== undefined ? parsedValue : parsedFormValue;
-    return React.createElement(AriaDateRangePicker, {
+    return lateErrorScope(AriaDateRangePickerContext, React.createElement(AriaDateRangePicker, {
       ...props,
       ref,
       ...validationProps({ disabled, readOnly, required, invalid: invalid ? invalid : externalValidation.isInvalid }),
@@ -1443,7 +1449,7 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
       ...{ 'data-muxui-size': resolvedSize },
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
-    }, fieldChildren({
+    }, fieldRootChildren({
       label,
       description,
       errorMessage: effectiveErrorMessage,
@@ -1465,7 +1471,7 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
         formResetAnchor(resetInputRef),
         startName ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name: startName, value: submittedValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
         endName ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name: endName, value: submittedValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
-    }));
+    })));
   });
   component.displayName = 'DateRangePicker';
   return component;

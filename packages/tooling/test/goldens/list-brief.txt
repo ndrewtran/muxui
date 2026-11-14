@@ -1,6 +1,6 @@
 @muxui/dense=1
-apiVersion="2.1.0"
+apiVersion="3.0.0"
 type="artifact.list"
 data={"items":[{"id":"muxui:capability:query-baseline","kind":"capability","lifecycle":"experimental","name":"Query baseline","platforms":[],"source":{"record":"catalog/capabilities/query-baseline.json"},"summary":"Pure API and CLI manifest, list, search, and get operations."}]}
-meta={"authority":"advisory","catalogDigest":"sha256:<digest>","catalogVersion":"2.1.0","detail":"brief","muxuiVersion":"0.0.0","nextCursor":"<cursor>","platform":null,"resolution":{"authority":"advisory","catalogSource":"package","compatibility":"unresolved","revisions":{},"sourceRevision":"sha256:<digest>","targetPackages":{}},"revisions":{},"schemaVersion":"2.1.0","sourceRevision":"sha256:<digest>","truncated":true}
+meta={"authority":"advisory","catalogDigest":"sha256:<digest>","catalogVersion":"3.0.0","detail":"brief","muxuiVersion":"0.0.0","nextCursor":"<cursor>","platform":null,"resolution":{"authority":"advisory","catalogSource":"package","compatibility":"unresolved","revisions":{},"sourceRevision":"sha256:<digest>","targetPackages":{}},"revisions":{},"schemaVersion":"3.0.0","sourceRevision":"sha256:<digest>","truncated":true}
 warnings=[]
