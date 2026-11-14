@@ -14,7 +14,7 @@ import { synchronizedSourceManifest } from '../../catalog/src/completeness.mjs';
 import { syncDeclarationReference } from '../reference-reader/sync.mjs';
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, carriesUpstreamPropName, compatibilityUpstream } from './r1-contracts.mjs';
 import { assertFlatImports, flatModuleName, flattenImports } from './flat-modules.mjs';
-import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
+import { ASSISTIVE_TECHNOLOGY } from './assistive-technology.mjs';
 import { buildRendererDescriptor } from './renderer-descriptor.mjs';
 import { readRuntimeSources, runtimeSourceFor } from './runtime-sources.mjs';
 import { readSupplementalMapping } from './supplemental-mapping.mjs';
@@ -47,7 +47,7 @@ export declare const MUXUI_THEME_PRESETS_BY_ID: Readonly<Record<MuxUIThemeId, Mu
 export declare const MUXUI_THEME_ACTION_BACKGROUNDS: Readonly<Record<MuxUIThemeId, { readonly light: string; readonly dark: string }>>;
 export declare const MUXUI_DEFAULT_THEME_PRESET_ID: MuxUIThemeId;
 `;
-// TypeScript sources ship as the .js and .d.ts that tsc emits from them (Decision 0031 item 2).
+// TypeScript sources ship as the .js and .d.ts that tsc emits from them.
 // --check emits into a fresh directory under build/, so it never rewrites build/ts, and
 // --list-outputs names the outputs without running tsc.
 const typeScriptSources = (await readdir(resolve(packageRoot, 'src'), { recursive: true }))
@@ -79,7 +79,7 @@ async function emitTypeScript() {
   return { outDir, emitted };
 }
 const typeScriptBuild = await emitTypeScript();
-// Decision 0031: a moved component's web.react API comes from its source, merged into its record on read.
+// A moved component's web.react API comes from its source, merged into its record on read.
 const derivedApis = await deriveApis({ packageRoot, repositoryRoot, declarationRoot: typeScriptBuild?.outDir });
 // The exact React Aria Components pin; the generated compatibility record and README follow it.
 const racVersion = manifest.dependencies['react-aria-components'];
@@ -201,7 +201,7 @@ function shippedModule(sourcePath, body, lang) {
   return generatedText(sourcePath, flattenImports(sourcePath, body, lang));
 }
 
-// Decision 0031 item 15: every shipped rule sits in one of these layers, in this order.
+// Every shipped rule sits in one of these layers, in this order.
 // `muxui.utilities` is declared for consumers and holds no rule yet. The wrapped
 // bodies keep their own indentation, so the layer braces never re-indent them.
 const cssLayerOrder = '@layer muxui.tokens, muxui.components, muxui.utilities;';
@@ -411,24 +411,8 @@ const themeRuntimeBody = `function deepFreeze(value) {\n  if (value && typeof va
 
 const cssBody = `${baseTheme.theme.css.trim()}\n\n${responsiveBlock}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='ltr'] { direction: ltr; }\n[data-muxui-direction='rtl'] { direction: rtl; }`;
 
-const candidateVersion = '0.1.0-rc.1';
-// Decision 0023: a bad candidate is fixed forward in the next rc.
-const fixForwardVersion = candidateVersion.replace(/rc\.(\d+)$/u, (_, number) => `rc.${Number(number) + 1}`);
-// Decision 0022 amendment 01: PR #108's check evidence is retained under
-// tests/evidence/r1.5; its review is author-reported only (PR #108 had no
-// hosted review), accepted for the rc boundary and not proof.
-const r15EvidenceStatus = {
-  status: 'checks-retained-review-author-reported',
-  retention: r15ClosureSource.evidenceCapture.retention,
-  basis: 'muxui:decision:0022:amendment:01',
-};
-// Decision 0022: the rc.1 prerelease makes no assistive-technology claim.
-const assistiveTechnologySupport = {
-  claim: 'none',
-  decision: 'muxui:decision:0022',
-  evidenceRequiredBefore: ['any assistive-technology support claim', 'S1.0 stable promotion'],
-  deferredEvidence: DEFERRED_R1_EVIDENCE,
-};
+// What the package claims: nothing stable, and no assistive-technology support (src/assistive-technology.mjs).
+const support = 'unproved; every export is experimental';
 const compatibility = {
   schema: 'muxui-react-compatibility-v1',
   package: manifest.name,
@@ -445,17 +429,16 @@ const compatibility = {
       browserMatrix: r15ClosureSource.compatibility.browserMatrix,
     },
     notClaimed: ['assistive technology', 'zoom', 'locale', 'browsers outside Google Chrome 151'],
-    assistiveTechnology: assistiveTechnologySupport,
+    assistiveTechnology: ASSISTIVE_TECHNOLOGY,
   },
   performance: r15ClosureSource.performance,
-  publication: r15ClosureSource.publication,
-  support: 'unproved; R1.5 React exports only',
+  support,
 };
 const compatibilityBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const reactCompatibility = /*#__PURE__*/ deepFreeze(${canonicalJson(compatibility)});\n`;
 const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.js';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton } from './components.js';\nexport { Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './fields.js';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.js';\n";
 // The types of Button, the R1.1 families, the fields, the overlays, and the color values are tsc's
 // declarations of src/button.ts, src/components.ts, src/fields.ts, src/overlays.ts, and
-// src/color-context.ts (Decision 0031); the index names them, so the modules' other exports
+// src/color-context.ts; the index names them, so the modules' other exports
 // (usePendingSubmitProps, the OwnProps types) stay private.
 const typesBody = `import type { ButtonPointerType } from './button.js';
 
@@ -519,8 +502,8 @@ export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastPro
 export type { DialogProps, DropZoneProps, FileTriggerProps, MuxUIDirectoryDropItem, MuxUIDropActivateEvent, MuxUIDropEvent, MuxUIDropItem, MuxUIDropOperation, MuxUIFileDropItem, MuxUIPlacement, MuxUITextDropItem, OverlayAccessibleName, PopoverProps, PreviewTriggerProps, ToastManager, ToastOptions, ToastProps, ToastProviderProps, TooltipProps } from './overlays.js';
 export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
-const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'r1.5-react-breadth', discovery: 'informational' });\n";
-const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components ${racVersion} is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- The R1.5 closure retains its fixed family membership separately from this current union.\n`;
+const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'react-breadth', discovery: 'informational' });\n";
+const readmeBody = `# @muxui/react\n\nThe standalone Mux UI renderer for React.\n\n- It exports the Mux UI-owned component families, from the root entry and isolated subpaths.\n- React Aria Components ${racVersion} is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n`;
 const markdownCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
 const readmeMappingBySlug = new Map(r16SupplementalComponents.map((entry) => [entry.slug, entry]));
 // The root's props, then each part that owns Mux UI props with some, in anatomy order and qualified by the part (`item: id, disabled`).
@@ -543,17 +526,15 @@ const readmeCompositionGuidance = ['menu', 'list-box', 'grid-list', 'virtualizer
     return `### ${artifact.name}\n\n${binding.behavior.map((behavior) => `- ${behavior}`).join('\n')}\n\nPublic parts: ${binding.api.parts.map((part) => `\`${part}\``).join(', ')}.`;
   }).join('\n\n');
 const readmeGuidance = `
-## R1 exit publication candidate
+## Support
 
-The exact R1 exit candidate is \`@muxui/react@0.1.0-rc.1\`, for the \`next\`
-dist-tag on the npm registry. The candidate contains only the standalone
-\`web.react\` renderer and its internal runtime dependencies. All current
-Mux UI-owned component exports remain experimental; no stable, secondary-renderer,
-or cross-platform support claim is made. The candidate makes no
-assistive-technology support claim; assistive-technology evidence is required
-before any such claim and before stable promotion. Automated accessibility,
-keyboard, and focus checks still apply. Publication, dist-tag mutation, and
-post-publication verification are separate authorized operations.
+This package is a prerelease on the \`next\` dist-tag of the npm registry. It
+contains only the standalone \`web.react\` renderer and its internal runtime
+dependencies. Every Mux UI component export is experimental; no stable,
+secondary-renderer, or cross-platform support is claimed. No
+assistive-technology support is claimed: automated accessibility, keyboard,
+and focus checks run, and manual and screen-reader testing has not been done
+(\`generated/release.json\` lists what is unverified).
 
 ## Install
 
@@ -601,7 +582,7 @@ Part classes were dash forms before (\`muxui-tab-list\` is now \`muxui-tabs__lis
 To develop against an unpublished build, install the versioned local candidate from the package directory instead:
 
 \`\`\`sh
-pnpm add ./muxui-react-${candidateVersion}.tgz
+pnpm add ./muxui-react-${manifest.version}.tgz
 \`\`\`
 
 ## Cascade layers
@@ -675,7 +656,7 @@ ${readmeCompositionGuidance}
 `;
 const descriptorRecord = {
   schema: 'muxui-renderer-descriptor-v1', generatedFrom: 'packages/react/src/generate.mjs',
-  package: manifest.name, version: manifest.version, support: 'unproved; R1.5 React exports only',
+  package: manifest.name, version: manifest.version, support,
   bindings: componentArtifacts.map((artifact) => ({
     binding: `${artifact.id}#web.react`, export: artifact.name, module: '.',
     lifecycle: 'experimental', strategy: 'direct', runtimeProfile: 'web.react',
@@ -692,60 +673,15 @@ const releaseRecord = {
   packagePrivate: manifest.private,
   catalog: { status: 'bound', components: componentArtifacts.map((artifact) => ({ component: artifact.id, binding: `${artifact.id}#web.react`, states: artifact.states })) },
   tokenSource: { path: 'catalog/tokens/default-theme.json', sha256: tokenSha256 },
-  evidence: {
-    ...r15EvidenceStatus,
-    ids: ['E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06'],
-    deferred: DEFERRED_R1_EVIDENCE.filter(({ id }) => id.startsWith('E-R1.5-')),
-  },
   advisories: [], exceptions: [],
-  publication: { status: 'disabled', requires: ['explicit external publish authorization'] },
-  assistiveTechnology: assistiveTechnologySupport,
-  rollback: { status: 'candidate-branch-only-before-merge' },
+  assistiveTechnology: ASSISTIVE_TECHNOLOGY,
   packageDependencies: manifest.dependencies,
   peerDependencies: manifest.peerDependencies,
   packageExports: manifest.exports,
   packageFiles: manifest.files,
-  publicationPreparation: {
-    // Release preparation packs the whole publish set and records it in one portfolio manifest (Decision 0032);
-    // this package is one member of its tuple, published last.
-    schema: 'muxui-portfolio-release-v1',
-    publishSet: 'tooling/audits/repository-policy/publish-set.json',
-    candidateVersion,
-    registry: 'https://registry.npmjs.org',
-    distTag: 'next',
-    // Decision 0023: npm sets latest on first publish; Mux UI never claims it.
-    latestDistTag: 'set by the registry on the first publish; not claimed or promoted until a stable release, apart from a separately authorized re-point to the fix-forward rc during a rollback',
-    preparationTool: 'tooling/audits/repository-policy/src/release-prepare.mjs',
-    publishCommand: 'npm publish <candidate-tarball> --tag next --access public --provenance --registry=https://registry.npmjs.org',
-    provenance: 'required-at-publication',
-    source: {
-      package: manifest.name,
-      version: manifest.version,
-      private: manifest.private,
-      generatedFrom: ['packages/react/src/generate.mjs', 'catalog/react-r1-5/closure.json'],
-    },
-    preflight: {
-      status: 'required-before-publication',
-      checks: [
-        'namespace ownership',
-        'version collision',
-        'next dist-tag collision',
-        'publish authorization drift',
-      ],
-    },
-    evidence: {
-      'E-R1-EXIT-01': 'candidate-preparation',
-      'E-R1-EXIT-02': 'candidate-integrity-prepared-registry-provenance-pending',
-      'E-R1-EXIT-03': 'pending-post-publication',
-      'E-R1-EXIT-04': 'pending-post-publication',
-    },
-    rollback: `prepared, not exercised: deprecate a bad ${candidateVersion} with a message and publish a fixed ${fixForwardVersion} as a new exact candidate, each through separate authorization; with explicit authorization at the time, re-point latest from the deprecated rc to the fixed rc, without stable promotion; unpublish only for a security or legal problem, with explicit authorization, inside npm's 72-hour no-dependents window; retain the immutable ${candidateVersion} version and its release manifest; the manifest's rollback plan covers the other packages of the set`,
-  },
 };
 const snapshotByFamily = new Map(familySnapshot.families.map((family) => [family.family, family]));
 const artifactBySlug = new Map(componentArtifacts.map((artifact) => [artifact.id.slice('muxui:component:'.length), artifact]));
-const R15_EVIDENCE_IDS = Object.freeze(['E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06']);
-const r15TrancheEvidence = (tranche) => Array.from({ length: tranche === 'R1.3' ? 5 : tranche === 'R1.4' ? 6 : 4 }, (_, index) => `E-${tranche}-${String(index + 1).padStart(2, '0')}`);
 const familySlug = (family) => family === 'Modal'
   ? 'dialog'
   : family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
@@ -800,14 +736,12 @@ const r15ClosureRecord = {
       },
       export: { name: source.exportName, module: '.', kind: 'component' },
       lifecycle: { artifact: artifact.lifecycle, binding: binding.lifecycle, strategy: binding.strategy },
-      evidence: { tranche: r15TrancheEvidence(source.tranche), final: R15_EVIDENCE_IDS, ...r15EvidenceStatus, deferred: deferredEvidenceForFamily(source.exportName), support: 'unproved; R1.5 React exports only' },
       packed: { package: manifest.name, version: manifest.version, private: manifest.private, entry: 'generated/index.mjs', types: 'generated/index.d.ts', styles: 'generated/styles.css', binding: `${artifact.id}#web.react`, export: source.exportName, runtimeProfile: 'web.react', selector: `.muxui-${source.slug}` },
     };
   }),
-  evidence: { ...r15EvidenceStatus, ids: R15_EVIDENCE_IDS, deferred: DEFERRED_R1_EVIDENCE.filter(({ id }) => id.startsWith('E-R1.5-')), support: 'unproved; R1.5 React exports only' },
+  support,
   compatibility: r15ClosureSource.compatibility,
   performance: r15ClosureSource.performance,
-  publication: r15ClosureSource.publication,
 };
 const supplementalStylesSource = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').catch(() => '');
 const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(async (entry) => {
@@ -875,7 +809,7 @@ const currentExports = currentFamilyRecords.map((source) => ({
 }));
 const currentDescriptorRecord = {
   ...descriptorRecord,
-  support: 'unproved; R1.6 React current union projection',
+  support,
   tranche: 'R1.6',
   bindings: currentBindings,
   exports: currentExports,
@@ -889,20 +823,16 @@ const currentDescriptorRecord = {
 };
 const currentReleaseRecord = {
   ...releaseRecord,
-  tranche: 'R1.6',
   componentExports: currentFamilyRecords.map((source) => ({ name: source.exportName, export: source.exportName, binding: `muxui:component:${source.slug}#web.react`, module: source.module, ...(source.subpath ? { subpath: source.module } : {}) })),
   bindings: currentBindings.map(({ binding, export: exportName, module, lifecycle, strategy, runtimeProfile, subpath }) => ({ binding, package: manifest.name, export: exportName, module, lifecycle, strategy, runtimeProfile, ...(subpath ? { subpath } : {}) })),
   catalog: { status: 'bound', components: currentFamilyRecords.map((source) => ({ component: source.artifact.id, binding: `muxui:component:${source.slug}#web.react`, states: source.artifact.states, ...(source.subpath ? { subpath: source.module } : {}) })) },
-  evidence: { status: 'pending', ids: [] },
-  publication: { status: 'disabled', requires: ['explicit external publish authorization'] },
+  // The fixed 53-family closure the current union grew from (catalog/react-r1-5/closure.json).
   historical: {
-    tranche: 'R1.5',
     source: 'catalog/react-r1-5/closure.json',
     familyCount: r15Families.length,
     componentExports: releaseRecord.componentExports,
     bindings: releaseRecord.bindings,
     catalog: releaseRecord.catalog,
-    evidence: releaseRecord.evidence,
   },
 };
 const currentContractRecord = {
@@ -932,9 +862,8 @@ const currentContractRecord = {
     api: source.artifact.bindings['web.react'].api,
     parts: source.artifact.anatomy,
   })),
-  evidence: { status: 'pending', ids: [] },
 };
-// A family ships as tsc's ${slug}.js and ${slug}.d.ts (Decision 0031); a subpath family's index.ts ships under its
+// A family ships as tsc's ${slug}.js and ${slug}.d.ts; a subpath family's index.ts ships under its
 // directory's name, which is its slug. A family in any other language has no shipping path, so it fails here.
 for (const record of currentMappedRecords) {
   if (!record.source.endsWith('.ts') || flatModuleName(record.source) !== `${record.slug}.js`) {
@@ -1098,5 +1027,5 @@ if (!listing) {
     families: currentFamilyRecords.map(({ slug, exportName, source, module }) => ({ slug, exportName, source, module })),
     checking,
   });
-  console.log('[react] generated current R1.6 union projection with the retained R1.5 family closure');
+  console.log('[react] generated the package projections');
 }

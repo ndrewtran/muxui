@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { canonicalJson, validateContractDocument } from '@muxui/schema';
-import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
+import { ASSISTIVE_TECHNOLOGY } from './assistive-technology.mjs';
 import { runtimeSourceFor } from './runtime-sources.mjs';
 
 // The R1.0 Stage 1 registry snapshot, a historical record of the upstream it
@@ -130,21 +130,7 @@ export function assertReactR10SourceContracts({ snapshot, upstreamExports, upstr
   return { snapshot, upstreamExports };
 }
 
-const R15_EVIDENCE_IDS = Object.freeze([
-  'E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06',
-]);
-// Decision 0022 amendment 01: R1.5 checks are retained and its review is
-// author-reported only; every unmet R1 item is listed against the families it covers.
-const R15_DEFERRED_EVIDENCE = DEFERRED_R1_EVIDENCE.filter(({ id }) => id.startsWith('E-R1.5-'));
-const isR15EvidenceStatus = (evidence, retention, deferred) => evidence?.status === 'checks-retained-review-author-reported'
-  && evidence.basis === 'muxui:decision:0022:amendment:01'
-  && evidence.retention === retention
-  && same(evidence.deferred, deferred);
-
-function r15TrancheEvidence(tranche) {
-  const count = tranche === 'R1.3' ? 5 : tranche === 'R1.4' ? 6 : 4;
-  return Array.from({ length: count }, (_, index) => `E-${tranche}-${String(index + 1).padStart(2, '0')}`);
-}
+const SUPPORT = 'unproved; every export is experimental';
 
 function r15Slug(artifact) {
   return artifact.id.slice('muxui:component:'.length);
@@ -176,8 +162,7 @@ export function assertReactR15GeneratedContracts({
 }) {
   const failR15 = (code) => fail(`MUXUI_REACT_R15_${code}`);
   const expectedClosureKeys = [
-    'advisories', 'agentDiscovery', 'compatibility', 'evidenceCapture',
-    'exceptions', 'performance', 'publication', 'schema', 'tranche',
+    'advisories', 'agentDiscovery', 'compatibility', 'exceptions', 'performance', 'schema', 'tranche',
   ];
   if (closure?.schema !== 'muxui-react-r1-5-closure-v1'
     || closure.tranche !== 'R1.5'
@@ -204,16 +189,8 @@ export function assertReactR15GeneratedContracts({
     || closure.performance?.budgets?.ssrMilliseconds !== 1000
     || closure.agentDiscovery?.status !== 'informational'
     || closure.agentDiscovery?.claim !== 'no support or release gate'
-    || !same(Object.keys(closure.evidenceCapture ?? {}).sort(), ['allowed', 'collection', 'prohibited', 'retention'].sort())
-    || closure.evidenceCapture?.collection !== 'default-off'
-    || !same(closure.evidenceCapture?.allowed, ['sanitized repository-relative paths', 'canonical IDs'])
-    || !same(closure.evidenceCapture?.prohibited, ['credentials', 'consumer data'])
-    || closure.evidenceCapture?.retention !== 'tests/evidence/r1.5 retained check evidence, at git tag pre-simplification'
     || !same(closure.exceptions, [])
-    || !same(closure.advisories, [])
-    || closure.publication?.candidateVersion !== '0.1.0-rc.1'
-    || closure.publication?.status !== 'disabled'
-    || closure.publication?.private !== true) failR15('CLOSURE_SOURCE_INVALID');
+    || !same(closure.advisories, [])) failR15('CLOSURE_SOURCE_INVALID');
 
   if (!Array.isArray(snapshot?.families) || snapshot.families.length !== 53
     || !Array.isArray(componentArtifacts) || componentArtifacts.length !== 53
@@ -258,14 +235,16 @@ export function assertReactR15GeneratedContracts({
       'internal-runtime-support': 158,
       'internal-type-support': 327,
     })
-    || !same(closureRecord.evidence?.ids, R15_EVIDENCE_IDS)
-    || !isR15EvidenceStatus(closureRecord.evidence, closure.evidenceCapture?.retention, R15_DEFERRED_EVIDENCE)
-    || !same(release?.assistiveTechnology?.deferredEvidence, DEFERRED_R1_EVIDENCE)
-    // Each deferred family exists in the tranche its evidence ID names.
-    || !DEFERRED_R1_EVIDENCE.every(({ id, families = [] }) => families.every((name) => closureRecord.families
-      .some((family) => family.export?.name === name && id.startsWith(`E-${family.tranche}-`))))
-    || !isR15EvidenceStatus(release?.historical?.evidence, closure.evidenceCapture?.retention, R15_DEFERRED_EVIDENCE)
-    || 'donor' in closureRecord) failR15('FAMILY_GRAPH_INVALID');
+    || closureRecord.support !== SUPPORT
+    || ['evidence', 'publication', 'donor'].some((key) => key in closureRecord)) failR15('FAMILY_GRAPH_INVALID');
+
+  // The assistive-technology record claims nothing, and every family it names as unverified is one the package exports.
+  const exportedFamilies = new Set(closureRecord.families.map((family) => family.export?.name));
+  if (!same(release?.assistiveTechnology, ASSISTIVE_TECHNOLOGY)
+    || ASSISTIVE_TECHNOLOGY.claim !== 'none'
+    || !ASSISTIVE_TECHNOLOGY.unverified.every(({ families, scope }) => (families ? families.every((name) => exportedFamilies.has(name)) : scope === 'every component'))) {
+    failR15('ASSISTIVE_TECHNOLOGY_RECORD_INVALID');
+  }
 
   // The current union is the retained 53 plus whatever the supplemental mapping declares.
   const currentCount = componentArtifacts.length + supplementalComponents.length;
@@ -277,6 +256,7 @@ export function assertReactR15GeneratedContracts({
     || descriptor?.schema !== 'muxui-renderer-descriptor-v1'
     || descriptor.generatedFrom !== 'packages/react/src/generate.mjs'
     || descriptor.package !== manifest.name
+    || descriptor.support !== SUPPORT
     || descriptor.tranche !== 'R1.6'
     || descriptor.bindings?.length !== currentCount
     || descriptor.exports?.length !== currentCount
@@ -290,11 +270,10 @@ export function assertReactR15GeneratedContracts({
     || release.bindings?.length !== currentCount
     || release.catalog?.status !== 'bound'
     || release.catalog.components?.length !== currentCount
-    || release.historical?.tranche !== 'R1.5'
     || release.historical?.familyCount !== 53
     || historicalReleaseBindings?.length !== 53
     || historicalReleaseExports?.length !== 53
-    || release.publication?.status !== 'disabled'
+    || ['evidence', 'publication', 'publicationPreparation', 'rollback', 'tranche'].some((key) => key in release)
     || currentContract?.schema !== 'muxui-react-r1-6-contract-v1'
     || currentContract.current?.familyCount !== currentCount
     || currentContract.current?.fixed53Count !== 53
@@ -350,10 +329,7 @@ export function assertReactR15GeneratedContracts({
       || familyClosure.lifecycle?.artifact !== artifact.lifecycle
       || familyClosure.lifecycle?.binding !== binding.lifecycle
       || familyClosure.lifecycle?.strategy !== binding.strategy
-      || !same(familyClosure.evidence?.tranche, r15TrancheEvidence(source.tranche))
-      || !same(familyClosure.evidence?.final, R15_EVIDENCE_IDS)
-      || !isR15EvidenceStatus(familyClosure.evidence, closure.evidenceCapture?.retention, deferredEvidenceForFamily(source.exportName))
-      || familyClosure.evidence?.support !== 'unproved; R1.5 React exports only'
+      || 'evidence' in familyClosure
       || familyClosure.packed?.binding !== bindingId
       || familyClosure.packed?.export !== source.exportName
       || familyClosure.packed?.runtimeProfile !== 'web.react'

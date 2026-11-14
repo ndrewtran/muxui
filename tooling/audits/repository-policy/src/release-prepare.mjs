@@ -39,12 +39,12 @@ import {
   rewritePackedManifest,
   stampDescriptorProvenance,
 } from './release-package.mjs';
-import { PORTFOLIO_MANIFEST_FILE, PUBLISH_SET_FILE, parseReleaseVersions, readPublishSet, readSourceVersions, tarballFileName } from './release-set.mjs';
+import { PORTFOLIO_MANIFEST_FILE, parseReleaseVersions, readPublishSet, readSourceVersions, tarballFileName } from './release-set.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
 import { assertPatternVariantMarkup } from './pattern-variant-markup.mjs';
 import { patternVariantExamples } from './pattern-variants.mjs';
 import { resolvePinnedTool as resolvePinnedToolIn } from './pinned-tool.mjs';
-import { fixForwardVersion, parseCandidateVersion } from './npm-publication.mjs';
+import { parseCandidateVersion } from './npm-publication.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 import { partRows } from '../../../../packages/react/test/support/styling-parts.ts';
 
@@ -70,17 +70,10 @@ try {
   throw new Error(`R1_EXIT_CANDIDATE_VERSION_INVALID: ${error.message}`);
 }
 const candidateArchiveName = tarballFileName('@muxui/react', candidateVersion);
-// Rollback fixes forward with the next rc, so later candidates name the right successor.
-const fixForwardCandidate = fixForwardVersion(candidateVersion);
 const preparationToolPath = 'tooling/audits/repository-policy/src/release-prepare.mjs';
 const r15Closure = JSON.parse(readFileSync(resolve(repositoryRoot, 'catalog/react-r1-5/closure.json'), 'utf8'));
-// The generator declares the source candidate (catalog closure) and its fix-forward;
-// the packed copy rewrites both to the input candidate and its fix-forward.
-const sourceCandidateVersion = r15Closure.publication.candidateVersion;
-const candidateVersionRewrites = new Map([
-  [sourceCandidateVersion, candidateVersion],
-  [fixForwardVersion(sourceCandidateVersion), fixForwardCandidate],
-]);
+// What the generated metadata says the package supports; the packed copy keeps it.
+const expectedSupport = 'unproved; every export is experimental';
 const documentedSupportingExports = ['ToastProvider', 'useToast', 'useCommandPalette'];
 const expectedPeerDependencies = {
   react: '>=19.2.0 <20',
@@ -523,11 +516,10 @@ try {
       sourceRevision,
     });
     writeFileSync(join(candidatePackage, 'package.json'), `${JSON.stringify(sortedJsonValue(candidateManifest), null, 2)}\n`);
-    // The source alpha becomes the candidate; the generator's declared candidate
-    // and fix-forward become the input candidate and its fix-forward.
-    const versionRewrites = new Map([[manifest.version, candidateVersion], ...candidateVersionRewrites]);
+    // The source alpha becomes the candidate, in the README and every generated file.
+    const versionRewrites = new Map([[manifest.version, candidateVersion]]);
     const readmePath = join(candidatePackage, 'README.md');
-    writeFileSync(readmePath, rewriteGeneratedVersion(readFileSync(readmePath, 'utf8'), candidateVersionRewrites));
+    writeFileSync(readmePath, rewriteGeneratedVersion(readFileSync(readmePath, 'utf8'), versionRewrites));
     for (const entry of expectedGeneratedEntries) {
       const relative = entry.slice('package/'.length);
       if (relative.endsWith('.provenance')) continue;
@@ -535,40 +527,15 @@ try {
       const original = readFileSync(path, 'utf8');
       let rewritten = rewriteGeneratedVersion(original, versionRewrites);
       if (relative === 'generated/release.json') {
-        const releaseValue = JSON.parse(rewritten);
-        rewritten = `${JSON.stringify({
-          ...releaseValue,
-          packagePrivate: false,
-          publication: { ...releaseValue.publication, status: 'prepared', mutationPerformed: false },
-          publicationPreparation: {
-            ...releaseValue.publicationPreparation,
-            status: 'prepared',
-            authorization: 'required-external-human-authorization',
-            mutationPerformed: false,
-          },
-        })}\n`;
+        rewritten = `${JSON.stringify({ ...JSON.parse(rewritten), packagePrivate: false })}\n`;
       } else if (relative === 'generated/r1-5-closure.json') {
         rewritten = rewriteGeneratedJson(rewritten, (value) => ({
           ...value,
-          publication: {
-            ...value.publication,
-            private: false,
-            status: 'prepared',
-            mutationPerformed: false,
-          },
           families: value.families.map((family) => ({ ...family, packed: { ...family.packed, private: false } })),
         }));
       } else if (relative === 'generated/renderer-descriptor.json') {
         // The renderer descriptor records the release and commit it was packed for (read, never compared, by the resolver).
         rewritten = stampDescriptorProvenance(rewritten, { releaseId, sourceCommit: sourceRevision });
-      } else if (relative === 'generated/compatibility.mjs') {
-        rewritten = rewriteGeneratedBody(rewritten, (body) => {
-          const publication = `"publication":{"candidateVersion":"${candidateVersion}","private":true,"requires":["explicit external publish authorization"],"status":"disabled"}`;
-          const preparedPublication = `"publication":{"candidateVersion":"${candidateVersion}","private":false,"requires":["explicit external publish authorization"],"status":"prepared","mutationPerformed":false}`;
-          const prepared = body.replace(publication, preparedPublication);
-          if (prepared === body) fail('R1_EXIT_PACK_RELEASE_METADATA_INVALID', 'compatibility publication metadata was not transformed');
-          return prepared;
-        });
       }
       writeFileSync(path, rewritten);
     }
@@ -651,52 +618,25 @@ try {
   assertExactExportList(descriptor.historical?.bindings?.map(({ export: name }) => name) ?? [], historicalExports, 'R1.5_PACK_EXPORT_SURFACE_INVALID');
   assertExactExportList(closure.families?.map(({ export: { name } }) => name) ?? [], canonicalHistoricalExports, 'R1.5_PACK_EXPORT_SURFACE_INVALID');
   if (closure.families?.length !== 53
-    || closure.publication?.private !== false
-    || closure.publication?.status !== 'prepared'
-    || closure.publication?.mutationPerformed !== false
     || closure.families.some(({ packed }) => packed?.private !== false)) {
     fail('R1.5_PACK_EXPORT_SURFACE_INVALID', 'descriptor, release, closure, and public export surfaces disagree');
   }
   if (release.packagePrivate !== false
-    || release.publication?.status !== 'prepared'
-    || release.publication?.mutationPerformed !== false
-    || release.publicationPreparation?.status !== 'prepared'
-    || release.publicationPreparation?.authorization !== 'required-external-human-authorization'
-    || release.publicationPreparation?.mutationPerformed !== false
     || stableJson(release.runtimeProfiles) !== stableJson(['web.react'])
     || release.version !== candidateVersion
     || descriptor.version !== candidateVersion
     || closure.version !== candidateVersion
     || !compatibility.includes(`"version":"${candidateVersion}"`)
-    || !compatibility.includes('unproved; R1.5 React exports only')) {
-    fail('R1_EXIT_PACK_RELEASE_METADATA_INVALID', 'support, publication, runtime, or package boundary drifted');
+    || !compatibility.includes(`"support":"${expectedSupport}"`)) {
+    fail('R1_EXIT_PACK_RELEASE_METADATA_INVALID', 'support, runtime, or package boundary drifted');
   }
-  assertIncludes(
-    compatibility,
-    `"publication":{"candidateVersion":"${candidateVersion}","private":false,"requires":["explicit external publish authorization"],"status":"prepared","mutationPerformed":false}`,
-    'R1_EXIT_PACK_RELEASE_METADATA_INVALID',
-  );
   const metadataFailures = [
     ['dependencies', stableJson(release.packageDependencies) === stableJson(expectedRuntimeDependencies)],
     ['peers', stableJson(release.peerDependencies) === stableJson(expectedPeerDependencies)],
     ['exports', stableJson(release.packageExports) === stableJson(manifest.exports)],
     ['files', stableJson(release.packageFiles) === stableJson(manifest.files)],
-    ['schema', release.publicationPreparation?.schema === 'muxui-portfolio-release-v1'],
-    ['publishSet', release.publicationPreparation?.publishSet === PUBLISH_SET_FILE],
-    ['candidateVersion', release.publicationPreparation?.candidateVersion === candidateVersion],
-    ['registry', release.publicationPreparation?.registry === 'https://registry.npmjs.org'],
-    ['distTag', release.publicationPreparation?.distTag === 'next'],
-    ['preparationTool', release.publicationPreparation?.preparationTool === preparationToolPath],
-    ['publishCommand', release.publicationPreparation?.publishCommand === 'npm publish <candidate-tarball> --tag next --access public --provenance --registry=https://registry.npmjs.org'],
-    ['provenance', release.publicationPreparation?.provenance === 'required-at-publication'],
-    ['sourcePrivate', release.publicationPreparation?.source?.private === true],
-    ['preflight', release.publicationPreparation?.preflight?.status === 'required-before-publication'],
-    ['evidence', stableJson(release.publicationPreparation?.evidence) === stableJson({
-      'E-R1-EXIT-01': 'candidate-preparation',
-      'E-R1-EXIT-02': 'candidate-integrity-prepared-registry-provenance-pending',
-      'E-R1-EXIT-03': 'pending-post-publication',
-      'E-R1-EXIT-04': 'pending-post-publication',
-    })],
+    // The packed record claims no assistive-technology support, and states what is unverified.
+    ['assistiveTechnology', release.assistiveTechnology?.claim === 'none' && Array.isArray(release.assistiveTechnology.unverified) && release.assistiveTechnology.unverified.length > 0],
   ].filter(([, valid]) => !valid).map(([name]) => name);
   if (metadataFailures.length !== 0) {
     fail('R1_EXIT_PACK_RELEASE_METADATA_INVALID', `release metadata does not correlate the candidate package tuple: ${metadataFailures.join(', ')}`);
@@ -717,7 +657,6 @@ try {
   });
   for (const name of [...currentComponentExports, ...documentedSupportingExports]) assertIncludes(readme, name, 'R1.5_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, 'web.react', 'R1_EXIT_PACK_GUIDANCE_MISSING');
-  assertIncludes(readme, `@muxui/react@${candidateVersion}`, 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, `./muxui-react-${candidateVersion}.tgz`, 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, 'next', 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(notice, 'Copyright (c) 2026 Andrew', 'R1.5_PACK_NOTICE_INVALID');
@@ -768,7 +707,7 @@ try {
     const expected = ${JSON.stringify(currentPublicExports)};
     if (JSON.stringify(Object.keys(entry).sort()) !== JSON.stringify([...expected].sort())) throw new Error('exact public export surface');
     if (compatibility.reactCompatibility.version !== '${candidateVersion}') throw new Error('compatibility version');
-    if (compatibility.reactCompatibility.support !== 'unproved; R1.5 React exports only') throw new Error('compatibility support');
+    if (compatibility.reactCompatibility.support !== '${expectedSupport}') throw new Error('compatibility support');
     if (testing.reactPlatformSafetyFixture.componentSupportClaim !== 'none') throw new Error('support claim');
     const packageEntry = await import.meta.resolve('@muxui/react');
     await import(new URL('./fields.js', packageEntry));

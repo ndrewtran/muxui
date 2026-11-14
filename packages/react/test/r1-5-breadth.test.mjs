@@ -3,6 +3,7 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { reactCompatibility } from '../generated/compatibility.mjs';
+import { ASSISTIVE_TECHNOLOGY } from '../src/assistive-technology.mjs';
 import { readSupplementalMapping } from '../src/supplemental-mapping.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
@@ -51,54 +52,32 @@ test('R1.6 contract is the retained 53-family floor plus the supplemental mappin
   assert.ok(contract.components.every((component) => !('donor' in component)));
 });
 
-test('compatibility and publication boundaries remain explicit', async () => {
+test('the published records claim no stable or assistive-technology support, list what is unverified, and carry no release process', async () => {
   const manifest = await readJson('packages/react/package.json');
-  const release = await readJson('packages/react/generated/release.json');
+  const release = await generatedJson('release.json');
+  const closure = await generatedJson('r1-5-closure.json');
+  const contract = await generatedJson('r1-6-contract.json');
+  const descriptor = await generatedJson('descriptor.json');
   assert.equal(manifest.private, true);
   assert.equal(release.packagePrivate, true);
-  assert.equal(release.publication.status, 'disabled');
   assert.equal(reactCompatibility.compatibilityProfile.runtimeProfile, 'web.react');
   assert.equal(reactCompatibility.compatibilityProfile.status, 'representative-baseline');
-  assert.equal(reactCompatibility.publication.status, 'disabled');
   assert.ok(reactCompatibility.compatibilityProfile.notClaimed.includes('assistive technology'));
-  const assistiveTechnology = release.assistiveTechnology;
-  assert.equal(assistiveTechnology.claim, 'none');
-  assert.equal(assistiveTechnology.decision, 'muxui:decision:0022');
-  assert.deepEqual(assistiveTechnology.evidenceRequiredBefore, ['any assistive-technology support claim', 'S1.0 stable promotion']);
-  assert.deepEqual(reactCompatibility.compatibilityProfile.assistiveTechnology, assistiveTechnology);
-  // Decision 0022's table: deferred IDs, parts, and family counts.
-  assert.deepEqual(assistiveTechnology.deferredEvidence.map(({ id, part, status, deferredTo, families }) => [id, part, status, deferredTo, families?.length]), [
-    ['E-R1.1-04', 'manual half', 'unmet', 'S1.0', 1],
-    ['E-R1.2-03', 'manual and assistive-technology half', 'unmet', 'S1.0', 5],
-    ['E-R1.3-04', 'manual and assistive-technology half', 'unmet', 'S1.0', 22],
-    ['E-R1.4-04', 'manual and assistive-technology proof', 'unmet', 'S1.0', 7],
-    ['E-R1.5-03', 'risk-profile half', 'unmet', 'S1.0', undefined],
-  ]);
-  const r15Deferred = [assistiveTechnology.deferredEvidence.at(-1)];
-  // Decision 0022 amendment 01: checks retained, review author-reported only.
-  assert.equal(release.historical.evidence.status, 'checks-retained-review-author-reported');
-  assert.equal(release.historical.evidence.basis, 'muxui:decision:0022:amendment:01');
-  assert.equal(release.historical.evidence.retention, 'tests/evidence/r1.5 retained check evidence, at git tag pre-simplification');
-  assert.deepEqual(release.historical.evidence.deferred, r15Deferred);
-  const closure = await generatedJson('r1-5-closure.json');
-  assert.equal(closure.evidence.status, 'checks-retained-review-author-reported');
-  assert.deepEqual(closure.evidence.deferred, r15Deferred);
-  for (const family of closure.families) {
-    const { evidence } = family;
-    assert.equal(evidence.status, 'checks-retained-review-author-reported');
-    assert.equal(evidence.retention, release.historical.evidence.retention);
-    // Every unmet tranche item covering this family is listed, never hidden under the status.
-    const expected = assistiveTechnology.deferredEvidence
-      .filter(({ families }) => !families || families.includes(family.export.name))
-      .map(({ id }) => id);
-    assert.deepEqual(evidence.deferred.map(({ id }) => id), expected, family.export.name);
+  for (const record of [reactCompatibility, closure, descriptor]) assert.equal(record.support, 'unproved; every export is experimental');
+
+  assert.deepEqual(release.assistiveTechnology, JSON.parse(JSON.stringify(ASSISTIVE_TECHNOLOGY)));
+  assert.equal(release.assistiveTechnology.claim, 'none');
+  assert.deepEqual(reactCompatibility.compatibilityProfile.assistiveTechnology, release.assistiveTechnology);
+  // Every family named as unverified is one the package exports.
+  const exported = new Set(closure.families.map((family) => family.export.name));
+  for (const { check, families = [] } of release.assistiveTechnology.unverified) {
+    for (const name of families) assert.ok(exported.has(name), `${check}: ${name}`);
   }
-  const deferredIds = (name) => closure.families.find((family) => family.export.name === name).evidence.deferred.map(({ id }) => id);
-  assert.deepEqual(deferredIds('Popover'), ['E-R1.4-04', 'E-R1.5-03']);
-  assert.deepEqual(deferredIds('Button'), ['E-R1.5-03']);
-  assert.deepEqual(deferredIds('DisclosureGroup'), ['E-R1.1-04', 'E-R1.5-03']);
-  assert.equal(release.publicationPreparation.distTag, 'next');
-  assert.match(release.publicationPreparation.latestDistTag, /not claimed or promoted/u);
-  assert.match(release.publicationPreparation.rollback, /^prepared, not exercised: deprecate a bad 0\.1\.0-rc\.1 .* publish a fixed 0\.1\.0-rc\.2 as a new exact candidate/u);
-  assert.match(release.publicationPreparation.rollback, /re-point latest from the deprecated rc to the fixed rc, without stable promotion/u);
+
+  // Release process state stays out of the package: no publication, evidence, authorization, or rollback record.
+  for (const [name, record] of [['release.json', release], ['r1-5-closure.json', closure], ['r1-6-contract.json', contract], ['compatibility.mjs', reactCompatibility]]) {
+    for (const key of ['evidence', 'publication', 'publicationPreparation', 'rollback']) assert.equal(key in record, false, `${name} ${key}`);
+    assert.doesNotMatch(JSON.stringify(record), /E-R1|decision:00|authoriz|S1\.0|tests\/evidence/u, name);
+  }
+  for (const family of closure.families) assert.equal('evidence' in family, false, family.family);
 });

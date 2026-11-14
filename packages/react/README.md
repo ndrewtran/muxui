@@ -1,25 +1,22 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:274fe98d3f9ddc0e7a879814d0d90add1a3ed58785b6c6be1e7be3708e9eced3 -->
+<!-- @generated-content-sha256: sha256:50ec7a36ec6d0606918e48dedd1f66b2976983f00da695149ae7904b881f0f0c -->
 # @muxui/react
 
-R1.6 current React union for the standalone Mux UI renderer.
+The standalone Mux UI renderer for React.
 
-- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.
+- It exports the Mux UI-owned component families, from the root entry and isolated subpaths.
 - React Aria Components 1.20.0 is an internal replaceable substrate.
 - MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.
-- The R1.5 closure retains its fixed family membership separately from this current union.
 
-## R1 exit publication candidate
+## Support
 
-The exact R1 exit candidate is `@muxui/react@0.1.0-rc.1`, for the `next`
-dist-tag on the npm registry. The candidate contains only the standalone
-`web.react` renderer and its internal runtime dependencies. All current
-Mux UI-owned component exports remain experimental; no stable, secondary-renderer,
-or cross-platform support claim is made. The candidate makes no
-assistive-technology support claim; assistive-technology evidence is required
-before any such claim and before stable promotion. Automated accessibility,
-keyboard, and focus checks still apply. Publication, dist-tag mutation, and
-post-publication verification are separate authorized operations.
+This package is a prerelease on the `next` dist-tag of the npm registry. It
+contains only the standalone `web.react` renderer and its internal runtime
+dependencies. Every Mux UI component export is experimental; no stable,
+secondary-renderer, or cross-platform support is claimed. No
+assistive-technology support is claimed: automated accessibility, keyboard,
+and focus checks run, and manual and screen-reader testing has not been done
+(`generated/release.json` lists what is unverified).
 
 ## Install
 
@@ -67,7 +64,7 @@ Part classes were dash forms before (`muxui-tab-list` is now `muxui-tabs__list`)
 To develop against an unpublished build, install the versioned local candidate from the package directory instead:
 
 ```sh
-pnpm add ./muxui-react-0.1.0-rc.1.tgz
+pnpm add ./muxui-react-0.1.0-alpha.0.tgz
 ```
 
 ## Cascade layers

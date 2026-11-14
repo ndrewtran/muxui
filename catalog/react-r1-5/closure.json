@@ -34,18 +34,6 @@
     "claim": "no support or release gate",
     "runtimeProfiles": ["web.react"]
   },
-  "evidenceCapture": {
-    "collection": "default-off",
-    "allowed": ["sanitized repository-relative paths", "canonical IDs"],
-    "prohibited": ["credentials", "consumer data"],
-    "retention": "tests/evidence/r1.5 retained check evidence, at git tag pre-simplification"
-  },
   "exceptions": [],
-  "advisories": [],
-  "publication": {
-    "candidateVersion": "0.1.0-rc.1",
-    "status": "disabled",
-    "private": true,
-    "requires": ["explicit external publish authorization"]
-  }
+  "advisories": []
 }
