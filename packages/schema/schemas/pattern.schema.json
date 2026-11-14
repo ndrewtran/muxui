@@ -30,7 +30,7 @@
       "x-muxui-authoring": { "effect": "editorial", "revisionAxes": ["content"], "autofixes": ["trim-outer-whitespace"] }
     },
     "lifecycle": {
-      "description": "Every BL1 pattern is experimental (Decision 0026); widening this enum is a deliberate schema change.",
+      "description": "Every pattern is experimental; widening this enum is a deliberate schema change.",
       "enum": ["experimental"],
       "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
     },
@@ -141,7 +141,7 @@
       "x-muxui-authoring": { "effect": "editorial", "revisionAxes": ["content"], "autofixes": ["trim-outer-whitespace"] }
     },
     "relations": {
-      "description": "Experimental (Decision 0026): provisional shape owned by G2.4; it may change before the planner consumes it.",
+      "description": "Experimental and provisional; it may change before a composition planner consumes it.",
       "type": "array",
       "uniqueItems": true,
       "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] },
@@ -168,7 +168,7 @@
       }
     },
     "invariants": {
-      "description": "Experimental (Decision 0026): provisional shape owned by G2.4; it may change before the planner consumes it.",
+      "description": "Experimental and provisional; it may change before a composition planner consumes it.",
       "type": "array",
       "uniqueItems": true,
       "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] },
@@ -190,7 +190,7 @@
       }
     },
     "parameters": {
-      "description": "Experimental (Decision 0026): provisional shape owned by G2.4; it may change before the planner consumes it.",
+      "description": "Experimental and provisional; it may change before a composition planner consumes it.",
       "type": "object",
       "propertyNames": { "pattern": "^[a-z][a-zA-Z0-9]*$" },
       "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] },

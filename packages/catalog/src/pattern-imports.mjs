@@ -1,6 +1,6 @@
 /**
  * Dependency-free, fail-closed import check for system-owned pattern variant
- * examples (Decision 0026).
+ * examples.
  *
  * Every import sits in the leading header: imports, comments, and blank lines
  * before the first other statement. A header import may name only `react`,

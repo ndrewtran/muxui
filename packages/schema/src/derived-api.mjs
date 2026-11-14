@@ -194,7 +194,7 @@ export function validateDerivedApi(document) {
 
 /**
  * What a component's authored binding apis may not be, given the bindings that take a
- * derived block (Decision 0031): an implemented binding carries exactly one of an
+ * derived block: an implemented binding carries exactly one of an
  * authored `api` or a derived block, an authored api carries no derived-only field, an
  * unsupported binding takes neither, and a derived block needs its binding. The
  * compiler (through mergeDerivedApis) and source diagnosis both apply these.

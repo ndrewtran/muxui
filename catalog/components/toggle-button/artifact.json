@@ -36,7 +36,7 @@
     "web.html": {
       "schemaVersion": "2.0.0",
       "strategy": "unsupported",
-      "reason": "Parked by Decision 0031: no responsible implementation until W1.0 restores @muxui/web."
+      "reason": "No framework-free web implementation exists. Use the web.react binding."
     },
     "web.react": {
       "schemaVersion": "2.0.0",

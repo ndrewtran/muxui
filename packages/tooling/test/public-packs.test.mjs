@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, posix, resolve } from 'node:path';
 import test, { after } from 'node:test';
 
-// Decision 0032 item 5: the entries each packed manifest exposes, and the files its tarball holds beyond them.
+// The entries each packed manifest exposes, and the files its tarball holds beyond them.
 const packagesRoot = resolve(import.meta.dirname, '../..');
 // Item 3: the Mux UI packages each may depend on come from the declared publish set that release preparation reads.
 const publishSet = JSON.parse(await readFile(resolve(packagesRoot, '../tooling/audits/repository-policy/publish-set.json'), 'utf8'));
@@ -121,7 +121,7 @@ async function importClosure(name, entries) {
 }
 
 /**
- * Decision 0032 item 3: a field a consumer can install names a Mux UI package only along an allowed edge, so
+ * A field a consumer can install names a Mux UI package only along an allowed edge, so
  * `@muxui/tokens` and parked packages never appear there; no field keeps a `workspace:` specifier. `devDependencies`
  * stay free of the edge rule because no package manager installs a dependency's development dependencies.
  */
@@ -138,7 +138,7 @@ function dependencyProblems(manifest, allowedEdges) {
   return problems;
 }
 
-test('P2.1 the packed dependency rule refuses Mux UI edges outside Decision 0032 in every installable field', () => {
+test('the packed dependency rule refuses Mux UI edges outside the publish set in every installable field', () => {
   const allowed = edgesOf('@muxui/catalog');
   for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
     assert.deepEqual(dependencyProblems({ [field]: { '@muxui/tokens': '0.6.0' } }, allowed), [`${field} @muxui/tokens is not an allowed Mux UI edge`]);
@@ -151,7 +151,7 @@ test('P2.1 the packed dependency rule refuses Mux UI edges outside Decision 0032
 });
 
 for (const [slug, spec] of Object.entries(specs)) {
-  test(`P2.1 packed ${spec.name} exposes only its public entries and the files they need`, async () => {
+  test(`packed ${spec.name} exposes only its public entries and the files they need`, async () => {
     const { manifest, files } = packed[spec.name];
     const source = JSON.parse(await readFile(join(packagesRoot, slug, 'package.json'), 'utf8'));
 

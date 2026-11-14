@@ -52,7 +52,7 @@ async function buildBaseline() {
   // The loader froze the bundle, so no test can change what the others read. Tests clone a record before changing it.
   const { artifacts } = context.catalogBundle;
   const button = artifacts.find(({ id }) => id === 'muxui:component:button');
-  // Button's web.react API is derived from its React source (Decision 0031). The bundle holds the
+  // Button's web.react API is derived from its React source. The bundle holds the
   // merged record; authoring reads the authored record, with each derived block in the revision context.
   const component = deepFreeze({
     ...button,
@@ -410,7 +410,7 @@ test('E-G0.5-02: revision explainer lists the normalized inputs behind each dige
   );
 });
 
-test('Decision 0031: a derived API change is classified like an authored one and moves only the binding spec', async () => {
+test('a derived API change is classified like an authored one and moves only the binding spec', async () => {
   const { component, revisionContext } = await setup();
   const authored = component.record;
   assert.equal(authored.bindings['web.react'].api, undefined, 'Button authors no web.react api');
@@ -506,7 +506,7 @@ test('Decision 0031: a derived API change is classified like an authored one and
   }
 });
 
-test('Decision 0031: adding a required derived prop or event is incompatible, and a description edit is editorial', async () => {
+test('adding a required derived prop or event is incompatible, and a description edit is editorial', async () => {
   const { component, revisionContext } = await setup();
   const authored = component.record;
   const derived = {
@@ -659,7 +659,7 @@ async function partFixture() {
   return { authored, revisionContext, part, document, diff, summary, withOther, base: document({ label: part() }), bare: document() };
 }
 
-test('Decision 0031 D2: inside a part, the root\'s derived rules hold', async () => {
+test('inside a part, the root\'s derived rules hold', async () => {
   const { authored, revisionContext, document, diff, summary, base, part } = await partFixture();
   const addProp = (required) => (api) => {
     api.partApis.label.props.push('tone');
@@ -710,7 +710,7 @@ test('Decision 0031 D2: inside a part, the root\'s derived rules hold', async ()
 
 // A part added whole, or the first partApis map, is classified by what it carries, not by the schema\'s blanket
 // compatible add: a default or a required prop or event asks more of existing callers.
-test('Decision 0031 D2: semantic-diff mutations of a part\'s additions', async (t) => {
+test('semantic-diff mutations of a part\'s additions', async (t) => {
   const { diff, summary, base, bare, part, withOther } = await partFixture();
   const requiredEvent = (block) => {
     block.events.push('dismiss');
@@ -763,7 +763,7 @@ test('Decision 0031 D2: semantic-diff mutations of a part\'s additions', async (
   });
 });
 
-test('Decision 0031: any change inside a host type\'s typeArguments is incompatible', async () => {
+test('any change inside a host type\'s typeArguments is incompatible', async () => {
   const { component, revisionContext } = await setup();
   const authored = component.record;
   const reactNode = { kind: 'host', name: 'React.ReactNode' };
@@ -852,7 +852,7 @@ test('Decision 0031: any change inside a host type\'s typeArguments is incompati
   assert.equal(named.effect, 'compatible', summary(named).join(', '));
 });
 
-test('Decision 0031: any change inside a tuple is incompatible, at the root, in a named type, and in a part', async (t) => {
+test('any change inside a tuple is incompatible, at the root, in a named type, and in a part', async (t) => {
   const { authored, revisionContext, document, part, diff: partDiff } = await partFixture();
   const string = { kind: 'string' };
   const block = { kind: 'reference', name: 'Block' };
@@ -939,7 +939,7 @@ test('Decision 0031: any change inside a tuple is incompatible, at the root, in 
   }
 });
 
-test('Decision 0031: source diagnosis rejects an authored derived-only field as the compiler does', async () => {
+test('source diagnosis rejects an authored derived-only field as the compiler does', async () => {
   const { context } = await setup();
   // Text derives its web.react api from its declarations, so its record authors none, and authoring one with propDetails is rejected.
   const recordPath = 'catalog/components/text/artifact.json';
@@ -1102,7 +1102,7 @@ test('E-G0.5-04: affected closure is graph-derived and extends through declared 
   );
 });
 
-test('E-R1.5-04: change intent previews canonical impact without authorizing a write', async () => {
+test('change intent previews canonical impact without authorizing a write', async () => {
   const { context, component, revisionContext } = await setup();
   const after = structuredClone(component.record);
   after.summary = `${after.summary} Updated`;
@@ -1140,7 +1140,7 @@ test('E-R1.5-04: change intent previews canonical impact without authorizing a w
   assert.equal(component.record.summary.endsWith('Updated'), false);
 });
 
-test('E-R1.5-04 negative: change intent rejects stale bases and invalid proposed sources', async () => {
+test('change intent rejects stale bases and invalid proposed sources', async () => {
   const { context, component, revisionContext } = await setup();
   const after = structuredClone(component.record);
   after.summary = `${after.summary} Updated`;
@@ -1174,7 +1174,7 @@ test('E-R1.5-04 negative: change intent rejects stale bases and invalid proposed
   );
 });
 
-test('E-R1.5-02: every React family and example source passes canonical diagnosis', async () => {
+test('every React family and example source passes canonical diagnosis', async () => {
   const { context } = await setup();
   const components = context.catalogBundle.artifacts.filter(({ kind }) => kind === 'component');
   const examples = context.catalogBundle.artifacts.filter(({ kind, record }) => (
@@ -1194,7 +1194,7 @@ test('E-R1.5-02: every React family and example source passes canonical diagnosi
     components.map(({ id }) => `${id}#web.react`).sort(),
   );
   for (const artifact of [...components, ...examples]) {
-    // The source record, which a derived API (Decision 0031) completes only in the compiled catalog.
+    // The source record, which a derived API completes only in the compiled catalog.
     const diagnosis = diagnoseCanonicalSource({
       context,
       family: artifact.kind,

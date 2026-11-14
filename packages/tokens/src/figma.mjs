@@ -1,6 +1,6 @@
 /*
  * Figma export: a deterministic projection of the canonical token source into
- * Figma variables, text styles, and effect styles (Decision 0020). Figma
+ * Figma variables, text styles, and effect styles. Figma
  * content is never canonical; every token is either exported or reported.
  */
 import { canonicalDigest } from '@muxui/schema';
