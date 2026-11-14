@@ -44,10 +44,10 @@ let sequence = 0;
  * lines the workflow printed before packages could be reused (a React-only tarball-sha512 and the React-only prepared and promoted
  * lines), which a retained run keeps. The candidate files are written once into a directory the fixture removes at the end of
  * the test run. `existing` names published packages besides React that the first release already put on the registry (a later
- * release that publishes tooling alone), so their publish is a later one.
+ * release that publishes tooling alone, or all four), so their publish is a later one.
  */
 export function portfolioFixture({ versions = {}, react: editReact, preparation, reuse = [], existing = [], legacy = false } = {}) {
-  const first = reuse.length > 0 ? firstReleaseFixture() : null;
+  const first = reuse.length > 0 || existing.length > 0 ? firstReleaseFixture() : null;
   const head = first ? secondCommit : commit;
   const sourceTree = first ? secondTree : tree;
   const publishedNames = names.filter((name) => !reuse.includes(name));
@@ -96,7 +96,8 @@ export function portfolioFixture({ versions = {}, react: editReact, preparation,
   const artifactDigest = `sha256:${'a'.repeat(64)}`;
 
   // The dry run's prepare job: main CI proof, preparation, the rehearsed publish of every package, and the set's own check.
-  const dryRunLog = ({ rehearsed = publishedNames } = {}) => log([
+  // `prepared` adds lines release preparation prints (its summary lines are what the capture's excerpt keeps).
+  const dryRunLog = ({ rehearsed = publishedNames, prepared = [] } = {}) => log([
     "Current runner version: '2.337.0'",
     '##[group]Run actions/checkout@v4',
     '[command]/usr/bin/git log -1 --format=%H',
@@ -105,6 +106,7 @@ export function portfolioFixture({ versions = {}, react: editReact, preparation,
     ...step('pnpm release:prepare 2>&1 | tee "$RUNNER_TEMP/release-prepare.log"', {},
       'unrelated check output',
       `P2.1 packed and audited ${publishedNames.filter((name) => name !== react).map((name) => `${name}@${versionOf(name)}`).join(', ') || 'no support package'}`,
+      ...prepared,
       `R1 exit release preparation passed for ${names.map((name) => `${name}@${versionOf(name)}`).join(', ')}; the sources remain private and unpublished.`),
     ...step('source_dir=$(sed -n \'s/^R1 exit artifacts written to //p\' "$RUNNER_TEMP/release-prepare.log" | tail -n 1)', {},
       `Candidate ${names.map((name) => `${name}@${versionOf(name)}`).join(' ')}`),
@@ -116,7 +118,8 @@ export function portfolioFixture({ versions = {}, react: editReact, preparation,
   ]);
 
   const artifactId = 9;
-  const promotedLog = ({ dryRunId = 1, attempt = 1, integrity = integrityOf(react) } = {}) => log([
+  // `collected` is what the promoted candidate's collect step prints.
+  const promotedLog = ({ dryRunId = 1, attempt = 1, integrity = integrityOf(react), collected = [] } = {}) => log([
     '##[group]Run actions/checkout@v4',
     '[command]/usr/bin/git log -1 --format=%H',
     head,
@@ -129,7 +132,7 @@ export function portfolioFixture({ versions = {}, react: editReact, preparation,
         : `Promoted candidate ${published.replace(integrityOf(react), integrity)} from dry run ${dryRunId} attempt ${attempt}`,
       ...(reuse.length > 0 ? [`Reused, not published: ${reuse.map((name) => `${name}@${versionOf(name)} ${integrityOf(name)}`).join(', ')}`] : []),
       'Dry run preparation: reused main CI run 4242 attempt 1'),
-    ...step('source_dir=$PROMOTED_DIR', {}),
+    ...step('source_dir=$PROMOTED_DIR', {}, ...collected),
     'Post job cleanup.',
   ]);
 

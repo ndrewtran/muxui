@@ -4015,6 +4015,310 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.match(publication.publishApproval.statement, /Approve both \(Recommended\)/u);
   });
 
+  // The claims a capture writes are derived from the release's own package roles and authentication, so each retained route's coverage
+  // is what the tool derives again from its verification.json: the first release (three token publishes and React by OIDC) and the
+  // tooling-only release (tooling by OIDC, three reused).
+  const retainedRoute = (route) => JSON.parse(readFileSync(join(repositoryRoot, route, 'verification.json'), 'utf8'));
+  const observedOf = (verification) => ({
+    release: verification.release,
+    published: verification.phases.published,
+    priorTuple: verification.phases.priorTuple,
+    placeholders: verification.phases.registry.placeholders,
+    placeholderOrigin: verification.phases.registry.placeholderOrigin,
+    later: verification.phases.ci.later,
+    amendedRoadmap: verification.amendedRoadmap,
+  });
+  const withoutEvidence = (parts) => parts.map(({ part, state, note }) => ({ part, state, note }));
+  const isDeepStrictEqualForTest = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+  const joinNamesForTest = (list) => (list.length < 3 ? list.join(' and ') : `${list.slice(0, -1).join(', ')}, and ${list.at(-1)}`);
+
+  test('P2.1 claims derive from each release\'s package roles and authentication, as both retained routes recorded them', () => {
+    const first = retainedRoute('tests/evidence/p2.1');
+    assert.deepEqual([p2.firstRelease.id, p2.firstRelease.tokenPublished], [first.release.portfolioId, first.release.tokenPublished], 'the first release\'s token publishes are the ones its route recorded');
+    for (const route of ['tests/evidence/p2.1', 'tests/evidence/p2.1-tooling-1.1.0-rc.2']) {
+      const verification = retainedRoute(route);
+      const claims = p2.settleClaims(p2.claimsFor(verification.release), observedOf(verification));
+      for (const [assertionId, recorded] of Object.entries(verification.coverage)) {
+        const derived = claims[assertionId];
+        assert.deepEqual(withoutEvidence(derived.parts), withoutEvidence(recorded.parts), `${route} ${assertionId} parts`);
+        assert.deepEqual(derived.limits, recorded.limits, `${route} ${assertionId} limits`);
+        assert.deepEqual(derived.nonClaims, recorded.nonClaims, `${route} ${assertionId} non-claims`);
+        derived.parts.forEach(({ evidence }, index) => {
+          const resolved = recorded.parts[index].evidence;
+          assert.deepEqual(evidence.map(({ kind }) => kind), resolved.map(({ kind }) => kind), `${route} ${assertionId} part ${index} evidence`);
+          evidence.forEach((item, at) => {
+            if (item.kind === 'log') assert.match(resolved[at].text, item.pattern, `${route} ${assertionId} part ${index} cites the line it names`);
+            if (item.kind === 'test') assert.deepEqual([item.file, item.title], [resolved[at].file, resolved[at].title]);
+          });
+        });
+      }
+    }
+  });
+
+  // The next release, offline: all four packages published by trusted publishing from one commit, compared with the tooling-only
+  // release and reusing nothing. The runs are the portfolio fixture's (its publish log is what npm-publication.mjs prints against the
+  // registry fake), bound by the R1 exit binders, checked against the retained prior route, read back, and resolved citation by
+  // citation, so the records carry real lines. Only the network phases (the published install and the prior tuple's install) are the
+  // tooling release's observations.
+  const allFour = async () => {
+    const { portfolioFixture, schema, catalog, tooling, react } = portfolioModule;
+    const prior = retainedRoute('tests/evidence/p2.1-tooling-1.1.0-rc.2');
+    const names = [schema, catalog, tooling, react];
+    // Each the rc after the one the registry fake holds from the first release.
+    const versions = { [schema]: '0.6.0-rc.2', [catalog]: '3.0.0-rc.2', [tooling]: '1.1.0-rc.2', [react]: '0.1.0-rc.6' };
+    const preparation = {
+      mode: 'main-ci-reused',
+      mainCi: { runId: 4242, runAttempt: 1 },
+      tool: { path: 'tooling/audits/repository-policy/src/release-prepare.mjs', sha256: `sha256:${'c'.repeat(64)}` },
+      verification: {
+        reactOnlineMatrix: [], publishSetConsumer: { packageManager: 'pnpm', entriesImported: 8, entriesResolved: 1 }, warnings: { duplicateDependencyVersions: [] },
+        versionEffects: { status: 'checked', priorRelease: prior.release.portfolioId, priorRevision: prior.sourceRevision, publish: names, units: prior.release.reuse.versionEffects.units },
+      },
+    };
+    const fixture = portfolioFixture({ existing: [schema, catalog, tooling], versions, preparation });
+    const label = (name) => `${name}@${versions[name]}`;
+    // The summary lines release preparation prints for this shape (release-prepare.mjs), which the dry run's excerpt keeps.
+    const prepared = [
+      `P2.1 version effects match the change since ${prior.release.portfolioId}; changed and publishing ${names.join(', ')}; publishing ${names.join(', ')}`,
+      'P2.1 set consumer: 4 tarballs installed together, 8 entries imported and 1 resolved, 2 descriptor bindings export their members',
+      `R1 exit npm publish dry-run passed for ${names.join(', ')} without lifecycle hooks or registry mutation`,
+      `[E-G0.0-04] independent clean checkouts ${fixture.head} generated identical projections with clean worktrees (sha256:${'e'.repeat(64)})`,
+    ];
+    const dryRun = r1Exit.bindDryRun(fixture.dryRunInput({ prepareLog: fixture.dryRunLog({ prepared }) }));
+    const publishLog = await fixture.publishLog();
+    const prepareLog = fixture.promotedLog({ collected: [`Candidate ${names.map(label).join(' ')}`] });
+    const publish = r1Exit.bindPublish({ dryRun, run: fixture.run(2), jobs: fixture.publishRunJobs(), prepareLog, publishLog });
+    const route = 'tests/evidence/p2.1-react-0.1.0-rc.6';
+    const options = { version: versions[react], candidate: react, priorRoute: prior.route };
+    const bound = { dryRun, publish, manifest: dryRun.manifest, sourceRevision: dryRun.execution.headRevision, route, routeRecords: {} };
+    const chain = p2.reuseOf({ bound, options });
+    const release = p2.releaseOf({ options, bound, chain });
+    return { fixture, prior, names, versions, label, dryRun, publish, publishLog, route, release, chain };
+  };
+  const attestedView = (entry, { runId, revision, latest }) => ({
+    view: viewOf(entry, { distTags: { latest, next: entry.version }, versions: [latest, entry.version] }),
+    attestations: attestationFor(entry, { runId, revision }),
+    placeholders: [],
+  });
+
+  test('a later P2.1 release reads each package\'s role and authentication from its own runs, and refuses a block without one', async () => {
+    const { fixture, names, release, publishLog, dryRun } = await allFour();
+    assert.deepEqual(release.packages.map(({ name, role, sourceCommit }) => [name, role, sourceCommit]), names.map((name) => [name, 'published', fixture.head]));
+    assert.deepEqual(release.tokenPublished, [], 'every package existed, so each published by OIDC');
+    assert.deepEqual(p2.releaseFacts(release).oidcPublished.map(({ name }) => name), names);
+    assert.deepEqual([release.reuse.priorRoute, release.reuse.reused, release.reuse.publishedPackages.map(({ authentication }) => authentication)], ['tests/evidence/p2.1-tooling-1.1.0-rc.2', [], names.map(() => 'trusted publishing (OIDC)')]);
+    // The first release, through the same binders: three new packages by the token, React by OIDC.
+    const first = portfolioModule.portfolioFixture();
+    const firstDryRun = r1Exit.bindDryRun(first.dryRunInput());
+    const firstPublish = r1Exit.bindPublish({ dryRun: firstDryRun, run: first.run(2), jobs: first.publishRunJobs(), prepareLog: first.promotedLog(), publishLog: await first.publishLog() });
+    const firstRelease = p2.releaseOf({ options: { version: first.reactVersion }, bound: { dryRun: firstDryRun, publish: firstPublish, sourceRevision: first.head, route: 'tests/evidence/p2.1', routeRecords: {} } });
+    assert.deepEqual(firstRelease.tokenPublished, names.slice(0, 3));
+    // A package block whose authentication line is missing is refused, not read as either kind.
+    const unauthenticated = publishLog.replace(/^.*Authentication for @muxui\/catalog: .*\n/mu, '');
+    assert.notEqual(unauthenticated, publishLog);
+    assert.throws(() => r1Exit.bindPublish({ dryRun, run: fixture.run(2), jobs: fixture.publishRunJobs(), prepareLog: fixture.promotedLog(), publishLog: unauthenticated }), r1ExitCode('R1_EXIT_RUN_INVALID'));
+  });
+
+  test('a later P2.1 release reads every package back against the run that published it, and refuses another run\'s attestation', async () => {
+    const { release, publish, fixture } = await allFour();
+    const latestOf = (name) => publish.portfolio.packages.find((entry) => entry.name === name).preflight.latest;
+    const priorReadBack = { packages: release.packages.map(({ name }) => ({ name, latest: { observed: latestOf(name) } })) };
+    const observe = (runOf) => async (entry) => attestedView(entry, { runId: runOf(entry), revision: fixture.head, latest: latestOf(entry.name) });
+    const readBack = await p2.bindReadBack({ release, publish, priorReadBack, observe: observe(() => publish.execution.runId) });
+    assert.deepEqual(readBack.map(({ name, provenance }) => [name, provenance.gitCommit, provenance.invocationId.split('/runs/')[1]]), release.packages.map(({ name }) => [name, fixture.head, `${publish.execution.runId}/attempts/1`]));
+    await assert.rejects(p2.bindReadBack({ release, publish, priorReadBack, observe: observe(({ name }) => (name === '@muxui/catalog' ? 99 : publish.execution.runId)) }), code('P2_1_REGISTRY_PROVENANCE_MISMATCH'));
+    // A reused package is read against the run and commit the prior release's read-back recorded for it, not this release's or the prior's own publish run.
+    const origin = 'b'.repeat(40);
+    const reusing = { ...release, packages: release.packages.map((entry) => (entry.name === '@muxui/react' ? { ...entry, role: 'reused', sourceCommit: origin } : entry)) };
+    const withoutReact = { ...publish, portfolio: { ...publish.portfolio, packages: publish.portfolio.packages.filter(({ name }) => name !== '@muxui/react') } };
+    const recorded = { packages: priorReadBack.packages.map((entry) => (entry.name === '@muxui/react' ? { ...entry, provenance: { invocationId: 'https://github.com/ndrewtran/muxui/actions/runs/555/attempts/1' } } : entry)) };
+    const reusedView = (runId) => async (entry) => (entry.name === '@muxui/react' ? attestedView(entry, { runId, revision: origin, latest: latestOf(entry.name) }) : observe(() => publish.execution.runId)(entry));
+    const reused = await p2.bindReadBack({ release: reusing, publish: withoutReact, priorReadBack: recorded, observe: reusedView(555) });
+    assert.match(reused.find(({ name }) => name === '@muxui/react').latest.basis, /^unchanged: this release did not publish the package, and the prior release's read-back recorded /u);
+    await assert.rejects(p2.bindReadBack({ release: reusing, publish: withoutReact, priorReadBack: recorded, observe: reusedView(publish.execution.runId) }), code('P2_1_REGISTRY_PROVENANCE_MISMATCH'));
+    await assert.rejects(p2.bindReadBack({ release: reusing, publish: withoutReact, priorReadBack: priorReadBack, observe: reusedView(555) }), code('P2_1_REUSE_RECORD_MISMATCH'), 'a reused package needs the run its prior read-back recorded');
+    // The prior tuple installs each package at the commit that built it: the tooling release's reused packages at the first release's.
+    const prior = retainedRoute('tests/evidence/p2.1-tooling-1.1.0-rc.2');
+    const firstSource = retainedRoute('tests/evidence/p2.1').sourceRevision;
+    assert.deepEqual(p2.priorTuplePackages(prior).map(({ name, sourceCommit }) => [name, sourceCommit]), [['@muxui/schema', firstSource], ['@muxui/catalog', firstSource], ['@muxui/tooling', prior.sourceRevision], ['@muxui/react', firstSource]]);
+  });
+
+  test('a later P2.1 release that publishes all four by OIDC resolves every citation to a real line and claims nothing of reuse or a token', async () => {
+    const { prior, names, label, dryRun, publish, route, release } = await allFour();
+    const head = gitIn(repositoryRoot, 'rev-parse', 'HEAD');
+    const published = { ...prior.phases.published, toolingVersion: { ...prior.phases.published.toolingVersion, installed: '1.1.0-rc.2', muxuiVersionInResponses: ['1.1.0-rc.2'], cliVersionInManifest: '1.1.0-rc.2' } };
+    const priorTuple = { ...prior.phases.priorTuple, packages: p2.priorTuplePackages(prior), tooling: p2.priorTuplePackages(prior).find(({ name }) => name === '@muxui/tooling'), bin: { ...prior.phases.priorTuple.bin, muxuiVersion: '1.1.0-rc.2', cliVersion: '1.1.0-rc.2' } };
+    const claims = p2.settleClaims(p2.claimsFor(release), { release, published, priorTuple, placeholders: [], placeholderOrigin: null });
+
+    // Main CI's two jobs, holding a passing line for every test the claims cite (and every case of the SemVer corpus), cut by the capture's own excerpt.
+    const stage = (path, body) => ({ path, sha256: digest(body) });
+    const corpus = gitIn(repositoryRoot, 'ls-tree', '--name-only', head, 'tooling/audits/repository-policy/test/fixtures/version-effects/').split('\n').map((path) => /\/(\d\d-.+)\.json$/u.exec(path)?.[1]).filter(Boolean);
+    const sources = Object.fromEntries(['policy', 'tooling'].map((key, index) => {
+      const cites = p2.citedTitles(claims, key);
+      const titles = [...cites.titles, ...(cites.prefixes.length > 0 ? corpus.map((name) => `version effects: ${name}`) : [])];
+      const raw = jobLog([`[ci-impact] running group checks-${key} (1 command(s))`, ...titles.map(passing), `ℹ tests ${titles.length}`, `ℹ pass ${titles.length}`, 'ℹ fail 0']);
+      const read = { job: { id: 900 + index, conclusion: 'success' }, name: `run checks-${key}`, group: `checks-${key}`, raw, lines: raw.split('\n'), ...p2.ciExcerpt(raw, cites) };
+      const retained = p2.retainCiJob(read, { stage, root: route, heading: `# job: run checks-${key}` });
+      return [key, { ...retained.phase, lines: retained.excerptLines }];
+    }));
+    const excerpt = (name, text) => ({ path: `${route}/validation/${name}.txt`, sha256: digest(text), lines: text.split('\n') });
+    const manifestText = canonicalJson(dryRun.manifest);
+    const excerpts = {
+      manifest: { path: `${route}/artifacts/release-manifest.json`, sha256: digest(manifestText) },
+      dryRunExcerpt: excerpt('dry-run-prepare', dryRun.excerpt.text),
+      publishPrepareExcerpt: excerpt('publish-prepare', publish.excerpts.prepare.text),
+      publishExcerpt: excerpt('publish', publish.excerpts.publish.text),
+    };
+    const rows = p2.roadmapRows(gitIn(repositoryRoot, 'show', `${head}:strategy/milestone-roadmap.md`));
+    const roadmapRule = p2.readRoadmapRule({ sourceRevision: head, rows, ceilingConstant: { file: 'packages/tooling/test/packed-cli.test.mjs', name: 'WEB_REACT_GET_FULL_REGRESSION_CEILING' } });
+    // The tests and source lines are read at this checkout's HEAD, which holds them; the fixture's release commit is not a real commit.
+    const coverage = p2.coverageOf(claims, {
+      release, sourceRevision: head, sources, logs: { dryRun: excerpts.dryRunExcerpt, publish: excerpts.publishExcerpt, publishPrepare: excerpts.publishPrepareExcerpt }, excerpts, manifestText,
+      publish, published, priorTuple, observation: { path: `${route}/artifacts/registry-read-back.json`, sha256: `sha256:${'0'.repeat(64)}` }, placeholders: [], placeholderOrigin: null, roadmapRule,
+    });
+    const compared = p2.comparedOf({ coverage, release, rows, sourceRevision: head, headRevision: head });
+
+    // Every citation is a real line of what it names.
+    const lineAt = (path, at) => [excerpts.dryRunExcerpt, excerpts.publishPrepareExcerpt, excerpts.publishExcerpt].find((entry) => entry.path === path).lines[at - 1].replace(/^\S+ /u, '');
+    const cited = Object.values(coverage).flatMap(({ parts }) => parts.flatMap(({ evidence }) => evidence));
+    for (const item of cited.filter(({ kind }) => kind === 'log')) assert.equal(lineAt(item.excerpt, item.line), item.text, `${item.source} ${item.text}`);
+    for (const item of cited.filter(({ kind }) => kind === 'test')) assert.equal(sources[item.job.slice('checks-'.length)].lines[item.line].replace(/^\S+ /u, '').startsWith(`✔ ${item.title} (`), true, item.title);
+    const counts = ['log', 'test', 'publish-package'].map((kind) => cited.filter((item) => item.kind === kind).length);
+    assert.ok(counts[0] >= 15 && counts[1] >= 60, `the records cite the runs and the CI jobs (${counts.join(', ')})`);
+    assert.equal(counts[2], 8, 'each package\'s publish block is cited twice: its authentication part and the read-back part');
+    const authentication = cited.filter(({ kind }) => kind === 'publish-package').map(({ name, authentication: line, excerpt: path }) => [name, line.value, line.text, lineAt(path, line.line)]);
+    for (const name of names) assert.ok(authentication.some((row) => isDeepStrictEqualForTest(row, [name, 'trusted publishing (OIDC)', `Authentication for ${name}: trusted publishing (OIDC)`, `Authentication for ${name}: trusted publishing (OIDC)`])), `${name} is cited by its own authentication line`);
+    const reactPart = coverage['E-P2.1-06'].parts.find(({ part }) => part.startsWith('@muxui/react publishes through its configured trusted publisher'));
+    assert.deepEqual([reactPart.state, reactPart.evidence.map(({ kind, name }) => name ?? kind)], ['shown', ['@muxui/react', 'read-back']]);
+    assert.deepEqual(coverage['E-P2.1-06'].parts.filter(({ part }) => part.startsWith('Observation, not a Roadmap clause: @muxui/')).map(({ evidence }) => evidence[0].name), names.slice(0, 3));
+    const notApplicable = Object.fromEntries(Object.entries(coverage).map(([id, { parts }]) => [id, parts.filter(({ state }) => state === 'not-applicable').map(({ part }) => part)]));
+    assert.deepEqual(notApplicable, {
+      'E-P2.1-01': [], 'E-P2.1-02': [], 'E-P2.1-04': [], 'E-P2.1-06': [],
+      'E-P2.1-03': ['The first portfolio release publishes all four.', 'Each reused package keeps its original recorded version, digest, and provenance, and the manifest verifies its compatibility with the new tuple.'],
+      'E-P2.1-05': ['Hosted or latest data stays advisory.'],
+    });
+    const priorManifests = coverage['E-P2.1-06'].parts.flatMap(({ evidence }) => evidence).find(({ field }) => field === 'prior-manifests');
+    assert.equal(priorManifests.manifests[0].role, 'the prior release', 'the prior is the tooling release, not the first');
+    const text = JSON.stringify(coverage);
+    for (const stale of ['Andrew reported', 'tooling candidate', 'three reused', 'the first release\'s four packages', 'stays installed and wrong', 'temporary npm token', 'reusing @muxui']) assert.ok(!text.includes(stale), `the records do not say "${stale}"`);
+
+    // The route: records and README say what published and how, and compare with the prior release, not the first.
+    const r1ExitRoute = { route: 'tests/evidence/r1-exit-0.1.0-rc.6', index: { path: 'tests/evidence/r1-exit-0.1.0-rc.6/index.json', sha256: `sha256:${'f'.repeat(64)}` }, records: [] };
+    const verification = {
+      ...prior, route, release, rows, sourceRevision: release.sourceRevision, coverage, compared, r1ExitRoute,
+      phases: { ...prior.phases, published, priorTuple, review: undefined, registry: { ...prior.phases.registry, placeholders: [], placeholderOrigin: null } },
+    };
+    const files = p2.assembleRoute(verification);
+    for (const [path, body] of files) if (path.includes('/records/')) assert.equal(JSON.parse(body).outcome, 'pass', path);
+    const record = JSON.parse(files.get(`${route}/records/E-P2.1-06.json`));
+    assert.equal(record.compared.priorRelease.route, prior.route);
+    assert.equal(record.githubEnvironment.secretCount, prior.phases.registry.githubEnvironment.secretCount, 'the npm-publish environment\'s secret count is recorded');
+    assert.ok(record.nonClaims.includes(`latest is observed, not claimed or promoted: this release published ${joinNamesForTest(names)} to next and left latest where the prior release's read-back saw it for every package (Decision 0023).`));
+    assert.ok(!record.nonClaims.some((claim) => /trusted publishers|Andrew reported/u.test(claim)), 'no package published without OIDC, so no trusted-publisher non-claim');
+    const readme = files.get(`${route}/README.md`);
+    assert.match(readme, /and reuses\nno package\. It compares with the prior release \(`muxui-portfolio:1adadbb095d9ebc1b63a0aae35c6a10c`, whose records are `tests\/evidence\/p2\.1-tooling-1\.1\.0-rc\.2`\)\./u);
+    assert.ok(readme.includes(`${joinNamesForTest(names.map((name) => `\`${label(name)}\``))} published by trusted publishing (OIDC). These records do not claim`));
+    assert.ok(readme.includes(`The R1 exit route of its React candidate, \`tests/evidence/r1-exit-0.1.0-rc.6\` (index sha256:${'f'.repeat(64)}), holds the\nE-R1-EXIT records of \`@muxui/react@0.1.0-rc.6\`; capture checked that it binds the same dry run, publish run, release commit, and React\nintegrity.`));
+    for (const stale of ['Andrew reported', 'This later release, not', 'from the first portfolio release']) assert.ok(!readme.includes(stale), `the README does not say "${stale}"`);
+  });
+
+  // The R1 exit route the README names must exist, be complete, and bind this release's runs and React candidate.
+  test('a later P2.1 release that publishes React reads its R1 exit route and refuses one that is missing, incomplete, or from other runs', async () => {
+    const routePath = 'tests/evidence/r1-exit-0.1.0-rc.5';
+    const r1 = JSON.parse(readFileSync(join(repositoryRoot, routePath, 'verification.json'), 'utf8'));
+    const release = {
+      sourceRevision: r1.sourceRevision,
+      dryRun: { runId: r1.phases.dryRun.execution.runId },
+      publish: { runId: r1.phases.publish.execution.runId },
+      packages: [{ name: '@muxui/react', version: '0.1.0-rc.5', integrity: r1.phases.dryRun.candidate.tarball.integrity }],
+    };
+    const read = p2.readSiblingR1Route({ release });
+    assert.deepEqual([read.route, read.records.map(({ assertionId }) => assertionId), read.index.sha256], [routePath, ['E-R1-EXIT-01', 'E-R1-EXIT-02', 'E-R1-EXIT-03', 'E-R1-EXIT-04'], digest(readFileSync(join(repositoryRoot, routePath, 'index.json')))]);
+    const rejects = (expected, input) => assert.throws(() => p2.readSiblingR1Route(input), code(expected), expected);
+    rejects('P2_1_R1_EXIT_ROUTE_MISMATCH', { release: { ...release, publish: { runId: 1 } } });
+    rejects('P2_1_R1_EXIT_ROUTE_MISMATCH', { release: { ...release, dryRun: { runId: 1 } } });
+    rejects('P2_1_R1_EXIT_ROUTE_MISMATCH', { release: { ...release, packages: [{ ...release.packages[0], integrity: integrityOf(3) }] } });
+    rejects('P2_1_R1_EXIT_ROUTE_MISMATCH', { release: { ...release, sourceRevision: 'b'.repeat(40) } });
+    rejects('P2_1_R1_EXIT_ROUTE_MISSING', { release: { ...release, packages: [{ ...release.packages[0], version: '0.1.0-rc.99' }] } });
+    // A route whose index lists only three records, or that a consistent capture left without its registry phase.
+    const copy = await mkdtemp(join(tmpdir(), 'muxui-p2-1-sibling-'));
+    try {
+      await cp(join(repositoryRoot, routePath), copy, { recursive: true });
+      const index = JSON.parse(readFileSync(join(copy, 'index.json'), 'utf8'));
+      await writeFile(join(copy, 'index.json'), JSON.stringify({ ...index, records: index.records.slice(0, 3) }));
+      rejects('P2_1_R1_EXIT_ROUTE_INCOMPLETE', { release, path: copy });
+      const { registry: _registry, ...phases } = r1.phases;
+      const partial = JSON.stringify({ ...r1, phases });
+      await writeFile(join(copy, 'verification.json'), partial);
+      await writeFile(join(copy, 'index.json'), JSON.stringify({ ...index, validation: { ...index.validation, sha256: digest(partial) } }));
+      rejects('P2_1_R1_EXIT_ROUTE_INCOMPLETE', { release, path: copy });
+    } finally {
+      await rm(copy, { recursive: true, force: true });
+    }
+  });
+
+  // A route is trusted only through its index: a verification.json or record the index does not bind at its digest is refused before
+  // its release identity is read, even when that identity is the one this release expects.
+  test('a later P2.1 release refuses an R1 exit route whose verification or records are not the ones its index binds', async () => {
+    const routePath = 'tests/evidence/r1-exit-0.1.0-rc.5';
+    const r1 = JSON.parse(readFileSync(join(repositoryRoot, routePath, 'verification.json'), 'utf8'));
+    const integrity = r1.phases.dryRun.candidate.tarball.integrity;
+    const releaseFor = (version, runs = {}) => ({
+      sourceRevision: r1.sourceRevision,
+      dryRun: { runId: runs.dryRun ?? r1.phases.dryRun.execution.runId },
+      publish: { runId: runs.publish ?? r1.phases.publish.execution.runId },
+      packages: [{ name: '@muxui/react', version, integrity }],
+    });
+    const rejects = (expected, input) => assert.throws(() => p2.readSiblingR1Route(input), code(expected), expected);
+    const copy = await mkdtemp(join(tmpdir(), 'muxui-p2-1-stale-'));
+    try {
+      await cp(join(repositoryRoot, routePath), copy, { recursive: true });
+      // Fresh verification data for other runs beside the old index and records: refused for its digest, not read for its runs.
+      const fresh = (version) => ({ ...r1, phases: { ...r1.phases, dryRun: { ...r1.phases.dryRun, execution: { ...r1.phases.dryRun.execution, runId: 71 }, candidate: { ...r1.phases.dryRun.candidate, version } }, publish: { ...r1.phases.publish, execution: { ...r1.phases.publish.execution, runId: 72 } } } });
+      await writeFile(join(copy, 'verification.json'), JSON.stringify(fresh('0.1.0-rc.5')));
+      rejects('P2_1_R1_EXIT_ROUTE_CHANGED', { release: releaseFor('0.1.0-rc.5', { dryRun: 71, publish: 72 }), path: copy });
+      // The same next to rc.5's index for an rc.6 release: the index binds another route's files.
+      await writeFile(join(copy, 'verification.json'), JSON.stringify(fresh('0.1.0-rc.6')));
+      rejects('P2_1_R1_EXIT_ROUTE_MISMATCH', { release: releaseFor('0.1.0-rc.6', { dryRun: 71, publish: 72 }), path: copy });
+      // A record changed after its index was written.
+      await cp(join(repositoryRoot, routePath, 'verification.json'), join(copy, 'verification.json'));
+      await writeFile(join(copy, 'records/E-R1-EXIT-04.json'), '{}');
+      rejects('P2_1_R1_EXIT_ROUTE_CHANGED', { release: releaseFor('0.1.0-rc.5'), path: copy });
+    } finally {
+      await rm(copy, { recursive: true, force: true });
+    }
+  });
+
+  // A rehearsal reads the R1 exit route from wherever it was written; the evidence still names the repository route.
+  test('a P2.1 rehearsal reads its R1 exit route from an absolute directory and retains the canonical route', async () => {
+    const routePath = 'tests/evidence/r1-exit-0.1.0-rc.5';
+    const r1 = JSON.parse(readFileSync(join(repositoryRoot, routePath, 'verification.json'), 'utf8'));
+    const tooling = retainedRoute('tests/evidence/p2.1-tooling-1.1.0-rc.2');
+    const react = tooling.release.packages.find(({ name }) => name === '@muxui/react');
+    // The tooling release's record with React published from rc.5's runs, so its README names the R1 exit route.
+    const release = {
+      ...tooling.release,
+      sourceRevision: r1.sourceRevision,
+      dryRun: { ...tooling.release.dryRun, runId: r1.phases.dryRun.execution.runId },
+      publish: { ...tooling.release.publish, runId: r1.phases.publish.execution.runId },
+      packages: tooling.release.packages.map((entry) => (entry === react ? { ...entry, role: 'published' } : entry)),
+    };
+    const copy = await mkdtemp(join(tmpdir(), 'muxui-p2-1-rehearsal-r1-'));
+    try {
+      await cp(join(repositoryRoot, routePath), copy, { recursive: true });
+      const read = p2.readSiblingR1Route({ release, path: copy, rehearsal: true });
+      assert.deepEqual([read.route, read.index.path], [routePath, `${routePath}/index.json`]);
+      assert.ok(!JSON.stringify(read).includes(copy), 'the lookup directory is not retained');
+      const files = p2.assembleRoute({ ...tooling, release, r1ExitRoute: read });
+      const readme = files.get(`${tooling.route}/README.md`);
+      assert.ok(readme.includes(`The R1 exit route of its React candidate, \`${routePath}\` (index ${read.index.sha256}), holds the`));
+      // Retaining the lookup directory instead is what the disclosure check refuses.
+      assert.throws(() => p2.assembleRoute({ ...tooling, release, r1ExitRoute: { ...read, route: copy } }), r1ExitCode('R1_EXIT_UNSANITIZED'));
+    } finally {
+      await rm(copy, { recursive: true, force: true });
+    }
+  });
+
   // The next release names this route's manifest as its prior release, so it must stay a manifest that check reads, retained once.
   test('the manifest of tooling 1.1.0-rc.2 is retained evidence a later release can name as its prior release or reuse from', async () => {
     const { PRIOR_RELEASE_VARIABLE, findPriorManifestProblems, planReuse, resolvePriorRelease } = await import('../src/release-effects.mjs');
