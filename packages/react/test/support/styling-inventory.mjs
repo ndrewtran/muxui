@@ -5,6 +5,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { styleRuleClasses } from './scan-surface.mjs';
+import { styledSubjectClasses } from '../../../../tooling/audits/repository-policy/src/release-proof.mjs';
 import { booleanStates, enumeratedStates } from '../../src/styling-contract.ts';
 
 /**
@@ -35,17 +36,19 @@ export async function readCatalog(repositoryRoot) {
 
 /**
  * Whether a class is established: a style rule selects it, or a `muxui-` token in the package sources spells it.
- * A class that is neither is not a hook, whatever mapping names it.
+ * A class that is neither is not a hook, whatever mapping names it. `styled` is narrower than `selected`: the classes a nonempty
+ * rule has in its subject, as release preparation's packed style check reads them, so an empty rule or an ancestor does not style.
  */
 export async function establishedClasses(packageRoot, stylesheets) {
   const selected = new Set(stylesheets.flatMap((css) => [...styleRuleClasses(css)]));
+  const styled = new Set(stylesheets.flatMap((css) => [...styledSubjectClasses(css)]));
   const root = resolve(packageRoot, 'src');
   const files = (await readdir(root, { recursive: true }))
     // The contract is the inventory's subject, so it never counts as spelling an established class.
     .filter((path) => /\.(?:ts|mjs)$/u.test(path) && !path.endsWith('.d.mts') && path !== 'generate.mjs' && path !== 'styling-contract.ts');
   const sources = (await Promise.all(files.map((path) => readFile(resolve(root, path), 'utf8')))).join('\n');
   const spelled = new Set(sources.match(/(?<![\w-])muxui-[a-z0-9]+(?:(?:__|--|-)[a-z0-9]+)*(?![\w-])/gu));
-  return { selected, isEstablished: (name) => selected.has(name) || spelled.has(name) };
+  return { selected, styled, isEstablished: (name) => selected.has(name) || spelled.has(name) };
 }
 
 /**
@@ -68,16 +71,16 @@ export function stateFailures(catalogStates, classification) {
 
 /**
  * What is wrong with the part map, as one message per problem. `contract` carries the closed sets of the part map module, passed in
- * so that this helper does not import it; `selected` is the set of classes an authored rule selects and `isEstablished` says whether a class is selected or spelled.
+ * so that this helper does not import it; `styled` is the set of classes an authored rule styles (`establishedClasses`) and `isEstablished` says whether a class is selected or spelled.
  *
  * Every anatomy entry has one row and every row names a real family and part. Each disposition has the shape its meaning needs
  * (a class hook is `partClass(family, part)` unless the row says why, a field hook is one of the four shared classes, a `none`
  * row has a reason and no hook), a `selector` uses only the hook, the family root, one of the five scope classes and the recorded
- * element predicates, and the rows the plan names carry their exception or qualifier. Every documented hook is selected by an
- * authored rule, or by a rule on the class its row is `styledThrough`, unless its row is `hookOnly`, and a `hookOnly` hook no rule selects
+ * element predicates, and the rows the plan names carry their exception or qualifier. Every documented hook is styled by an
+ * authored rule, or by a rule on the class its row is `styledThrough`, unless its row is `hookOnly`, and a `hookOnly` hook no rule styles
  * (a stale one fails).
  */
-export function partFailures(anatomy, rows, contract, { selected, isEstablished }) {
+export function partFailures(anatomy, rows, contract, { styled, isEstablished }) {
   const { partClass, publicSharedClasses, scopeClasses, elementQualifiers, noElementReasons, dispositions } = contract;
   const failures = [];
   const keyOf = (row) => `${row.family}.${row.part}`;
@@ -133,11 +136,11 @@ export function partFailures(anatomy, rows, contract, { selected, isEstablished 
       if (hookOnly !== undefined) failures.push(`${key}: styledThrough names the class that styles the hook, so the row is not hookOnly`);
     }
     if (documented.includes(disposition)) {
-      // A hook is styled when a rule selects it, or selects the class the element also carries for it.
-      const isSelected = selected.has(hook) || (styledThrough !== undefined && selected.has(styledThrough));
+      // A hook is styled when a rule styles it, or styles the class the element also carries for it.
+      const isStyled = styled.has(hook) || (styledThrough !== undefined && styled.has(styledThrough));
       if (hookOnly !== undefined && !hookOnly) failures.push(`${key}: hookOnly without a reason`);
-      if (!isSelected && hookOnly === undefined) failures.push(`${key}: no authored rule selects ${hook} and the row is not hookOnly`);
-      if (isSelected && hookOnly !== undefined) failures.push(`${key}: hookOnly, but an authored rule now selects ${hook}`);
+      if (!isStyled && hookOnly === undefined) failures.push(`${key}: no authored rule styles ${hook} and the row is not hookOnly`);
+      if (isStyled && hookOnly !== undefined) failures.push(`${key}: hookOnly, but an authored rule now styles ${hook}`);
     } else if (hookOnly !== undefined) failures.push(`${key}: hookOnly applies to a documented hook`);
   }
 

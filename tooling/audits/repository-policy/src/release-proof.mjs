@@ -105,27 +105,64 @@ export function assertStylesheetAssetUrls({ stylesheet, stylesheetEntry, entries
 }
 
 /**
- * Fails unless the packed stylesheet selects, as a whole class name, every hook the part map
- * (`packages/react/test/support/styling-parts.ts`) says a Mux rule styles for each component: its `class` and `root-element`
- * rows that are neither `hookOnly` nor `styledThrough`. A component whose rows have no such hook, such as one another family
- * supplies the whole look of, needs no rule of its own; a component with no rows at all fails. Comments never count.
+ * Adds the whole class names a selector's subject compound requires, the elements its rule styles: class selectors and
+ * `[class~=x]` (not `[class*=]` or `[class^=]`), with escapes decoded, and the subjects of `:is()` and `:where()` arguments.
+ * Ancestor and sibling compounds and `:not()`, `:has()` and other pseudo-class arguments never count.
+ */
+function addSubjectClasses(selector, styled) {
+  const nodes = [...selector.children];
+  for (const node of nodes.slice(nodes.findLastIndex(({ type }) => type === 'Combinator') + 1)) {
+    if (node.type === 'ClassSelector') styled.add(cssTree.ident.decode(node.name));
+    if (node.type === 'AttributeSelector' && node.matcher === '~=' && cssTree.ident.decode(node.name.name).toLowerCase() === 'class') {
+      styled.add(node.value.type === 'String' ? node.value.value : cssTree.ident.decode(node.value.name));
+    }
+    if (node.type === 'PseudoClassSelector' && ['is', 'where'].includes(node.name.toLowerCase())) {
+      for (const list of node.children ?? []) {
+        if (list.type === 'SelectorList') for (const argument of list.children) addSubjectClasses(argument, styled);
+      }
+    }
+  }
+}
+
+/**
+ * The classes a stylesheet styles: each whole class name in the subject of a style rule that has a declaration or a nested rule.
+ * Comments, empty rules, at-rule conditions (`@scope` roots and limits, `@supports selector()`) and mentions outside a subject
+ * never count. The React styling inventory reads authored CSS through this too, so a `hookOnly` row in the part map means the same
+ * thing to it and to the packed check: a documented hook outside this set.
+ */
+export function styledSubjectClasses(stylesheet) {
+  const styled = new Set();
+  cssTree.walk(cssTree.parse(stylesheet, { positions: false, parseValue: false }), {
+    visit: 'Rule',
+    enter: ({ prelude, block }) => {
+      if (prelude.type !== 'SelectorList' || block.children.isEmpty) return;
+      for (const selector of prelude.children) addSubjectClasses(selector, styled);
+    },
+  });
+  return styled;
+}
+
+/**
+ * Fails unless the packed stylesheet styles (`styledSubjectClasses`) every hook the part map
+ * (`packages/react/test/support/styling-parts.ts`) says a Mux rule styles for each component: its `class`, `root-element` and
+ * shared `field` rows that are not `hookOnly`. A `styledThrough` row needs its supplying class styled instead. A component whose
+ * rows have no such hook, such as one another family supplies the whole look of, needs no rule of its own; a component with no
+ * rows at all fails.
  */
 export function assertPackedComponentStyles({ stylesheet, componentExports, partRows }) {
-  const selected = new Set();
-  cssTree.walk(cssTree.parse(stylesheet, { positions: false, parseValue: false }), {
-    visit: 'ClassSelector',
-    enter: (node) => selected.add(node.name),
-  });
+  const styled = styledSubjectClasses(stylesheet);
   const failures = componentExports.flatMap((name) => {
     const slug = name.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
     const rows = partRows.filter(({ family }) => family === slug);
     if (rows.length === 0) return [`${name}: the part map has no rows for ${slug}`];
     return rows
-      .filter(({ disposition, hook, hookOnly, styledThrough }) => (
-        ['class', 'root-element'].includes(disposition) && hook !== undefined && hookOnly === undefined && styledThrough === undefined
+      .filter(({ disposition, hook, hookOnly }) => (
+        ['class', 'root-element', 'field'].includes(disposition) && hook !== undefined && hookOnly === undefined
       ))
-      .filter(({ hook }) => !selected.has(hook))
-      .map(({ hook }) => `${name}: no rule selects .${hook}`);
+      .flatMap(({ hook, styledThrough }) => {
+        if (styledThrough !== undefined) return styled.has(styledThrough) ? [] : [`${name}: no rule selects .${styledThrough}, which styles .${hook}`];
+        return styled.has(hook) ? [] : [`${name}: no rule selects .${hook}`];
+      });
   });
   if (failures.length !== 0) fail('R1.5_PACK_STYLE_MISSING', failures.join('; '));
 }

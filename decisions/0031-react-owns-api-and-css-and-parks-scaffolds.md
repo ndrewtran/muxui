@@ -267,7 +267,9 @@ Part 3, React owns its public CSS contract, in two stages and one stylesheet:
       the markup of its own family, from the canonical examples or from a
       fixture for the states they do not show.
     - `browser/hook-only-reach.test.mjs` shows in a browser that a consumer's rule
-      reaches the elements of each of the 12 hooks no stylesheet selects.
+      reaches the elements of each of the 16 hooks no authored rule styles. A
+      nonempty rule styles the classes in the subjects of its selectors, as
+      release preparation's packed style check reads them (#481).
     - `public-surface.test.mjs` checks that the style entries are exactly
       `styles.css`, `themes.css`, and `themes-apca.css` (Decision 0036), that
       each starts with the layer order and
