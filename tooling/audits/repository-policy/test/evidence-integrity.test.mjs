@@ -3315,7 +3315,7 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     assert.deepEqual(lateMiddle.portfolio.packages.map(({ state, published }) => [state, published]), [['verified', true], ['publish-failed', 'unverified'], ['not-attempted', false], ['not-attempted', false]]);
     const corrupted = r1Exit.bindPriorPublish(await failed({ corrupt: [catalog] }));
     assert.deepEqual(corrupted.portfolio.packages.map(({ state }) => state), ['verified', 'read-back-failed', 'not-attempted', 'not-attempted']);
-    assert.match(corrupted.excerpt.text, /catalog@2\.1\.0-rc\.1: bad-bytes; published bad bytes; deprecate 2\.1\.0-rc\.1/u);
+    assert.match(corrupted.excerpt.text, /catalog@3\.0\.0-rc\.1: bad-bytes; published bad bytes; deprecate 3\.0\.0-rc\.1/u);
 
     // A run that published React, or that succeeded, is not a prior attempt that published no React.
     const { input } = await boundRuns(fixture);
@@ -3559,7 +3559,7 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     const { input } = await boundRuns(fixture);
     const publish = r1Exit.bindPublish(await input());
     assert.deepEqual(publish.portfolio.packages.map(({ name, state }) => [name, state]), [[react, 'verified']]);
-    assert.deepEqual(publish.portfolio.reused.map(({ name, version }) => [name, version]), [[schema, '0.6.0-rc.1'], [catalog, '2.1.0-rc.1'], [tooling, '1.1.0-rc.1']]);
+    assert.deepEqual(publish.portfolio.reused.map(({ name, version }) => [name, version]), [[schema, '0.6.0-rc.1'], [catalog, '3.0.0-rc.1'], [tooling, '1.1.0-rc.1']]);
     assert.deepEqual(publish.portfolio.packages.map(({ authentication }) => authentication), ['trusted publishing (OIDC)']);
     assert.equal(publish.observed.published, `${react}@0.1.0-rc.6`);
     assert.match(publish.excerpts.publish.text, /Published @muxui\/react@0\.1\.0-rc\.6 \(1 of 1\)/u);
@@ -3568,8 +3568,8 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     await assert.rejects(Promise.resolve().then(async () => r1Exit.bindPublish(await input({ publishLog: await fixture.publishLog({ versionsEnvironment: fixture.versionsText.replace(`${schema}=`, `${schema}=0.6.0-rc.1`) }) }))), code('R1_EXIT_TUPLE_MISMATCH'));
     // Each reused package was checked on the registry before anything published, or the run is not what it claims to be.
     const log = await fixture.publishLog();
-    assert.ok(log.includes(`${catalog}@2.1.0-rc.1: reused, on the registry with ${fixture.integrityOf(catalog)}`));
-    await assert.rejects(Promise.resolve().then(async () => r1Exit.bindPublish(await input({ publishLog: log.replace(`${catalog}@2.1.0-rc.1: reused, on the registry with`, `${catalog}@2.1.0-rc.1: seen with`) }))), code('R1_EXIT_RUN_INVALID'));
+    assert.ok(log.includes(`${catalog}@3.0.0-rc.1: reused, on the registry with ${fixture.integrityOf(catalog)}`));
+    await assert.rejects(Promise.resolve().then(async () => r1Exit.bindPublish(await input({ publishLog: log.replace(`${catalog}@3.0.0-rc.1: reused, on the registry with`, `${catalog}@3.0.0-rc.1: seen with`) }))), code('R1_EXIT_RUN_INVALID'));
   });
 
   test('a release that reuses @muxui/react has no React candidate, so the R1 exit capture refuses it and says why', () => {
