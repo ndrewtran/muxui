@@ -375,7 +375,8 @@ test('the shared accessibility sections render through Storybook\'s own Markdown
       texts(shared.querySelectorAll('p:not(.muxui-docs-caption)')).map((text) => text.replace(/\s+/gu, ' ')),
       ['Support status', 'Verification'].flatMap((heading) => plain(guideSection(raw, heading))),
     );
-    assert.deepEqual(texts(shared.querySelectorAll('code')), ['S1.0']);
+    const codeSpans = ['Support status', 'Verification'].flatMap((heading) => [...guideSection(raw, heading).matchAll(/`([^`]+)`/gu)].map(([, code]) => code));
+    assert.deepEqual(texts(shared.querySelectorAll('code')), codeSpans);
     // The tested profile link leaves Storybook for the file that owns the profile, and the guide link follows it.
     const links = [...shared.querySelectorAll('a')].map((node) => [node.textContent, node.getAttribute('href'), node.getAttribute('target')]);
     assert.deepEqual(links, [
