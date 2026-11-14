@@ -140,16 +140,20 @@ with no routing, data fetching or business state, distributed by copy and paste.
 
 ## Release
 
+- Every release publishes all four packages at their next rc. npm provenance
+  names each release's source commit; no release ledger is kept.
 - Each candidate is built once by the publish workflow's dry run. The publish run
   promotes that exact artifact after re-verifying its bytes; it never rebuilds.
 - Publishes go to `next` with npm provenance over OIDC. `latest` is never
-  claimed or promoted, and no stable version exists.
+  claimed or promoted, and no stable version exists. After publishing, the run
+  installs the set from the registry and verifies its integrity and signed
+  provenance.
 - A bad version is deprecated and fixed forward with the next rc. Unpublishing
   is only for a security or legal problem.
 - No assistive-technology support is claimed. The manual and
   assistive-technology proof such a claim needs does not exist; automated proof
   is axe in one browser plus package keyboard and focus tests. The published
-  `release.json` lists the unverified families.
+  `release.json` lists what is unverified (`assistiveTechnology.unverified`).
 
 ## Invariants
 
