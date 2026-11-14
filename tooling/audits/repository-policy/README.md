@@ -2,8 +2,8 @@
 
 This package owns Mux UI's deterministic repository-policy checks. For delivery
 work, begin with the repository [route map](../../../AGENTS.md), then read the
-canonical Architecture, Roadmap, Product Scope, and relevant evidence owner.
-The repository entrypoint audits navigation, ownership, generated output, and
+canonical Architecture, Roadmap, and Product Scope.
+The repository entrypoint audits the toolchain pins, generated output, and
 artifact naming.
 
 This package implements the root `pnpm check`, `pnpm check:all`, and
@@ -37,7 +37,7 @@ compile into the catalog that the tooling queries and dense goldens render. Scal
 run the theme-authoring checks, and Scale source also runs the documentation
 owner that embeds it. Either route runs the Scale docs browser test, which
 builds the docs site first. Repository-policy, workflow, policy-run fixture, and
-retained evidence changes run the policy checks. The declared publish set,
+release ledger changes run the policy checks. The declared publish set,
 `publish-set.json` (`pullRequestImpact.publishSetInputs`), also runs the `@muxui/tooling`
 check, whose packed-entry test takes its allowed edges from it. Mixed changes combine and
 deduplicate those scopes.
@@ -180,66 +180,6 @@ install and check take about a minute, so they run last in `checks-tooling`
 whenever the plan has it; a plan without the tooling check keeps a `tailwind`
 group.
 
-### Retained-evidence tests
-
-The `test/evidence-*.test.mjs` files were four minutes of this package's five
-when they were one file: `evidence-integrity.test.mjs` (the retained BL1 and R1
-evidence and the capture tools) and the growth audit over an archive of HEAD,
-split into `evidence-growth-scope`, `-catalog`, and `-normalization` around the
-fixture they share, `evidence-growth-repository.mjs`. `evidence-growth-platform-safety`
-compiles real trees from history instead, so the normalization of trees from before
-platform safety resolved from registry defaults is held to what history holds. The package has two
-scripts. `check` runs the repository audit, `evidence-verify.mjs`, and every other
-test file. `check:evidence` runs `evidence-verify.mjs` and the evidence files, one
-process each, with `--test-concurrency` set to their count so a small runner still
-overlaps them (the growth files compile the catalog about twenty times and are the
-longest). The fixture archives HEAD without `tests/evidence/`, which the audit
-reads from the checkout and which was most of the bytes, and a test holds its
-tree to HEAD's tree minus that directory, so it cannot stop standing for the
-repository. The integrity tests re-derive each retained capture from git many
-times, so they cache reads of a commit's objects for the run.
-
-A pull request's `checks-policy` group runs `check:evidence` only when the change
-reaches what the tests load or read, through imports or as data:
-
-- `pullRequestImpact.evidenceInputs` lists path prefixes (a trailing slash is a
-  directory): `tests/evidence/`, the policy modules the suite imports (the release
-  modules and `publish-set.json` that the portfolio capture fixture builds a
-  release from, with the registry fake and tuple fixture under `test/`), the
-  `test/evidence-` files (the tests and the fixture they share),
-  `apps/docs/src/lib/block-presets.ts`, `packages/react/src/r1-deferred-evidence.mjs`,
-  Decision 0022, which the R1 exit capture reads, and the data the growth audit
-  and its fixture read from the archive of HEAD: `.github/workflows/`,
-  `strategy/platform-safety-contract.json` (the compiler reads it), and the root
-  `.gitignore` (a conservative input: the fixture force-adds, so no ignore file
-  changes what its commits hold).
-- `evidenceInputPatterns` lists regular expressions for path classes:
-  every `package.json` (the audit checks each workspace package's version and
-  publish configuration), a `.gitattributes` at any depth (`git archive` of HEAD
-  honors `export-ignore` and `export-subst` from every directory, so a nested
-  file can drop a file the fixture reads), the hosting and deployment file names
-  the audit rejects (copied from `hostingPaths` in
-  `tests/evidence/bl1/boundary-audit.mjs`), and `apps/*/astro.config.*` (the
-  audit checks Astro site settings).
-- `evidencePresenceInputs` lists files the tests only look up by name
-  (`README.md`, `pnpm-lock.yaml`, the React stylesheet, and the `pattern-<slug>`
-  browser tests): adding or removing one runs the tests, editing it does not.
-- The packages this package depends on (catalog, schema, tokens, tooling) are
-  loaded by the tests, so a change to one runs them through the workspace links,
-  as it ran policy before.
-- A policy lockfile importer change, and a path no route owns, run them too.
-
-Decisions, strategy other than the safety contract, guidance, and the planner and
-its tests skip it. The route tests pin these lists, fail when a module the suite
-imports is not planned by them, and fail when a path class the audit or fixture
-reads as data does not plan `check:evidence`. The growth fixture does not depend
-on incidental HEAD state: it stages with `git add -f`, so an ignore rule, at any
-depth, cannot drop its own negative controls (a guard fails an unforced `git add`
-there), and computes its version bumps from the current version. Main,
-scheduled runs, `pnpm check`, `pnpm check:all`, and `pnpm release:prepare`
-always run both scripts: the workspace runner adds `check:evidence` beside any
-run that includes this package.
-
 ## Release preparation and lineage
 
 A release is the declared publish set, `publish-set.json` (Decision 0032):
@@ -258,8 +198,7 @@ version inputs, so an empty input reuses its package. Without the variable, a lo
 preparation takes `-rc.1` for each member. Each tarball is repacked deterministically with the
 rc version, `private: false`, no scripts or development dependencies, the release
 commit as `gitHead`, and sibling edges as `^<rc>` ranges. The catalog's generated
-files are compiled for its rc outside the checkout, and tooling's catalog range is
-refused unless the catalog major is the query API major. Preparation audits every
+files are compiled for its rc outside the checkout. Preparation audits every
 tarball against its declared entries, files, and dependencies (`E-P2.1-01`; a third-party
 dependency must be a registry range or dist-tag equal to the source's, so no path, link,
 Git, URL, shorthand, or alias passes), checks
@@ -272,13 +211,12 @@ isolated pnpm consumer, keeps the React pnpm, npm, and yarn matrix, and rehearse
 One portfolio release manifest (`muxui-portfolio-release-v1`, `src/release-manifest.mjs`)
 correlates the tuple: source commit and tree, each package with its role
 (`published` or `reused`), integrity, and provenance, the catalog, contract
-versions, descriptor and compatibility profile digests, evidence and exception
-digests, and the rollback plan. Its digest excludes how the checks ran, so the same
+versions, descriptor and compatibility profile digests, and the rollback plan. Its digest excludes how the checks ran, so the same
 commit and versions give the same digest. `verifyPortfolioRelease` holds the manifest to
 the tarball bytes and recomputes what it records instead of trusting it: the catalog
 bundle against its declared digest, sidecars, module, and release record, the contract
-versions, the renderer descriptor and its export identities, the exception digests, the
-evidence indexes, lockfile, and token source as committed at the release commit, the
+versions, the renderer descriptor and its export identities, the lockfile and token
+source as committed at the release commit, the
 `react` correlation block (lockfile, generated outputs, catalog, token and binding-spec
 identities, and the icon visual contract; absent when `@muxui/react` is reused), and the
 publication and rollback plans. It rejects repacked bytes under a version, a package missing from the tuple, a
@@ -287,18 +225,16 @@ record of the earlier manifest that published it (a manifest for the commit the 
 names) or whose compatibility no longer holds.
 
 Release preparation compares the proposed versions with the prior portfolio release:
-`MUXUI_PRIOR_RELEASE_MANIFEST` names it (read as committed at the release commit, and it
-must be listed with its digest by the `index.json` of its `tests/evidence` route), or
+`MUXUI_PRIOR_RELEASE_MANIFEST` names it, a release ledger file `releases/<hex>.json` read
+as committed at the release commit (see `releases/README.md`), or
 `MUXUI_FIRST_PORTFOLIO_RELEASE=true` declares the first one, which holds only while no
-tracked file is a portfolio release manifest.
-`src/release-effects.mjs` classifies the change by Architecture "Version units and
-compatibility" and rejects versions that are too small, go backwards, or release an
-unchanged unit. Classification is conservative: a change without a precise rule is
-major. A unit with no stable release admits any change in its first base's rc series.
-The `E-P2.1-04` corpus is in `test/fixtures/version-effects/`. The workflow's dry run
-takes them as the `prior-release` (a tracked `tests/evidence/` path ending `.json`) and
-`first-portfolio-release` inputs, exactly one, and the outcome is recorded in the
-manifest as `preparation.verification.versionEffects`. Publish mode promotes that dry
+tracked file is a portfolio release manifest. Which packages publish, and at which
+versions, is the release's choice: `src/release-effects.mjs` rejects a published version
+that is not ahead of the prior release, and a reused package whose recorded range does
+not admit a sibling's new version. The workflow's dry run takes them as the
+`prior-release` (a `releases/<hex>.json` path) and `first-portfolio-release` inputs,
+exactly one, and the outcome is recorded in the manifest as
+`preparation.verification.versionCheck`. Publish mode promotes that dry
 run and does not derive it again.
 
 `.github/workflows/npm-publish.yml` builds a candidate once (Decision 0030).
@@ -323,9 +259,8 @@ before the `publish` job starts.
 
 ### Reusing packages
 
-The first portfolio release publishes all four packages. A later release publishes only the
-packages whose version units changed and reuses the rest (Decision 0032 item 9,
-`E-P2.1-03`). The interface is one signal: a package whose version input is empty is
+The first portfolio release publishes all four packages. A later release publishes the
+packages it chooses and reuses the rest (Decision 0032 item 9, `E-P2.1-03`). The interface is one signal: a package whose version input is empty is
 reused. `MUXUI_RELEASE_VERSIONS` always names every member, so a package left out of it is
 an error and not a reuse, and the workflow's inputs `version`, `schema-version`,
 `catalog-version`, and `tooling-version` are optional for that reason. Reuse needs a prior
@@ -338,23 +273,17 @@ Preparation (`src/release-prepare.mjs`, with `planReuse` in `src/release-effects
 
 - reads the reused records from the prior manifest and the manifest that published each
   (the prior one, or for a package the prior release itself reused, the manifest of the
-  release before it, which must be retained as `tests/evidence/**/release-manifest.json` at
-  the release commit). Each of those manifests is retained evidence: tracked at the
-  release commit under a route whose `index.json` lists its path with the sha256 of exactly
-  those bytes (`readIndexedArtifact`). A manifest of a wanted release that its route does
-  not list, or two different manifests of one release, stop the release;
+  release before it, which must be committed in the release ledger as `releases/<hex>.json`
+  at the release commit, `readLedgerManifest`). A ledger file whose manifest is not the
+  release its name gives stops the release;
 - fetches each reused tarball from the public registry by its exact version before packing
   anything and verifies it (`verifyReused`, `fetchReusedTarball`, below). A reused package is
   never repacked;
 - then verifies their signatures with `npm audit signatures` (`verifyReusedSignatures` in
   `src/release-proof.mjs`, below). It runs only when something is reused;
-- takes the reused packages' versions as their recorded ones, so the version check
-  (`E-P2.1-04`) reads a reused package as proposing its prior version. An unchanged package
-  at its version passes. A changed package at its version is refused (`P2_1_VERSION_NOT_AHEAD`
-  for a unit, `P2_1_VERSION_PUBLICATION_MISSING` for the schema or tooling), and so is a
-  package whose recorded range no longer admits a sibling's new version
-  (`P2_1_VERSION_RANGE_BROKEN`). A version given to a package that did not change is refused
-  as before (`P2_1_VERSION_UNIT_UNCHANGED`). Nothing is reused silently;
+- takes the reused packages' versions as their recorded ones. A reused package whose
+  recorded range no longer admits a sibling's new version is refused
+  (`P2_1_VERSION_RANGE_BROKEN`). Nothing checks that a reused package is unchanged;
 - runs the set consumer, descriptor audit, and compatibility checks on the real tuple: the
   published candidates and the fetched bytes together. A reused `@muxui/react` also gets the
   audits and consumer proofs a packed one gets, against the current sources, with the release
@@ -363,7 +292,7 @@ Preparation (`src/release-prepare.mjs`, with `planReuse` in `src/release-effects
 - writes the published tarballs, in publish order, and the manifest. The `npm publish
   --dry-run` rehearsal covers the same packages.
 
-What authenticates a reused package. A retained manifest that agrees with its own digest
+What authenticates a reused package. A ledger manifest that agrees with its own digest
 proves nothing about the bytes, because a repack can update every digest it records and
 recompute its own. The check that does not rest on the repository is the registry's
 attestation of the original publish. For each reused package, `verifyReused` reads the
@@ -415,9 +344,8 @@ Limits.
   neither does the release: the repository, workflow, commit and run are read from the signed
   statement. The run is only required to be a run of the repository, and is not matched to a
   recorded one, because the manifest does not record the publish run.
-- The index of a route lists the digest of a file in the same commit, so it ties a manifest to
-  retained evidence a reviewer saw; it does not defend against a change that updates both, and
-  the attestation is what holds then.
+- The ledger is trusted as committed: it does not defend against a commit that rewrites a
+  manifest and its digests together, and the attestation is what holds then.
 
 The untagged `0.0.0-stage` version npm lists beside each new package's first release is no
 release candidate; reuse reads exact versions and the publish preflight reads `latest` and
@@ -468,9 +396,8 @@ It checks out only `src/npm-publication.mjs`, `src/release-set.mjs`, and
   exactly when its version input is not empty, and reused exactly when it is empty,
   and the manifest's role must agree. The operator's `tarball-sha512` input
   authorizes exactly the published tarballs: their sha512 integrities, comma
-  separated, in any order, no more and no fewer. (The first release's input held
-  the `@muxui/react` digest alone, and the retained evidence of that run keeps its
-  binding.) A package the manifest marks `reused` is not published.
+  separated, in any order, no more and no fewer. A package the manifest marks
+  `reused` is not published.
 - `publish-set` (the `Publish the set in order` step) first verifies each reused package
   on the registry (`verifyReused`: the recorded integrity, the attestation of the
   original publish, and `next` at the recorded version), and preflights every package it
@@ -515,8 +442,8 @@ A later release that reuses packages is exercised end to end against the same re
 the preparation does, fetches the reused bytes, builds and verifies the manifest, promotes the
 candidate, and publishes only what changed, for a tooling-only release and for one that reuses
 `@muxui/react`; its refusals are a reused package that is missing, differently hashed, or
-without provenance, a version collision, a publish input for an unchanged package, and no
-prior release. `test/release-effects.test.mjs` runs the same plan against committed sources.
+without provenance, a version collision, a publish input for a package the manifest reuses,
+and no prior release.
 
 The tests are `test/release-set.test.mjs`, `test/release-manifest.test.mjs`,
 `test/release-lineage.test.mjs`, and `test/npm-publication.test.mjs`, whose
@@ -525,32 +452,3 @@ a promotion lineage from another commit, workflow, or version, each stopping bef
 any publish) and partial-publication rehearsals (a refused publish and a failed
 read-back after earlier packages published) run against an in-process registry
 (`test/registry-fake.mjs`), with no network and no registry mutation.
-
-### Release evidence capture
-
-`tests/evidence/capture-r1-exit.mjs` captures the R1 exit evidence of the
-`@muxui/react` candidate from `npm-publish.yml` runs, and parses four workflow
-formats: the token workflow that published rc.1, the trusted-publishing workflow,
-the build-once workflow, and the portfolio workflow. The earlier three keep their
-adapters, and `test/evidence-integrity.test.mjs` rebuilds the committed rc.1 to rc.4
-routes byte for byte. For a portfolio run the candidate is `@muxui/react`, so the
-`E-R1-EXIT` records keep their shape; the dry run's portfolio manifest (schema,
-digest, source commit and tree, and every tarball's recorded bytes) and each
-package's preflight, publish, and workflow read-back ride along under `portfolio`. A package the publish attempted without a confirmed read-back is recorded `published: 'unverified'`, never `false`, which is only for a package never attempted. A later release's candidate holds only its published tarballs, and a package it reuses rides along under `portfolio` without one: its version and digests are the earlier release's, and the publish run's check of it on the registry is recorded as `portfolio.reused`. The capture binds a `tarball-sha512` that is either the `@muxui/react` digest alone (the first release's input) or the digests of exactly the published tarballs. A release that reuses `@muxui/react` has no React candidate and so no R1 exit route: the capture refuses it, and the earlier rc's route stays the evidence of that candidate. The P2.1 capture (`tests/evidence/capture-p2.1.mjs`) binds the first release from the R1 exit route of its React candidate (`--version`), and refuses any release that compares with a prior one. Every later release, whichever packages it publishes, is `--release=<package>@<version> --dry-run-run=<id> --publish-run=<id> --prior-route=<the prior release's route>`: it reads that release's own dry run and publish run through this tool's binders, with a package the release publishes as the candidate, derives each package's role and authentication from the manifest and the publish run, and retains its manifest under `artifacts/release-manifest.json` of a route of its own (`tests/evidence/p2.1-<package>-<version>`), where the next release names it as `prior-release`. When that release also publishes `@muxui/react`, this tool's route of the React candidate holds its E-R1-EXIT records from the same runs, and the P2.1 route holds only E-P2.1-01 to 06.
-The capture accepts a publish log only in the workflow's own shape: one block per package, in publish order, each package's read-back finished before the next package's publish starts, and each read-back's dist-tags what that package's preflight allows (`next` the new version, `latest` unchanged or registry-set on a first publish, no other tag).
-`test/evidence-integrity.test.mjs` also captures a hosted portfolio release
-built by `test/evidence-portfolio-fixture.mjs`, whose publish job log is what
-`npm-publication.mjs` prints against the registry fake.
-
-Evidence capture and disclosure remain owned by the architecture, Product Scope,
-package, and evidence references. See
-[`tests/evidence/README.md`](../../../tests/evidence/README.md) before retaining
-proof.
-
-## Identity-reset compatibility
-
-`identityReset.current` is the live Mux UI identity. The audit rejects legacy
-machine/display names, package scopes, namespaces, executable command tokens,
-completion helpers, experimental namespaces, fixture keys, and historical
-object keys in current sources. No public package API exposes a legacy alias or
-compatibility mode.
