@@ -7,14 +7,14 @@ import {
   loadThresholds,
   measureRegression,
   regressionFailures,
-} from '../../../tests/evidence/bl1/regression.mjs';
+} from './pattern-regression.mjs';
 
 const thresholds = await loadThresholds();
 const api = createCatalogApi(JSON.parse(catalogJson));
 const measured = measureRegression({ api, baselineApi: await compileApiWithoutPatterns(), thresholds });
 
 // Every block holds the thresholds in the working tree (E-BL1-11). A pull request may change a limit or a budget in
-// tests/evidence/bl1/regression-thresholds.json, logged in provenance.revisions (Decision 0029), and these tests follow it.
+// pattern-regression-thresholds.json, and these tests follow it.
 test('E-BL1-11: the shipped patterns hold the regression thresholds', () => {
   assert.deepEqual(regressionFailures(measured, thresholds), []);
   // The measurement saw every shipped pattern, not an empty set.
