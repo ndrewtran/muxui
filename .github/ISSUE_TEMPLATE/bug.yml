@@ -4,7 +4,7 @@ labels: [type:bug]
 body:
   - type: textarea
     id: reproduction
-    attributes: { label: Reproduction, description: Steps, code or a link. }
+    attributes: { label: Reproduction, description: "Steps, code or a link." }
     validations: { required: true }
   - type: textarea
     id: expected
