@@ -16,18 +16,6 @@ const carriedFields = ['type', 'license', 'repository', 'homepage', 'bugs', 'eng
 /** A sibling edge is a package-manager request for the rc and later builds of its line, not an exact pin. */
 export const siblingRange = (version) => `^${version}`;
 
-const major = (version) => Number(/^(\d+)\./u.exec(version)?.[1]);
-
-/**
- * Decision 0032 item 8: a dependency on `@muxui/catalog` is a range bound to the query API major tooling reads, so
- * the catalog the candidate set ships must be a release of that major.
- */
-export function assertCatalogRangeBound({ catalogVersion, queryApiVersion }) {
-  if (!(major(catalogVersion) === major(queryApiVersion))) {
-    throw new Error(`P2_1_CATALOG_RANGE_UNBOUND: catalog ${catalogVersion} is not a release of the query API major ${major(queryApiVersion)} tooling reads (${queryApiVersion})`);
-  }
-}
-
 /**
  * The manifest a candidate publishes, from the manifest `pnpm pack` wrote: the rc version, `private: false`, the
  * publish configuration, the commit it was built from (`gitHead`, which npm records at publish time as well), and

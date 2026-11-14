@@ -741,7 +741,7 @@ test('npm-publish.yml names the prior release in a dry run, validates it before 
   // The version validation reads only the first-release flag, so a first release that reuses a package fails in seconds.
   assert.equal(workflow.match(/MUXUI_FIRST_PORTFOLIO_RELEASE:/gu)?.length, 2);
   assert.match(step('Validate release versions'), /env:\n          MUXUI_FIRST_PORTFOLIO_RELEASE: \$\{\{ inputs\.first-portfolio-release && 'true' \|\| '' \}\}\n        run: node [^\n]*release-set\.mjs validate-versions/u);
-  assert.doesNotMatch(job('registry-preflight') + job('publish'), /prior-release|first-portfolio-release|MUXUI_PRIOR|MUXUI_FIRST|versionEffects/u);
+  assert.doesNotMatch(job('registry-preflight') + job('publish'), /prior-release|first-portfolio-release|MUXUI_PRIOR|MUXUI_FIRST|versionCheck/u);
   // The input check sits with the version checks, ahead of the install, the checks, and the pack.
   const titles = [...prepare.matchAll(/^      - name: (.+)$/gmu)].map(([, title]) => title);
   assert.ok(titles.indexOf('Validate prior release inputs') > titles.indexOf('Validate release versions'));
