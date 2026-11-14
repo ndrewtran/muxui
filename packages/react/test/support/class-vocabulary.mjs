@@ -24,6 +24,7 @@ export const nonClassTokens = Object.freeze({
   'button-fixture.mjs': { 'muxui-r1-button': 1 },
   'r1-contracts.mjs': { 'muxui-react-r1-5-closure-v1': 2, 'muxui-renderer-descriptor-v1': 1, 'muxui-react-release-candidate-v1': 1, 'muxui-react-r1-6-contract-v1': 1 },
   'supplemental-mapping.mjs': { 'muxui-react-r1-6-supplemental-components-v2': 1 },
+  'supplemental/color-mode-picker.ts': { 'muxui-color-mode': 1 },
   'supplemental/color-mode-toggle.ts': { 'muxui-color-mode': 1 },
   'supplemental/input-tags.ts': { 'muxui-input-tags-label': 1, 'muxui-input-tags-description': 1, 'muxui-input-tags-error': 1, 'muxui-input-tags-input': 1 },
   'supplemental/multi-select.ts': { 'muxui-multi-select-label': 1, 'muxui-multi-select-description': 1, 'muxui-multi-select-error': 1, 'muxui-multi-select-status': 1 },

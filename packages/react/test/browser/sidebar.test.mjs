@@ -295,6 +295,10 @@ for (const engine of browserEngines()) {
             assert.ok(ratios.every((ratio) => ratio >= 4.5), label(`badge text meets text contrast, ${hovered ? `hovering ${hovered}` : 'idle'} (${ratios.map((ratio) => ratio.toFixed(2))})`));
           }
           await tab.mouse.move(0, 0);
+          // Idle navigation icons and a group's chevron meet non-text contrast against the sidebar, expanded as well as folded.
+          const navMarks = ['a[href="#home"] .muxui-sidebar__nav-icon', 'summary .muxui-sidebar__nav-icon', 'summary .muxui-sidebar__nav-chevron'];
+          const navRatios = await Promise.all(navMarks.map((selector) => tab.evaluate(contrastOf, { selector })));
+          assert.ok(navRatios.every((ratio) => ratio >= 3), label(`idle navigation icons meet non-text contrast (${navRatios.map((ratio) => ratio.toFixed(2))})`));
           // Search shows a focus ring in both schemes: a 2px shadow that stands out from the sidebar by 3:1.
           await focusByKeyboard(tab, '.muxui-sidebar__search-input');
           const shadow = await tab.evaluate(() => getComputedStyle(document.querySelector('.muxui-sidebar__search-input')).boxShadow);

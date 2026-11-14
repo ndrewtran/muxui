@@ -2,13 +2,13 @@ import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, LabelHTMLAttributes, ReactNode, RefAttributes } from 'react';
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
-import { FieldError as AriaFieldError } from 'react-aria-components';
 import { AriaCheckboxField, AriaCheckboxButton } from '../substrate.ts';
 import type { CheckboxButtonProps as AriaCheckboxButtonProps, CheckboxButtonRenderProps, CheckboxFieldProps as AriaCheckboxFieldProps } from 'react-aria-components';
 import { normalizeChoiceControlSize } from '../choice-context.mjs';
 import { h, cx, nativePart } from './part-utils.ts';
 import type { PartProps } from './part-utils.ts';
 import { fieldText, mappedFieldProps } from './field-utils.ts';
+import { fieldError } from '../field-error.ts';
 
 /**
  * The props Mux UI defines for CheckboxField.Root, the compound's root; the catalog's web.react
@@ -70,15 +70,15 @@ function makeCheckboxField() {
     const renderProps = React.useContext(CheckboxFieldIndicatorContext);
     const content = children === undefined || children === null
       ? renderProps?.isIndeterminate
-        ? h(MinusIcon, { 'aria-hidden': true, focusable: 'false', size: 12 })
+        ? h(MinusIcon, { className: 'muxui-checkbox-field__indicator-icon', 'aria-hidden': true, focusable: 'false', size: 12 })
         : renderProps?.isSelected
-          ? h(CheckIcon, { 'aria-hidden': true, focusable: 'false', size: 12 })
+          ? h(CheckIcon, { className: 'muxui-checkbox-field__indicator-icon', 'aria-hidden': true, focusable: 'false', size: 12 })
           : null
       : children;
     return nativePart('span', 'muxui-checkbox-field__indicator', props, ref, content);
   });
   const Description = /*#__PURE__*/ React.forwardRef<HTMLElement, CheckboxFieldDescriptionProps>(function CheckboxFieldDescription(props, ref) { return fieldText('description', 'muxui-checkbox-field__description', props, ref); });
-  const Error = /*#__PURE__*/ React.forwardRef<HTMLElement, CheckboxFieldErrorProps>(function CheckboxFieldError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-checkbox-field__error', props.className) }); });
+  const Error = /*#__PURE__*/ React.forwardRef<HTMLElement, CheckboxFieldErrorProps>(function CheckboxFieldError(props, ref) { return fieldError('muxui-checkbox-field__error', props, ref); });
   return /*#__PURE__*/ Object.freeze({ Root, Button, Indicator, Description, Error });
 }
 

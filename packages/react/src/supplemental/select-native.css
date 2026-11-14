@@ -38,6 +38,12 @@
   appearance: auto;
 }
 
+/* Option rows in a multiple select take Chromium's default spacing everywhere; Firefox's own adds 3px per row. */
+.muxui-select-native option {
+  padding-block: 0 1px;
+  padding-inline: 2px;
+}
+
 .muxui-select-native__field[data-muxui-size='sm'],
 .muxui-select-native[data-muxui-size='sm'] { --muxui-control-target-size: var(--muxui-control-size-sm); }
 .muxui-select-native__field[data-muxui-size='lg'],

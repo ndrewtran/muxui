@@ -51,7 +51,13 @@
               "doc": "Reports an activation of the Link, in addition to following its href."
             },
             { "name": "children", "optional": true, "type": "React.ReactNode" },
-            { "name": "className", "optional": true, "type": "string" }
+            { "name": "className", "optional": true, "type": "string" },
+            {
+              "name": "download",
+              "optional": true,
+              "type": "boolean | string",
+              "doc": "The native download attribute: true downloads the destination, a string also names the saved file. React types it any."
+            }
           ],
           "ref": { "type": "HTMLElement" },
           "natives": [
@@ -65,9 +71,11 @@
                 "rel",
                 "onActivate",
                 "children",
-                "className",
-                "onClick"
+                "className"
               ]
+            },
+            {
+              "type": "Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'hrefLang' | 'ping' | 'referrerPolicy' | 'type'>"
             }
           ]
         }
@@ -171,14 +179,23 @@
           "refs": ["components#LinkOwnProps"]
         },
         {
-          "type": "Omit<React.HTMLAttributes<HTMLElement>, keyof LinkOwnProps | 'children' | 'className' | 'onClick'>",
+          "type": "Omit<React.HTMLAttributes<HTMLElement>, keyof LinkOwnProps | 'children' | 'className'>",
           "refs": ["components#LinkOwnProps"]
+        },
+        {
+          "type": "Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'hrefLang' | 'ping' | 'referrerPolicy' | 'type'>"
         }
       ],
-      "text": "interface LinkProps extends LinkOwnProps, Omit<React.HTMLAttributes<HTMLElement>, keyof LinkOwnProps | 'children' | 'className' | 'onClick'> {\n  children?: React.ReactNode;\n  className?: string;\n}",
+      "text": "interface LinkProps extends LinkOwnProps, Omit<React.HTMLAttributes<HTMLElement>, keyof LinkOwnProps | 'children' | 'className'>, Pick<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'hrefLang' | 'ping' | 'referrerPolicy' | 'type'> {\n  children?: React.ReactNode;\n  className?: string;\n  download?: boolean | string;\n}",
       "members": [
         { "name": "children", "optional": true, "type": "React.ReactNode" },
-        { "name": "className", "optional": true, "type": "string" }
+        { "name": "className", "optional": true, "type": "string" },
+        {
+          "name": "download",
+          "optional": true,
+          "type": "boolean | string",
+          "doc": "The native download attribute: true downloads the destination, a string also names the saved file. React types it any."
+        }
       ],
       "refs": ["components#LinkOwnProps"]
     }

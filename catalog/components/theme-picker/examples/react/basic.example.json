@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:theme-picker-basic-react",
+  "kind": "example",
+  "name": "Basic React ThemePicker",
+  "summary": "A source-faithful React theme-picker example using the Mux-owned API.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:theme-picker#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/theme-picker/examples/react/basic.tsx"
+}

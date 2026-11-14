@@ -189,7 +189,7 @@ test('items without a link keep the markup Sidebar always rendered', () => {
   // Shared with the pre-nesting implementation: a details group, an optional current header, and plain child links.
   assert.equal(
     withoutSvgPaths(renderToString(nav(h(Sidebar.NavItem, { icon: Icon, current: true, badge: '2', items: [{ href: '/now', label: 'Now', current: true }, { href: '/next', label: 'Next' }] }, 'Roadmap')))),
-    '<aside class="muxui-sidebar"><ul class="muxui-sidebar__nav-list"><li class="muxui-sidebar__nav-item"><details>'
+    '<aside class="muxui-sidebar"><ul class="muxui-sidebar__nav-list"><li class="muxui-sidebar__nav-item"><details class="muxui-sidebar__nav-details">'
       + '<summary class="muxui-sidebar__nav-link muxui-sidebar__nav-link--current"><svg class="muxui-sidebar__nav-icon" aria-hidden="true"></svg><span class="muxui-sidebar__nav-label">Roadmap</span><span class="muxui-sidebar__nav-badge">2</span><svg/></summary>'
       + '<ul class="muxui-sidebar__nav-children">'
       + '<li class="muxui-sidebar__nav-item"><a class="muxui-sidebar__nav-link muxui-sidebar__nav-child-link muxui-sidebar__nav-link--current" data-rac="" href="/now" tabindex="0" data-react-aria-pressable="true" aria-current="page" data-muxui-state-current="true">Now</a></li>'
@@ -208,8 +208,8 @@ test('groups render closed unless defaultExpanded or expanded says otherwise', (
   assert.doesNotMatch(open, /<ul[^>]* hidden/u);
   assert.match(open, /<button[^>]*aria-expanded="true"/u);
 
-  assert.match(renderToString(nav(h(Sidebar.NavItem, { defaultExpanded: true, items: [{ label: 'Leaf', href: '/leaf' }] }, 'Group'))), /<details open="">/u);
-  assert.match(renderToString(nav(h(Sidebar.NavItem, { expanded: true, items: [{ label: 'Leaf', href: '/leaf' }] }, 'Group'))), /<details open="">/u);
+  assert.match(renderToString(nav(h(Sidebar.NavItem, { defaultExpanded: true, items: [{ label: 'Leaf', href: '/leaf' }] }, 'Group'))), /<details class="muxui-sidebar__nav-details" open="">/u);
+  assert.match(renderToString(nav(h(Sidebar.NavItem, { expanded: true, items: [{ label: 'Leaf', href: '/leaf' }] }, 'Group'))), /<details class="muxui-sidebar__nav-details" open="">/u);
 });
 
 test('a link group pairs the link with a toggle that names and controls its list', () => {
@@ -358,5 +358,25 @@ test('entries keep their state by id when siblings come and go', async () => {
     assert.equal(second().getAttribute('aria-expanded'), 'false');
     await act(async () => setFilter(true));
     assert.equal(second().getAttribute('aria-expanded'), 'false', 'removing a sibling does not reset the group');
+  });
+});
+
+test('MobileTrigger keeps a pressable logo its own: it opens nothing and takes none of the menu button attributes', async () => {
+  const [{ Button }, { Link }] = await Promise.all([import('../src/button.ts'), import('../src/components.ts')]);
+  const logo = h(React.Fragment, null, h(Link, { href: '/', id: 'home' }, 'Home'), h(Button, { id: 'post' }, 'Post'));
+  const trigger = h(Sidebar.MobileTrigger, { logo }, h('a', { href: '/inbox' }, 'Inbox'));
+  const html = renderToString(trigger);
+  for (const id of ['home', 'post']) {
+    const tag = new RegExp(`<[a-z]+[^>]* id="${id}"[^>]*>`, 'u').exec(html)?.[0] ?? '';
+    assert.ok(tag, `${id} renders with its own id`);
+    assert.doesNotMatch(tag, /aria-expanded|aria-haspopup|aria-controls/u, `${id} in server markup is not the drawer's trigger`);
+  }
+  await withDom(trigger, async (document) => {
+    for (const id of ['home', 'post']) {
+      await click(document.getElementById(id));
+      assert.equal(document.querySelector('[role="dialog"]'), null, `pressing ${id} leaves the drawer closed`);
+    }
+    await click(document.querySelector('.muxui-sidebar__mobile-trigger'));
+    assert.ok(document.querySelector('[role="dialog"]'), 'the menu button still opens the drawer');
   });
 });

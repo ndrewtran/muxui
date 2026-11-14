@@ -550,7 +550,7 @@ export function LightboxPopup({ children, className, onKeyDown, onTouchStart, on
     };
   }, [onKeyDown, onTouchCancel, onTouchEnd, onTouchStart, value]);
   if (!value?.present) return null;
-  return React.createElement(Modal, null,
+  return React.createElement(Modal, { className: 'muxui-lightbox__modal' },
     // A caller's role reaches React Aria as written; DialogProps types it as only dialog or alertdialog.
     React.createElement(Dialog, {
       ...props,
@@ -758,7 +758,7 @@ function NavButton({ direction: delta, children, disabled = false, onActivate, c
     onActivate: (event: LightboxControlActivation) => { onActivate?.(event); value?.navigate(delta); },
   };
   return children === undefined || children === null
-    ? React.createElement(IconButton, controlProps, React.createElement(delta < 0 ? ChevronLeft : ChevronRight, { size: 24, 'aria-hidden': 'true', focusable: 'false' }))
+    ? React.createElement(IconButton, controlProps, React.createElement(delta < 0 ? ChevronLeft : ChevronRight, { className: 'muxui-lightbox__navigation-icon', size: 24, 'aria-hidden': 'true', focusable: 'false' }))
     : React.createElement(Button, controlProps, children);
 }
 export function LightboxPrevious(props: LightboxControlProps): ReactElement { return React.createElement(NavButton, { ...props, direction: -1 }); }
@@ -775,6 +775,6 @@ export function LightboxClose({ onActivate, className, children, ...props }: Lig
     onActivate: (event: LightboxControlActivation) => { onActivate?.(event); value?.close(); },
   };
   return children === undefined || children === null
-    ? React.createElement(IconButton, controlProps, React.createElement(X, { size: 16, 'aria-hidden': 'true', focusable: 'false' }))
+    ? React.createElement(IconButton, controlProps, React.createElement(X, { className: 'muxui-lightbox__close-icon', size: 16, 'aria-hidden': 'true', focusable: 'false' }))
     : React.createElement(Button, controlProps, children);
 }

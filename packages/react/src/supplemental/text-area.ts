@@ -1,11 +1,12 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, RefAttributes, TextareaHTMLAttributes } from 'react';
-import { FieldError as AriaFieldError, Label as AriaLabel } from 'react-aria-components';
+import { Label as AriaLabel } from 'react-aria-components';
 import { AriaTextArea } from '../substrate.ts';
 import type { TextAreaProps as AriaTextAreaProps } from 'react-aria-components';
 import { h, cx } from './part-utils.ts';
 import type { PartProps } from './part-utils.ts';
 import { fieldText } from './field-utils.ts';
+import { fieldError } from '../field-error.ts';
 import { renderFieldRoot } from './field-root.ts';
 
 /**
@@ -45,7 +46,7 @@ const TextAreaRoot = /*#__PURE__*/ React.forwardRef<HTMLDivElement, TextAreaRoot
 const TextAreaInput = /*#__PURE__*/ React.forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextAreaInput({ disabled, className, ...props }, ref) { return h(AriaTextArea, { ...(props as AriaTextAreaProps), ref, disabled, className: cx('muxui-text-area__textarea', className) }); });
 const TextAreaLabel = /*#__PURE__*/ React.forwardRef<HTMLLabelElement, TextAreaLabelProps>(function TextAreaLabel(props, ref) { return h(AriaLabel, { ...props, ref, className: cx('muxui-text-area__label', props.className) }); });
 const TextAreaDescription = /*#__PURE__*/ React.forwardRef<HTMLElement, TextAreaDescriptionProps>(function TextAreaDescription(props, ref) { return fieldText('description', 'muxui-text-area__description', props, ref); });
-const TextAreaError = /*#__PURE__*/ React.forwardRef<HTMLElement, TextAreaErrorProps>(function TextAreaError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-text-area__error', props.className) }); });
+const TextAreaError = /*#__PURE__*/ React.forwardRef<HTMLElement, TextAreaErrorProps>(function TextAreaError(props, ref) { return fieldError('muxui-text-area__error', props, ref); });
 
 export const TextArea: {
   Root: ForwardRefExoticComponent<TextAreaRootProps & RefAttributes<HTMLDivElement>>;

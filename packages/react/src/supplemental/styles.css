@@ -859,7 +859,7 @@
 }
 
 .muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-muxui-state-hovered]:not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
 }
 
 .muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-hovered] {
@@ -1383,6 +1383,14 @@
     outline-color var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
 }
 
+/* React Aria Components wrap a tag's content in a `display: contents` cell without a className. A data-driven label sits in it as
+   text, so the cell takes the tag's typography, not the host's `div` rule. */
+:where(.muxui-input-tags__tag) > :where([role='gridcell']) {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 .muxui-input-tags__tag[data-muxui-state-hovered]:not([data-muxui-state-disabled]) {
   background-image: linear-gradient(
     color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent),
@@ -1834,7 +1842,7 @@
 }
 
 .muxui-multi-select__item:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
   color: var(--muxui-item-focus-color);
 }
 
@@ -3105,17 +3113,21 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     color: var(--muxui-semantic-color-neutral-100);
   }
 
+  :scope .muxui-sidebar__search-icon {
+    color: var(--muxui-semantic-color-neutral-40);
+  }
+
+  /* Navigation icons and marks are graphics a reader uses, so they meet non-text contrast against the sidebar. */
   :scope :is(
-    .muxui-sidebar__search-icon,
     .muxui-sidebar__nav-icon,
     .muxui-sidebar__nav-external,
     .muxui-sidebar__nav-chevron
   ) {
-    color: var(--muxui-semantic-color-neutral-40);
+    color: var(--muxui-semantic-color-neutral-60);
   }
 
-  /* Folded, the icon is the only name a sighted user has, so it needs non-text contrast on its own. */
-  :scope :where(.muxui-sidebar[data-muxui-collapsed]) :is(.muxui-sidebar__nav-icon, .muxui-sidebar__search-icon) {
+  /* Folded, the search icon is the only name a sighted user has, so it needs non-text contrast on its own. */
+  :scope :where(.muxui-sidebar[data-muxui-collapsed]) .muxui-sidebar__search-icon {
     color: var(--muxui-semantic-color-neutral-60);
   }
 
@@ -3409,140 +3421,13 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 /* switch-field */
+/* The switch itself is Switch's: Button and Thumb carry the muxui-switch and muxui-switch__indicator classes, so the Switch
+   block of fields.css is the only source of its track, thumb, tokens, states and motion, and Description and Error carry the
+   field classes Switch's text uses. Only the root layout is written here, and Switch's wrapper shares it. */
 .muxui-switch-field {
-  --muxui-switch-field-track-width: 2.5rem;
-  --muxui-switch-field-track-height: 1.375rem;
-  --muxui-switch-field-thumb-size: 0.875rem;
-  --muxui-switch-field-thumb-offset: 0.25rem;
-
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-tight-gap);
-}
-
-
-.muxui-switch-field__description,
-.muxui-switch-field__error {
-  margin-left: calc(var(--muxui-switch-field-track-width) + var(--muxui-semantic-layout-action-gap));
-}
-
-
-
-.muxui-switch-field__button {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--muxui-semantic-layout-control-gap);
-  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
-  padding-inline-start: calc(var(--muxui-switch-field-track-width) + var(--muxui-semantic-layout-inset-medium));
-  color: var(--muxui-semantic-color-neutral-80);
-  font-family: var(--muxui-semantic-typography-text-font-family);
-  font-size: var(--muxui-semantic-typography-body-size);
-  font-weight: var(--muxui-semantic-typography-control-weight);
-  cursor: pointer;
-  outline: none;
-  user-select: none;
-  flex-shrink: 0;
-}
-
-.muxui-switch-field__button::before {
-  content: '';
-  position: absolute;
-  inset-inline-start: 0;
-  inset-block-start: 50%;
-  width: var(--muxui-switch-field-track-width);
-  height: var(--muxui-switch-field-track-height);
-  border-radius: var(--muxui-semantic-shape-pill-radius);
-  border: 1.5px solid var(--muxui-semantic-color-neutral-30);
-  background-color: var(--muxui-semantic-color-neutral-20);
-  transform: translateY(-50%);
-  transition:
-    background-color var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
-    border-color var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
-    box-shadow var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
-}
-
-.muxui-switch-field__button[data-muxui-state-focus-visible]::before {
-  box-shadow:
-    0 0 0 2px var(--muxui-semantic-focus-inner),
-    0 0 0 4px var(--muxui-focus-ring-color);
-}
-
-
-
-.muxui-switch-field__button[data-muxui-state-selected]::before {
-  background-color: var(--muxui-semantic-color-color-60);
-  border-color: var(--muxui-semantic-color-color-60);
-}
-
-.muxui-switch-field__button[data-muxui-state-selected][data-muxui-state-hovered]:not([data-muxui-state-disabled])::before {
-  background-color: var(--muxui-semantic-color-color-50);
-  border-color: var(--muxui-semantic-color-color-50);
-}
-
-
-
-.muxui-switch-field__button[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected])::before {
-  border-color: var(--muxui-semantic-color-neutral-50);
-  background-color: var(--muxui-semantic-color-neutral-26);
-}
-
-@media (forced-colors: none) {
-  .muxui-switch-field__button[data-muxui-state-hovered]:not([data-muxui-state-disabled], [data-muxui-state-selected])::before {
-    background-color: var(--muxui-semantic-color-neutral-20);
-    background-image: linear-gradient(
-      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
-      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
-    );
-  }
-}
-
-
-
-/* The invalid edge wins in every state. The hovered selector matches the
-   selected hover rule's specificity, outranks the unselected hover rule, and
-   follows both in source order. */
-.muxui-switch-field[data-muxui-state-invalid] .muxui-switch-field__button::before,
-.muxui-switch-field[data-muxui-state-invalid] .muxui-switch-field__button[data-muxui-state-hovered]::before {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
-}
-
-
-
-.muxui-switch-field[data-muxui-state-disabled] .muxui-switch-field__button {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-
-
-.muxui-switch-field__thumb {
-  position: absolute;
-  inset-inline-start: var(--muxui-switch-field-thumb-offset);
-  inset-block-start: 50%;
-  width: var(--muxui-switch-field-thumb-size);
-  height: var(--muxui-switch-field-thumb-size);
-  border-radius: 50%;
-  background-color: var(--muxui-semantic-color-neutral-80);
-  box-shadow: var(--muxui-semantic-elevation-floating);
-  transition:
-    transform var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
-    background-color var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
-  transform: translate(0, -50%);
-  z-index: 1;
-  flex-shrink: 0;
-  pointer-events: none;
-}
-
-.muxui-switch-field__button[data-muxui-state-selected] .muxui-switch-field__thumb {
-  transform: translate(
-    calc(
-      var(--muxui-switch-field-track-width) - (var(--muxui-switch-field-thumb-offset) * 1.2) -
-        var(--muxui-switch-field-thumb-size)
-    ),
-    -50%
-  );
-  background-color: var(--muxui-semantic-color-color-60-fg);
 }
 
 /* tag-select */
@@ -3792,7 +3677,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 .muxui-tag-select__item:is(:hover, [data-muxui-state-hovered]):not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
   color: var(--muxui-item-focus-color);
 }
 
@@ -3951,5 +3836,12 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
   .muxui-checkbox-field[data-muxui-state-disabled] .muxui-checkbox-field__button {
     opacity: 1;
+  }
+
+  /* Forced colours drop the box-shadow ring, so keyboard focus draws the outline Checkbox and RadioGroup draw. */
+  .muxui-radio-field__button[data-muxui-state-focus-visible] .muxui-radio-field__indicator {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
   }
 }

@@ -224,7 +224,7 @@ export const CodeBlock: ForwardRefExoticComponent<CodeBlockProps & RefAttributes
       onKeyDown: (event) => { if (event.key === 'Escape') dismissFeedback(); },
       'aria-label': mode === 'diff' ? 'Copy updated code' : 'Copy code',
     }, React.createElement('span', { ref: copyIcon, className: 'muxui-code-block__copy-icon' },
-      React.createElement(status === 'copied' ? Check : Copy, { size: 16, 'aria-hidden': true, focusable: 'false' }))),
+      React.createElement(status === 'copied' ? Check : Copy, { className: 'muxui-code-block__copy-glyph', size: 16, 'aria-hidden': true, focusable: 'false' }))),
     })),
   listing.coarse && React.createElement('p', { className: 'muxui-code-block__notice' }, 'Large change shown as removed and added lines.'),
   mode === 'diff' && lineNumbers && React.createElement('span', { id: legendId, className: 'muxui-code-block__status' }, 'Original line numbers are in the first column. Updated line numbers are in the second.'),

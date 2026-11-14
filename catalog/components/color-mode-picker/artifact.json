@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:color-mode-picker",
+  "kind": "component",
+  "name": "ColorModePicker",
+  "summary": "Choose Light, Dark, or System as the color mode, with persistence.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Letting people choose a light or dark presentation, or to follow their operating system's preference."
+    ],
+    "avoidWhen": [
+      "When the application offers only a light and a dark choice and never follows the system; use ColorModeToggle.",
+      "When the product supports one fixed color scheme."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "option"
+  ],
+  "states": [
+    "idle",
+    "selected",
+    "focused",
+    "disabled"
+  ],
+  "accessibility": {
+    "nameRequired": false,
+    "obligations": [
+      "Exposes one radio group named Color mode, or by aria-label or aria-labelledby, whose radios are Light, Dark, and System.",
+      "Reads bounded localStorage and prefers-color-scheme without accessing browser globals during SSR.",
+      "Writes the Mux data-muxui-color-scheme hook on the document root."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "behavior": [
+        "The picker is a ToggleButtonGroup of three text options, Light, Dark, and System, with one selected and none able to be cleared.",
+        "The first render uses defaultMode, or System when it is not set, so server rendering and the first client render match.",
+        "localStorage and the operating system preference are read only after mount, never during server rendering.",
+        "After mount, the mode saved in localStorage under storageKey is restored when it is light or dark; any other saved value is ignored. Without one, defaultMode is used, and without that, System.",
+        "Light and Dark are written to data-muxui-color-scheme on the document root and saved under storageKey as light or dark, the format ColorModeToggle uses, so the two share a saved choice.",
+        "System removes the saved value from storage and writes the operating system's prefers-color-scheme to data-muxui-color-scheme, then follows later changes of that preference while System stays chosen. Choosing Light or Dark, or unmounting the picker, stops following and leaves the attribute as it was.",
+        "A change calls onModeChange with light, dark, or system; restoring a saved mode does not call it.",
+        "mode sets the selected option when the page controls it and is still written to the document root and storage; the picker does not change it, so the application updates mode.",
+        "The picker does not listen for changes to localStorage.",
+        "Nothing is written until the saved mode has been read, so a saved choice is never replaced by the default.",
+        "The picker is one radio group with one tab stop. Arrow keys move focus between the options, and Space or Enter selects the focused one.",
+        "The default name is Color mode. aria-label or aria-labelledby replaces it."
+      ],
+      "accessibility": [
+        "Exposes one radio group named Color mode, or by aria-label or aria-labelledby, whose radios are Light, Dark, and System.",
+        "Reads bounded localStorage and prefers-color-scheme without accessing browser globals during SSR.",
+        "Writes the Mux data-muxui-color-scheme hook on the document root."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.interaction-transition",
+            "requirement": "required"
+          }
+        ]
+      },
+      "runtimeProfiles": {}
+    }
+  }
+}

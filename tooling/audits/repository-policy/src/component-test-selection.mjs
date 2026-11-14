@@ -102,6 +102,9 @@ const FAMILY_EXTRA_TESTS = Object.freeze({
   Lightbox: ['test/heavy-components.test.mjs'],
   Markdown: ['test/heavy-components.test.mjs'],
   Resizable: ['test/heavy-components.test.mjs'],
+  // SwitchField draws Switch's switch and motion, so a change to either selects the proof that they paint and move alike.
+  Switch: ['test/browser/switch-motion.test.mjs'],
+  SwitchField: ['test/browser/switch-motion.test.mjs'],
   Table: ['test/browser/table-sort-indicator.test.mjs'],
   TextEditor: ['test/heavy-components.test.mjs', 'test/browser/text-editor-selection-actions.test.mjs'],
   TagSelect: ['test/browser/tag-select-focus.test.mjs'],

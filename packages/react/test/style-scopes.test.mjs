@@ -143,7 +143,7 @@ test('the authored !important declarations are exactly the pinned ones, by categ
   }
   const found = importantByCategory(authoredCss);
   assert.deepEqual(Object.fromEntries(Object.entries(found).map(([category, list]) => [category, list.length])), {
-    'forced-colors': 43, 'reduced-motion-media': 6, 'reduced-motion-attribute': 27, structural: 10,
+    'forced-colors': 50, 'reduced-motion-media': 6, 'reduced-motion-attribute': 27, structural: 10,
   });
   assert.deepEqual(found, importantPin);
   // The structural ones are internal parts, not accessibility adaptations.
@@ -152,8 +152,8 @@ test('the authored !important declarations are exactly the pinned ones, by categ
 
 test('the generated stylesheets keep every !important declaration in muxui.components', () => {
   const authored = authoredIdentities(authoredCss);
-  // styles.css carries all 86 once, including the shared supplemental stylesheet's 15; the theme sheets carry none.
-  assert.equal(authored.length, 86);
+  // styles.css carries all 93 once, including the shared supplemental stylesheet's 15; the theme sheets carry none.
+  assert.equal(authored.length, 93);
   assert.equal(authored.filter(([file]) => file === 'supplemental/styles.css').length, 15);
   assert.deepEqual(generatedIdentities(generatedCss['styles.css']), inComponentsLayer(authored));
   assert.deepEqual(importantDeclarations(generatedCss['themes.css']), []);
@@ -169,7 +169,7 @@ test('the !important pin fails when one is removed, swapped, changed, split by a
   assert.notDeepEqual(mutated((css) => css.replace(/\s*!important/u, '')), importantPin);
   // Equal count: one removed and an unrelated one added.
   const swapped = mutated((css) => unknown(css.replace(/\s*!important/u, '')));
-  assert.equal(Object.values(swapped).flat().length, 86);
+  assert.equal(Object.values(swapped).flat().length, 93);
   assert.notDeepEqual(swapped, importantPin);
   assert.notDeepEqual(mutated((css) => css.replace(first, '$1inherit$3')), importantPin);
   assert.notDeepEqual(mutated(unknown), importantPin);
@@ -184,7 +184,7 @@ test('the !important pin fails when one is removed, swapped, changed, split by a
   const chunk = authoredCss['supplemental/select-native.css'].trim();
   assert.ok(styles.includes(chunk), 'the generated stylesheet carries the chunk verbatim');
   const relayered = styles.replace(chunk, `}\n\n@layer muxui.utilities {\n${chunk}\n}\n\n@layer muxui.components {`);
-  assert.equal(importantDeclarations(relayered).length, 86);
+  assert.equal(importantDeclarations(relayered).length, 93);
   assert.notDeepEqual(generatedIdentities(relayered), inComponentsLayer(authoredIdentities(authoredCss)));
   assert.notDeepEqual(generatedIdentities(split(styles)), inComponentsLayer(authoredIdentities(authoredCss)));
 });

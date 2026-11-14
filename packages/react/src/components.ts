@@ -1,5 +1,6 @@
 import React from 'react';
 import type {
+  AnchorHTMLAttributes,
   ButtonHTMLAttributes,
   ForwardRefExoticComponent,
   HTMLAttributes,
@@ -10,10 +11,11 @@ import type {
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
-import { Breadcrumbs as AriaBreadcrumbs, DisclosurePanel as AriaDisclosurePanel, Label as AriaLabel, ProgressBar as AriaProgressBar, Separator as AriaSeparator } from 'react-aria-components';
+import { Breadcrumbs as AriaBreadcrumbs, DisclosurePanel as AriaDisclosurePanel, Label as AriaLabel, ProgressBar as AriaProgressBar, Separator as AriaSeparator, useLocale } from 'react-aria-components';
 import { AriaBreadcrumb, AriaCheckbox, AriaDisclosure, AriaDisclosureGroup, AriaGroup, AriaLink, AriaToggleButton, AriaButton } from './substrate.ts';
 import type { CheckboxProps as AriaCheckboxProps, LinkProps as AriaLinkProps, PressEvent, ToggleButtonProps as AriaToggleButtonProps } from 'react-aria-components';
 import type { ButtonPointerType } from './button.ts';
+import { withHostAttributes } from './button.ts';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
@@ -181,7 +183,10 @@ export const Checkbox: ForwardRefExoticComponent<CheckboxProps & RefAttributes<H
     defaultSelected: defaultChecked,
     isDisabled: disabled,
     isIndeterminate: indeterminate,
-    isInvalid: invalid,
+    // React Aria reads isInvalid: false as controlled-valid, which would hide a failed required check after a blocked
+    // submit, so it is passed only when invalid is set, as the fields do. A conditional, not ||: extraction reads a
+    // fallback on an owned prop as an executed default.
+    isInvalid: invalid ? invalid : undefined,
     // Undefined lets a checkbox inherit its CheckboxGroup's required state.
     ...(required === undefined ? {} : { isRequired: required }),
     name,
@@ -194,7 +199,7 @@ export const Checkbox: ForwardRefExoticComponent<CheckboxProps & RefAttributes<H
         'data-muxui-state-selected': isSelected || undefined,
         'data-muxui-state-indeterminate': isIndeterminate || undefined,
       }, isIndeterminate || isSelected
-        ? React.createElement(isIndeterminate ? MinusIcon : CheckIcon, { 'aria-hidden': 'true', focusable: 'false', size: 12 })
+        ? React.createElement(isIndeterminate ? MinusIcon : CheckIcon, { className: 'muxui-checkbox__indicator-icon', 'aria-hidden': 'true', focusable: 'false', size: 12 })
         : null),
       React.createElement('span', { className: 'muxui-checkbox__label' }, children)),
   });
@@ -301,6 +306,8 @@ export const Disclosure: ForwardRefExoticComponent<DisclosureProps & RefAttribut
       ...props,
       ref,
       className: classNames('muxui-disclosure', className),
+      // React Aria takes the id as the Disclosure's key in a group and leaves it off the element, so the root gets it here.
+      render: (domProps) => React.createElement('div', withHostAttributes({ ...props, id }, domProps)),
       id,
       isExpanded: expanded,
       defaultExpanded,
@@ -398,9 +405,11 @@ export interface LinkOwnProps {
   onActivate?: (event: LinkActivationEvent) => void;
 }
 
-export interface LinkProps extends LinkOwnProps, Omit<HTMLAttributes<HTMLElement>, keyof LinkOwnProps | 'children' | 'className' | 'onClick'> {
+export interface LinkProps extends LinkOwnProps, Omit<HTMLAttributes<HTMLElement>, keyof LinkOwnProps | 'children' | 'className'>, Pick<AnchorHTMLAttributes<HTMLAnchorElement>, 'hrefLang' | 'ping' | 'referrerPolicy' | 'type'> {
   children?: ReactNode;
   className?: string;
+  /** The native download attribute: true downloads the destination, a string also names the saved file. React types it any. */
+  download?: boolean | string;
 }
 
 /** A link to another location. */
@@ -413,12 +422,14 @@ export const Link: ForwardRefExoticComponent<LinkProps & RefAttributes<HTMLEleme
   rel,
   className,
   onActivate,
+  onClick,
   ...props
 }, ref) {
   // Like Button, an undefined disabled inherits a disabled GridList item; an explicit false still
   // wins. A Link without an href is always disabled, and an empty href is not forwarded because
   // React warns about it. The RAC Link always gets an explicit isDisabled.
   const inheritedDisabled = React.useContext(GridListItemDisabledContext);
+  const isDisabled = !href || (disabled == null ? inheritedDisabled : disabled);
   return React.createElement(AriaLink, {
     // React Aria passes the native attributes it does not own through to the <a>; its focus and
     // keyboard handler types name Element where React's name HTMLElement.
@@ -427,12 +438,24 @@ export const Link: ForwardRefExoticComponent<LinkProps & RefAttributes<HTMLEleme
     ref: ref as React.Ref<HTMLAnchorElement>,
     // Conditionals, not || and ??: extraction reads a fallback on an owned prop as an executed default.
     href: href ? href : undefined,
-    isDisabled: !href || (disabled == null ? inheritedDisabled : disabled),
+    isDisabled,
     target,
     rel,
     className: classNames('muxui-link', className),
     ...{ 'aria-current': current ? 'page' : undefined },
     onPress: (event: PressEvent) => onActivate?.(activationEvent(event, event.target as HTMLAnchorElement)),
+    // The element React Aria would render: an anchor while the Link can be followed, otherwise a span.
+    render: (domProps) => React.createElement(isDisabled ? 'span' : 'a', {
+      ...withHostAttributes(props, domProps),
+      // onClick goes on the element, not to React Aria: React Aria would also call it for a keyboard press, after the
+      // browser has already followed the link, with a copy of the event whose preventDefault does nothing. Here it runs
+      // once per native click (pointer, Enter, element.click()) before React Aria's press handling, and its
+      // preventDefault keeps the Link from navigating. onActivate still reports the activation.
+      onClick: (event: React.MouseEvent<HTMLAnchorElement>) => {
+        if (!isDisabled) onClick?.(event);
+        domProps.onClick?.(event);
+      },
+    }),
   }, children);
 });
 
@@ -473,10 +496,11 @@ export const Meter: ForwardRefExoticComponent<MeterProps & RefAttributes<HTMLDiv
   const externalLabel = props['aria-label'];
   const externalLabelledby = props['aria-labelledby'];
   const labelId = React.useId();
+  const { locale } = useLocale();
   const boundedValue = Math.min(maxValue, Math.max(minValue, value));
   const percentage = maxValue === minValue ? 0 : ((boundedValue - minValue) / (maxValue - minValue)) * 100;
   // A conditional, not ??: the percent format is the omitted formatOptions' behaviour, not a default the block states.
-  const formatter = new Intl.NumberFormat(undefined, formatOptions == null ? { style: 'percent' } : formatOptions);
+  const formatter = new Intl.NumberFormat(locale, formatOptions == null ? { style: 'percent' } : formatOptions);
   const valueText = formatter.format(!formatOptions || formatOptions.style === 'percent' ? percentage / 100 : boundedValue);
   return React.createElement('div', {
     ...props,

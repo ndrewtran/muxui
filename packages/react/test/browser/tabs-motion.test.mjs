@@ -4,6 +4,7 @@ import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { TabsMotionFixture } from '../fixtures/tabs-motion-fixture.mjs';
 import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { assertEntersInPlace, assertFillClear, assertFollowsDirection, assertHiddenInForcedColors, assertIdle, assertJumped, assertLayerColor, assertParksWithoutFade, assertReentersFromFade, assertSkipsItem, assertTravelled, faded, travel } from './hover-layer-probes.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(TabsMotionFixture)));
@@ -49,7 +50,7 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     await awaitFontsAndFrames(page);
     assert.deepEqual(errors, []);
     assert.match(await page.locator('#primary-tabs').getAttribute('class'), /tabs-primary/u);
-    assert.equal(await page.locator('.muxui-tabs__panels').count(), 2, 'SSR and hydration retain both tab panel trees');
+    assert.equal(await page.locator('.muxui-tabs__panels').count(), 3, 'SSR and hydration retain every tab panel tree');
 
     const initial = await readIndicator(page, '#primary-tabs');
     assert.equal(initial.selectedLabel, 'A');
@@ -57,6 +58,36 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     assert.ok(Math.abs(initial.indicator.width - initial.label.width) < 1, 'indicator uses label width');
     assert.ok(initial.trigger.width > initial.label.width + 8, 'variable trigger padding is not included in the indicator');
     assert.equal(await page.locator('#primary-tabs [role="tab"][aria-disabled="true"]').count(), 1);
+
+    // One hover layer follows the pointer between enabled tabs, on the same spring as the underline.
+    const hover = { page, layer: '#primary-tabs .muxui-tabs__hover', items: '#primary-tabs [role="tab"]' };
+    const setStateDuration = (duration) => page.evaluate((value) => {
+      for (const property of ['--muxui-semantic-motion-state-duration', '--muxui-semantic-motion-state-transition-duration', '--muxui-semantic-motion-state-transition-spring-visual-duration']) {
+        if (value) document.documentElement.style.setProperty(property, value);
+        else document.documentElement.style.removeProperty(property);
+      }
+    }, duration);
+    await setStateDuration('160ms');
+    assertTravelled(await travel(hover, 0, 1), 'underline hover');
+    await assertFillClear(hover, 1, 'hovered underline tab leaves its fill to the hover layer');
+    await assertLayerColor(hover, 'var(--muxui-semantic-surface-hover)', 'underline hover layer paints the surface hover colour');
+    await assertIdle(hover, 'underline hover');
+    await assertHiddenInForcedColors(hover, 'forced colors hide the underline hover layer');
+    await assertSkipsItem(hover, 1, 2, 'disabled tab');
+    await assertEntersInPlace(hover, 1, 0, 'underline hover entering the group');
+    await assertReentersFromFade(hover, 0, 1, 'underline hover re-entering during its fade');
+    await page.mouse.move(0, 0);
+    await faded(hover);
+    await assertFollowsDirection(hover, 0, 'underline hover');
+    await assertParksWithoutFade(hover, setStateDuration, 'underline hover');
+    await setStateDuration('160ms');
+    await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
+    await page.waitForFunction(() => document.querySelector('#primary-tabs .muxui-tabs__hover')?.hasAttribute('data-muxui-hover-reduced'));
+    assertJumped(await travel(hover, 0, 1), 'reduced underline hover');
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
+    await page.waitForFunction(() => !document.querySelector('#primary-tabs .muxui-tabs__hover')?.hasAttribute('data-muxui-hover-reduced'));
+    await setStateDuration();
 
     await page.evaluate(() => { document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '800ms'); document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '800ms'); });
     await page.evaluate(() => window.__muxuiTabsSetSelected('long'));
@@ -180,6 +211,8 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
         && Math.abs(indicator.getBoundingClientRect().width - label.getBoundingClientRect().width) < 1;
     }, undefined, { timeout: 1000 });
     assert.ok(Date.now() - systemReducedStarted < 300, 'system reduced mode settles the active indicator immediately');
+    await page.waitForFunction(() => document.querySelector('#primary-tabs .muxui-tabs__hover')?.hasAttribute('data-muxui-hover-reduced'));
+    assertJumped(await travel(hover, 0, 1), 'system reduced underline hover');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-state-duration');
@@ -187,8 +220,79 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
       window.__muxuiTabsUnmount();
     });
     await page.locator('#tabs-unmounted').waitFor({ state: 'attached' });
-    assert.equal(await page.locator('.muxui-tabs__motion-underline').count(), 0, 'unmount removes per-instance indicator nodes');
+    assert.equal(await page.locator('.muxui-tabs__motion-underline, .muxui-tabs__hover').count(), 0, 'unmount removes per-instance indicator and hover nodes');
     assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await browser?.close();
+    await close();
+  }
+});
+
+/** The selected tab's mark: the measured indicator once the motion is ready, else the CSS stand-in; runs in the page. */
+function readSelectedMark(selector) {
+  const root = document.querySelector(selector);
+  const motion = root.querySelector('.muxui-tabs__motion');
+  const tab = root.querySelector('[role="tab"][aria-selected="true"]');
+  // Where the selected label's text is drawn, which the stand-in's layout must not move.
+  const range = document.createRange();
+  range.selectNodeContents(tab.querySelector('.muxui-tabs__tab-label'));
+  const { left: textLeft, top: textTop } = range.getBoundingClientRect();
+  const text = { left: Math.round(textLeft * 10) / 10, top: Math.round(textTop * 10) / 10 };
+  const paint = (style, box) => ({ text, box: Object.fromEntries(Object.entries(box).map(([key, value]) => [key, Math.round(value * 10) / 10])), color: style.backgroundColor, radius: style.borderTopLeftRadius });
+  // Each place the stand-in can be drawn, and whether it is drawn there.
+  const standIns = [tab.querySelector('.muxui-tabs__tab-label'), tab].map((host) => ({ host, style: getComputedStyle(host, '::after') }))
+    .filter(({ style }) => style.content !== 'none' && style.content !== 'normal');
+  if (motion.hasAttribute('data-muxui-tabs-ready')) {
+    const indicator = root.querySelector('.muxui-tabs__motion-underline');
+    const { left, top, width, height } = indicator.getBoundingClientRect();
+    return { ready: true, standIns: standIns.length, opacity: getComputedStyle(indicator).opacity, ...paint(getComputedStyle(indicator), { left, top, width, height }) };
+  }
+  if (standIns.length !== 1) return { ready: false, standIns: standIns.length };
+  const [{ host, style }] = standIns;
+  const base = host.getBoundingClientRect();
+  return { ready: false, standIns: 1, opacity: style.opacity, ...paint(style, { left: base.left + parseFloat(style.left), top: base.top + parseFloat(style.top), width: parseFloat(style.width), height: parseFloat(style.height) }) };
+}
+
+test('an underline Tabs marks its selected tab in server markup, where the measured indicator then lands', { timeout: 90_000 }, async () => {
+  const { url, close } = await startServer({ entries: ['src/collections.mjs'], pages: { '/tabs-motion.html': documentHtml } });
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const open = async (hydrate, forcedColors) => {
+      const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+      await page.emulateMedia({ forcedColors });
+      // Without its entry module the page stays the server markup, as a reader meets it before hydration or with scripts off.
+      if (!hydrate) await page.route('**/tabs-motion-browser-entry.mjs', (route) => route.abort());
+      await page.goto(`${url}/tabs-motion.html`, { waitUntil: 'load' });
+      if (hydrate) await page.waitForFunction(() => [...document.querySelectorAll('.muxui-tabs__motion')].every((motion) => motion.hasAttribute('data-muxui-tabs-ready')));
+      await awaitFontsAndFrames(page);
+      return page;
+    };
+    for (const forcedColors of ['none', 'active']) {
+      const server = await open(false, forcedColors);
+      const hydrated = await open(true, forcedColors);
+      // Forced colours repaint an author background as Canvas, which would cut the mark out of the rail; it is Highlight instead.
+      const highlight = forcedColors === 'active' ? await server.evaluate(() => {
+        const probe = document.body.appendChild(Object.assign(document.createElement('div'), { style: 'forced-color-adjust: none; background-color: Highlight' }));
+        const color = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return color;
+      }) : undefined;
+      // #unequal-tabs selects a plain tab beside a taller one, so its label sits above the row's bottom edge.
+      for (const selector of ['#primary-tabs', '#vertical-tabs', '#unequal-tabs']) {
+        const label = `${selector} (forced colours ${forcedColors})`;
+        const before = await server.evaluate(readSelectedMark, selector);
+        const after = await hydrated.evaluate(readSelectedMark, selector);
+        assert.equal(before.ready, false, `${label} has no motion before hydration`);
+        assert.equal(before.standIns, 1, `${label} draws one selected mark before hydration`);
+        assert.equal(after.standIns, 0, `${label} drops the stand-in once the indicator is ready`);
+        assert.deepEqual([before.opacity, after.opacity], ['1', '1'], `${label} shows both marks`);
+        assert.deepEqual({ box: before.box, color: before.color, radius: before.radius }, { box: after.box, color: after.color, radius: after.radius }, `${label} indicator lands exactly on the server mark`);
+        assert.deepEqual(before.text, after.text, `${label} label text stays where it was drawn`);
+        if (highlight) assert.equal(after.color, highlight, `${label} draws both marks in Highlight`);
+      }
+      await Promise.all([server.close(), hydrated.close()]);
+    }
   } finally {
     await browser?.close();
     await close();

@@ -244,8 +244,8 @@
 		"wide": 64
 	},
 	"switch-field": {
-		"narrow": 84,
-		"wide": 84
+		"narrow": 64,
+		"wide": 64
 	},
 	"table": {
 		"narrow": 216,

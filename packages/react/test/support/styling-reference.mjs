@@ -72,6 +72,7 @@ const defaultRoot = resolve(import.meta.dirname, '../../../..');
  * @property {string} [qualifier] The element predicate of a root-element row (`button` for Card.Button).
  * @property {string} [conditional] Why the element depends on the caller, for a `callerSupplied` row.
  * @property {string} [composedOf] The family whose root class the element also carries (`button`).
+ * @property {string} [styledThrough] The class the element also carries whose rules style it: the part's states are the ones those rules select.
  * @property {boolean} [hookOnly] No Mux rule styles the hook.
  * @property {string} [noElement] Why a `none` row renders no element (provider, children, substrate, caller, state).
  * @property {string} [companion] For a reflected row selected through a companion hook: that hook.
@@ -966,6 +967,8 @@ export async function readStylingFacts(root = defaultRoot) {
 // ---------------------------------------------------------------------------------------------------------------------------
 
 const documentedDispositions = ['class', 'root-element', 'field', 'composed'];
+/** The classes a rule can select a row's element by: its hook, and the class it is `styledThrough`. */
+const hooksOfRow = (row) => (row.styledThrough === undefined ? [row.hook] : [row.hook, row.styledThrough]);
 const tagText = (tags) => tags.map((tag) => `<${tag}>`).join(', ');
 const listText = (list) => list.join(', ');
 
@@ -1005,7 +1008,7 @@ const insideAny = (element, roots) => { for (let node = element.parent; node && 
 function selectedParts({ attribute, rows, observed, facts }) {
   const byClass = facts.selection.get(attribute);
   if (!byClass) return { parts: [], internal: [], companion: null };
-  const own = rows.filter((row) => documentedDispositions.includes(row.disposition) && byClass.has(row.hook)).map((row) => row.part);
+  const own = rows.filter((row) => documentedDispositions.includes(row.disposition) && hooksOfRow(row).some((hook) => byClass.has(hook))).map((row) => row.part);
   const internal = unique(rows.filter((row) => row.disposition === 'internal' && byClass.has(row.hook)).map((row) => row.part));
   const rootPart = observed.rootRow?.part;
   const found = observed.companions.find(({ hook }) => byClass.has(hook));
@@ -1036,7 +1039,7 @@ function onText(emittedOn, selectedOn) {
 }
 
 /** The note of a class row. One function builds every note so the docs and Storybook print the same words. */
-function classNote(row, { qualifierTag, owner, rootHook, observedAnywhere, hasRenders }) {
+function classNote(row, { qualifierTag, owner, throughOwner, rootHook, observedAnywhere, hasRenders }) {
   const sentences = [];
   if (row.disposition === 'none') return `Renders no element (${noElementPhrases[row.reason]}).`;
   if (row.disposition === 'internal') return 'Internal: no hook.';
@@ -1047,6 +1050,7 @@ function classNote(row, { qualifierTag, owner, rootHook, observedAnywhere, hasRe
   if (row.callerSupplied !== undefined) sentences.push(row.callerSupplied);
   else if (row.composedOf !== undefined) sentences.push(`Composed from ${pascal(row.composedOf)}: also carries .muxui-${row.composedOf}.`);
   if (row.exception !== undefined) sentences.push(row.exception);
+  if (row.styledThrough !== undefined) sentences.push(`Styled through .${row.styledThrough}, which the element also carries${throughOwner === undefined ? '' : ` (${pascal(throughOwner)})`}.`);
   if (row.hookOnly !== undefined) sentences.push('Hook only: no Mux rule styles it.');
   if (hasRenders && !observedAnywhere) sentences.push('Not in a catalog example.');
   return sentences.join(' ');
@@ -1077,7 +1081,7 @@ function hookRows({ slug, rows, observed, facts }) {
       part: row.part,
       disposition: row.disposition,
       origin: 'part',
-      selectedOn: documented && facts.selectedClasses.has(row.hook) ? [row.part] : [],
+      selectedOn: documented && hooksOfRow(row).some((hook) => facts.selectedClasses.has(hook)) ? [row.part] : [],
       emittedOn: elements.length > 0 ? [row.part] : [],
       tags,
       inRoot,
@@ -1085,9 +1089,10 @@ function hookRows({ slug, rows, observed, facts }) {
       ...(qualifierTag && { qualifier: qualifierTag }),
       ...(row.callerSupplied !== undefined && { conditional: row.callerSupplied }),
       ...(row.composedOf !== undefined && { composedOf: row.composedOf }),
+      ...(row.styledThrough !== undefined && { styledThrough: row.styledThrough }),
       ...(row.hookOnly !== undefined && { hookOnly: true }),
       ...(row.disposition === 'none' && { noElement: row.reason }),
-      note: classNote(row, { qualifierTag, owner: ownerOf(row.hook) ?? slug, rootHook, observedAnywhere: elements.length > 0, hasRenders: hasRenders && documented }),
+      note: classNote(row, { qualifierTag, owner: ownerOf(row.hook) ?? slug, throughOwner: row.styledThrough === undefined ? undefined : ownerOf(row.styledThrough), rootHook, observedAnywhere: elements.length > 0, hasRenders: hasRenders && documented }),
       provenance: found.map(({ source }) => source),
     };
   });
@@ -1114,7 +1119,7 @@ function catalogAttributes(states, facts) {
  * because a shared hook is selected for the states of every family that uses it.
  */
 function styledStateAttributes({ rows, observed, facts }) {
-  const hooksOf = (dispositions) => new Set([...rows.filter((row) => dispositions.includes(row.disposition) && row.hook).map((row) => row.hook), ...observed.companions.map(({ hook }) => hook)]);
+  const hooksOf = (dispositions) => new Set([...rows.filter((row) => dispositions.includes(row.disposition) && row.hook).flatMap(hooksOfRow), ...observed.companions.map(({ hook }) => hook)]);
   const states = [...facts.selection].filter(([attribute]) => attribute.startsWith('data-muxui-state-'));
   const styledOn = (hooks) => states.filter(([, byClass]) => [...byClass.keys()].some((name) => hooks.has(name))).map(([attribute]) => attribute);
   return { own: styledOn(hooksOf(['class', 'root-element'])), wide: styledOn(hooksOf(documentedDispositions)) };
@@ -1562,12 +1567,16 @@ const interactionPseudos = new Set(['hover', 'active', 'focus', 'focus-visible',
 
 /**
  * What a pseudo-class is on an element of the Basic example at rest. `:not()`, `:is()` and `:where()` are decided by their
- * arguments and an interaction pseudo-class is false. Every other one (`:disabled`, `:first-child`, `:has()`) is unknown, and unknown
- * stays unknown through `:not()` and `:is()`: a rule that depends on it is never read as not applying.
+ * arguments and an interaction pseudo-class is false. `:checked` on an input is its `checked` attribute, which the server markup
+ * writes, and `:has()` is decided when each of its selectors is one compound under a descendant or child combinator (the native
+ * choice state rules ask `:has(input:checked)`). Every other one (`:disabled`, `:first-child`, `:has()` of a sibling or a chain) is
+ * unknown, and unknown stays unknown through `:not()` and `:is()`: a rule that depends on it is never read as not applying.
  * @returns {boolean | null}
  */
 function atRest({ name, selectors }, element) {
   if (name === 'is' || name === 'where') return anyMatches(selectors, element);
+  if (name === 'checked' && element.tag === 'input') return element.attributes.has('checked');
+  if (name === 'has') return hasAtRest(selectors, element);
   if (name === 'not') {
     const found = anyMatches(selectors, element);
     return found === null ? null : !found;
@@ -1575,6 +1584,25 @@ function atRest({ name, selectors }, element) {
   // The example's elements are inside the body; none is the document element.
   if (name === 'root') return false;
   return interactionPseudos.has(name) ? false : null;
+}
+
+/** Whether `element` has a descendant (or, for `>`, a child) that one of the one-compound `selectors` matches at rest. */
+function hasAtRest(selectors, element) {
+  if (!selectors.every(({ compounds }) => compounds.length === 1 && [' ', '>'].includes(compounds[0].combinator))) return null;
+  let result = false;
+  const visit = (parent, depth) => {
+    for (const child of elementsOf(parent)) {
+      for (const { compounds: [compound] } of selectors) {
+        if (compound.combinator === '>' && depth > 0) continue;
+        const found = matchComplex({ compounds: [{ ...compound, combinator: ' ' }] }, child, atRest);
+        if (found === true) return true;
+        if (found === null) result = null;
+      }
+      if (visit(child, depth + 1)) return true;
+    }
+    return false;
+  };
+  return visit(element, 0) ? true : result;
 }
 
 /** Whether some selector of a list matches `element` at rest: true, false, or null when none does for sure and one may. */
@@ -1994,7 +2022,7 @@ const readmePath = 'packages/react/README.md';
  * Button, and the Hooks block reads Button's rules for it).
  */
 function sourcePaths({ rows, observed, facts }) {
-  const hooks = new Set([...rows.filter((row) => documentedDispositions.includes(row.disposition)).map((row) => row.hook), ...observed.companions.map(({ hook }) => hook)]);
+  const hooks = new Set([...rows.filter((row) => documentedDispositions.includes(row.disposition)).flatMap(hooksOfRow), ...observed.companions.map(({ hook }) => hook)]);
   // A file styles a hook when a rule's subject is the hook or one of its modifiers (`muxui-text--sm`).
   const styles = facts.authored.filter(({ classes }) => [...hooks].some((name) => classes.has(name) || [...classes].some((candidate) => candidate.startsWith(`${name}--`)))).map(({ path }) => path);
   return [partMapPath, referencePath, ...styles, tokenRecordPath, readmePath, 'catalog/guides/foundations-component-tokens.md'];

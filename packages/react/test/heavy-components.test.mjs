@@ -61,8 +61,8 @@ test('Markdown returns its fallback for source, line count, and line length boun
 });
 test('Markdown preserves indented code as paragraph content while fencing creates code blocks', () => {
   const html = renderToStaticMarkup(React.createElement(Markdown, { source: '    indented code\n\n```js\nfenced code\n```' }));
-  assert.match(html, /<p>indented code<\/p>/u);
-  assert.match(html, /<pre class="muxui-markdown__code-block" data-muxui-language="js"><code>fenced code<\/code><\/pre>/u);
+  assert.match(html, /<p class="muxui-markdown__paragraph">indented code<\/p>/u);
+  assert.match(html, /<pre class="muxui-markdown__code-block" data-muxui-language="js"><code class="muxui-markdown__code-block-content">fenced code<\/code><\/pre>/u);
 });
 test('TextEditor only accepts the finite owned document grammar', () => {
   const input = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hi', marks: [{ type: 'link', attrs: { href: 'javascript:bad' } }] }] }, { type: 'script', content: [] }] };

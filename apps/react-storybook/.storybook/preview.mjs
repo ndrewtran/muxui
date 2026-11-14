@@ -7,6 +7,7 @@ import * as MuxUI from '@muxui/react';
 import { backgroundOptions, buildTheme } from './theme.mjs';
 import { ComponentDocs } from './component-docs-page.mjs';
 import '@muxui/react/styles.css';
+import '@muxui/react/themes.css';
 import './preview.css';
 
 const colorSchemeItems = [

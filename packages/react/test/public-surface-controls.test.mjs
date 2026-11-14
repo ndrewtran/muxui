@@ -2,12 +2,12 @@
 // it exists for (a synthetic baseline and a mutated copy of it go through the same harness), the packages
 // resolve as intended, and a compile that cannot be trusted stops the check instead of passing it.
 import assert from 'node:assert/strict';
-import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 import { consumerTsc, tscDiagnostics, typeScript7Tsc } from './support/declaration-surface.mjs';
 import { applyAccepted, comparePublicSurfaces, interpretDiagnostics } from './support/public-surface-probes.mjs';
-import { assertResolution, createSnapshots, entrySpecifier } from './support/public-surface-snapshots.mjs';
+import { assertResolution, createSnapshots, entrySpecifier, loadBaseline, loadCurrent } from './support/public-surface-snapshots.mjs';
 import { MAX_NESTED_DEPTH, inventoryOf, inventoryProblems, listSubjects } from './support/public-surface-subjects.mjs';
 
 const compilers = [{ label: 'TypeScript 7', tsc: typeScript7Tsc() }, { label: 'TypeScript 6', tsc: consumerTsc() }];
@@ -21,6 +21,23 @@ test('an accepted difference absorbs only its own assertion, with the values it 
     const result = applyAccepted([other], [entry]);
     assert.deepEqual(result.unaccepted, [other]);
     assert.deepEqual(result.stale, [entry]);
+  }
+  // An entry for one compiler and mode is in play only in that run, so it is neither absorbing nor stale elsewhere.
+  // A union diagnostic has no parsed old and new values, so its entry names the diagnostic's own text instead. An entry
+  // that names neither absorbs nothing, not even a failure that has no values either; one that names the text absorbs
+  // exactly that text.
+  const text = '{ old: "a"; new: "a" | ... 1 more ... | "c"; } | { ...; }';
+  const diagnostic = { subject: 'S', assertion: 'optional', message: text };
+  const bare = { subject: 'S', assertion: 'optional' };
+  assert.deepEqual(applyAccepted([diagnostic], [bare]), { unaccepted: [diagnostic], stale: [bare] });
+  const named = { ...bare, message: text };
+  assert.deepEqual(applyAccepted([diagnostic], [named]), { unaccepted: [], stale: [] });
+  const changed = { ...diagnostic, message: text.replace('1 more', '2 more') };
+  assert.deepEqual(applyAccepted([changed], [named]), { unaccepted: [changed], stale: [named] });
+  const scoped = { ...entry, compiler: 'TypeScript 7', mode: 'loose' };
+  assert.deepEqual(applyAccepted([failure], [scoped], { compiler: 'TypeScript 7', mode: 'loose' }), { unaccepted: [], stale: [] });
+  for (const run of [{ compiler: 'TypeScript 6', mode: 'loose' }, { compiler: 'TypeScript 7', mode: 'exact' }]) {
+    assert.deepEqual(applyAccepted([failure], [scoped], run), { unaccepted: [failure], stale: [] });
   }
 });
 
@@ -438,4 +455,41 @@ test('a compiler that crashes, is killed, or prints nothing stops the check inst
     assert.throws(() => comparePublicSurfaces(snapshots, compiler('signal.mjs', "process.kill(process.pid, 'SIGKILL');")), /was stopped by SIGKILL/u);
     assert.throws(() => comparePublicSurfaces(snapshots, compiler('silent.mjs', 'process.exit(0);')), /no resolution of @muxui\/react was traced/u);
   });
+});
+
+// A second optional prop on Popover, added to the real declarations, is a difference no accepted entry names. The accepted
+// entries for the Popover colorScheme prop state the diagnostics of that one addition, so they cannot absorb another one.
+// Only Popover's two subjects are probed, which is all the entries are about; the whole surface is
+// public-surface-baseline.test.mjs.
+test('a second optional prop on Popover is an unaccepted difference under every compiler and mode, and the real declarations leave none', () => {
+  const POPOVER = ['.:props:Popover', '.:type:PopoverProps'];
+  const { accepted } = JSON.parse(readFileSync(join(import.meta.dirname, 'fixtures/public-surface-accepted.json'), 'utf8'));
+  const current = loadCurrent();
+  const declaration = 'export type PopoverOwnProps = {\n';
+  const overlays = current.files['overlays.d.ts'];
+  assert.equal(overlays.split(declaration).length, 2, 'the declaration to extend is there once');
+  const probed = (text) => {
+    const snapshots = createSnapshots({ baseline: loadBaseline(), current: { ...current, files: { ...current.files, 'overlays.d.ts': text } } });
+    try {
+      return comparePublicSurfaces(snapshots, compilers, { only: POPOVER });
+    } finally {
+      snapshots.dispose();
+    }
+  };
+  const leftOver = (comparison) => comparison.runs.flatMap((run) => ['loose', 'exact'].map((mode) => ({ label: `${run.label}, ${mode}`, ...applyAccepted(run[mode].failures, accepted, { compiler: run.label, mode }) })));
+
+  // The real declarations: every difference is accepted, and no entry for these subjects is left unused.
+  const real = leftOver(probed(overlays));
+  assert.equal(real.length, compilers.length * 2);
+  for (const { label, unaccepted, stale } of real) {
+    assert.deepEqual(unaccepted, [], `${label}: nothing is unaccepted`);
+    assert.deepEqual(stale.filter(({ subject }) => POPOVER.includes(subject)), [], `${label}: no entry for Popover is stale`);
+  }
+
+  // A second optional prop leaves only Popover's own difference unaccepted, in every run.
+  const mutated = leftOver(probed(overlays.replace(declaration, `${declaration}    rogue?: boolean;\n`)));
+  assert.equal(mutated.length, compilers.length * 2);
+  for (const { label, unaccepted } of mutated) {
+    assert.deepEqual([...new Set(unaccepted.map(({ subject }) => subject))].sort(), POPOVER, `${label}: both Popover subjects have an unaccepted difference`);
+  }
 });
