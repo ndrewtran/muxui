@@ -3,7 +3,7 @@
   "tranche": "R1.5",
   "compatibility": {
     "runtimeProfile": "web.react",
-    "node": ">=24.19.0 <25",
+    "node": ">=24.19.0 <27",
     "react": ">=19.2.0 <20",
     "reactDom": ">=19.2.0 <20",
     "browserMatrix": {

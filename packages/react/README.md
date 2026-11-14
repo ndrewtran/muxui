@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:dcc7f4ffc63e84dd7edc05ad6acd83a2c2de7a0d43d874a66de9e16989707044 -->
+<!-- @generated-content-sha256: sha256:7c3685df530a350bb3f19c64eb4987f2459e7f0d4a59c3355e8793b68dc71642 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -26,7 +26,7 @@ Install the prerelease from the `next` dist-tag on npm:
 pnpm add @muxui/react@next
 ```
 
-It requires Node.js `>=24.19.0 <25`, React `>=19.2.0 <20`, and React DOM `>=19.2.0 <20`. npm also points `latest` at the first published version; that is not a stable or `latest` support claim.
+It requires Node.js `>=24.19.0 <27`, React `>=19.2.0 <20`, and React DOM `>=19.2.0 <20`. npm also points `latest` at the first published version; that is not a stable or `latest` support claim.
 
 ## Usage
 

@@ -18,7 +18,7 @@ points `latest` at a package's first published version; that is not a stable or
 pnpm add @muxui/catalog@next
 ```
 
-It requires Node.js `>=24.19.0 <25`.
+It requires Node.js `>=24.19.0 <27`.
 
 ## Entries
 

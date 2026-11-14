@@ -39,7 +39,7 @@ results, navigation, labels, and custom item content.
 | ID | Remaining requirement | Owner / completion condition |
 | --- | --- | --- |
 | B11 | CSS/token/part mapping and theme application | Bento maps selectors and tokens across shell/native chrome documents, preserves its 16px rem assumptions and atomic theme updates. |
-| B13a | Consumer Node policy | Resolve Bento's Node 20 tooling against Mux's declared `>=24.19.0 <25` engine contract and verify the chosen supported install/build path. No browser runtime incompatibility has been established. |
+| B13a | Consumer Node policy | Resolve Bento's Node 20 tooling against Mux's declared `>=24.19.0 <27` engine contract and verify the chosen supported install/build path. No browser runtime incompatibility has been established. |
 | B13b | Reproducible Mux distribution and installation | Wire the chosen package/tarball source into Bento's development and frozen release lock workflows. |
 | B14 | React Aria dependency resolution | Align Bento's forced aliases and manual chunks with Mux's pinned substrate; verify a single context copy. Bento's React peer version already satisfies Mux. |
 | B15 | Row and Column layout helpers | Provide explicit Bento-owned helpers or admit a Mux-owned layout API. |

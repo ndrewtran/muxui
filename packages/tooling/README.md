@@ -21,7 +21,7 @@ pnpm exec muxui manifest
 The command reads the `@muxui/catalog` the project declares; without one it
 reports `MUXUI_CATALOG_NOT_DECLARED`. It runs inside a pnpm project (a
 `pnpm-lock.yaml` and a `packageManager` of exactly `pnpm@10.33.0`) on Node.js
-`>=24.19.0 <25`.
+`>=24.19.0 <27`.
 
 ## Entries
 
