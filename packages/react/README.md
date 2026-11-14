@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:8c10a34158215d86d8f922b1dce7bcad0055d8fbd36b41c3e84623ec643d39b9 -->
+<!-- @generated-content-sha256: sha256:dcc7f4ffc63e84dd7edc05ad6acd83a2c2de7a0d43d874a66de9e16989707044 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -45,7 +45,7 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
 
-`styles.css` loads the bundled Inter, Playfair Display and Roboto Mono faces from `assets/fonts` as woff2 slices by script and falls back to a face's complete TTF only for a character no slice holds, so a page of Latin text fetches the 106 kB Latin slice of upright Inter instead of its 877 kB TTF.
+`styles.css` loads the bundled Inter and Roboto Mono faces from `assets/fonts` as woff2 slices by script and falls back to a face's complete TTF only for a character no slice holds, so a page of Latin text fetches the 106 kB Latin slice of upright Inter instead of its 877 kB TTF. Playfair Display loads as its complete TTFs.
 
 ## Locale and routing
 

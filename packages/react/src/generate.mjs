@@ -565,7 +565,7 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 
 Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a theme scope after importing \`styles.css\` to activate the canonical viewport-based values for that scope; the default \`:root\` values remain static.
 
-\`styles.css\` loads the bundled Inter, Playfair Display and Roboto Mono faces from \`assets/fonts\` as woff2 slices by script and falls back to a face's complete TTF only for a character no slice holds, so a page of Latin text fetches the 106 kB Latin slice of upright Inter instead of its 877 kB TTF.
+\`styles.css\` loads the bundled Inter and Roboto Mono faces from \`assets/fonts\` as woff2 slices by script and falls back to a face's complete TTF only for a character no slice holds, so a page of Latin text fetches the 106 kB Latin slice of upright Inter instead of its 877 kB TTF. Playfair Display loads as its complete TTFs.
 
 ## Locale and routing
 
