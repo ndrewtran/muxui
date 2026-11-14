@@ -14,10 +14,5 @@ build/
 /packages/schema/generated/
 /packages/tooling/generated/
 
-# Local agent client state stays untracked; only the shared skills discovery
-# link to `.agents/skills` is tracked.
-/.claude/*
-!/.claude/skills
-
-# Temp directories the R1 exit capture renames into place; a crash may leave one.
-/tests/evidence/.*.staging-*
+# Local agent client state stays untracked.
+/.claude/
