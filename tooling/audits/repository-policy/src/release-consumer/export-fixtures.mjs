@@ -1,7 +1,7 @@
 // Release-preparation fixtures for packed runtime exports that no canonical
 // catalog example imports. Copied into the clean consumer beside the examples.
 import React from 'react';
-import { Lightbox, LightboxBackdrop, LightboxCaption, LightboxClose, LightboxContent, LightboxNext, LightboxPopup, LightboxPrevious, LightboxTrigger, Toast, ToastProvider, reactCompatibility, supplementalFamilies } from '@muxui/react';
+import { Lightbox, LightboxBackdrop, LightboxCaption, LightboxClose, LightboxContent, LightboxNext, LightboxPopup, LightboxPrevious, LightboxTrigger, MuxProvider, NumberField, Toast, ToastProvider, reactCompatibility, supplementalFamilies } from '@muxui/react';
 import { MARKDOWN_DEPTH_LIMIT, MARKDOWN_LINE_LENGTH_LIMIT, MARKDOWN_LINE_LIMIT, MARKDOWN_NODE_LIMIT, MARKDOWN_SOURCE_LIMIT } from '@muxui/react/markdown';
 import { isTextEditorDocument, normalizeTextEditorDocument } from '@muxui/react/text-editor';
 
@@ -10,6 +10,11 @@ const items = [{ key: 'one', label: 'First' }, { key: 'two', label: 'Second' }];
 
 export function ToastFixture() {
   return h(ToastProvider, null, h(Toast, { title: 'Saved', message: 'Changes saved' }));
+}
+
+// A German provider around a field that formats in the locale: SSR and hydration must agree on the server's value.
+export function MuxProviderFixture() {
+  return h(MuxProvider, { locale: 'de-DE' }, h(NumberField, { label: 'Amount', defaultValue: 1234.5, step: 0.01, formatOptions: { style: 'currency', currency: 'EUR' } }));
 }
 
 export function LightboxPartsFixture() {
@@ -27,6 +32,7 @@ export function LightboxPartsFixture() {
 /** Runtime exports each fixture renders, keyed by fixture export name. */
 export const fixtureCoverage = {
   ToastFixture: ['@muxui/react:Toast', '@muxui/react:ToastProvider'],
+  MuxProviderFixture: ['@muxui/react:MuxProvider'],
   LightboxPartsFixture: ['@muxui/react:Lightbox', '@muxui/react:LightboxBackdrop', '@muxui/react:LightboxCaption', '@muxui/react:LightboxClose', '@muxui/react:LightboxContent', '@muxui/react:LightboxNext', '@muxui/react:LightboxPopup', '@muxui/react:LightboxPrevious', '@muxui/react:LightboxTrigger'],
 };
 

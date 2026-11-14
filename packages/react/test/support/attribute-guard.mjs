@@ -96,9 +96,9 @@ export const reviewedRacImports = Object.freeze([
   'ColorPickerStateContext', 'ColorSliderStateContext', 'ColorSwatch', 'DEFAULT_SLOT', 'DateFieldContext', 'DatePickerContext',
   'DateRangePickerContext', 'Dialog', 'DialogContext', 'DialogTrigger',
   'DisclosurePanel', 'FieldError', 'FieldErrorContext', 'FieldInputContext', 'FileTrigger', 'Focusable', 'Form', 'GridLayout', 'Header', 'Heading',
-  'InputContext', 'Label', 'ListBoxSection', 'ListLayout', 'MenuSection', 'MenuTrigger', 'OverlayTriggerStateContext',
+  'I18nProvider', 'InputContext', 'Label', 'ListBoxSection', 'ListLayout', 'MenuSection', 'MenuTrigger', 'OverlayTriggerStateContext',
   'PopoverContext', 'Pressable', 'PreviewTrigger', 'ProgressBar', 'RadioGroupStateContext', 'RangeCalendarStateContext',
-  'RootMenuTriggerStateContext', 'Separator', 'Size', 'SubmenuTrigger', 'TabPanels', 'TagGroup', 'Text', 'TextAreaContext', 'TextContext',
+  'RootMenuTriggerStateContext', 'RouterProvider', 'Separator', 'Size', 'SubmenuTrigger', 'TabPanels', 'TagGroup', 'Text', 'TextAreaContext', 'TextContext',
   'TimeFieldContext', 'TokenFieldValue', 'TooltipContext', 'TooltipTrigger', 'TreeItemContent', 'UNSTABLE_ToastContent', 'UNSTABLE_ToastQueue',
   'Virtualizer', 'VisuallyHidden', 'parseColor', 'useFilter', 'useLocale', 'useSlottedContext',
 ]);

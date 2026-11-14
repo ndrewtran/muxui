@@ -267,21 +267,22 @@ test('the anchors of a page are unique, and every family page shows its owner\'s
 		for (const type of api.types) assert.ok(type.imports.length > 0 && type.imports.every((line) => line.startsWith('import type { ')), `${slug} ${type.name}`);
 		types += api.types.length;
 	}
-	assert.equal(types, 292, 'the 322 exported types less the 24 shared and 6 package-level');
+	assert.equal(types, 292, 'the 323 exported types less the 24 shared and 7 package-level');
 });
 
 test('the package exports page lists every entry of the export map, the package-level exports and the shared types with their reasons', () => {
 	const exported = buildPackageExports(reference, facts.packageName);
 	assert.deepEqual(exported.entries.map(({ key }) => key), ['.', './compatibility', './styles.css', './themes', './themes.css', './themes-apca.css', './testing', './text-editor', './markdown']);
 	assert.deepEqual(exported.entries.filter(({ untyped }) => untyped !== undefined).map(({ key }) => key), ['./compatibility', './styles.css', './themes.css', './themes-apca.css', './testing']);
-	assert.deepEqual(exported.packageLevel.map(({ name }) => name), ['reactCompatibility', 'supplementalFamilies', 'MUXUI_DEFAULT_THEME_PRESET_ID', 'MUXUI_THEME_ACTION_BACKGROUNDS', 'MUXUI_THEME_PRESETS', 'MUXUI_THEME_PRESETS_BY_ID']);
+	assert.deepEqual(exported.packageLevel.map(({ name }) => name), ['MuxProvider', 'reactCompatibility', 'supplementalFamilies', 'MUXUI_DEFAULT_THEME_PRESET_ID', 'MUXUI_THEME_ACTION_BACKGROUNDS', 'MUXUI_THEME_PRESETS', 'MUXUI_THEME_PRESETS_BY_ID']);
 	assert.ok(exported.packageLevel.every(({ reason }) => reason !== undefined));
-	assert.equal(exported.packageTypes.length, 6);
+	assert.equal(exported.packageTypes.length, 7);
 	assert.equal(exported.sharedTypes.length, 24);
 	assert.ok(exported.sharedTypes.every(({ reason }) => reason !== undefined));
 	// No family's source list names these, so each value and type carries the source of the module that declares it.
 	assert.ok([...exported.packageLevel, ...exported.packageTypes, ...exported.sharedTypes].every(({ source }) => source !== undefined));
 	assert.equal(exported.packageLevel.find(({ name }) => name === 'supplementalFamilies').source, 'packages/react/src/supplemental/index.ts');
+	assert.equal(exported.packageLevel.find(({ name }) => name === 'MuxProvider').source, 'packages/react/src/mux-provider.ts');
 	assert.equal(exported.sharedTypes.find(({ name }) => name === 'ControlSize').source, 'packages/react/src/fields.ts');
 	assert.equal(literal(null), 'null');
 });

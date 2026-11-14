@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:700ca20ec169d2bde6a6e415b03814649772a74f88f4b0e670f9cabcfa2da952 -->
+<!-- @generated-content-sha256: sha256:8c10a34158215d86d8f922b1dce7bcad0055d8fbd36b41c3e84623ec643d39b9 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -46,6 +46,18 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
 
 `styles.css` loads the bundled Inter, Playfair Display and Roboto Mono faces from `assets/fonts` as woff2 slices by script and falls back to a face's complete TTF only for a character no slice holds, so a page of Latin text fetches the 106 kB Latin slice of upright Inter instead of its 877 kB TTF.
+
+## Locale and routing
+
+`MuxProvider` sets the application-wide context components read. Its `locale` prop is the language tag components format numbers and dates in and take their text direction from. Pass the locale the server detected, on the server and the client, so the markup hydrates unchanged; without one, components render `en-US` on the server and switch to the browser's language after hydration. Its optional `navigate` (and `useHref`) props hand the `href` of a `Link` or a breadcrumb to a client-side router instead of a page load. The provider renders no element; the page still owns `<html lang dir>`.
+
+```tsx
+import { MuxProvider } from '@muxui/react';
+
+export function Root({ locale, children }: { locale: string; children: React.ReactNode }) {
+  return <MuxProvider locale={locale}>{children}</MuxProvider>;
+}
+```
 
 ## State attributes
 

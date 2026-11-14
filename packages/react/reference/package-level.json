@@ -3,10 +3,27 @@
   "owner": "package-level",
   "sources": {
     "index": "packages/react/src/generate.mjs",
+    "mux-provider": "packages/react/src/mux-provider.ts",
     "supplemental": "packages/react/src/supplemental/index.ts",
     "themes": "packages/react/src/generate.mjs"
   },
   "exports": [
+    {
+      "name": "MuxProvider",
+      "entry": ".",
+      "module": "mux-provider",
+      "kind": "function",
+      "doc": "Sets the application-wide context Mux UI components read: the locale and, optionally, the router. It renders no\nelement, so place it once near the root, inside the document body. The page still owns `<html lang dir>`.",
+      "signature": "MuxProvider(props: MuxProviderProps): React.ReactNode",
+      "parameters": [
+        {
+          "name": "props",
+          "type": "MuxProviderProps",
+          "refs": ["mux-provider#MuxProviderProps"]
+        }
+      ],
+      "returns": { "type": "React.ReactNode" }
+    },
     {
       "name": "reactCompatibility",
       "entry": ".",
@@ -55,6 +72,37 @@
     }
   ],
   "types": [
+    {
+      "id": "mux-provider#MuxProviderProps",
+      "name": "MuxProviderProps",
+      "module": "mux-provider",
+      "public": [
+        { "entry": ".", "name": "MuxProviderProps" }
+      ],
+      "owner": "package-level",
+      "text": "type MuxProviderProps = {\n  locale?: string;\n  navigate?: (href: string) => void;\n  useHref?: (href: string) => string;\n  children?: React.ReactNode;\n};",
+      "members": [
+        {
+          "name": "locale",
+          "optional": true,
+          "type": "string",
+          "doc": "The BCP 47 language tag components format numbers and dates in and read their text direction from, such as `de-DE`\nor `ar-EG`. Pass the same value on the server and the client so the markup hydrates unchanged. Without it,\ncomponents render `en-US` on the server and switch to the browser's language after hydration."
+        },
+        {
+          "name": "navigate",
+          "optional": true,
+          "type": "(href: string) => void",
+          "doc": "Opens the `href` of a `Link` or a breadcrumb in place of a browser navigation. Pass a router's navigate function so\nthose links change the route without a page load. Modified clicks, such as opening in a new tab, still reach the\nbrowser."
+        },
+        {
+          "name": "useHref",
+          "optional": true,
+          "type": "(href: string) => string",
+          "doc": "Turns a link's `href` into the URL the browser shows, such as a router's base path joined to it. It runs as a hook."
+        },
+        { "name": "children", "optional": true, "type": "React.ReactNode" }
+      ]
+    },
     {
       "id": "themes#MuxUIMonochromeThemeId",
       "name": "MuxUIMonochromeThemeId",

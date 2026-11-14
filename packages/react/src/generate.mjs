@@ -435,9 +435,9 @@ const compatibility = {
   support,
 };
 const compatibilityBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const reactCompatibility = /*#__PURE__*/ deepFreeze(${canonicalJson(compatibility)});\n`;
-const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.js';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton } from './components.js';\nexport { Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './fields.js';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.js';\n";
-// The types of Button, the R1.1 families, the fields, the overlays, and the color values are tsc's
-// declarations of src/button.ts, src/components.ts, src/fields.ts, src/overlays.ts, and
+const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { MuxProvider } from './mux-provider.js';\nexport { Button } from './button.js';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton } from './components.js';\nexport { Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './fields.js';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.js';\n";
+// The types of Button, MuxProvider, the R1.1 families, the fields, the overlays, and the color values are tsc's
+// declarations of src/button.ts, src/mux-provider.ts, src/components.ts, src/fields.ts, src/overlays.ts, and
 // src/color-context.ts; the index names them, so the modules' other exports
 // (usePendingSubmitProps, the OwnProps types) stay private.
 const typesBody = `import type { ButtonPointerType } from './button.js';
@@ -445,6 +445,8 @@ const typesBody = `import type { ButtonPointerType } from './button.js';
 export { Button } from './button.js';
 export type { ButtonActivationEvent, ButtonPointerType, ButtonProps } from './button.js';
 export type { ButtonPartProps, PartProps, SupplementalActivation, SupplementalFieldProps } from './part-utils.js';
+export { MuxProvider } from './mux-provider.js';
+export type { MuxProviderProps } from './mux-provider.js';
 export type ComponentPointerType = ButtonPointerType;
 export { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton } from './components.js';
 export type { BreadcrumbItem, BreadcrumbsProps, CheckboxProps, DisclosureGroupProps, DisclosureProps, GroupProps, LinkActivationEvent, LinkProps, MeterProps, ProgressBarProps, SeparatorProps, ToggleButtonActivationEvent, ToggleButtonProps } from './components.js';
@@ -564,6 +566,18 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a theme scope after importing \`styles.css\` to activate the canonical viewport-based values for that scope; the default \`:root\` values remain static.
 
 \`styles.css\` loads the bundled Inter, Playfair Display and Roboto Mono faces from \`assets/fonts\` as woff2 slices by script and falls back to a face's complete TTF only for a character no slice holds, so a page of Latin text fetches the 106 kB Latin slice of upright Inter instead of its 877 kB TTF.
+
+## Locale and routing
+
+\`MuxProvider\` sets the application-wide context components read. Its \`locale\` prop is the language tag components format numbers and dates in and take their text direction from. Pass the locale the server detected, on the server and the client, so the markup hydrates unchanged; without one, components render \`en-US\` on the server and switch to the browser's language after hydration. Its optional \`navigate\` (and \`useHref\`) props hand the \`href\` of a \`Link\` or a breadcrumb to a client-side router instead of a page load. The provider renders no element; the page still owns \`<html lang dir>\`.
+
+\`\`\`tsx
+import { MuxProvider } from '@muxui/react';
+
+export function Root({ locale, children }: { locale: string; children: React.ReactNode }) {
+  return <MuxProvider locale={locale}>{children}</MuxProvider>;
+}
+\`\`\`
 
 ## State attributes
 

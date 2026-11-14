@@ -853,7 +853,7 @@ try {
     planModules.push({ file: output, measuredLayout: true });
   }
   for (const file of ['render-examples.mjs', 'hydrate-examples.mjs', 'export-fixtures.mjs']) copyConsumerTool(consumer, file);
-  planModules.push({ file: 'export-fixtures.mjs', components: ['ToastFixture', 'LightboxPartsFixture'] });
+  planModules.push({ file: 'export-fixtures.mjs', components: ['ToastFixture', 'MuxProviderFixture', 'LightboxPartsFixture'] });
   const componentModules = ['@muxui/react', ...new Set(isolatedExportModules.map((entry) => `@muxui/react/${entry.split(':')[1].slice(2)}`))];
   writeFileSync(join(consumer, 'ssr-plan.json'), `${JSON.stringify({
     modules: planModules,

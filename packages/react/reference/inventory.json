@@ -704,6 +704,20 @@
           "module": "multi-select"
         },
         {
+          "name": "MuxProvider",
+          "kind": "value",
+          "owner": "package-level",
+          "module": "mux-provider",
+          "reason": "the application-wide locale and router context of the package, not a component"
+        },
+        {
+          "name": "MuxProviderProps",
+          "kind": "type",
+          "owner": "package-level",
+          "module": "mux-provider",
+          "reason": "the application-wide locale and router context of the package, not a component"
+        },
+        {
           "name": "MuxUIAccessibleName",
           "kind": "type",
           "owner": "shared",
