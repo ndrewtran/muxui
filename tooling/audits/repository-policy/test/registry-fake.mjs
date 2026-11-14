@@ -3,8 +3,10 @@
 // `npm publish --tag next --provenance`. No network and no real registry; every request and every write is
 // recorded, and there is no way to deprecate, unpublish, or re-tag, so a test can assert none happened.
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { PUBLISHING_REPOSITORY, PUBLISHING_WORKFLOW, REGISTRY } from '../src/npm-publication.mjs';
+import { readArchive } from '../src/release-archive.mjs';
 
 const slsa = { predicateType: 'https://slsa.dev/provenance/v1' };
 
@@ -105,7 +107,9 @@ export function createRegistry({ seed = {}, faults: initialFaults = {}, commit: 
     const bytes = readFileSync(file);
     const integrity = faults.corrupt?.includes(name) ? `sha512-${createHash('sha512').update(`other ${bytes.toString('base64')}`).digest('base64')}` : sri(bytes);
     const first = !packuments.has(name);
-    const packument = add(name, version, integrity, { attested: !faults.unattested?.includes(name), bytes });
+    // The publish workflow's provenance names the commit of its run, which the packed manifest records as gitHead.
+    const { gitHead } = JSON.parse(readArchive(bytes).get('package/package.json')?.toString('utf8') ?? '{}');
+    const packument = add(name, version, integrity, { attested: !faults.unattested?.includes(name), bytes, commit: gitHead ?? defaultCommit });
     // `--tag next` moves next; the registry itself sets latest on a package's first version.
     packument['dist-tags'].next = version;
     if (first) packument['dist-tags'].latest = version;
@@ -114,14 +118,49 @@ export function createRegistry({ seed = {}, faults: initialFaults = {}, commit: 
     if (faults.landThenFail?.includes(name)) throw new Error(`npm error code ETIMEDOUT\nnpm error network request to ${REGISTRY}/${name} timed out after the registry accepted it`);
   }
 
+  /**
+   * The `npm` the post-publication check runs, answered from what the registry holds: `install` writes the package-lock.json
+   * of the project's dependencies (an exact version that is not readable fails the install), and `audit signatures` verifies
+   * each installed version's registry signature and lists its attestation bundles. `auditFaults` maps a package name to
+   * `invalid` or `missing`, as npm reports a bad signature. Every call is recorded in `npmCalls`.
+   */
+  const npmCalls = [];
+  const auditFaults = {};
+  function npm(args, { cwd }) {
+    npmCalls.push(args.join(' '));
+    if (args[0] === '--version') return { status: 0, stdout: '11.17.0\n', stderr: '' };
+    const dependencies = JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf8')).dependencies;
+    const documentOf = (name, version) => (hidden.has(name) ? undefined : packuments.get(name)?.versions[version]);
+    if (args[0] === 'install') {
+      const missing = Object.entries(dependencies).filter(([name, version]) => !documentOf(name, version));
+      if (missing.length > 0) return { status: 1, stdout: '', stderr: `npm error code ETARGET\nnpm error notarget No matching version found for ${missing[0].join('@')}.` };
+      const packages = Object.fromEntries(Object.entries(dependencies).map(([name, version]) => [`node_modules/${name}`, { version, resolved: documentOf(name, version).dist.tarball, integrity: documentOf(name, version).dist.integrity }]));
+      writeFileSync(join(cwd, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages: { '': { dependencies }, ...packages } }));
+      return { status: 0, stdout: '', stderr: '' };
+    }
+    if (args.join(' ') === 'audit signatures --json --include-attestations') {
+      const entries = Object.entries(dependencies).map(([name, version]) => {
+        const url = documentOf(name, version)?.dist.attestations?.url;
+        return { name, version, location: `node_modules/${name}`, registry: `${REGISTRY}/`, ...(url ? { attestationBundles: attestationDocument(statements.get(url)).attestations } : {}) };
+      });
+      const result = { invalid: entries.filter(({ name }) => auditFaults[name] === 'invalid'), missing: entries.filter(({ name }) => auditFaults[name] === 'missing'), verified: entries.filter(({ name }) => !auditFaults[name]) };
+      return { status: result.invalid.length + result.missing.length > 0 ? 1 : 0, stdout: JSON.stringify(result), stderr: '' };
+    }
+    return { status: 1, stdout: '', stderr: `the fake npm does not run ${args.join(' ')}` };
+  }
+
   /** npm-publication.mjs's injectable IO with no real waiting and short polling. */
   const io = (extra = {}) => ({
-    fetch, sleep: async () => {}, log: () => {}, intervalMs: 0, versionAttempts: 2, tagAttempts: 2, ...extra,
+    fetch, runNpm: npm, sleep: async () => {}, log: () => {}, intervalMs: 0, versionAttempts: 2, tagAttempts: 2, installAttempts: 2, ...extra,
   });
 
   return {
     fetch,
     publish,
+    npm,
+    npmCalls,
+    /** The packages `npm audit signatures` reports as `invalid` or `missing`. */
+    auditFaults,
     io,
     /** The failures in force; a test clears one to let a later publication succeed. */
     faults,

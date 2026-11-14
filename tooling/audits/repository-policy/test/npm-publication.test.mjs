@@ -301,12 +301,14 @@ test('E-P2.1-06 rehearsal: a refused publish after earlier packages published st
   const plan = lines.filter((line) => /^- |^\d+\. |^Recovery plan/u.test(line));
   assert.deepEqual(plan.slice(0, 5), [
     'Recovery plan (a plan only; nothing was deprecated, unpublished, or re-tagged):',
-    `- ${schema}@${first.schema}: healthy; published and verified; stays published and is not deprecated`,
-    `- ${catalog}@${first.catalog}: healthy; published and verified; stays published and is not deprecated`,
+    `- ${schema}@${first.schema}: healthy; published and verified; stays published and is not deprecated; the next release moves to 0.6.0-rc.2`,
+    `- ${catalog}@${first.catalog}: healthy; published and verified; stays published and is not deprecated; the next release moves to 3.0.0-rc.2`,
     `- ${tooling}@${first.tooling}: unverified; ${unverifiedPlan}`,
-    `- ${react}@${first.react}: not-attempted; never attempted; nothing to do`,
+    `- ${react}@${first.react}: not-attempted; never attempted; the next release keeps ${first.react}`,
   ]);
-  assert.ok(plan.some((line) => /verify the tuple again against a new release manifest; no record is rewritten/u.test(line)));
+  // tooling's outcome is not settled, so the plan stops there and proposes no next release.
+  assert.ok(plan.some((line) => /re-check the registry until every package above is settled/u.test(line)));
+  assert.ok(!lines.some((line) => line.startsWith('Next release:')));
   assert.ok(!plan.some((line) => /deprecate \S+@|deprecate \d/u.test(line.replace(/deprecate nothing until|is not deprecated/gu, ''))));
   assert.ok(registry.writes.every(({ op }) => op === 'publish'), 'the fake registry saw publishes only');
 
@@ -333,12 +335,23 @@ test('E-P2.1-06 rehearsal: a failed read-back deprecates only the version that p
   assert.deepEqual(registry.writes.map(({ name }) => name), [schema, catalog]);
   const plan = lines.filter((line) => /^- |^\d+\. |^Recovery plan/u.test(line));
   assert.deepEqual(plan.slice(1, 5), [
-    `- ${schema}@${first.schema}: healthy; published and verified; stays published and is not deprecated`,
-    `- ${catalog}@${first.catalog}: bad-bytes; published bad bytes; deprecate ${first.catalog} (separate explicit authorization) and fix forward to 3.0.0-rc.2`,
-    `- ${tooling}@${first.tooling}: not-attempted; never attempted; nothing to do`,
-    `- ${react}@${first.react}: not-attempted; never attempted; nothing to do`,
+    `- ${schema}@${first.schema}: healthy; published and verified; stays published and is not deprecated; the next release moves to 0.6.0-rc.2`,
+    `- ${catalog}@${first.catalog}: bad-bytes; published bad bytes; deprecate ${first.catalog} (with Andrew's yes) and move to 3.0.0-rc.2`,
+    `- ${tooling}@${first.tooling}: not-attempted; never attempted; the next release keeps ${first.tooling}`,
+    `- ${react}@${first.react}: not-attempted; never attempted; the next release keeps ${first.react}`,
   ]);
   assert.ok(plan.some((line) => /@muxui\/catalog: published bad bytes; deprecate 3\.0\.0-rc\.1/u.test(line)), 'the steps name the one deprecation');
+  // Every outcome is settled, so recovery is the next four-package release from the registry's state.
+  const next = `${schema}=0.6.0-rc.2,${catalog}=3.0.0-rc.2,${tooling}=${first.tooling},${react}=${first.react}`;
+  assert.equal(lines.at(-1), `Next release: MUXUI_RELEASE_VERSIONS=${next}`);
+  assert.ok(plan.includes(`3. prepare the next release of all four packages at ${next}, with a new dry run and a new release manifest; no record is rewritten`), plan.join('\n'));
+  // That tuple is what the registry now admits: each version is absent and the next rc after next, or a first rc.1.
+  const admitted = [];
+  for (const pair of next.split(',')) {
+    const [name, version] = pair.split('=');
+    admitted.push((await npm.preflight(version, registry.io(), name)).kind);
+  }
+  assert.deepEqual(admitted, ['later', 'later', 'first', 'later']);
   assert.equal(plan.filter((line) => /: published bad bytes; deprecate/u.test(line)).length, 1);
   assert.ok(registry.writes.every(({ op }) => op === 'publish'));
 });
@@ -359,10 +372,10 @@ test('E-P2.1-06 rehearsal: a publish that errored after npm accepted it is unver
   assert.deepEqual(registry.writes.map(({ name }) => name), [schema, catalog], 'the publish landed, and nothing later was attempted');
   const plan = lines.filter((line) => /^- |^\d+\. |^Recovery plan/u.test(line));
   assert.deepEqual(plan.slice(1, 5), [
-    `- ${schema}@${first.schema}: healthy; published and verified; stays published and is not deprecated`,
+    `- ${schema}@${first.schema}: healthy; published and verified; stays published and is not deprecated; the next release moves to 0.6.0-rc.2`,
     `- ${catalog}@${first.catalog}: unverified; ${unverifiedPlan}`,
-    `- ${tooling}@${first.tooling}: not-attempted; never attempted; nothing to do`,
-    `- ${react}@${first.react}: not-attempted; never attempted; nothing to do`,
+    `- ${tooling}@${first.tooling}: not-attempted; never attempted; the next release keeps ${first.tooling}`,
+    `- ${react}@${first.react}: not-attempted; never attempted; the next release keeps ${first.react}`,
   ]);
   assert.ok(!plan.some((line) => line.includes('never published')), 'a 404 after an attempt is not "never published"');
   assert.ok(!plan.some((line) => /: published bad bytes; deprecate/u.test(line)));
@@ -375,15 +388,18 @@ test('E-P2.1-06 rehearsal: a publish that errored after npm accepted it is unver
 
 test('a recovery plan deprecates a version only when the registry holds other bytes for it', () => {
   const set = [{ name: schema, version: first.schema }, { name: catalog, version: first.catalog }];
-  const plan = (assessed) => npm.planRecovery({ set, assessed }).packages.map(({ state, deprecate, fixForward }) => ({ state, deprecate, fixForward }));
-  assert.deepEqual(plan([]), [{ state: 'not-attempted', deprecate: false, fixForward: undefined }, { state: 'not-attempted', deprecate: false, fixForward: undefined }]);
+  const plan = (assessed) => npm.planRecovery({ set, assessed }).packages.map(({ state, deprecate, nextVersion }) => ({ state, deprecate, nextVersion }));
+  assert.deepEqual(plan([]), [{ state: 'not-attempted', deprecate: false, nextVersion: first.schema }, { state: 'not-attempted', deprecate: false, nextVersion: first.catalog }]);
   assert.deepEqual(plan([{ name: schema, state: 'healthy' }, { name: catalog, state: 'bad-bytes' }]), [
-    { state: 'healthy', deprecate: false, fixForward: undefined }, { state: 'bad-bytes', deprecate: true, fixForward: '3.0.0-rc.2' },
+    { state: 'healthy', deprecate: false, nextVersion: '0.6.0-rc.2' }, { state: 'bad-bytes', deprecate: true, nextVersion: '3.0.0-rc.2' },
   ]);
   for (const state of ['healthy', 'unattested', 'unverified']) {
     assert.ok(plan([{ name: schema, state }, { name: catalog, state }]).every(({ deprecate }) => deprecate === false), state);
   }
-  assert.ok(npm.planRecovery({ set, assessed: [] }).steps.includes('verify the tuple again against a new release manifest; no record is rewritten'));
+  // An unsettled outcome, or a failed post-publication check, proposes no next release.
+  assert.equal(npm.planRecovery({ set, assessed: [] }).nextVersions, `${schema}=${first.schema},${catalog}=${first.catalog}`);
+  for (const state of ['unattested', 'unverified']) assert.equal(npm.planRecovery({ set, assessed: [{ name: catalog, state }] }).nextVersions, null, state);
+  assert.equal(npm.planRecovery({ set, assessed: [{ name: schema, state: 'healthy' }, { name: catalog, state: 'healthy' }], failed: { name: null, version: null, phase: 'verify' } }).nextVersions, null);
 });
 
 test('the publication CLI preflights the whole set read-only, and verifies a candidate before publishing', async () => {
@@ -835,4 +851,59 @@ test('the publication CLI preflights only what a release publishes', async () =>
     `${tooling} dist-tags latest=${first.tooling} next=${first.tooling}`,
   ]);
   assert.deepEqual(registry.writes, []);
+});
+
+// The post-publication check reads what a consumer installs: the registry's install, its integrity, and npm audit signatures.
+function publishedRegistry({ commit: at = commit } = {}) {
+  const bytes = new Map(names.map((name) => [name, Buffer.from(`${name} published bytes`)]));
+  const integrityOf = (name) => `sha512-${createHash('sha512').update(bytes.get(name)).digest('base64')}`;
+  const registry = createRegistry({ seed: Object.fromEntries(names.map((name) => [name, { tarballs: { [versionOf[name]]: bytes.get(name) }, tags: { latest: versionOf[name], next: versionOf[name] }, commit: at }])) });
+  const packages = names.map((name) => ({ name, version: versionOf[name], integrity: integrityOf(name) }));
+  return { registry, packages };
+}
+
+test('the post-publication check installs the exact versions from the registry and verifies their integrity and signed provenance', async () => {
+  const { registry, packages } = publishedRegistry();
+  const environments = [];
+  const lines = [];
+  const run = (args, options) => {
+    environments.push(options.env);
+    return registry.npm(args, options);
+  };
+  const environment = { PATH: '/usr/bin', NPM_TOKEN: temporaryToken, NODE_AUTH_TOKEN: temporaryToken, npm_config__authToken: temporaryToken, npm_config_registry: 'https://elsewhere.example' };
+  await npm.verifyPublished({ packages, sourceCommit: commit, environment, run, intervalMs: 0, log: (line) => lines.push(line) });
+  assert.deepEqual(registry.npmCalls, ['install --ignore-scripts --no-audit --no-fund --legacy-peer-deps', 'audit signatures --json --include-attestations']);
+  assert.match(lines.at(-1), /^Installed @muxui\/schema@0\.6\.0-rc\.1, .* npm audit signatures verified each registry signature and Sigstore attestation, built from a{40}/u);
+  // npm runs with no credential and no inherited registry: only the project's .npmrc and two empty config files apply.
+  for (const env of environments) {
+    assert.deepEqual(Object.keys(env).filter((key) => /token|^npm_config_registry$/iu.test(key)), []);
+    assert.match(env.npm_config_userconfig, /muxui-published-.*user\.npmrc$/u);
+  }
+});
+
+test('the post-publication check fails on other bytes, a bad signature, or provenance that is not this commit and workflow', async () => {
+  const refuses = async (change, message) => {
+    const { registry, packages } = publishedRegistry();
+    const checked = change(registry, packages) ?? packages;
+    await assert.rejects(npm.verifyPublished({ packages: checked, sourceCommit: commit, run: registry.npm, installAttempts: 2, intervalMs: 0, sleep: async () => {}, log: () => {} }), message);
+  };
+  await refuses((_registry, packages) => packages.map((entry) => (entry.name === catalog ? { ...entry, integrity: draftIntegrity('o') } : entry)), /@muxui\/catalog installed as 3\.0\.0-rc\.1 with sha512-.*; expected 3\.0\.0-rc\.1 with sha512-o+==/u);
+  await refuses((_registry, packages) => packages.map((entry) => (entry.name === react ? { ...entry, version: '0.1.0-rc.6' } : entry)), /did not appear after 2 attempts/u);
+  await refuses((registry) => { registry.auditFaults[tooling] = 'invalid'; }, /invalid signatures or attestations: @muxui\/tooling@1\.1\.0-rc\.1/u);
+  await refuses((registry) => { registry.auditFaults[schema] = 'missing'; }, /missing registry signatures: @muxui\/schema@0\.6\.0-rc\.1/u);
+  await refuses((registry) => { registry.attestation(react, first.react).predicate.buildDefinition.resolvedDependencies[0].digest.gitCommit = otherCommit; }, /@muxui\/react@0\.1\.0-rc\.5 has provenance .*: wrong the source commit\./u);
+  await refuses((registry) => { registry.attestation(schema, first.schema).predicate.buildDefinition.externalParameters.workflow.ref = 'refs/heads/feature'; }, /wrong the workflow\./u);
+  await refuses((registry) => { registry.attestation(catalog, first.catalog).subject[0].digest.sha512 = '0'.repeat(128); }, /wrong the subject sha512\./u);
+});
+
+test('a release whose post-publication check fails stops after the publish for a decision, and proposes no next release', async () => {
+  const registry = createRegistry({ seed: reactHistory() });
+  registry.auditFaults[react] = 'invalid';
+  const { run, lines } = publishRun({ registry });
+  const error = await run().then(() => assert.fail('the run should stop'), (stopped) => stopped);
+  assert.equal(error.title, 'Post-publication check failed');
+  assert.deepEqual(error.progress.failed, { name: null, version: null, phase: 'verify' });
+  assert.deepEqual(registry.writes.map(({ name }) => name), names, 'every package published and read back first');
+  assert.ok(lines.some((line) => /stop for a decision: the post-publication check failed/u.test(line)), lines.join('\n'));
+  assert.ok(!lines.some((line) => line.startsWith('Next release:')));
 });

@@ -16,9 +16,10 @@
 // provenance is signed with the job's OIDC identity either way. Everything else is a public registry read. No
 // deprecate, unpublish, dist-tag, or owner command exists here: a failed publication prints its recovery plan and
 // executes none of it.
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { appendFileSync, readFileSync, readdirSync } from 'node:fs';
+import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PORTFOLIO_MANIFEST_FILE, candidateFileNames, readPublishSet, tarballFileName } from './release-set.mjs';
@@ -473,6 +474,95 @@ export async function fetchReusedTarball(record, io = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// The post-publication check: what a consumer installing the release gets.
+
+/** `npm <args>` in `cwd`, bounded; the publish job's npm is the one `check-npm` verified. */
+function runNpm(args, { cwd, env }) {
+  return spawnSync('npm', args, { cwd, env, encoding: 'utf8', stdio: 'pipe', maxBuffer: 64 * 1024 * 1024, timeout: 300_000 });
+}
+
+/**
+ * The environment of the check's npm: no npm script context and no credential (the token, NODE_AUTH_TOKEN, and any npm auth
+ * setting), with the user and global configuration pointed at two empty files in `project`, so only the project's `.npmrc`
+ * (the public registry) applies.
+ */
+function checkEnvironment(environment, project) {
+  const env = Object.fromEntries(Object.entries(environment).filter(([key]) => !/^(?:npm_|yarn_)/iu.test(key) && key !== 'NODE_AUTH_TOKEN' && key !== 'NPM_TOKEN'));
+  return { ...env, npm_config_userconfig: join(project, 'user.npmrc'), npm_config_globalconfig: join(project, 'global.npmrc'), npm_config_engine_strict: 'false' };
+}
+
+const npmOutput = (result) => (result.error?.message || result.stderr || result.stdout || `exited with ${result.signal ?? result.status}`).trim().slice(-2000);
+
+/**
+ * Verifies a published release the way a consumer receives it. A new project outside the checkout, whose npm configuration
+ * is empty but for the public registry, installs every package in `packages` ({ name, version, integrity }) at its exact
+ * version, with scripts ignored; the install is retried while the registry's install metadata still lags the publish. Then,
+ * for each package:
+ * - the integrity npm installed it at (package-lock.json) is the authorized one;
+ * - `npm audit signatures --json --include-attestations` exits 0 with no invalid and no missing signature, and its
+ *   `verified` list (the packages whose attestation it verified: the Sigstore signature and certificate chain of the bundle,
+ *   and the registry's signature over the version) holds the package as a direct dependency;
+ * - the statement npm verified names those bytes, built from `sourceCommit` by this repository's publish workflow on main
+ *   (`judgeAttestation`).
+ * `run(args, { cwd, env })` runs npm; tests inject it so they touch no network.
+ */
+export async function verifyPublished({
+  packages, sourceCommit, environment = process.env, run = runNpm, installAttempts = 10, intervalMs = 30_000,
+  sleep = (ms) => new Promise((done) => setTimeout(done, ms)), log = console.log,
+}) {
+  const title = 'Post-publication check failed';
+  const project = mkdtempSync(join(tmpdir(), 'muxui-published-'));
+  try {
+    writeFileSync(join(project, 'package.json'), `${JSON.stringify({
+      name: 'muxui-published-check', private: true, dependencies: Object.fromEntries(packages.map(({ name, version }) => [name, version])),
+    }, null, 2)}\n`);
+    writeFileSync(join(project, '.npmrc'), `registry=${REGISTRY}/\n`);
+    writeFileSync(join(project, 'user.npmrc'), '');
+    writeFileSync(join(project, 'global.npmrc'), '');
+    const env = checkEnvironment(environment, project);
+    const npm = (args) => run(args, { cwd: project, env });
+
+    await poll('the published packages to install from the registry', async () => {
+      const install = npm(['install', '--ignore-scripts', '--no-audit', '--no-fund', '--legacy-peer-deps']);
+      if (install.status === 0) return true;
+      log(`npm install failed: ${npmOutput(install).split('\n').at(-1)}`);
+      return undefined;
+    }, { attempts: installAttempts, intervalMs, sleep, log });
+    const lock = JSON.parse(readFileSync(join(project, 'package-lock.json'), 'utf8'));
+    for (const { name, version, integrity } of packages) {
+      const installed = lock.packages?.[`node_modules/${name}`];
+      if (installed?.version !== version || installed.integrity !== integrity) {
+        stop(title, `${name} installed as ${installed?.version ?? 'nothing'} with ${installed?.integrity ?? 'no integrity'}; expected ${version} with ${integrity}.`);
+      }
+    }
+
+    const audit = npm(['audit', 'signatures', '--json', '--include-attestations']);
+    let result;
+    try {
+      result = JSON.parse(audit.stdout);
+    } catch {
+      stop(title, `npm audit signatures printed output that is not JSON: ${npmOutput(audit)}`);
+    }
+    if (!Array.isArray(result?.invalid) || !Array.isArray(result.missing) || !Array.isArray(result.verified)) {
+      stop(title, 'npm audit signatures did not report invalid, missing, and verified packages.');
+    }
+    const named = (entries) => entries.map((entry) => `${entry.name}@${entry.version}`).join(', ');
+    if (result.invalid.length > 0) stop(title, `npm audit signatures found invalid signatures or attestations: ${named(result.invalid)}.`);
+    if (result.missing.length > 0) stop(title, `npm audit signatures found missing registry signatures: ${named(result.missing)}.`);
+    if (audit.status !== 0) stop(title, `npm audit signatures exited ${audit.status}: ${npmOutput(audit)}`);
+    for (const { name, version, integrity } of packages) {
+      const covered = result.verified.find((entry) => entry.name === name && entry.version === version
+        && entry.location === `node_modules/${name}` && entry.registry === `${REGISTRY}/`);
+      if (covered === undefined) stop(title, `npm audit signatures did not verify an attestation of ${name}@${version}.`);
+      judgeAttestation({ name, version, integrity, sourceCommit, attestations: { attestations: covered.attestationBundles } });
+    }
+    log(`Installed ${packages.map(({ name, version }) => `${name}@${version}`).join(', ')} from ${REGISTRY} at the authorized integrity; npm audit signatures verified each registry signature and Sigstore attestation, built from ${sourceCommit} by ${PUBLISHING_WORKFLOW} on main.`);
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Ordered publication and its recovery plan.
 
 /**
@@ -488,7 +578,7 @@ export async function fetchReusedTarball(record, io = {}) {
  * `error.progress` = { attempted, verified, failed }: the packages whose publish was attempted, those whose
  * read-back passed, and the one that failed with the phase it failed in. Nothing later is attempted.
  */
-export async function publishSet({ packages, reused = [], publish, token, ...io }) {
+export async function publishSet({ packages, reused = [], publish, token, sourceCommit, ...io }) {
   const log = io.log ?? console.log;
   const progress = { attempted: [], verified: [], failed: null };
   const recorded = new Map();
@@ -560,6 +650,17 @@ export async function publishSet({ packages, reused = [], publish, token, ...io 
       throw failure;
     }
   }
+  // Every package is published and read back; last, what a consumer installs from the registry, with its signatures.
+  try {
+    await verifyPublished({
+      packages: progress.verified, sourceCommit, environment: io.environment, run: io.runNpm, installAttempts: io.installAttempts, intervalMs: io.intervalMs, sleep: io.sleep, log,
+    });
+  } catch (error) {
+    progress.failed = { name: null, version: null, phase: 'verify' };
+    const failure = error instanceof NpmPublicationError ? error : new NpmPublicationError('Post-publication check failed', error.message);
+    failure.progress = progress;
+    throw failure;
+  }
   return progress.verified;
 }
 
@@ -588,35 +689,41 @@ export async function assessAttempted(attempted, io = {}) {
 }
 
 /**
- * The recovery plan after a failed publication, as Decision 0023 amendment 01 and Decision 0032 item 9 set it. It
- * is a plan and nothing here runs it. `set` is the publish set in order and `assessed` the result of
- * `assessAttempted`. Only a version that published bad bytes is deprecated, with Andrew's separate authorization, and
- * fixed forward; a package that was never attempted needs nothing; a healthy version stays published and is not
- * deprecated; an attempted package the registry does not show stops for a decision, never as "nothing to do" and never
- * as a republish of the same version; no record is rewritten.
+ * The recovery plan after a failed publication. It is a plan and nothing here runs it. `set` is the publish set in order,
+ * `assessed` the result of `assessAttempted`, and `failed` the phase that stopped the run. Recovery is the next release:
+ * all four packages again, each at the version the registry's observed state admits. A package never attempted keeps its
+ * version, which the registry still does not hold; a healthy version stays published and the next release moves past it;
+ * only a version that published bad bytes is deprecated, with Andrew's yes, and moved past too. An outcome the registry
+ * does not settle (an attempted package it does not show, the candidate bytes without provenance, or a failed
+ * post-publication check) stops for a decision, never as "nothing to do" and never as a republish of the same version,
+ * and the plan proposes no next release until it is settled.
  */
-export function planRecovery({ set, assessed }) {
+export function planRecovery({ set, assessed, failed = null }) {
   const byName = new Map(assessed.map((entry) => [entry.name, entry]));
   const packages = set.map(({ name, version }) => {
-    const found = byName.get(name);
-    const state = found?.state ?? 'not-attempted';
-    const next = fixForwardVersion(version, name);
+    const state = byName.get(name)?.state ?? 'not-attempted';
+    const after = fixForwardVersion(version, name);
     const action = {
-      'not-attempted': { deprecate: false, text: 'never attempted; nothing to do' },
-      healthy: { deprecate: false, text: 'published and verified; stays published and is not deprecated' },
-      'bad-bytes': { deprecate: true, fixForward: next, text: `published bad bytes; deprecate ${version} (separate explicit authorization) and fix forward to ${next}` },
+      'not-attempted': { deprecate: false, nextVersion: version, text: `never attempted; the next release keeps ${version}` },
+      healthy: { deprecate: false, nextVersion: after, text: `published and verified; stays published and is not deprecated; the next release moves to ${after}` },
+      'bad-bytes': { deprecate: true, nextVersion: after, text: `published bad bytes; deprecate ${version} (with Andrew's yes) and move to ${after}` },
       unattested: { deprecate: false, text: 'published the candidate bytes without provenance; stop for a decision, and deprecate nothing automatically' },
       unverified: { deprecate: false, text: 'the publish may have landed and is not visible yet; stop for a decision, re-check the registry later, do not republish this version, and deprecate nothing until it is known' },
     }[state];
     return { name, version, state, ...action };
   });
+  const unsettled = failed?.phase === 'verify' || packages.some(({ nextVersion }) => nextVersion === undefined);
+  const nextVersions = unsettled ? null : packages.map(({ name, nextVersion }) => `${name}=${nextVersion}`).join(',');
   return {
     packages,
+    nextVersions,
     steps: [
       'stop further publication; preserve every published version and the release manifest',
+      ...(failed?.phase === 'verify' ? ['stop for a decision: the post-publication check failed on published versions; deprecate nothing until the failure is understood'] : []),
       ...packages.filter(({ deprecate }) => deprecate).map(({ name, text }) => `${name}: ${text}`),
-      'fix forward with a new dispatch at versions the registry does not hold yet, through a separately authorized publication',
-      'verify the tuple again against a new release manifest; no record is rewritten',
+      unsettled
+        ? 're-check the registry until every package above is settled, then prepare the next release from it'
+        : `prepare the next release of all four packages at ${nextVersions}, with a new dry run and a new release manifest; no record is rewritten`,
       'latest is not claimed or promoted',
     ],
   };
@@ -626,20 +733,21 @@ const planLines = (plan) => [
   'Recovery plan (a plan only; nothing was deprecated, unpublished, or re-tagged):',
   ...plan.packages.map(({ name, version, state, text }) => `- ${name}@${version}: ${state}; ${text}`),
   ...plan.steps.map((step, index) => `${index + 1}. ${step}`),
+  ...(plan.nextVersions ? [`Next release: MUXUI_RELEASE_VERSIONS=${plan.nextVersions}`] : []),
 ];
 
 /** Reads the registry for what the failed run attempted and prints the recovery plan; never executes it. */
 async function reportRecovery({ packages, error, environment, io }) {
   const log = io.log ?? console.log;
   const assessed = await assessAttempted(error.progress?.attempted ?? [], io);
-  const plan = planRecovery({ set: packages, assessed });
+  const { failed } = error.progress ?? {};
+  const plan = planRecovery({ set: packages, assessed, failed });
   const lines = planLines(plan);
   for (const line of lines) log(line);
-  const { failed } = error.progress ?? {};
   writeSummary(environment, [
     '### Publication stopped',
     '',
-    ...(failed ? [`Failed: ${failed.name}@${failed.version} (${failed.phase}): ${error.message}`, ''] : []),
+    ...(failed ? [`Failed: ${failed.name ? `${failed.name}@${failed.version}` : 'the release'} (${failed.phase}): ${error.message}`, ''] : []),
     '```',
     ...lines,
     '```',
@@ -773,7 +881,7 @@ export async function main(command, environment = process.env, io = {}) {
       const token = takeToken(environment);
       log(`Publish set: ${packages.map((entry) => `${entry.name}@${entry.version}`).join(', ')}`);
       try {
-        const verified = await publishSet({ ...io, packages, reused, token, publish: io.publish ?? ((pkg, auth) => npmPublish(pkg, environment, auth)) });
+        const verified = await publishSet({ environment, ...io, packages, reused, token, sourceCommit: environment.GITHUB_SHA, publish: io.publish ?? ((pkg, auth) => npmPublish(pkg, environment, auth)) });
         writeSummary(environment, [
           '### Published to next',
           '',
