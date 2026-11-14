@@ -8,13 +8,13 @@ import { loadJsonDocument, resolveJsonPointer } from './contracts.mjs';
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const recipe = loadJsonDocument('type-projection.json');
 const platformSafetyContract = JSON.parse(readFileSync(
-  join(repositoryRoot, 'strategy/platform-safety-contract.json'),
+  join(repositoryRoot, 'packages/schema/platform-safety-contract.json'),
   'utf8',
 ));
 
 function projectionValues(source, valueField) {
   const [fileName, pointer] = source.split('#');
-  const document = fileName.startsWith('strategy/')
+  const document = fileName.startsWith('packages/')
     ? JSON.parse(readFileSync(join(repositoryRoot, fileName), 'utf8'))
     : loadJsonDocument(fileName);
   const value = resolveJsonPointer(
@@ -45,7 +45,7 @@ const policy = JSON.parse(await readFile(
 const source = 'packages/schema/schemas/type-projection.json';
 const outputPath = join(repositoryRoot, recipe.output);
 const expected = generatedText({ source, body, policy });
-const platformSafetySource = 'strategy/platform-safety-contract.json';
+const platformSafetySource = 'packages/schema/platform-safety-contract.json';
 const platformSafetyBody = [
   `export const platformSafetyContract = Object.freeze(${JSON.stringify(platformSafetyContract)});`,
   'export const platformSafetyRequirementIds = Object.freeze(',

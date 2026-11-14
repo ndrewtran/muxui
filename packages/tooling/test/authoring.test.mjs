@@ -121,8 +121,8 @@ async function temporaryCatalogRepository() {
       { recursive: true },
     ),
     cp(
-      resolve(repositoryRoot, 'strategy/platform-safety-contract.json'),
-      resolve(temporaryRoot, 'strategy/platform-safety-contract.json'),
+      resolve(repositoryRoot, 'packages/schema/platform-safety-contract.json'),
+      resolve(temporaryRoot, 'packages/schema/platform-safety-contract.json'),
     ),
   ]);
   return temporaryRoot;

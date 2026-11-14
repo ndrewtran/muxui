@@ -6,7 +6,7 @@
   },
   "pageBudgetProfilePath": "packages/catalog/token-section-page-budget-profile.json",
   "patternCategoriesPath": "catalog/patterns/categories.json",
-  "platformSafetyContractPath": "strategy/platform-safety-contract.json",
+  "platformSafetyContractPath": "packages/schema/platform-safety-contract.json",
   "queryApiVersion": "3.0.0",
   "supportedQueryApiVersions": [
     "3.0.0"
