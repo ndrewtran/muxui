@@ -1,9 +1,11 @@
-/* A consumer's rule on each documented hook that no authored stylesheet selects: the part map's hookOnly rows, one rule each, in table order.
+/* A consumer's rule on each documented hook that no authored stylesheet styles: the part map's hookOnly rows, one rule each, in table order.
  * It is unlayered, so it is a consumer's rule and wins over the layered stylesheets. test/browser/hook-only-reach.test.mjs loads it after
  * the shipped styles and checks each rule reaches exactly the elements of its selector; styling-tokens.test.mjs checks the rules and the
  * rows are the same set. The probe colour is not a Mux colour: it only has to be told apart from every colour Mux paints. */
 .muxui-color-mode-picker { outline-color: rgb(1, 2, 3); }
+.muxui-color-wheel__track { outline-color: rgb(1, 2, 3); }
 .muxui-command-palette__separator { outline-color: rgb(1, 2, 3); }
+.muxui-data-diff__head { outline-color: rgb(1, 2, 3); }
 .muxui-data-diff__body { outline-color: rgb(1, 2, 3); }
 .muxui-date-range-picker__start { outline-color: rgb(1, 2, 3); }
 .muxui-date-range-picker__end { outline-color: rgb(1, 2, 3); }
@@ -12,6 +14,7 @@
 .muxui-menu__list { outline-color: rgb(1, 2, 3); }
 .muxui-menu__section { outline-color: rgb(1, 2, 3); }
 .muxui-sidebar__toggle { outline-color: rgb(1, 2, 3); }
+.muxui-table__body { outline-color: rgb(1, 2, 3); }
 .muxui-tabs__panels { outline-color: rgb(1, 2, 3); }
 .muxui-text { outline-color: rgb(1, 2, 3); }
 .muxui-text-editor__image-picker { outline-color: rgb(1, 2, 3); }

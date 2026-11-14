@@ -55,7 +55,7 @@ export type PartRow = {
   readonly selector?: string;
   /** Why `hook` is not `partClass(family, part)`. */
   readonly exception?: string;
-  /** No authored rule selects the hook; why. A fixture stylesheet proves a consumer's rule on the selector reaches the element. */
+  /** No authored rule styles the hook (none has it in a nonempty subject); why. A fixture stylesheet proves a consumer's rule on the selector reaches the element. */
   readonly hookOnly?: string;
   /** The family whose root class shares the element: the control is also a `muxui-button`. Applies to the element Mux renders. */
   readonly composedOf?: string;
@@ -183,7 +183,7 @@ export const partRows: readonly PartRow[] = [
   { family: 'color-swatch-picker', part: 'swatch', disposition: 'composed', hook: 'muxui-color-swatch' },
   { family: 'color-swatch-picker', part: 'selection', disposition: 'none', reason: 'state' },
   { family: 'color-wheel', part: 'root', disposition: 'class', hook: 'muxui-color-wheel' },
-  { family: 'color-wheel', part: 'track', disposition: 'class', hook: 'muxui-color-wheel__track' },
+  { family: 'color-wheel', part: 'track', disposition: 'class', hook: 'muxui-color-wheel__track', hookOnly: 'React Aria paints the hue gradient on the track inline; the only authored rule on the class is empty.' },
   { family: 'color-wheel', part: 'thumb', disposition: 'class', hook: 'muxui-color-wheel__thumb' },
   { family: 'combo-box', part: 'root', disposition: 'class', hook: 'muxui-combo-box' },
   { family: 'combo-box', part: 'label', disposition: 'field', hook: 'muxui-field-label' },
@@ -225,7 +225,7 @@ export const partRows: readonly PartRow[] = [
   { family: 'data-diff', part: 'description', disposition: 'class', hook: 'muxui-data-diff__description' },
   { family: 'data-diff', part: 'viewport', disposition: 'class', hook: 'muxui-data-diff__viewport' },
   { family: 'data-diff', part: 'table', disposition: 'class', hook: 'muxui-data-diff__table' },
-  { family: 'data-diff', part: 'head', disposition: 'class', hook: 'muxui-data-diff__head' },
+  { family: 'data-diff', part: 'head', disposition: 'class', hook: 'muxui-data-diff__head', hookOnly: 'The thead carries it; a rule names it only as the ancestor of the selection cells it styles, so the head itself is not styled.' },
   { family: 'data-diff', part: 'column', disposition: 'class', hook: 'muxui-data-diff__column' },
   { family: 'data-diff', part: 'body', disposition: 'class', hook: 'muxui-data-diff__body', hookOnly: 'The tbody carries it; the table and the rows are styled and the body is not.' },
   { family: 'data-diff', part: 'row', disposition: 'class', hook: 'muxui-data-diff__row' },
@@ -467,7 +467,7 @@ export const partRows: readonly PartRow[] = [
   { family: 'table', part: 'root', disposition: 'class', hook: 'muxui-table' },
   { family: 'table', part: 'header', disposition: 'class', hook: 'muxui-table__header' },
   { family: 'table', part: 'column', disposition: 'class', hook: 'muxui-table__column' },
-  { family: 'table', part: 'body', disposition: 'class', hook: 'muxui-table__body' },
+  { family: 'table', part: 'body', disposition: 'class', hook: 'muxui-table__body', hookOnly: 'The tbody carries it; the rows and cells are styled and the only authored rule on the body is empty.' },
   { family: 'table', part: 'row', disposition: 'class', hook: 'muxui-table__row' },
   { family: 'table', part: 'cell', disposition: 'class', hook: 'muxui-table__cell' },
   { family: 'tabs', part: 'root', disposition: 'class', hook: 'muxui-tabs' },

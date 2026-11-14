@@ -216,8 +216,8 @@ test('every part-map row is a class row of its family, once and in anatomy order
   const dispositions = Object.groupBy(allRows(classRows), ({ row }) => row.disposition);
   assert.deepEqual(Object.fromEntries(Object.entries(dispositions).map(([name, list]) => [name, list.length])), { class: 360, 'root-element': 8, field: 48, composed: 12, internal: 10, none: 19 });
   const byNote = (pattern) => allRows(classRows).filter(({ row }) => pattern.test(row.note));
-  assert.equal(allRows(classRows).filter(({ row }) => row.hookOnly).length, 13);
-  assert.equal(byNote(/Hook only: no Mux rule styles it\./u).length, 13);
+  assert.equal(allRows(classRows).filter(({ row }) => row.hookOnly).length, 16);
+  assert.equal(byNote(/Hook only: no Mux rule styles it\./u).length, 16);
   assert.equal(byNote(/^Internal: no hook\.$/u).length, 10);
   assert.equal(byNote(/^Renders no element \(/u).length, 19);
 });

@@ -319,11 +319,19 @@ export const hookOnlyFixtures = {
     name: 'Text',
     element: ({ h, M }) => h(M.Text, { as: 'p' }, 'Plain text'),
   },
+  'color-wheel.track': {
+    name: 'ColorWheel',
+    element: ({ h, M }) => h(M.ColorWheel, { 'aria-label': 'Hue', defaultValue: '#336699' }),
+  },
   'command-palette.separator': {
     name: 'CommandPalette open with a separator',
     element: ({ h, M }) => h(M.CommandPalette.Root, { open: true, onOpenChange() {} },
       h(M.CommandPalette.Backdrop, null, h(M.CommandPalette.Popup, { 'aria-label': 'Commands' },
         h(M.CommandPalette.Content, null, h(M.CommandPalette.ListBox, { 'aria-label': 'Commands' }, h(M.CommandPalette.Item, { id: 'a', textValue: 'A' }, 'A')), h(M.CommandPalette.Separator, null))))),
+  },
+  'data-diff.head': {
+    name: 'DataDiff with rows',
+    element: ({ h, M }) => h(M.DataDiff, { label: 'Changes', columns: [{ id: 'name', label: 'Name' }], rows: [{ id: 'a', label: 'A', kind: 'added', values: { name: 'A' } }] }),
   },
   'data-diff.body': {
     name: 'DataDiff with rows',
@@ -342,6 +350,10 @@ export const hookOnlyFixtures = {
   'sidebar.toggle': {
     name: 'Sidebar with a toggle',
     element: ({ h, M }) => h(M.Sidebar.Provider, null, h(M.Sidebar.Root, { 'aria-label': 'Navigation' }, h(M.Sidebar.Toggle, null), h(M.Sidebar.NavList, null, h(M.Sidebar.NavItem, { href: '#a' }, 'A')))),
+  },
+  'table.body': {
+    name: 'Table with rows',
+    element: ({ h, M }) => h(M.Table, { 'aria-label': 'People', columns: [{ id: 'name', label: 'Name', isRowHeader: true }], rows: [{ id: 'ada', name: 'Ada' }] }),
   },
   'tabs.panels': {
     name: 'Tabs',

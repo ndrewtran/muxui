@@ -130,10 +130,10 @@ test('semantic styling roles compile across all declared mode combinations', () 
 // The styling contract inventory (CSS Stage 2). It proves the contract covers every catalog state and anatomy entry and that each
 // row has the shape its disposition needs; styling-emission.test.mjs proves the class is emitted on the right element.
 const catalog = await readCatalog(resolve(packageRoot, '../..'));
-const { selected, isEstablished } = await establishedClasses(packageRoot, styles.map(({ css }) => css));
+const { selected, styled, isEstablished } = await establishedClasses(packageRoot, styles.map(({ css }) => css));
 const contract = { partClass, publicSharedClasses, scopeClasses, elementQualifiers, noElementReasons, dispositions };
 const rowKey = (row) => `${row.family}.${row.part}`;
-const rowFailures = (rows = partRows) => partFailures(catalog.anatomy, rows, contract, { selected, isEstablished });
+const rowFailures = (rows = partRows) => partFailures(catalog.anatomy, rows, contract, { styled, isEstablished });
 
 // React Aria spells every state data-<name> except read-only (data-readonly); the Mux spelling replaces it.
 const reactAriaName = (state) => `data-${state === 'read-only' ? 'readonly' : state}`;
@@ -183,7 +183,7 @@ test('the state classification refuses an unclassified name, a stale entry and a
   assert.match(stateFailures(catalog.states, { ...catalogStateKinds, error: ['status'] }).join(), /error is a status without the attribute it names/u);
 });
 
-test('every catalog anatomy entry has one part-map row with a disposition, and every documented hook is selected or hookOnly', () => {
+test('every catalog anatomy entry has one part-map row with a disposition, and every documented hook is styled or hookOnly', () => {
   assert.deepEqual(rowFailures(), []);
   assert.equal(partRows.length, [...catalog.anatomy.values()].flat().length);
 });
@@ -224,14 +224,18 @@ test('the part map check refuses a missing row, a duplicate, an unknown key and 
   assert.match(change('tooltip.tooltip', { hook: 'muxui-tooltip__bogus' }), /tooltip\.tooltip: a root-element row's hook is the family root muxui-tooltip/u);
   assert.match(change('range-calendar.grid', { hook: 'muxui-range-calendar' }), /range-calendar\.grid: muxui-range-calendar is not a documented hook of another family/u);
   assert.match(change('meter.label', { hook: 'muxui-field-label' }), /meter\.label: muxui-field-label is documented elsewhere, so it is not internal/u);
-  // A documented hook with no authored rule is hookOnly with a reason; a hookOnly hook a rule selects is stale.
-  assert.ok(!selected.has('muxui-menu__list'));
-  assert.match(change('menu.list', { hookOnly: undefined }), /menu\.list: no authored rule selects muxui-menu__list and the row is not hookOnly/u);
+  // A documented hook no authored rule styles is hookOnly with a reason; a hookOnly hook a rule styles is stale. A rule styles the
+  // classes of its subject and has a body: Table's body has only an empty rule, and DataDiff's head is only an ancestor.
+  assert.ok(!styled.has('muxui-menu__list'));
+  assert.match(change('menu.list', { hookOnly: undefined }), /menu\.list: no authored rule styles muxui-menu__list and the row is not hookOnly/u);
+  assert.ok(selected.has('muxui-table__body') && selected.has('muxui-data-diff__head'));
+  assert.match(change('table.body', { hookOnly: undefined }), /table\.body: no authored rule styles muxui-table__body and the row is not hookOnly/u);
+  assert.match(change('data-diff.head', { hookOnly: undefined }), /data-diff\.head: no authored rule styles muxui-data-diff__head and the row is not hookOnly/u);
   assert.match(change('menu.list', { hookOnly: '' }), /menu\.list: hookOnly without a reason/u);
-  assert.match(change('button.root', { hookOnly: 'x' }), /button\.root: hookOnly, but an authored rule now selects muxui-button/u);
+  assert.match(change('button.root', { hookOnly: 'x' }), /button\.root: hookOnly, but an authored rule now styles muxui-button/u);
   // A hook styled through another class names a documented hook of another family or a shared field class, on a class row that is not hookOnly too.
   assert.match(change('switch-field.button', { styledThrough: 'muxui-bogus' }), /switch-field\.button: styledThrough muxui-bogus is neither a documented hook of another family nor a shared field class/u);
-  assert.match(change('switch-field.button', { styledThrough: undefined }), /switch-field\.button: no authored rule selects muxui-switch-field__button and the row is not hookOnly/u);
+  assert.match(change('switch-field.button', { styledThrough: undefined }), /switch-field\.button: no authored rule styles muxui-switch-field__button and the row is not hookOnly/u);
   assert.match(change('switch-field.button', { hookOnly: 'x' }), /switch-field\.button: styledThrough names the class that styles the hook, so the row is not hookOnly/u);
   assert.match(change('alert-dialog.root', { styledThrough: 'muxui-button' }), /alert-dialog\.root: a none row names no element/u);
   // A selector names the hook, the family root, one of the five scope classes and the recorded element predicates, and nothing else.
@@ -249,7 +253,7 @@ test('the part map check refuses a missing row, a duplicate, an unknown key and 
   for (const key of ['input.root', 'input.input', 'menu.root']) assert.match(change(key, { exception: undefined }), new RegExp(`${key.replace('.', '\\.')}: a root or control exception must be recorded`, 'u'));
 });
 
-// A documented hook no authored rule selects is `hookOnly`, which is a description of the hook and not an exemption from item 19's
+// A documented hook no authored rule styles is `hookOnly`, which is a description of the hook and not an exemption from item 19's
 // CSS proof: support/hook-only.css holds one consumer rule per such row, and test/browser/hook-only-reach.test.mjs shows each
 // reaches the element with the shipped styles loaded. This is the static half: the rules and the rows are the same set, each rule
 // is unlayered and only paints the probe colour, so it is a consumer's rule and nothing else.
@@ -270,7 +274,7 @@ function hookOnlyRuleFailures(css, rows) {
 test('the hookOnly fixture stylesheet has one unlayered consumer rule for each hookOnly row and no other', async () => {
   const css = await readFile(new URL('./support/hook-only.css', import.meta.url), 'utf8');
   assert.deepEqual(hookOnlyRuleFailures(css, partRows), []);
-  assert.equal(partRows.filter((row) => row.hookOnly !== undefined).length, 13);
+  assert.equal(partRows.filter((row) => row.hookOnly !== undefined).length, 16);
   // Controls: a missing rule, an extra one, a layered one, a duplicate and a rule that paints something else each fail.
   const failures = (changed, rows = partRows) => hookOnlyRuleFailures(changed, rows).join('\n');
   assert.match(failures(css.replace('.muxui-menu__list { outline-color: rgb(1, 2, 3); }\n', '')), /\.muxui-menu__list: a hookOnly row without a fixture rule/u);
@@ -281,7 +285,7 @@ test('the hookOnly fixture stylesheet has one unlayered consumer rule for each h
   assert.match(failures(css, partRows.map((row) => rowKey(row) === 'menu.list' ? { ...row, hookOnly: undefined } : row)), /\.muxui-menu__list: a fixture rule for a row that is not hookOnly/u);
 });
 
-test('every family root is selected, hookOnly, or renders no element, and the rows say which', () => {
+test('every family root is styled, hookOnly, or renders no element, and the rows say which', () => {
   const roots = partRows.filter(({ part }) => part === 'root');
   // Toast and Tooltip have no root part: the part named for the family is the root element (a root-element row).
   assert.deepEqual([...catalog.anatomy].filter(([, parts]) => !parts.includes('root')).map(([family]) => family), ['toast', 'tooltip']);
@@ -290,7 +294,7 @@ test('every family root is selected, hookOnly, or renders no element, and the ro
   // element is a provider (AlertDialog.Root renders nothing).
   for (const row of roots) {
     if (row.disposition === 'none') assert.equal(row.reason, 'provider', `${row.family} root`);
-    else assert.ok(selected.has(row.hook) || row.hookOnly, `${row.family} root ${row.hook} is selected or hookOnly`);
+    else assert.ok(styled.has(row.hook) || row.hookOnly, `${row.family} root ${row.hook} is styled or hookOnly`);
   }
   // Input and Menu roots differ from the class their control carries; the rows record why and no other family needs to.
   assert.deepEqual(roots.filter((row) => row.disposition === 'class' && row.hook !== `muxui-${row.family}`).map((row) => row.family), ['input', 'menu']);
@@ -307,7 +311,7 @@ test('the class naming function agrees with every BEM part class that exists, an
     }
   }
   for (const name of publicSharedClasses) {
-    assert.ok(selected.has(name) && partRows.some((row) => row.hook === name && row.disposition === 'field'), `${name} is styled and has field rows`);
+    assert.ok(styled.has(name) && partRows.some((row) => row.hook === name && row.disposition === 'field'), `${name} is styled and has field rows`);
   }
   // Every scope class is real: spelled in source, and no row names one as a part hook. muxui-switch-field is also the root of the
   // SwitchField family, which Switch renders as the wrapper around its label, description and error.

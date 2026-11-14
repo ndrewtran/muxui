@@ -6,6 +6,7 @@ import { execFile } from 'node:child_process';
 import { createServer } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
+import * as cssTree from 'css-tree';
 import {
   assertBundleRetention,
   assertExactArchiveEntries,
@@ -13,6 +14,7 @@ import {
   assertExactExportList,
   assertInstalledCandidate,
   assertNoPublicSurfaceLeaks,
+  assertPackedComponentStyles,
   assertPackedFileBoundary,
   assertSingleInstalledVersion,
   assertStylesheetAssetUrls,
@@ -39,6 +41,7 @@ import {
 } from '../src/release-proof.mjs';
 import { attestationDocument, statementOf } from './registry-fake.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
+import { partRows } from '../../../../packages/react/test/support/styling-parts.ts';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const packageRoot = join(repositoryRoot, 'packages/react');
@@ -142,6 +145,106 @@ test('release proof resolves every local stylesheet URL to a nonempty archive as
     }),
     /R1\.5_PACK_STYLE_ASSET_MISSING/u,
   );
+});
+
+test('the packed stylesheet selects every hook the part map says Mux styles', () => {
+  const historicalSnapshot = JSON.parse(readFileSync(join(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
+  const { currentComponentExports } = deriveCurrentExportSurface({
+    historicalFamilies: historicalSnapshot.families,
+    supplementalComponents: readSupplementalMapping(repositoryRoot),
+  });
+  const stylesheet = readFileSync(join(packageRoot, 'generated/styles.css'), 'utf8');
+  assert.ok(currentComponentExports.includes('ColorModePicker'), 'a component with no rule of its own is in the surface');
+  assert.ok(currentComponentExports.includes('ThemePicker'));
+  const check = (sheet) => () => assertPackedComponentStyles({ stylesheet: sheet, componentExports: currentComponentExports, partRows });
+  check(stylesheet)();
+  // Removing every rule that names a shared field hook or a styled-through supplier fails, though the hook still appears in markup.
+  const withoutRulesNaming = (hook) => {
+    const ast = cssTree.parse(stylesheet, { positions: false, parseValue: false });
+    cssTree.walk(ast, {
+      visit: 'Rule',
+      enter: (node, item, list) => {
+        if (new RegExp(`\\.${hook}(?![\\w-])`, 'u').test(cssTree.generate(node.prelude))) list.remove(item);
+      },
+    });
+    return cssTree.generate(ast);
+  };
+  assert.throws(check(withoutRulesNaming('muxui-field-description')), /TextField: no rule selects \.muxui-field-description(?:;|$)/u);
+  assert.throws(
+    check(withoutRulesNaming('muxui-switch__indicator')),
+    /SwitchField: no rule selects \.muxui-switch__indicator, which styles \.muxui-switch-field__thumb/u,
+  );
+});
+
+test('the packed style check exempts hook-only hooks and needs every other hook as a whole class name', () => {
+  const rows = [
+    { family: 'picker', part: 'root', disposition: 'class', hook: 'muxui-picker', hookOnly: 'Another family supplies the look.' },
+    { family: 'picker', part: 'option', disposition: 'composed', hook: 'muxui-toggle', composedOf: 'button' },
+    { family: 'text', part: 'root', disposition: 'class', hook: 'muxui-text' },
+    { family: 'dialog', part: 'root', disposition: 'none', reason: 'provider' },
+    { family: 'dialog', part: 'popup', disposition: 'class', hook: 'muxui-dialog__popup' },
+    { family: 'dialog', part: 'label', disposition: 'class', hook: 'muxui-dialog__label', styledThrough: 'muxui-field-label' },
+  ];
+  const check = (stylesheet, componentExports = ['Picker', 'Text', 'Dialog']) => (
+    () => assertPackedComponentStyles({ stylesheet, componentExports, partRows: rows })
+  );
+  check('@layer muxui { .muxui-text { color: red } .muxui-dialog__popup:where([data-muxui-state-open]) { inset: 0 } .muxui-field-label { color: red } }')();
+  assert.throws(check('.muxui-text { color: red } .muxui-dialog__popup { inset: 0 } .muxui-dialog__label { color: red }'), /Dialog: no rule selects \.muxui-field-label, which styles \.muxui-dialog__label$/u);
+  assert.throws(check('.muxui-text-field { color: red } .muxui-dialog__popup, .muxui-field-label { inset: 0 }'), /R1\.5_PACK_STYLE_MISSING: Text: no rule selects \.muxui-text$/u);
+  assert.throws(check('/* .muxui-text */ .muxui-dialog__popup, .muxui-field-label { inset: 0 }'), /Text: no rule selects \.muxui-text$/u);
+  assert.throws(check('.muxui-text { color: red } .muxui-dialog__popup-icon, .muxui-field-label { inset: 0 }'), /Dialog: no rule selects \.muxui-dialog__popup$/u);
+  assert.throws(check('.muxui-text { color: red }', ['Menu']), /Menu: the part map has no rows for menu/u);
+});
+
+test('the packed style check counts only classes in the subject of a nonempty rule', () => {
+  const rowsOf = (...families) => partRows.filter(({ family }) => families.includes(family));
+  const check = (stylesheet, componentExports, rows) => () => assertPackedComponentStyles({ stylesheet, componentExports, partRows: rows });
+  const button = (sheet) => check(sheet, ['Button'], rowsOf('button'));
+  button('.muxui-button { color: red } .muxui-button__label { color: red }')();
+  button(':where(.muxui-link, .muxui-button)[data-muxui-state-pressed] { color: red } .muxui-button > :is(.muxui-icon, .muxui-button__label) { color: red }')();
+  assert.throws(button('.muxui-link:not(.muxui-button) { color: red } .muxui-button__label { color: red }'), /Button: no rule selects \.muxui-button$/u);
+  assert.throws(button('.muxui-card:has(.muxui-button) { color: red } .muxui-button__label { color: red }'), /Button: no rule selects \.muxui-button$/u);
+  assert.throws(button('.muxui-button {} .muxui-button__label { color: red }'), /Button: no rule selects \.muxui-button$/u);
+  assert.throws(button('.muxui-button + .muxui-link { color: red } .muxui-button__label { color: red }'), /Button: no rule selects \.muxui-button$/u);
+  assert.throws(
+    button('@supports selector(.muxui-button) { .muxui-link { color: red } } .muxui-button__label { color: red }'),
+    /Button: no rule selects \.muxui-button$/u,
+  );
+  assert.throws(
+    button('@scope (.muxui-button) to (.muxui-button__label) { .muxui-icon { color: red } } .muxui-button__label { color: red }'),
+    /Button: no rule selects \.muxui-button$/u,
+  );
+  button('@scope (.muxui-card) { .muxui-button { color: red } } .muxui-button__label { color: red }')();
+  // A rule on a pseudo-element styles the pseudo-element, not the element it hangs from.
+  const pending = '.muxui-button[data-muxui-state-pending]::after { content: "" } .muxui-button__label { color: red }';
+  assert.throws(button(pending), /Button: no rule selects \.muxui-button$/u);
+  for (const pseudo of [':before', ':first-letter', '::placeholder', '::-webkit-scrollbar', '::marker']) {
+    assert.throws(button(`.muxui-button${pseudo} { color: red } .muxui-button__label { color: red }`), /Button: no rule selects \.muxui-button$/u, pseudo);
+  }
+  button(`${pending} .muxui-button { color: red }`)();
+
+  // TextField's root and its shared field hooks: a root named only as an ancestor of the field input styles nothing.
+  const fields = '.muxui-field-label, .muxui-field-input { color: red } .muxui-field-description, .muxui-field-error { color: red }';
+  const textField = (sheet) => check(sheet, ['TextField'], rowsOf('text-field'));
+  textField(`:where(.muxui-search-field, .muxui-text-field)[data-muxui-size="sm"] { gap: 0 } ${fields}`)();
+  assert.throws(textField(`.muxui-text-field .muxui-field-input { gap: 0 } ${fields}`), /TextField: no rule selects \.muxui-text-field$/u);
+  assert.throws(
+    textField('.muxui-text-field { gap: 0 } .muxui-field-label, .muxui-field-input, .muxui-field-error { color: red } .muxui-field-description-icon { color: red }'),
+    /TextField: no rule selects \.muxui-field-description$/u,
+  );
+});
+
+test('the packed style check decodes escaped classes and reads [class~=] as a whole class', () => {
+  const rows = partRows.filter(({ family }) => family === 'theme-picker');
+  const others = rows.map(({ hook }) => hook).filter((hook) => hook !== 'muxui-theme-picker__swatch').map((hook) => `.${hook}`).join(', ');
+  const check = (swatch) => () => assertPackedComponentStyles({ stylesheet: `${others} { color: red } ${swatch} { color: red }`, componentExports: ['ThemePicker'], partRows: rows });
+  check('.muxui-theme-picker__swatch')();
+  check('.muxui-theme-picker__\\73 watch')();
+  check('[class~="muxui-theme-picker__swatch"]')();
+  check('.muxui-theme-picker__option [class~=muxui-theme-picker__\\73 watch]')();
+  for (const swatch of ['[class*="muxui-theme-picker__swatch"]', '[class^="muxui-theme-picker__swatch"]', '[class="muxui-theme-picker__swatch"]', '.muxui-theme-picker__\\73 watches']) {
+    assert.throws(check(swatch), /ThemePicker: no rule selects \.muxui-theme-picker__swatch$/u, swatch);
+  }
 });
 
 test('release proof rejects missing bundled font, dependency, or license notice', () => {

@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
+import * as cssTree from 'css-tree';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, posix } from 'node:path';
@@ -101,6 +102,77 @@ export function assertStylesheetAssetUrls({ stylesheet, stylesheetEntry, entries
     const size = entrySizes instanceof Map ? entrySizes.get(archiveEntry) : entrySizes?.[archiveEntry];
     if (!Number.isFinite(size) || size <= 0) fail('R1.5_PACK_STYLE_ASSET_MISSING', archiveEntry);
   }
+}
+
+// The single-colon spellings CSS keeps for the CSS 2 pseudo-elements.
+const legacyPseudoElements = new Set(['before', 'after', 'first-line', 'first-letter']);
+
+/**
+ * Adds the whole class names a selector's subject compound requires, the elements its rule styles: class selectors and
+ * `[class~=x]` (not `[class*=]` or `[class^=]`), with escapes decoded, and the subjects of `:is()` and `:where()` arguments.
+ * Ancestor and sibling compounds and `:not()`, `:has()` and other pseudo-class arguments never count, and neither does a compound
+ * with a pseudo-element (`::after`, `::placeholder`, legacy `:before`): the rule styles that pseudo-element, not the element.
+ * Nesting is not supported: a nested rule is left unparsed, so `&` never counts its parent.
+ */
+function addSubjectClasses(selector, styled) {
+  const nodes = [...selector.children];
+  const subject = nodes.slice(nodes.findLastIndex(({ type }) => type === 'Combinator') + 1);
+  if (subject.some(({ type, name }) => type === 'PseudoElementSelector'
+    || (type === 'PseudoClassSelector' && legacyPseudoElements.has(name.toLowerCase())))) return;
+  for (const node of subject) {
+    if (node.type === 'ClassSelector') styled.add(cssTree.ident.decode(node.name));
+    if (node.type === 'AttributeSelector' && node.matcher === '~=' && cssTree.ident.decode(node.name.name).toLowerCase() === 'class') {
+      styled.add(node.value.type === 'String' ? node.value.value : cssTree.ident.decode(node.value.name));
+    }
+    if (node.type === 'PseudoClassSelector' && ['is', 'where'].includes(node.name.toLowerCase())) {
+      for (const list of node.children ?? []) {
+        if (list.type === 'SelectorList') for (const argument of list.children) addSubjectClasses(argument, styled);
+      }
+    }
+  }
+}
+
+/**
+ * The classes a stylesheet styles: each whole class name in the subject of a style rule that has a declaration or a nested rule.
+ * Comments, empty rules, at-rule conditions (`@scope` roots and limits, `@supports selector()`) and mentions outside a subject
+ * never count. The React styling inventory reads authored CSS through this too, so a `hookOnly` row in the part map means the same
+ * thing to it and to the packed check: a documented hook outside this set.
+ */
+export function styledSubjectClasses(stylesheet) {
+  const styled = new Set();
+  cssTree.walk(cssTree.parse(stylesheet, { positions: false, parseValue: false }), {
+    visit: 'Rule',
+    enter: ({ prelude, block }) => {
+      if (prelude.type !== 'SelectorList' || block.children.isEmpty) return;
+      for (const selector of prelude.children) addSubjectClasses(selector, styled);
+    },
+  });
+  return styled;
+}
+
+/**
+ * Fails unless the packed stylesheet styles (`styledSubjectClasses`) every hook the part map
+ * (`packages/react/test/support/styling-parts.ts`) says a Mux rule styles for each component: its `class`, `root-element` and
+ * shared `field` rows that are not `hookOnly`. A `styledThrough` row needs its supplying class styled instead. A component whose
+ * rows have no such hook, such as one another family supplies the whole look of, needs no rule of its own; a component with no
+ * rows at all fails.
+ */
+export function assertPackedComponentStyles({ stylesheet, componentExports, partRows }) {
+  const styled = styledSubjectClasses(stylesheet);
+  const failures = componentExports.flatMap((name) => {
+    const slug = name.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
+    const rows = partRows.filter(({ family }) => family === slug);
+    if (rows.length === 0) return [`${name}: the part map has no rows for ${slug}`];
+    return rows
+      .filter(({ disposition, hook, hookOnly }) => (
+        ['class', 'root-element', 'field'].includes(disposition) && hook !== undefined && hookOnly === undefined
+      ))
+      .flatMap(({ hook, styledThrough }) => {
+        if (styledThrough !== undefined) return styled.has(styledThrough) ? [] : [`${name}: no rule selects .${styledThrough}, which styles .${hook}`];
+        return styled.has(hook) ? [] : [`${name}: no rule selects .${hook}`];
+      });
+  });
+  if (failures.length !== 0) fail('R1.5_PACK_STYLE_MISSING', failures.join('; '));
 }
 
 export function assertExactDependencyGraph(actual, expected) {

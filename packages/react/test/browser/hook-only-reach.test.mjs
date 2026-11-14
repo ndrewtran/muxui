@@ -3,7 +3,7 @@ import test from 'node:test';
 import { partRows, selectorOf } from '../support/styling-parts.ts';
 import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
-// Thirteen documented hooks have no rule in any authored stylesheet (the part map's hookOnly rows): Mux emits the class and styles
+// Sixteen documented hooks are styled by no authored rule (the part map's hookOnly rows): Mux emits the class and styles
 // the element another way or not at all. A hook is only useful if a consumer's rule on it reaches the element, so this mounts each
 // row's fixture with the shipped stylesheets and support/hook-only.css (one unlayered rule per row that paints a probe outline
 // colour) and checks that the probe lands on exactly the elements the selector matches, and on no other element on the page.
@@ -12,7 +12,7 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 
 const probe = 'rgb(1, 2, 3)';
 const hookOnly = partRows.filter((row) => row.hookOnly !== undefined);
-assert.equal(hookOnly.length, 13);
+assert.equal(hookOnly.length, 16);
 
 const entry = `
 import React from 'react';
@@ -54,7 +54,7 @@ for (const engine of browserEngines()) {
         await page.waitForSelector(selectorOf(row), { state: 'attached', timeout: 10_000 });
       };
       // Where the probe is painted: every element of the page with the probe outline colour. The elements the row's selector names
-      // must all be painted; an element no hookOnly selector names (any row's, since the stylesheet holds all thirteen) must not be.
+      // must all be painted; an element no hookOnly selector names (any row's, since the stylesheet holds all sixteen) must not be.
       const everySelector = hookOnly.map(selectorOf);
       const measure = (selector) => page.evaluate(({ selector: target, selectors, colour }) => {
         const name = (element) => `${element.localName}${element.className && typeof element.className === 'string' ? `.${element.className.trim().replace(/\s+/gu, '.')}` : ''}`;
