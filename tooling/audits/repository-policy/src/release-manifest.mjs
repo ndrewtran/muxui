@@ -1,5 +1,5 @@
-// The portfolio release manifest (`E-P2.1-03`): one document per release that correlates the whole tuple of the
-// publish set, and the verifier that holds it to the tarball bytes. Both read the same facts from the tarballs, so
+// The portfolio release manifest: one document per release that correlates the whole tuple of the publish set, and
+// the verifier that holds it to the tarball bytes. Both read the same facts from the tarballs, so
 // the builder cannot record something the verifier would read differently. Builtins only: the lineage check runs in
 // a job that installs nothing.
 import { execFileSync } from 'node:child_process';
@@ -8,7 +8,7 @@ import { canonicalJson } from './canonical-json.mjs';
 import { readArchive } from './release-archive.mjs';
 import { deriveCatalogIdentity, deriveVisualContract, digestFileSet, readLockedIntegrity } from './release-contract.mjs';
 import { CANDIDATE_PUBLISH_CONFIG, descriptorExports, isPackageSpecifier } from './release-package.mjs';
-import { nextCandidateVersion, tarballFileName } from './release-set.mjs';
+import { tarballFileName } from './release-set.mjs';
 
 export const PORTFOLIO_SCHEMA = 'muxui-portfolio-release-v1';
 export const REACT_COMPATIBILITY_SCHEMA = 'muxui-react-compatibility-v1';
@@ -16,6 +16,9 @@ const RENDERER_PACKAGE = '@muxui/react';
 const RENDERER_BINDING = 'web.react';
 const SCHEMA_PACKAGE = '@muxui/schema';
 const CATALOG_PACKAGE = '@muxui/catalog';
+const TOOLING_PACKAGE = '@muxui/tooling';
+/** The packages that publish only `-rc.N` prereleases of their source version; @muxui/react is pinned to 0.1.0-rc.N. */
+const PRERELEASE_PACKAGES = Object.freeze([SCHEMA_PACKAGE, CATALOG_PACKAGE, TOOLING_PACKAGE]);
 const gitObject = /^[0-9a-f]{40}$/u;
 
 export const sha256 = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
@@ -75,6 +78,23 @@ export function releaseIdFor({ revision, published }) {
   return `muxui-portfolio:${sha256(identity).slice('sha256:'.length, 'sha256:'.length + 32)}`;
 }
 
+/**
+ * Problems in an installed candidate set: each prerelease package is installed at its rc candidate version, the
+ * catalog's package version is its `catalogVersion`, and tooling's own range on the catalog admits it. `installed` maps a
+ * package to the manifest version the consumer holds.
+ */
+export function findCandidateSetProblems({ versions, installed, toolingCatalogRange, catalogVersion }) {
+  const problems = [];
+  for (const name of PRERELEASE_PACKAGES) {
+    const version = installed.get(name);
+    if (version !== versions.get(name)) problems.push(`${name} installs ${version}, not the candidate ${versions.get(name)}`);
+    else if (!/^\d+\.\d+\.\d+-rc\.[1-9]\d*$/u.test(version)) problems.push(`${name}@${version} is not an rc prerelease`);
+  }
+  if (catalogVersion !== installed.get(CATALOG_PACKAGE)) problems.push(`the catalog installs ${installed.get(CATALOG_PACKAGE)} but declares catalogVersion ${catalogVersion}`);
+  else if (!caretAllows(toolingCatalogRange, catalogVersion)) problems.push(`${TOOLING_PACKAGE} requires ${CATALOG_PACKAGE}@${toolingCatalogRange}, which does not admit ${catalogVersion}`);
+  return problems;
+}
+
 
 /**
  * Problems in a renderer descriptor against the catalog's release record for it and the package's own export map
@@ -118,56 +138,6 @@ export function committedFileReader(revision, cwd) {
       return undefined;
     }
   };
-}
-
-/**
- * The release ledger: the manifest of each portfolio release a later release names or reuses from, byte for byte as
- * the release wrote it, at `releases/<hex>.json` for the release id `muxui-portfolio:<hex>`. One path per id, so a
- * ledger cannot hold two manifests of one release.
- */
-export const RELEASE_LEDGER = 'releases';
-const ledgerName = /^releases\/([0-9a-f]{32})\.json$/u;
-const releaseIdHex = /^muxui-portfolio:([0-9a-f]{32})$/u;
-
-/** The ledger path of a release id, or undefined for a string that is not one. */
-export const releaseLedgerPath = (id) => {
-  const hex = releaseIdHex.exec(typeof id === 'string' ? id : '')?.[1];
-  return hex === undefined ? undefined : `${RELEASE_LEDGER}/${hex}.json`;
-};
-
-/**
- * The ledger manifest at `path` as committed at `revision`: a portfolio manifest whose id is the one its file name
- * gives. An uncommitted edit is not read, and a missing file, another path, or a mismatched manifest stops the release.
- */
-export function readLedgerManifest({ path, revision, cwd }) {
-  const hex = ledgerName.exec(path)?.[1] ?? fail('P2_1_RELEASE_LEDGER_PATH_INVALID', `${path} is not ${RELEASE_LEDGER}/<hex of a release id>.json`);
-  const bytes = committedFileReader(revision, cwd)(path) ?? fail('P2_1_RELEASE_LEDGER_MISSING', `${path} is not committed at ${revision}`);
-  let manifest;
-  try {
-    manifest = JSON.parse(bytes.toString('utf8'));
-  } catch {
-    fail('P2_1_RELEASE_LEDGER_MISMATCH', `${path} is not JSON`);
-  }
-  if (manifest?.schema !== PORTFOLIO_SCHEMA || manifest.id !== `muxui-portfolio:${hex}`) {
-    fail('P2_1_RELEASE_LEDGER_MISMATCH', `${path} is not the ${PORTFOLIO_SCHEMA} manifest of muxui-portfolio:${hex}`);
-  }
-  return manifest;
-}
-
-/**
- * The ledger manifests committed at `revision` for the releases `ids` name: where a reused package's record is checked
- * against the release that published it. A release with no ledger file is absent from the Map, and
- * `verifyPortfolioRelease` then refuses the reuse.
- */
-export function readRetainedManifests({ ids, revision, cwd }) {
-  const found = new Map();
-  const read = committedFileReader(revision, cwd);
-  for (const id of new Set(ids)) {
-    const path = releaseLedgerPath(id);
-    if (path === undefined || read(path) === undefined) continue;
-    found.set(id, readLedgerManifest({ path, revision, cwd }));
-  }
-  return found;
 }
 
 /** A file as committed at the release commit; a missing one stops the release. */
@@ -354,39 +324,11 @@ function tupleEdges(publishSet, facts) {
     .sort((left, right) => (`${left.from}>${left.to}` < `${right.from}>${right.to}` ? -1 : 1));
 }
 
-/** Decision 0023 and its amendment 01, per package of the release (Decision 0032 item 9). */
-export function buildRollbackPlan({ published }) {
-  return {
-    status: 'prepared-not-exercised',
-    authority: ['muxui:decision:0023', 'muxui:decision:0023:amendment:01', 'muxui:decision:0032'],
-    distTag: 'next',
-    publishOrder: published.map(({ name }) => name),
-    packages: published.map(({ name, version }) => ({ name, version, fixForward: nextCandidateVersion(version) })),
-    trigger: ['published consumer verification failure', 'integrity or provenance mismatch of one package', 'a later package in the order failing to publish or read back'],
-    steps: [
-      'stop further publication and preserve every published version and this manifest',
-      'deprecate only a version that published bad bytes, with Andrew\'s separate explicit authorization, naming the failure and its fixed successor; a package that never published needs no deprecation, and healthy published versions stay published',
-      'fix forward by publishing the corrected rc of the failed package, and of any package that depends on it, to next in publish order through a separately authorized publication',
-      'verify the tuple again against a new release manifest; no record is rewritten',
-      'latest is not claimed or promoted (the registry sets it on a package\'s first publish); re-pointing it is only the Decision 0023 item 3 rollback step, with Andrew\'s explicit authorization at the time',
-    ],
-    forbidden: [
-      'overwrite or republish a published version',
-      'unpublish, except for a security or legal problem inside the npm 72-hour no-dependents window with explicit human authorization',
-      'claim or promote latest or a stable release',
-      'rewrite an earlier release manifest or evidence record',
-    ],
-  };
-}
-
-const buildPublication = ({ published }) => ({
-  status: 'prepared',
+// Where and in which order the set publishes. Recovery from a partial publish is the publish job's plan (npm-publication.mjs).
+const buildPublication = (publishSet) => ({
   registry: CANDIDATE_PUBLISH_CONFIG.registry,
   distTag: CANDIDATE_PUBLISH_CONFIG.tag,
-  order: published.map(({ name }) => name),
-  authorization: 'required-external-human-authorization',
-  provenance: 'required-at-publication',
-  mutationPerformed: false,
+  order: publishSet.packages.map(({ name }) => name),
 });
 
 // A manifest's digest covers everything except the digest itself and how the checks ran.
@@ -396,42 +338,21 @@ function manifestDigest(manifest) {
 }
 
 /**
- * The portfolio manifest. `artifacts` maps every member of the set to its tarball bytes. `reused` maps a package the
- * release does not publish to its package record in the manifest that published it; the bytes must be the ones that
- * record names, and the new record keeps its version, digests, and provenance. `readCommitted(path)` reads the
- * lockfile and the token source as committed at the release commit. A published React
- * package brings its `react` correlation block, derived here; a reused one keeps the record of its own release.
- * `preparation` says how the checks ran and is not part of the digest, so two preparations of one commit and tuple have
- * one digest whatever the run was.
+ * The portfolio manifest. `artifacts` maps every member of the set to its tarball bytes, all built from `source.revision`.
+ * `readCommitted(path)` reads the lockfile and the token source as committed at the release commit, for the `react`
+ * correlation block. `preparation` says how the checks ran and is not part of the digest, so two preparations of one
+ * commit and tuple have one digest whatever the run was.
  */
-export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map(), source, readCommitted, preparation }) {
+export function buildPortfolioManifest({ publishSet, artifacts, source, readCommitted, preparation }) {
   const facts = readTupleFacts({ publishSet, artifacts });
-  const versionOf = (name) => facts.packages.get(name).manifest.version;
-  for (const [name, prior] of reused) {
-    const { bytes, manifest } = facts.packages.get(name);
-    if (prior.name !== name || prior.version !== manifest.version || prior.file !== tarballFileName(name, manifest.version)
-      || prior.integrity !== sha512Integrity(bytes) || prior.sha256 !== sha256(bytes) || manifest.gitHead !== prior.provenance?.sourceCommit) {
-      fail('P2_1_MANIFEST_REUSE_MISMATCH', `${name} is not the package its earlier release recorded (${prior.version}, ${prior.integrity})`);
-    }
-  }
-  const published = publishSet.packages.filter(({ name }) => !reused.has(name)).map(({ name }) => ({ name, version: versionOf(name) }));
-  const id = releaseIdFor({ revision: source.revision, published });
+  const published = publishSet.packages.map(({ name }) => ({ name, version: facts.packages.get(name).manifest.version }));
   const body = {
     schema: PORTFOLIO_SCHEMA,
-    id,
+    id: releaseIdFor({ revision: source.revision, published }),
     source: { revision: source.revision, tree: source.tree },
     packages: publishSet.packages.map(({ name }) => {
       const { bytes, manifest } = facts.packages.get(name);
-      if (reused.has(name)) return { ...reused.get(name), role: 'reused' };
-      return {
-        name,
-        version: manifest.version,
-        role: 'published',
-        file: tarballFileName(name, manifest.version),
-        integrity: sha512Integrity(bytes),
-        sha256: sha256(bytes),
-        provenance: { kind: 'release-commit', releaseId: id, sourceCommit: source.revision },
-      };
+      return { name, version: manifest.version, file: tarballFileName(name, manifest.version), integrity: sha512Integrity(bytes), sha256: sha256(bytes) };
     }),
     catalog: {
       id: facts.catalogPackage.releaseManifest.catalog.id,
@@ -442,32 +363,27 @@ export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map
     compatibility: { edges: tupleEdges(publishSet, facts) },
     descriptors: facts.descriptors.map(({ descriptor: _descriptor, ...record }) => record),
     reactCompatibility: facts.reactCompatibility,
-    ...(reused.has(RENDERER_PACKAGE) ? {} : { react: deriveReactCorrelation(facts, readCommitted) }),
-    publication: buildPublication({ published }),
-    rollback: buildRollbackPlan({ published }),
+    react: deriveReactCorrelation(facts, readCommitted),
+    publication: buildPublication(publishSet),
   };
   return { ...body, digest: sha256(canonicalJson(body)), preparation };
 }
 
 /**
- * Verifies a portfolio manifest against the tarballs of its tuple (`artifacts`: package name to bytes, the
- * published ones from the candidate and a reused one from where it was first published). It rejects repacked bytes
- * under one version, a package missing from the tuple, a published package built from another commit, and a reused
- * package that is not exactly the record of the earlier release it names (`priorManifests`: release id to that
- * release's manifest) or whose compatibility no longer holds. Contracts, rollback, and publication are recomputed,
- * not trusted: from the packed catalog, schema, and renderer, from the lockfile and token source as committed
- * (`readCommitted`), and from the verified records. A manifest written before releases stopped recording evidence
- * keeps its `evidence` block; nothing recomputes it, and its own digest still covers it. The `react`
- * correlation is recomputed for a published React package and absent for a reused one. `expected` may name the commit and tree the
- * release must come from. Returns the facts read from the tarballs.
+ * Verifies a portfolio manifest against the tarballs of its tuple (`artifacts`: package name to bytes). It rejects
+ * repacked bytes under one version, a package missing from the tuple, and a package built from another commit than the
+ * release's. Contracts, compatibility, and publication are recomputed, not trusted: from the packed catalog, schema, and
+ * renderer, and from the lockfile and token source as committed (`readCommitted`). `expected` may name the commit and
+ * tree the release must come from. Returns the facts read from the tarballs.
  */
-export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expected = {}, readCommitted, priorManifests = new Map() }) {
+export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expected = {}, readCommitted }) {
   if (manifest?.schema !== PORTFOLIO_SCHEMA) fail('P2_1_MANIFEST_SCHEMA_INVALID', `the manifest schema is ${manifest?.schema}`);
   if (manifest.digest !== manifestDigest(manifest)) fail('P2_1_MANIFEST_DIGEST_MISMATCH', 'the manifest digest does not match its content');
   if (!gitObject.test(manifest.source?.revision ?? '') || !gitObject.test(manifest.source?.tree ?? '')) fail('P2_1_MANIFEST_SOURCE_INVALID', 'the source revision and tree must be Git object ids');
   for (const key of ['revision', 'tree']) {
     if (expected[key] !== undefined && manifest.source[key] !== expected[key]) fail('P2_1_MANIFEST_SOURCE_MISMATCH', `the manifest source ${key} is ${manifest.source[key]}, not ${expected[key]}`);
   }
+  const { revision } = manifest.source;
 
   const recorded = new Map((manifest.packages ?? []).map((record) => [record.name, record]));
   const missing = publishSet.packages.filter(({ name }) => !recorded.has(name) || !artifacts.has(name)).map(({ name }) => name);
@@ -477,48 +393,22 @@ export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expect
   }
 
   const facts = readTupleFacts({ publishSet, artifacts });
-  const published = [];
   for (const { name } of publishSet.packages) {
     const record = recorded.get(name);
     const { bytes, manifest: packed } = facts.packages.get(name);
     if (sha512Integrity(bytes) !== record.integrity || sha256(bytes) !== record.sha256) {
       fail('P2_1_MANIFEST_PACKAGE_REPACKED', `${name}@${record.version} is not the recorded bytes (${sha512Integrity(bytes)})`);
     }
-    if (packed.name !== name || packed.version !== record.version) fail('P2_1_MANIFEST_PACKAGE_REPACKED', `${name} packs ${packed.name}@${packed.version}, not ${record.version}`);
-    const { sourceCommit } = record.provenance ?? {};
-    if (!gitObject.test(sourceCommit ?? '') || packed.gitHead !== sourceCommit) {
-      fail('P2_1_MANIFEST_COMMIT_MISMATCH', `${name} is built from ${packed.gitHead}, not its recorded ${sourceCommit}`);
+    if (packed.name !== name || packed.version !== record.version || record.file !== tarballFileName(name, record.version)) {
+      fail('P2_1_MANIFEST_PACKAGE_REPACKED', `${name} packs ${packed.name}@${packed.version}, not ${record.version} (${record.file})`);
     }
-    if (record.role === 'published') {
-      published.push({ name, version: record.version });
-      if (sourceCommit !== manifest.source.revision) fail('P2_1_MANIFEST_COMMIT_MISMATCH', `${name} is published from ${sourceCommit}, not the release commit ${manifest.source.revision}`);
-    } else if (record.role !== 'reused') {
-      fail('P2_1_MANIFEST_PACKAGE_INVALID', `${name} has role ${record.role}`);
-    }
+    if (packed.gitHead !== revision) fail('P2_1_MANIFEST_COMMIT_MISMATCH', `${name} is built from ${packed.gitHead}, not the release commit ${revision}`);
   }
-  if (releaseIdFor({ revision: manifest.source.revision, published }) !== manifest.id) fail('P2_1_MANIFEST_ID_MISMATCH', 'the release id does not name this commit and the published versions');
-  for (const { name } of publishSet.packages) {
-    const record = recorded.get(name);
-    if (record.role === 'published' && record.provenance.releaseId !== manifest.id) fail('P2_1_MANIFEST_COMMIT_MISMATCH', `${name} records release ${record.provenance.releaseId}, not ${manifest.id}`);
-    if (record.role !== 'reused') continue;
-    if (record.provenance.releaseId === manifest.id) fail('P2_1_MANIFEST_PACKAGE_INVALID', `${name} is reused and records this release as its origin`);
-    // A reused package is the record of the release that published it, byte for byte and field for field.
-    const origin = priorManifests.get(record.provenance.releaseId);
-    if (origin === undefined || origin.schema !== PORTFOLIO_SCHEMA || origin.id !== record.provenance.releaseId || origin.digest !== manifestDigest(origin)) {
-      fail('P2_1_MANIFEST_REUSE_UNVERIFIED', `${name} is reused from ${record.provenance.releaseId}, which has no verified earlier manifest`);
-    }
-    const earlier = (origin.packages ?? []).find((candidate) => candidate.name === name && candidate.role === 'published');
-    if (earlier === undefined || canonicalJson({ ...record, role: 'published' }) !== canonicalJson(earlier)) {
-      fail('P2_1_MANIFEST_REUSE_MISMATCH', `${name}@${record.version} is not the record ${origin.id} published (${earlier?.version}, ${earlier?.integrity})`);
-    }
-    // The commit the registry's attestation names is the record's sourceCommit, so it must be the commit the origin release is for.
-    if (origin.source?.revision !== record.provenance.sourceCommit) {
-      fail('P2_1_MANIFEST_REUSE_MISMATCH', `${name}@${record.version} is built from ${record.provenance.sourceCommit}, and ${origin.id} is for ${origin.source?.revision}`);
-    }
-  }
+  const published = publishSet.packages.map(({ name }) => ({ name, version: recorded.get(name).version }));
+  if (releaseIdFor({ revision, published }) !== manifest.id) fail('P2_1_MANIFEST_ID_MISMATCH', 'the release id does not name this commit and the published versions');
 
   // Compatibility: every sibling edge admits the tuple's version, and the renderer descriptor matches the catalog's
-  // release record and its own package's export map.
+  // release record, its own package's export map, and this release.
   const edges = tupleEdges(publishSet, facts);
   for (const edge of edges) {
     if (!caretAllows(edge.range, edge.version)) fail('P2_1_MANIFEST_COMPATIBILITY_BROKEN', `${edge.from} requires ${edge.to}@${edge.range}, and the tuple has ${edge.version}`);
@@ -529,23 +419,21 @@ export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expect
       descriptor: descriptor.descriptor, catalogPackage, version: descriptor.version, packageExports: facts.packages.get(descriptor.package).manifest.exports,
     });
     if (problems.length > 0) fail('P2_1_MANIFEST_COMPATIBILITY_BROKEN', `${descriptor.package}: ${problems.join('; ')}`);
-    const provenance = descriptor.descriptor.provenance;
-    const owner = recorded.get(descriptor.package).provenance;
-    if (provenance !== undefined && (provenance.releaseId !== owner.releaseId || provenance.sourceCommit !== owner.sourceCommit)) {
-      fail('P2_1_MANIFEST_COMMIT_MISMATCH', `${descriptor.package} descriptor records ${provenance.sourceCommit}, not ${owner.sourceCommit}`);
+    const { provenance } = descriptor.descriptor;
+    if (provenance !== undefined && (provenance.releaseId !== manifest.id || provenance.sourceCommit !== revision)) {
+      fail('P2_1_MANIFEST_COMMIT_MISMATCH', `${descriptor.package} descriptor records ${provenance.releaseId} at ${provenance.sourceCommit}, not ${manifest.id} at ${revision}`);
     }
   }
 
-  // Everything else the manifest records is recomputed from the same bytes, the committed sources, and the records above.
+  // Everything else the manifest records is recomputed from the same bytes and the committed sources.
   const recomputed = {
     catalog: { id: catalogPackage.releaseManifest.catalog.id, version: catalogPackage.catalogVersion, digest: catalogPackage.catalogDigest },
     contracts: facts.contracts,
     compatibility: { edges },
     descriptors: facts.descriptors.map(({ descriptor: _descriptor, ...record }) => record),
     reactCompatibility: facts.reactCompatibility,
-    react: recorded.get(RENDERER_PACKAGE).role === 'published' ? deriveReactCorrelation(facts, readCommitted) : null,
-    publication: buildPublication({ published }),
-    rollback: buildRollbackPlan({ published }),
+    react: deriveReactCorrelation(facts, readCommitted),
+    publication: buildPublication(publishSet),
   };
   for (const [key, value] of Object.entries(recomputed)) {
     if (canonicalJson(manifest[key] ?? null) !== canonicalJson(value)) fail('P2_1_MANIFEST_RECORD_MISMATCH', `the recorded ${key} is not what the tarballs and the committed sources hold`);

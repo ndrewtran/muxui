@@ -1,94 +1,52 @@
 name: npm publish
 
 # Manual npm publication of an exact release candidate. It never runs on push or
-# merge. A release is the declared publish set (tooling/audits/repository-policy/
-# publish-set.json: @muxui/schema, @muxui/catalog, @muxui/tooling, @muxui/react;
-# Decision 0032), each package with its own rc version: the version inputs
-# below, `version` for @muxui/react, which must be 0.1.0-rc.N (Roadmap R1
-# exit, Decision 0023 amendment 01), and one for each of the others, an rc of
-# its source version, <source version>-rc.N.
+# merge. A release publishes the whole publish set
+# (tooling/audits/repository-policy/publish-set.json: @muxui/schema,
+# @muxui/catalog, @muxui/tooling, @muxui/react), every package at its next rc:
+# `version` for @muxui/react (0.1.0-rc.N) and an rc of its source version,
+# <source version>-rc.N, for each of the others. All four inputs are required.
 #
-# A release publishes only the packages whose version units changed (Decision
-# 0032 item 9). A package whose version input is empty is reused: it keeps the
-# version, bytes, and provenance of the prior release, which `prior-release`
-# names, so a release that reuses anything needs it and cannot be the first.
-# The dry run fetches each reused package from the public registry by its exact
-# version, never following a redirect, and holds it to the integrity that
-# release recorded and to the attestation the registry holds for it: the SLSA
-# statement must name those bytes, the recorded commit, and this repository's
-# publish workflow on main. `next` must still be that version. The dry run also
-# runs `npm audit signatures` on them in a project outside the checkout, which
-# verifies the attestation's Sigstore signature and the registry's signature.
-# The prior release manifest, and the manifest of any release it reused from,
-# must be committed in the release ledger as releases/<hex>.json, for the
-# release id muxui-portfolio:<hex> (releases/README.md).
-# The dry run never repacks a reused package and checks the whole tuple with it.
-# Which packages publish is the release's choice: nothing classifies the change,
-# so a changed package left empty is reused as it was. At least one package is
-# published. The candidate artifact holds the published tarballs, in publish
-# order, and the manifest. The publish job publishes only those, and before the
-# first publish and again before each one checks every reused package's version
-# document, attestation statement, and `next` against the registry; the
-# signatures are the dry run's.
-#
-# - mode=dry-run (default): `prepare` builds the candidate set for the input
-#   versions on the dispatched commit, rehearses `npm publish --dry-run` for
-#   every tarball in publish order, verifies the set against its portfolio
-#   release manifest, and uploads the tarballs and the manifest. When main's
-#   push CI already passed every ci.yml job for this exact commit, it runs only
-#   `generate:check` and `release-prepare.mjs`; otherwise it runs the full
-#   `pnpm release:prepare` (Decision 0030). No environment or secret.
-#   tarball-sha512 (the sha512 integrity of each published tarball, comma
-#   separated; the dry run's summary lists them) may be empty here; when given
-#   it must be exactly those.
-#   The dry run also says which release it compares with: `prior-release` names
-#   the prior portfolio release manifest (a tracked releases/<hex>.json), or
-#   `first-portfolio-release` declares the first one (E-P2.1-04). Exactly one of
-#   them; the preparation rejects a published version that is not ahead of the
-#   prior release, or a reused package whose recorded range does not admit a
-#   sibling's new version, and records the outcome in the manifest as
-#   preparation.verification.versionCheck.
-# - mode=publish (main only): `prepare` promotes the dry run named by dry-run-id
-#   (verifies it, downloads its artifact by id, and checks the candidate set
-#   against the commit and the inputs) without building anything, so the prior
-#   release setting is the dry run's, recorded in its manifest and never
-#   re-derived from these inputs. The version inputs and tarball-sha512 must be
-#   the dry run's: a package is published exactly when its version input is not
-#   empty, and the authorization lists exactly the published tarballs. A reused
-#   package is fetched again from the registry, checked against the retained
-#   manifest of the release that published it and its attestation. Then one `publish` job, in the `npm-publish`
-#   environment (main only, no required reviewer; Decision 0033), publishes the
-#   set to `next` in publish order. It is the only job with `id-token: write`.
-#   A package that exists on npm publishes through trusted publishing: its
-#   `npm publish` exchanges that identity for a short-lived token scoped to the
-#   package, so each needs its own trusted publisher (Decision 0032 item 10).
-#   A package that does not exist yet cannot (`npm trust` needs an existing
-#   package), so its first publish alone uses the temporary NPM_TOKEN secret of
-#   the npm-publish environment, which only the `Publish the set in order` step
-#   sees; the run refuses before any publish when a first publish has no token
-#   and never falls back. Provenance is signed with the OIDC identity either way.
-#   The token is revoked after the first release's read-back. Each new package's
-#   trusted publisher is set up just before its next real release, since npm
-#   expires one after 2 days without a publish; until then a publish of that
-#   existing package stops on authentication and never falls back to a token.
-#   Per published package the publish job preflights
-#   the registry, rechecks for drift, publishes with provenance, and reads back
-#   the version, integrity, provenance attestation, and `next`; it stops at the
-#   first failure and never continues to a later package. A failure prints a
-#   recovery plan (Decision 0023 amendment 01) and executes none of it.
-# - mode=registry-preflight: the publish preflight alone for every version
-#   input that is not empty, read-only against the public registry, with no
-#   environment or credentials.
+# - mode=dry-run (default): preflights the four versions against the registry
+#   (read-only), then `prepare` builds the candidate set on the dispatched
+#   commit, rehearses `npm publish --dry-run` for every tarball in publish
+#   order, verifies the set against its portfolio release manifest, and uploads
+#   the tarballs and the manifest. When main's push CI already passed every
+#   ci.yml job for this exact commit, it runs only `generate:check` and
+#   `release-prepare.mjs`; otherwise it runs the full `pnpm release:prepare`.
+#   No environment or secret. tarball-sha512 may be empty here; when given it
+#   must be exactly the sha512 integrity of each tarball (the summary lists them).
+# - mode=publish (main only): `prepare` promotes the dry run named by
+#   dry-run-id (verifies it, downloads its artifact by id, and checks the
+#   candidate set against the commit and the inputs) without building anything.
+#   The version inputs and tarball-sha512 must be the dry run's. Then one
+#   `publish` job, in the `npm-publish` environment (main only, no required
+#   reviewer), publishes the set to `next` in publish order. It is the only job
+#   with `id-token: write`. A package that exists on npm publishes through
+#   trusted publishing (each needs its own trusted publisher); a package that
+#   does not exist yet uses the temporary NPM_TOKEN secret of the environment
+#   for its first publish only, and the run refuses before any publish when a
+#   first publish has no token. Provenance is signed with the OIDC identity
+#   either way. Per package the job preflights the registry, rechecks for drift,
+#   publishes with provenance, and reads back the version, integrity,
+#   provenance attestation, and `next`; it stops at the first failure. After the
+#   last package, it installs the four exact versions from the registry in a
+#   clean project, holds each to its authorized sha512, and runs
+#   `npm audit signatures`: each attestation must name those bytes, this commit,
+#   and this workflow on main. A failure prints a recovery plan (the next
+#   four-package release, from what the registry holds) and executes none of it.
+# - mode=registry-preflight: the publish preflight alone for the four versions,
+#   read-only against the public registry, with no environment or credentials.
 #
 # Preflight, per package: the version must be absent from the registry. A first
 # publish (package absent) must be its rc.1. Otherwise the dist-tags must be
 # exactly latest and next, the version must be the next release candidate after
 # next (next = rc.N, the version rc.N+1, same base version) or the rc.1 of a
-# strictly higher base version (Decision 0035), and latest is recorded; after
-# publishing, next must be the candidate and latest unchanged. Any other state
-# stops for a decision. The registry sets `latest` on a first publish; nothing
-# here claims or moves a dist-tag, and no deprecate, unpublish, dist-tag, or
-# owner command runs anywhere.
+# strictly higher base version, and latest is recorded; after publishing, next
+# must be the candidate and latest unchanged. Any other state stops for a
+# decision. The registry sets `latest` on a first publish; nothing here claims
+# or moves a dist-tag, and no deprecate, unpublish, dist-tag, or owner command
+# runs anywhere.
 #
 # Record `tarball-sha512` from a dry run of this workflow, not a local run. The
 # archive is byte-stable across Linux runners, but Node's gzip header stores
@@ -98,37 +56,23 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "@muxui/react candidate version, 0.1.0-rc.N (e.g. 0.1.0-rc.2); empty reuses the prior release's @muxui/react"
-        required: false
+        description: "@muxui/react candidate version, 0.1.0-rc.N (e.g. 0.1.0-rc.7)"
+        required: true
         type: string
-        default: ''
       schema-version:
-        description: "@muxui/schema candidate version, <source version>-rc.N (e.g. 0.6.0-rc.1); empty reuses the prior release's; every mode"
-        required: false
+        description: "@muxui/schema candidate version, <source version>-rc.N (e.g. 0.6.0-rc.3)"
+        required: true
         type: string
-        default: ''
       catalog-version:
-        description: "@muxui/catalog candidate version, <source version>-rc.N (e.g. 2.1.0-rc.1); empty reuses the prior release's; every mode"
-        required: false
+        description: "@muxui/catalog candidate version, <source version>-rc.N (e.g. 3.0.0-rc.2)"
+        required: true
         type: string
-        default: ''
       tooling-version:
-        description: "@muxui/tooling candidate version, <source version>-rc.N (e.g. 1.1.0-rc.1); empty reuses the prior release's; every mode"
-        required: false
+        description: "@muxui/tooling candidate version, <source version>-rc.N (e.g. 1.1.0-rc.4)"
+        required: true
         type: string
-        default: ''
-      prior-release:
-        description: "Prior portfolio release manifest, a tracked releases/<hex>.json (releases/README.md lists them); dry-run needs this or first-portfolio-release, and a release that reuses a package needs this"
-        required: false
-        type: string
-        default: ''
-      first-portfolio-release:
-        description: "This is the first portfolio release, so no prior manifest is tracked and nothing is reused; dry-run needs this or prior-release"
-        required: false
-        type: boolean
-        default: false
       tarball-sha512:
-        description: "Integrity (sha512-...) of each tarball this release publishes, comma separated, from a dry run of this workflow; optional for dry-run"
+        description: "Integrity (sha512-...) of each of the four tarballs, comma separated, from a dry run of this workflow; optional for dry-run"
         required: false
         type: string
         default: ''
@@ -147,13 +91,13 @@ on:
 permissions:
   contents: read
 
-# One entry for every member of the publish set, as release-set.mjs, release-lineage.mjs, and
-# npm-publication.mjs read them: its version, or empty to reuse it. Inputs reach scripts only through the environment.
+# One version for every member of the publish set, as release-set.mjs, release-lineage.mjs, and
+# npm-publication.mjs read them. Inputs reach scripts only through the environment.
 env:
   MUXUI_RELEASE_VERSIONS: '@muxui/schema=${{ inputs.schema-version }},@muxui/catalog=${{ inputs.catalog-version }},@muxui/tooling=${{ inputs.tooling-version }},@muxui/react=${{ inputs.version }}'
 
 jobs:
-  # Read-only public registry state for every version input: what the publish
+  # Read-only public registry state for the four versions: what the publish
   # preflight would accept or stop on. Trusted publishing has no stored
   # credential to verify; OIDC is exchanged only inside the publish job.
   registry-preflight:
@@ -209,43 +153,21 @@ jobs:
         with:
           node-version-file: .node-version
 
-      # Fails in seconds, before the long release preparation. An empty version reuses @muxui/react.
+      # These fail in seconds, before the long release preparation.
       - name: Validate version input
-        if: inputs.version != ''
         env:
           VERSION: ${{ inputs.version }}
         run: node tooling/audits/repository-policy/src/npm-publication.mjs validate-version
 
-      # Every package that is published needs an rc of its source version, at least one is published, and the first
-      # portfolio release reuses nothing; this fails before the long preparation too.
+      # Every package needs an rc of its source version.
       - name: Validate release versions
-        env:
-          MUXUI_FIRST_PORTFOLIO_RELEASE: ${{ inputs.first-portfolio-release && 'true' || '' }}
         run: node tooling/audits/repository-policy/src/release-set.mjs validate-versions
 
-      # E-P2.1-04: a dry run must say which release it compares with, and fails in seconds when it does not.
-      # Publish promotes the dry run's candidate, so it checks the shape only. Inputs reach the script through the environment.
-      - name: Validate prior release inputs
-        env:
-          MODE: ${{ inputs.mode }}
-          PRIOR_RELEASE: ${{ inputs.prior-release }}
-          FIRST_RELEASE: ${{ inputs.first-portfolio-release }}
-        run: |
-          set -euo pipefail
-          if [ -n "$PRIOR_RELEASE" ] && [[ ! "$PRIOR_RELEASE" =~ ^releases/[0-9a-f]{32}\.json$ ]]; then
-            echo "::error title=Prior release path::prior-release must be empty or a release ledger path, releases/<32 hex digits>.json."
-            exit 1
-          fi
-          if [ "$MODE" = dry-run ]; then
-            if [ -n "$PRIOR_RELEASE" ] && [ "$FIRST_RELEASE" = true ]; then
-              echo "::error title=Prior release ambiguous::Set prior-release or first-portfolio-release, not both."
-              exit 1
-            fi
-            if [ -z "$PRIOR_RELEASE" ] && [ "$FIRST_RELEASE" != true ]; then
-              echo "::error title=Prior release required::Set prior-release to the prior portfolio release manifest, or first-portfolio-release for the first one."
-              exit 1
-            fi
-          fi
+      # Each version must be what the registry admits next: absent, and the next rc after `next` or a first rc.1.
+      # The publish job preflights again before any write.
+      - name: Registry preflight (read-only)
+        if: inputs.mode == 'dry-run'
+        run: node tooling/audits/repository-policy/src/npm-publication.mjs preflight-set
 
       - name: Record Node version
         id: node
@@ -273,8 +195,7 @@ jobs:
 
       # Main's push CI runs every fixed ci.yml job, so a run for this exact
       # commit in which each one passed already proved what release:prepare would
-      # rerun (Decision 0030). Anything else, including an unreadable run, is the
-      # full path.
+      # rerun. Anything else, including an unreadable run, is the full path.
       - name: Find main CI proof
         id: mainci
         if: inputs.mode == 'dry-run'
@@ -289,9 +210,6 @@ jobs:
           MAIN_CI_MODE: ${{ steps.mainci.outputs.mode }}
           MUXUI_RELEASE_MAIN_CI_RUN: ${{ steps.mainci.outputs.run-id }}
           MUXUI_RELEASE_MAIN_CI_ATTEMPT: ${{ steps.mainci.outputs.attempt }}
-          # Read by release-prepare.mjs, which refuses neither or both, and a first-release claim a tracked manifest contradicts.
-          MUXUI_PRIOR_RELEASE_MANIFEST: ${{ inputs.prior-release }}
-          MUXUI_FIRST_PORTFOLIO_RELEASE: ${{ inputs.first-portfolio-release && 'true' || '' }}
         run: |
           set -euo pipefail
           if [ "$MAIN_CI_MODE" = reuse ]; then
@@ -345,7 +263,7 @@ jobs:
           if [ -n "$PROMOTED_DIR" ]; then
             source_dir=$PROMOTED_DIR
           else
-            source_dir=$(sed -n 's/^R1 exit artifacts written to //p' "$RUNNER_TEMP/release-prepare.log" | tail -n 1)
+            source_dir=$(sed -n 's/^Release candidate written to //p' "$RUNNER_TEMP/release-prepare.log" | tail -n 1)
           fi
           if [ -z "$source_dir" ] || [ ! -d "$source_dir" ]; then
             echo "::error title=Candidate missing::The candidate artifact directory is missing."
@@ -363,7 +281,7 @@ jobs:
           {
             echo "### Release candidate"
             echo
-            jq -r '.packages[] | "- \(.name): `\(.version)` (\(.role)), \(.integrity)"' "$manifest"
+            jq -r '.packages[] | "- \(.name): `\(.version)`, \(.integrity)"' "$manifest"
             echo "- release manifest digest: \`$(jq -r .digest "$manifest")\`"
             echo "- source revision: \`$(jq -r .source.revision "$manifest")\`"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -373,7 +291,7 @@ jobs:
             echo "manifest=$manifest"
           } >> "$GITHUB_OUTPUT"
 
-      # Reports the exact publish command of every published package, in publish order, without a token or
+      # Reports the exact publish command of every package, in publish order, without a token or
       # registry write. Provenance is only generated by a real publish, so --dry-run needs no OIDC.
       - name: Rehearse npm publish (dry run)
         env:
@@ -383,15 +301,15 @@ jobs:
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP"
-          mapfile -t files < <(jq -r '.packages[] | select(.role == "published") | .file' "$MANIFEST")
+          mapfile -t files < <(jq -r '.packages[] | .file' "$MANIFEST")
           for file in "${files[@]}"; do
             npm publish "$CANDIDATE_DIR/$file" --tag next --provenance --access public \
               --registry=https://registry.npmjs.org --dry-run
           done
 
       # The candidate set is read the way a promotion reads it: exactly the expected files, each tarball the
-      # recorded bytes, every published package built from this commit, and the versions the inputs name. A
-      # dry run may leave tarball-sha512 empty; when given it must be the @muxui/react tarball's.
+      # recorded bytes built from this commit, and the versions the inputs name. A dry run may leave
+      # tarball-sha512 empty; when given it must list the four tarballs' integrities.
       - name: Check candidate against inputs
         env:
           CANDIDATE_DIR: ${{ steps.candidate.outputs.dir }}
@@ -411,10 +329,11 @@ jobs:
     if: inputs.mode == 'publish' && github.ref == 'refs/heads/main'
     needs: prepare
     runs-on: ubuntu-latest
-    # The read-back allows about 5 minutes for a version and 10 for its dist-tags, for each of the four packages.
+    # The read-back allows about 5 minutes for a version and 10 for its dist-tags, for each of the four packages,
+    # and the post-publication install about 5 more.
     timeout-minutes: 90
     # The environment scopes the temporary NPM_TOKEN secret, limits deployments to main, and records
-    # them. It has no required reviewer (Decision 0033). One job publishes the whole set.
+    # them. It has no required reviewer. One job publishes the whole set.
     environment: npm-publish
     permissions:
       contents: read
@@ -460,9 +379,8 @@ jobs:
           path: ${{ runner.temp }}/npm-candidate
 
       # The candidate as the publish job must trust it: exactly the set's
-      # tarballs and manifest, every tarball the manifest's recorded bytes, built
-      # from this commit and this release, the versions the inputs name, and the
-      # authorized @muxui/react digest.
+      # tarballs and manifest, every tarball the manifest's recorded bytes, for
+      # this commit, the versions the inputs name, and the authorized digests.
       - name: Re-verify candidate
         env:
           CANDIDATE_DIR: ${{ runner.temp }}/npm-candidate
@@ -471,10 +389,12 @@ jobs:
 
       # Preflights every package read-only, then for each in publish order:
       # drift recheck, `npm publish --tag next --provenance`, and registry
-      # read-back of its version, integrity, provenance, and next. The first
-      # failure stops the set and prints the recovery plan, which it does not run.
-      # The version document is read first; the packument's dist-tags can stay
-      # CDN-cached for minutes after a publish, so both reads retry.
+      # read-back of its version, integrity, provenance, and next. The version
+      # document is read first; the packument's dist-tags can stay CDN-cached for
+      # minutes after a publish, so both reads retry. Then the post-publication
+      # check installs the set from the registry and runs npm audit signatures.
+      # The first failure stops the set and prints the recovery plan, which it
+      # does not run.
       - name: Publish the set in order
         env:
           CANDIDATE_DIR: ${{ runner.temp }}/npm-candidate

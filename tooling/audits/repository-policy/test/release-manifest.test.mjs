@@ -1,17 +1,10 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import test from 'node:test';
 import { canonicalJson } from '../src/canonical-json.mjs';
 import { readArchive } from '../src/release-archive.mjs';
-import { FIRST_RELEASE_VARIABLE, PRIOR_RELEASE_VARIABLE, findPriorManifestProblems, planReuse, resolvePriorRelease } from '../src/release-effects.mjs';
-import {
-  caretAllows, readLedgerManifest, readRetainedManifests, releaseIdFor, releaseLedgerPath, sha256, sha512Integrity, verifyPortfolioRelease,
-} from '../src/release-manifest.mjs';
-import { readPublishSet } from '../src/release-set.mjs';
+import { caretAllows, findCandidateSetProblems, sha256, verifyPortfolioRelease } from '../src/release-manifest.mjs';
 import {
   archiveOf, artifactsOf, catalogFiles, catalogModuleFor, commit, digest, committedStore, jsonBytes, manifestOf, otherCommit, publishSet, readCommitted, sidecarFor, tree, tupleFixture,
 } from './release-tuple-fixture.mjs';
@@ -46,18 +39,18 @@ const catalogOf = (change) => {
   return fixture;
 };
 
-test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts, descriptors, profile, rollback', () => {
+test('one manifest correlates the tuple: packages, catalog, contracts, descriptors, profile, publication', () => {
   const { artifacts, manifest } = honest();
   assert.equal(manifest.schema, 'muxui-portfolio-release-v1');
-  assert.deepEqual(Object.keys(manifest).sort(), ['catalog', 'compatibility', 'contracts', 'descriptors', 'digest', 'id', 'packages', 'preparation', 'publication', 'react', 'reactCompatibility', 'rollback', 'schema', 'source']);
+  assert.deepEqual(Object.keys(manifest).sort(), ['catalog', 'compatibility', 'contracts', 'descriptors', 'digest', 'id', 'packages', 'preparation', 'publication', 'react', 'reactCompatibility', 'schema', 'source']);
   assert.deepEqual(manifest.source, { revision: commit, tree });
-  assert.deepEqual(manifest.packages.map(({ name, version, role }) => [name, version, role]), [
-    ['@muxui/schema', '0.6.0-rc.1', 'published'], ['@muxui/catalog', '3.0.0-rc.1', 'published'],
-    ['@muxui/tooling', '1.1.0-rc.1', 'published'], ['@muxui/react', '0.1.0-rc.5', 'published'],
+  assert.deepEqual(manifest.packages.map(({ name, version, file }) => [name, version, file]), [
+    ['@muxui/schema', '0.6.0-rc.1', 'muxui-schema-0.6.0-rc.1.tgz'], ['@muxui/catalog', '3.0.0-rc.1', 'muxui-catalog-3.0.0-rc.1.tgz'],
+    ['@muxui/tooling', '1.1.0-rc.1', 'muxui-tooling-1.1.0-rc.1.tgz'], ['@muxui/react', '0.1.0-rc.5', 'muxui-react-0.1.0-rc.5.tgz'],
   ]);
   for (const record of manifest.packages) {
+    assert.deepEqual(Object.keys(record).sort(), ['file', 'integrity', 'name', 'sha256', 'version']);
     assert.match(record.integrity, /^sha512-/u);
-    assert.deepEqual(record.provenance, { kind: 'release-commit', releaseId: manifest.id, sourceCommit: commit });
   }
   const catalogPackage = JSON.parse(readArchive(artifacts.get('@muxui/catalog')).get('package/generated/catalog-package.json'));
   assert.deepEqual(manifest.catalog, { id: `@muxui/catalog@3.0.0-rc.1:${catalogPackage.catalogDigest}`, version: '3.0.0-rc.1', digest: catalogPackage.catalogDigest });
@@ -69,11 +62,7 @@ test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts,
     '@muxui/catalog>@muxui/schema@^0.6.0-rc.1', '@muxui/tooling>@muxui/catalog@^3.0.0-rc.1', '@muxui/tooling>@muxui/schema@^0.6.0-rc.1',
   ]);
   assert.equal(manifest.reactCompatibility.schema, 'muxui-react-compatibility-v1');
-  assert.deepEqual(manifest.rollback.packages.map(({ name, fixForward }) => [name, fixForward]), [
-    ['@muxui/schema', '0.6.0-rc.2'], ['@muxui/catalog', '3.0.0-rc.2'], ['@muxui/tooling', '1.1.0-rc.2'], ['@muxui/react', '0.1.0-rc.6'],
-  ]);
-  assert.equal(manifest.rollback.status, 'prepared-not-exercised');
-  assert.equal(manifest.publication.mutationPerformed, false);
+  assert.deepEqual(manifest.publication, { registry: 'https://registry.npmjs.org', distTag: 'next', order: publishSet.packages.map(({ name }) => name) });
   verify(manifest, artifacts);
 });
 
@@ -111,18 +100,17 @@ test('E-P2.1-03 the verifier rejects a package missing from the tuple', () => {
   assert.throws(() => verify(extra, artifacts), /P2_1_MANIFEST_PACKAGE_UNEXPECTED/u);
 });
 
-test('E-P2.1-03 the verifier rejects a published package built from another commit', () => {
-  // The tarball was built elsewhere: its gitHead is not the release commit its record claims.
+test('the verifier rejects a package built from another commit', () => {
+  // The tarball was built elsewhere: its gitHead is not the release commit.
   const foreign = artifactsOf(tupleFixture({ commits: { '@muxui/catalog': otherCommit } }));
-  assert.throws(() => verify(manifestOf(foreign), foreign), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/catalog is built from b+, not its recorded a+/u);
-  // The record owns up to it, as a published package: still not the release commit.
+  assert.throws(() => verify(manifestOf(foreign), foreign), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/catalog is built from b+, not the release commit a+/u);
+  // So is a descriptor that records another release.
   const { artifacts, manifest } = honest();
-  const records = manifest.packages.map((record) => (record.name === '@muxui/schema' ? { ...record, provenance: { ...record.provenance, sourceCommit: otherCommit } } : record));
-  assert.throws(() => verify(redigest({ ...manifest, packages: records }), artifacts), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/schema is built from a+, not its recorded b+/u);
-  const owned = artifactsOf(tupleFixture({ commits: { '@muxui/schema': otherCommit } }));
-  const ownedManifest = manifestOf(owned);
-  const ownedRecords = ownedManifest.packages.map((record) => (record.name === '@muxui/schema' ? { ...record, provenance: { ...record.provenance, sourceCommit: otherCommit } } : record));
-  assert.throws(() => verify(redigest({ ...ownedManifest, packages: ownedRecords }), owned), /@muxui\/schema is published from b+, not the release commit a+/u);
+  const stamped = tupleFixture();
+  const stampedArtifacts = artifactsOf(stamped);
+  stamped.files['@muxui/react']['generated/renderer-descriptor.json'].provenance.releaseId = 'muxui-portfolio:other';
+  stampedArtifacts.set('@muxui/react', archiveOf(stamped.files['@muxui/react']));
+  assert.throws(() => verify(manifestOf(stampedArtifacts), stampedArtifacts), /P2_1_MANIFEST_COMMIT_MISMATCH: @muxui\/react descriptor records muxui-portfolio:other/u);
   // The release itself must be the one asked for.
   assert.throws(() => verify(manifest, artifacts, { expected: { revision: otherCommit } }), /P2_1_MANIFEST_SOURCE_MISMATCH/u);
 });
@@ -181,21 +169,17 @@ test('E-P2.1-03 the catalog bundle is recomputed: an emptied bundle under the ol
   }, /the package record's token requirement sets differ from the bundle's/u);
 });
 
-// ---- contracts, publication, and rollback are recomputed ----
+// ---- contracts and publication are recomputed ----
 
-test('E-P2.1-03 contracts, publication, and rollback are recomputed, not trusted', () => {
+test('contracts and publication are recomputed, not trusted', () => {
   const { artifacts, manifest } = honest();
   const forged = (key, value) => redigest({ ...manifest, [key]: value });
   const rejects = (key, value) => assert.throws(() => verify(forged(key, value), artifacts), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded .* is not what the tarballs and the committed sources hold/u, key);
   rejects('contracts', { ...manifest.contracts, schemaVersion: '9.9.9' });
   rejects('contracts', { ...manifest.contracts, tokenContractVersion: '1.0.0' });
-  rejects('rollback', {});
-  rejects('rollback', { ...manifest.rollback, forbidden: [] });
-  rejects('publication', { ...manifest.publication, mutationPerformed: true });
+  rejects('publication', { ...manifest.publication, distTag: 'latest' });
+  rejects('publication', { ...manifest.publication, order: [...manifest.publication.order].reverse() });
   rejects('publication', undefined);
-
-  // A manifest written while releases recorded evidence digests keeps that block under its own digest; nothing recomputes it.
-  verify(redigest({ ...manifest, evidence: { capturedCiEvidence: [], retainedReviewEvidence: [], activeExceptions: [] } }), artifacts);
 
   // The schema package must declare the contract versions the catalog bundle implements.
   const schema = tupleFixture();
@@ -276,13 +260,6 @@ test('E-P2.1-03 the react correlation block is recomputed from the tarballs and 
   const unlockedLucide = committedStore();
   unlockedLucide.set('pnpm-lock.yaml', Buffer.from("lockfileVersion: '9.0'\n"));
   assert.throws(() => manifestOf(artifacts, { readCommitted: unlockedLucide.read }), /R1_EXIT_VISUAL_CONTRACT_INVALID: Lucide requires an exact version and lockfile integrity/u);
-
-  // A renderer that is reused keeps the block of the release that published it: this release records none, and may not forge one.
-  const reuse = reuseScenario({ reuse: ['@muxui/react'] });
-  const reused = manifestOf(reuse.artifacts, { reused: reuse.reused });
-  assert.equal('react' in reused, false);
-  verify(reused, reuse.artifacts, { priorManifests: reuse.priorManifests });
-  assert.throws(() => verify(redigest({ ...reused, react: manifest.react }), reuse.artifacts, { priorManifests: reuse.priorManifests }), recordMismatch);
 });
 
 // ---- the renderer descriptor ----
@@ -312,191 +289,21 @@ test('E-P2.1-02 the verifier requires the catalog\'s renderer descriptor at its 
   identity('@muxui/react#Button')();
 });
 
-// ---- reuse ----
+// ---- the installed candidate set ----
 
-// An earlier release at another commit, and a new release that reuses `names` from it.
-function reuseScenario({ reuse, release = {}, earlier = {} }) {
-  const allEarlier = Object.fromEntries(publishSet.packages.map(({ name }) => [name, otherCommit]));
-  const earlierArtifacts = artifactsOf(tupleFixture({ commits: allEarlier, ...earlier }), { revision: otherCommit });
-  const earlierManifest = manifestOf(earlierArtifacts, { source: { revision: otherCommit, tree } });
-  const reused = new Map(reuse.map((name) => [name, earlierManifest.packages.find((record) => record.name === name)]));
-  const artifacts = artifactsOf(tupleFixture({ commits: Object.fromEntries(reuse.map((name) => [name, otherCommit])), ...release }), { reused });
-  for (const name of reuse) artifacts.set(name, earlierArtifacts.get(name));
-  return { earlierArtifacts, earlierManifest, reused, artifacts, priorManifests: new Map([[earlierManifest.id, earlierManifest]]) };
-}
-
-test('E-P2.1-03 a reused package is the record of the release that published it, field for field and byte for byte', () => {
-  const { earlierManifest, reused, artifacts, priorManifests } = reuseScenario({ reuse: ['@muxui/schema'] });
-  const manifest = manifestOf(artifacts, { reused });
-  assert.deepEqual(manifest.packages.map(({ name, role }) => [name, role]), [['@muxui/schema', 'reused'], ['@muxui/catalog', 'published'], ['@muxui/tooling', 'published'], ['@muxui/react', 'published']]);
-  assert.deepEqual(manifest.packages[0], { ...earlierManifest.packages[0], role: 'reused' });
-  assert.equal(manifest.id, releaseIdFor({ revision: commit, published: manifest.packages.slice(1).map(({ name, version }) => ({ name, version })) }));
-  verify(manifest, artifacts, { priorManifests });
-
-  // Repacked bytes under the same version and original provenance cannot be recorded...
-  const repacked = tupleFixture({ commits: { '@muxui/schema': otherCommit } });
-  repacked.files['@muxui/schema']['extra.txt'] = 'x';
-  const repackedArtifacts = new Map(artifacts).set('@muxui/schema', archiveOf(repacked.files['@muxui/schema']));
-  assert.throws(() => manifestOf(repackedArtifacts, { reused }), /P2_1_MANIFEST_REUSE_MISMATCH: @muxui\/schema is not the package its earlier release recorded/u);
-  // ...and a forged record for them does not match the earlier release's.
-  const newBytes = repackedArtifacts.get('@muxui/schema');
-  const forged = redigest({ ...manifest, packages: manifest.packages.map((record) => (record.name === '@muxui/schema'
-    ? { ...record, integrity: sha512Integrity(newBytes), sha256: sha256(newBytes) }
-    : record)) });
-  assert.throws(() => verify(forged, repackedArtifacts, { priorManifests }), /P2_1_MANIFEST_REUSE_MISMATCH: @muxui\/schema@0\.6\.0-rc\.1 is not the record muxui-portfolio:[0-9a-f]+ published/u);
-  // Any other field of the record is held to it too.
-  const relabelled = redigest({ ...manifest, packages: manifest.packages.map((record) => (record.name === '@muxui/schema' ? { ...record, provenance: { ...record.provenance, sourceCommit: commit } } : record)) });
-  assert.throws(() => verify(relabelled, artifacts, { priorManifests }), /P2_1_MANIFEST_COMMIT_MISMATCH/u);
-
-  // A reuse needs the earlier manifest, verified: none, another release, or one that no longer matches its digest.
-  assert.throws(() => verify(manifest, artifacts), /P2_1_MANIFEST_REUSE_UNVERIFIED: @muxui\/schema is reused from muxui-portfolio:[0-9a-f]+, which has no verified earlier manifest/u);
-  assert.throws(() => verify(manifest, artifacts, { priorManifests: new Map([['muxui-portfolio:other', earlierManifest]]) }), /P2_1_MANIFEST_REUSE_UNVERIFIED/u);
-  const tampered = { ...earlierManifest, source: { ...earlierManifest.source, tree: 'd'.repeat(40) } };
-  assert.throws(() => verify(manifest, artifacts, { priorManifests: new Map([[earlierManifest.id, tampered]]) }), /P2_1_MANIFEST_REUSE_UNVERIFIED/u);
-  // The commit the registry attests for the reused bytes is the commit of the origin release: an origin for another commit does not vouch for the record.
-  const otherOrigin = redigest({ ...earlierManifest, source: { ...earlierManifest.source, revision: commit } });
-  assert.throws(() => verify(manifest, artifacts, { priorManifests: new Map([[earlierManifest.id, otherOrigin]]) }), new RegExp(`P2_1_MANIFEST_REUSE_MISMATCH: @muxui/schema@0\\.6\\.0-rc\\.1 is built from ${otherCommit}, and ${earlierManifest.id} is for ${commit}`, 'u'));
-  // It cannot name this release as its own origin.
-  const self = redigest({ ...manifest, packages: manifest.packages.map((record) => (record.role === 'reused' ? { ...record, provenance: { ...record.provenance, releaseId: manifest.id } } : record)) });
-  assert.throws(() => verify(self, artifacts, { priorManifests }), /P2_1_MANIFEST_PACKAGE_INVALID: @muxui\/schema is reused and records this release as its origin/u);
-});
-
-test('E-P2.1-03 a reused package must still be compatible with the new tuple', () => {
-  // Tooling asked for a catalog line the new tuple does not carry.
-  const incompatible = reuseScenario({ reuse: ['@muxui/tooling'], release: { versions: { '@muxui/catalog': '4.0.0-rc.1' } } });
-  const manifest = manifestOf(incompatible.artifacts, { reused: incompatible.reused });
-  assert.throws(() => verify(manifest, incompatible.artifacts, { priorManifests: incompatible.priorManifests }), /P2_1_MANIFEST_COMPATIBILITY_BROKEN: @muxui\/tooling requires @muxui\/catalog@\^3\.0\.0-rc\.1, and the tuple has 4\.0\.0-rc\.1/u);
-
-  // The renderer still carries the requirement digests the catalog has since changed.
-  const drifted = reuseScenario({ reuse: ['@muxui/react'], release: { catalogTokenDigest: digest('9') } });
-  const driftedManifest = manifestOf(drifted.artifacts, { reused: drifted.reused });
-  assert.throws(() => verify(driftedManifest, drifted.artifacts, { priorManifests: drifted.priorManifests }), /P2_1_MANIFEST_COMPATIBILITY_BROKEN: @muxui\/react: muxui:component:button#web\.react token requirement digests differ/u);
-
-  // The catalog's range for the renderer no longer admits the reused version.
-  const outside = reuseScenario({ reuse: ['@muxui/react'], release: { reactRange: '^0.2.0-0' } });
-  const outsideManifest = manifestOf(outside.artifacts, { reused: outside.reused });
-  assert.throws(() => verify(outsideManifest, outside.artifacts, { priorManifests: outside.priorManifests }), /range \^0\.2\.0-0 does not admit 0\.1\.0-rc\.5/u);
-
-  // A compatible reuse verifies.
-  const compatible = reuseScenario({ reuse: ['@muxui/react'] });
-  verify(manifestOf(compatible.artifacts, { reused: compatible.reused }), compatible.artifacts, { priorManifests: compatible.priorManifests });
-});
-
-// The manifests that vouch for a reused package are the ones the release ledger holds at the release commit, one file per
-// release id, named by that id.
-test('E-P2.1-03 the manifest of the release that published a reused package is read from the release ledger at the release commit', () => {
-  const scratch = mkdtempSync(join(tmpdir(), 'muxui-release-ledger-'));
-  try {
-    const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { cwd: scratch, encoding: 'utf8' }).trim();
-    const write = (path, value) => {
-      mkdirSync(dirname(join(scratch, path)), { recursive: true });
-      writeFileSync(join(scratch, path), `${JSON.stringify(value)}\n`);
-    };
-    const commitAll = (message) => {
-      git('add', '-A');
-      git('commit', '-q', '--allow-empty', '-m', message);
-      return git('rev-parse', 'HEAD');
-    };
-    const read = (id, revision) => readRetainedManifests({ ids: [id], revision, cwd: scratch });
-    const { manifest } = honest();
-    const path = releaseLedgerPath(manifest.id);
-    assert.equal(path, `releases/${manifest.id.slice('muxui-portfolio:'.length)}.json`);
-    assert.equal(releaseLedgerPath('muxui-portfolio:other'), undefined);
-    git('init', '-q');
-    write(path, manifest);
-    const revision = commitAll('ledger');
-    assert.deepEqual([...read(manifest.id, revision)], [[manifest.id, JSON.parse(JSON.stringify(manifest))]]);
-    assert.deepEqual([...read(`muxui-portfolio:${'a'.repeat(32)}`, revision)], []);
-    assert.deepEqual([...read('muxui-portfolio:other', revision)], [], 'not a release id');
-    assert.deepEqual([...readRetainedManifests({ ids: [], revision: 'not-read', cwd: scratch })], [], 'a release that reuses nothing reads nothing');
-    assert.deepEqual(readLedgerManifest({ path, revision, cwd: scratch }), JSON.parse(JSON.stringify(manifest)));
-    // The commit decides: a manifest added after it is not in the ledger at it, and an uncommitted edit is never read.
-    const laterManifest = redigest({ ...manifest, id: `muxui-portfolio:${'b'.repeat(32)}` });
-    write(releaseLedgerPath(laterManifest.id), laterManifest);
-    const later = commitAll('later');
-    assert.deepEqual([...read(laterManifest.id, revision)], []);
-    assert.deepEqual([...read(laterManifest.id, later).keys()], [laterManifest.id]);
-    write(path, { ...manifest, packages: [] });
-    assert.deepEqual(read(manifest.id, later).get(manifest.id), JSON.parse(JSON.stringify(manifest)));
-
-    // A file whose content is not the manifest its name gives stops the release, as does another path or a missing file.
-    const refuses = (pattern, options) => assert.throws(() => readLedgerManifest({ path, revision: git('rev-parse', 'HEAD'), cwd: scratch, ...options }), pattern);
-    write(path, laterManifest);
-    commitAll('the wrong manifest under this id');
-    refuses(/P2_1_RELEASE_LEDGER_MISMATCH: releases\/[0-9a-f]{32}\.json is not the muxui-portfolio-release-v1 manifest of /u);
-    assert.throws(() => read(manifest.id, git('rev-parse', 'HEAD')), /P2_1_RELEASE_LEDGER_MISMATCH/u);
-    write(path, { ...manifest, schema: 'muxui-release-manifest-v1' });
-    commitAll('another schema');
-    refuses(/P2_1_RELEASE_LEDGER_MISMATCH/u);
-    refuses(/P2_1_RELEASE_LEDGER_PATH_INVALID/u, { path: 'tests/evidence/r1-exit-0.1.0-rc.5/artifacts/release-manifest.json' });
-    refuses(/P2_1_RELEASE_LEDGER_MISSING/u, { path: `releases/${'c'.repeat(32)}.json` });
-  } finally {
-    rmSync(scratch, { recursive: true, force: true });
-  }
-});
-
-// The real ledger. The next release names its latest manifest as `prior-release`, the first-release flag is refused
-// while any is tracked, and a reuse finds the manifest of the release that published each package it keeps.
-const ledger = {
-  rc5: 'releases/40dcc0032b7db3a47e19797d4e73bc9d.json',
-  toolingRc2: 'releases/1adadbb095d9ebc1b63a0aae35c6a10c.json',
-  rc6: 'releases/901c8c6dbc6a22e970b37a726594b286.json',
-};
-const repositoryRoot = resolve(import.meta.dirname, '../../../..');
-const releasePublishSet = readPublishSet(repositoryRoot);
-
-test('every release ledger manifest is a usable prior release for the publish set', () => {
-  const paths = execFileSync('git', ['ls-tree', '--name-only', 'HEAD', 'releases/'], { cwd: repositoryRoot, encoding: 'utf8' }).split('\n').filter((path) => path.endsWith('.json'));
-  assert.deepEqual(paths.sort(), Object.values(ledger).sort());
-  for (const path of paths) {
-    const manifest = readLedgerManifest({ path, revision: 'HEAD', cwd: repositoryRoot });
-    assert.deepEqual(findPriorManifestProblems(manifest, releasePublishSet), [], `${path}: its digest and release id recompute and it inventories the whole publish set`);
-  }
-});
-
-test('the tooling 1.1.0-rc.2 release reused the rest from rc.5, and either reuse chain finds every manifest it needs', () => {
-  const cwd = repositoryRoot;
-  const revision = 'HEAD';
-  const origin = readLedgerManifest({ path: ledger.rc5, revision, cwd });
-  const prior = resolvePriorRelease({ environment: { [PRIOR_RELEASE_VARIABLE]: ledger.toolingRc2 }, revision, cwd });
-  assert.equal(prior.first, false);
-  const manifest = prior.priorManifest;
-  assert.deepEqual(manifest.packages.map(({ role, provenance }) => [role, provenance.releaseId]), [
-    ['reused', origin.id], ['reused', origin.id], ['published', manifest.id], ['reused', origin.id],
-  ]);
-  // A release that publishes tooling alone reuses the other three, whose origin is rc.5; one that publishes React reuses tooling from this one.
-  const [schemaName, catalogName, toolingName, reactName] = releasePublishSet.packages.map(({ name }) => name);
-  const alone = planReuse({ publishSet: releasePublishSet, published: new Map([[toolingName, '1.1.0-rc.3']]), priorRelease: prior, revision, cwd });
-  assert.deepEqual([...alone.reused.keys()], [schemaName, catalogName, reactName]);
-  assert.deepEqual([...alone.priorManifests.keys()].sort(), [manifest.id, origin.id].sort());
-  const react = planReuse({ publishSet: releasePublishSet, published: new Map([[reactName, '0.1.0-rc.6']]), priorRelease: prior, revision, cwd });
-  assert.deepEqual([...react.reused.keys()], [schemaName, catalogName, toolingName]);
-  assert.equal(react.reused.get(toolingName).provenance.releaseId, manifest.id);
-  assert.deepEqual([...react.priorManifests.keys()].sort(), [manifest.id, origin.id].sort());
-});
-
-// rc.6 published all four packages from one commit, so it is the next release's prior release and every package's origin.
-test('the rc.6 release is the baseline for the next release', () => {
-  const cwd = repositoryRoot;
-  const revision = 'HEAD';
-  const prior = resolvePriorRelease({ environment: { [PRIOR_RELEASE_VARIABLE]: ledger.rc6 }, revision, cwd });
-  const manifest = prior.priorManifest;
-  assert.equal(manifest.id, 'muxui-portfolio:901c8c6dbc6a22e970b37a726594b286');
-  assert.equal(manifest.source.revision, 'aedb4238c8ffaf2fd25262eefd6d9b82eae0b8d7');
-  assert.deepEqual(manifest.packages.map(({ name, version, role, provenance }) => [name, version, role, provenance.releaseId, provenance.sourceCommit]), [
-    ['@muxui/schema', '0.6.0-rc.2'], ['@muxui/catalog', '3.0.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.3'], ['@muxui/react', '0.1.0-rc.6'],
-  ].map(([name, version]) => [name, version, 'published', manifest.id, manifest.source.revision]));
-  assert.deepEqual(manifest.packages.map(({ integrity }) => integrity), [
-    'sha512-XPyrhYeE12Yidou21KBKz4EW+ZX5WZQHnRmR18DLvVs0kU9fr8hW1eJHNF/Y82FAvOe7yAAFimETBYvBnWFSZA==',
-    'sha512-HMwYvyRbfJxENcoTNpNF5Hsd2FlkOW4BZ3xpX3yjRluV0QR9ieB93JfHo1ACnpOumEyZl3kg4sMAB1N3yzc8Rw==',
-    'sha512-DplBg0L3Y5VJyJRJljXVMgbixfU1AgQdiqYj5eCaLKB6AEve6pLu0iHK2GapfWXmUYGUo9hr/aHI5cNibCe0Kg==',
-    'sha512-MJzCOYP8UDQ49A6DwdD/7x4Qo6vfAFVcH67/1UHMHJnQW7c1zMLCC0kZ2bS9RAkkHjvHP+vDmJkSFQJvWZZ6VA==',
-  ], 'the integrities npm serves for these versions');
-  // A release that publishes React alone reuses the rest from rc.6 and needs no other manifest.
-  const next = planReuse({ publishSet: releasePublishSet, published: new Map([['@muxui/react', '0.1.0-rc.7']]), priorRelease: prior, revision, cwd });
-  assert.deepEqual([...next.versions], [['@muxui/schema', '0.6.0-rc.2'], ['@muxui/catalog', '3.0.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.3'], ['@muxui/react', '0.1.0-rc.7']]);
-  assert.deepEqual([...next.priorManifests.keys()], [manifest.id]);
-  assert.throws(() => resolvePriorRelease({ environment: { [FIRST_RELEASE_VARIABLE]: 'true' }, revision, cwd }), /P2_1_FIRST_RELEASE_CONTRADICTED: .*releases\/901c8c6dbc6a22e970b37a726594b286\.json/u);
+test('the installed candidate set is prereleases, the catalog version is catalogVersion, and tooling admits the catalog', () => {
+  const versions = new Map([['@muxui/schema', '0.6.0-rc.1'], ['@muxui/catalog', '2.1.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.1'], ['@muxui/react', '0.1.0-rc.5']]);
+  const good = { versions, installed: new Map(versions), toolingCatalogRange: '^2.1.0-rc.1', catalogVersion: '2.1.0-rc.1' };
+  assert.deepEqual(findCandidateSetProblems(good), []);
+  const problems = (change) => findCandidateSetProblems({ ...good, ...change });
+  assert.match(problems({ installed: new Map([...versions, ['@muxui/schema', '0.6.0']]) })[0], /@muxui\/schema installs 0\.6\.0, not the candidate/u);
+  const stable = new Map([...versions, ['@muxui/tooling', '1.1.0']]);
+  assert.match(problems({ versions: stable, installed: stable })[0], /@muxui\/tooling@1\.1\.0 is not an rc prerelease/u);
+  assert.match(problems({ catalogVersion: '2.1.0' })[0], /declares catalogVersion 2\.1\.0/u);
+  // Under node-semver a plain range admits a prerelease only of its own base version.
+  assert.match(problems({ toolingCatalogRange: '^2.1.0-rc.2' })[0], /does not admit 2\.1\.0-rc\.1/u);
+  const next = new Map([...versions, ['@muxui/catalog', '2.2.0-rc.1']]);
+  assert.match(problems({ versions: next, installed: next, catalogVersion: '2.2.0-rc.1' })[0], /does not admit 2\.2\.0-rc\.1/u);
 });
 
 test('the deterministic archive reads back the files it was built from, in name order', () => {

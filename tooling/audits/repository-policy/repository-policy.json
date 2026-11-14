@@ -58,7 +58,6 @@
     "decisions/": ["@muxui/repository-policy"],
     "docs/": ["@muxui/repository-policy"],
     "packages/": ["@muxui/repository-policy"],
-    "releases/": ["@muxui/repository-policy"],
     "strategy/": ["@muxui/repository-policy"],
     "tests/": ["@muxui/repository-policy"],
     "tooling/": ["@muxui/repository-policy"]

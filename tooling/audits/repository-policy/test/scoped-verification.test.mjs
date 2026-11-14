@@ -202,7 +202,7 @@ test('repository policy routes navigation and CI paths to the policy check with 
   const policyPaths = [
     'README.md', 'ARCHITECTURE.md', 'LICENSE', '.gitignore', 'docs/releasing.md',
     'AGENTS.md', '.github/workflows/ci.yml',
-    'tests/fixtures/g0.4/corpus.json', 'releases/README.md',
+    'tests/fixtures/g0.4/corpus.json',
   ];
   for (const path of policyPaths) {
     const plan = planScopedTask({
