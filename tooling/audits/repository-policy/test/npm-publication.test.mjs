@@ -390,6 +390,54 @@ test('a recovery plan deprecates a version only when the registry holds other by
   assert.equal(npm.planRecovery({ set, assessed: [{ name: schema, state: 'healthy' }, { name: catalog, state: 'healthy' }], failed: { name: null, version: null, phase: 'verify' } }).nextVersions, null);
 });
 
+test('a recovery plan proposes no next release that the registry does not admit, such as a version published since the preflight', async () => {
+  // catalog has its rc.1; this release publishes its rc.2. After schema publishes, someone else publishes catalog 3.0.0-rc.2,
+  // so catalog's recheck stops it before its publish: catalog was never attempted, and its version is taken.
+  const registry = createRegistry({ seed: { ...reactHistory(), ...existingPackage(catalog, '3.0.0-rc.1') } });
+  const candidate = candidateOf({ versions: { [catalog]: '3.0.0-rc.2' } });
+  const lines = [];
+  const io = {
+    ...registry.io({ log: (line) => lines.push(line) }),
+    publish: async (pkg, auth) => {
+      await registry.publish(pkg, auth);
+      if (pkg.name === schema) await registry.publish({ name: catalog, version: '3.0.0-rc.2', file: join(candidate.directory, tarballFileName(catalog, '3.0.0-rc.2')) }, {});
+    },
+  };
+  const error = await npm.main('publish-set', candidate.environment, io).then(() => assert.fail('the run should stop'), (stopped) => stopped);
+  assert.deepEqual(error.progress.failed, { name: catalog, version: '3.0.0-rc.2', phase: 'recheck' });
+  assert.ok(lines.includes(`- ${catalog}@3.0.0-rc.2: not-attempted; never attempted; the next release keeps 3.0.0-rc.2`));
+  // The rest of the tuple is admitted; catalog's version is not, so the plan stops and prints no tuple.
+  assert.deepEqual(lines.filter((line) => line.includes('stop for a decision')), [
+    `2. stop for a decision: the registry does not admit ${catalog}@3.0.0-rc.2 for the next release (Version exists: ${catalog}@3.0.0-rc.2 is already on the registry; never overwrite or republish.)`,
+  ]);
+  assert.ok(lines.some((line) => /re-check the registry until every package above is settled/u.test(line)));
+  assert.ok(!lines.some((line) => line.startsWith('Next release:')), lines.join('\n'));
+});
+
+test('a recovery plan stops, with no tuple, when the registry state is ambiguous or cannot be read', async () => {
+  const set = [{ name: schema, version: first.schema }, { name: catalog, version: '3.0.0-rc.2' }];
+  const refusals = async (registryIo) => npm.preflightNextRelease(npm.planRecovery({ set, assessed: [{ name: schema, state: 'healthy' }] }).packages, registryIo);
+  const seed = (tags) => ({ [schema]: { versions: { [first.schema]: draftIntegrity('s') }, tags: { latest: first.schema, next: first.schema } }, [catalog]: { versions: { '3.0.0-rc.1': draftIntegrity('c') }, tags } });
+
+  // A settled registry admits the whole tuple.
+  assert.deepEqual(await refusals(createRegistry({ seed: seed({ latest: '3.0.0-rc.1', next: '3.0.0-rc.1' }) }).io()), []);
+  // An extra dist-tag, or next at a version the packument does not list, is drift.
+  const drift = await refusals(createRegistry({ seed: seed({ latest: '3.0.0-rc.1', next: '3.0.0-rc.1', beta: '3.0.0-rc.1' }) }).io());
+  assert.deepEqual(drift.map(({ name, version }) => `${name}@${version}`), [`${catalog}@3.0.0-rc.2`]);
+  assert.match(drift[0].reason, /^Dist-tag drift: Expected exactly latest and next/u);
+  assert.match((await refusals(createRegistry({ seed: seed({ latest: '3.0.0-rc.1', next: '3.0.0-rc.9' }) }).io()))[0].reason, /next points at 3\.0\.0-rc\.9, which is not a published version/u);
+  // A registry that answers 500, or cannot be reached, is unreadable.
+  const status500 = await refusals({ fetch: async () => ({ status: 500, json: async () => null }) });
+  assert.deepEqual(status500.map(({ reason }) => reason), [`Registry read failed: Unexpected HTTP 500 reading ${schema}.`, `Registry read failed: Unexpected HTTP 500 reading ${catalog}.`]);
+  const unreachable = await refusals({ fetch: async () => { throw new TypeError('fetch failed'); } });
+  assert.deepEqual(unreachable.map(({ reason }) => reason), ['the registry could not be read: fetch failed', 'the registry could not be read: fetch failed']);
+
+  const plan = npm.planRecovery({ set, assessed: [{ name: schema, state: 'healthy' }], refused: drift });
+  assert.equal(plan.nextVersions, null);
+  assert.ok(plan.steps.includes(`stop for a decision: the registry does not admit ${catalog}@3.0.0-rc.2 for the next release (${drift[0].reason})`));
+  assert.ok(!plan.steps.some((step) => step.startsWith('prepare the next release')));
+});
+
 test('the publication CLI preflights the whole set read-only, and verifies a candidate before publishing', async () => {
   const registry = createRegistry({ seed: reactHistory() });
   const candidate = candidateOf();
@@ -546,6 +594,41 @@ test('the post-publication check fails on other bytes, a bad signature, or prove
   await refuses((registry) => { registry.attestation(react, first.react).predicate.buildDefinition.resolvedDependencies[0].digest.gitCommit = otherCommit; }, /@muxui\/react@0\.1\.0-rc\.5 has provenance .*: wrong the source commit\./u);
   await refuses((registry) => { registry.attestation(schema, first.schema).predicate.buildDefinition.externalParameters.workflow.ref = 'refs/heads/feature'; }, /wrong the workflow\./u);
   await refuses((registry) => { registry.attestation(catalog, first.catalog).subject[0].digest.sha512 = '0'.repeat(128); }, /wrong the subject sha512\./u);
+});
+
+test('the post-publication check retries npm audit signatures through a transient failure, and surfaces npm\'s error', async () => {
+  // npm's JSON error for an attestation endpoint that still lags the publish, and a spawn that timed out with no output.
+  const notFound = { status: 1, stdout: JSON.stringify({ error: { code: 'E404', summary: `404 Not Found - GET ${npm.REGISTRY}/-/npm/v1/attestations/@muxui%2freact@0.1.0-rc.5`, detail: '' } }), stderr: 'npm error code E404\n' };
+  const timedOut = { status: null, stdout: '', stderr: '', error: Object.assign(new Error('spawnSync npm ETIMEDOUT'), { code: 'ETIMEDOUT' }) };
+  const scripted = (registry, failures) => (args, options) => (args[0] === 'audit' && failures.length > 0 ? failures.shift() : registry.npm(args, options));
+  const check = ({ registry, packages }, run, lines = []) => npm.verifyPublished({ packages, sourceCommit: commit, run, installAttempts: 3, intervalMs: 0, sleep: async () => {}, log: (line) => lines.push(line) });
+
+  // Two transient failures, then npm's report: the check passes.
+  const passing = publishedRegistry();
+  const lines = [];
+  await check(passing, scripted(passing.registry, [notFound, timedOut]), lines);
+  assert.equal(passing.registry.npmCalls.filter((call) => call.startsWith('audit')).length, 1, 'the fake answered the third audit');
+  assert.ok(lines.includes(`npm audit signatures failed with E404: 404 Not Found - GET ${npm.REGISTRY}/-/npm/v1/attestations/@muxui%2freact@0.1.0-rc.5`), lines.join('\n'));
+  assert.ok(lines.includes('npm audit signatures failed with ETIMEDOUT: spawnSync npm ETIMEDOUT'));
+  assert.match(lines.at(-1), /^Installed /u);
+
+  // A transient failure that never clears fails after the bound, with npm's last code and message.
+  const lagging = publishedRegistry();
+  await assert.rejects(check(lagging, scripted(lagging.registry, [notFound, notFound, notFound])), (error) => error.title === 'Post-publication check failed'
+    && error.message === `npm audit signatures failed 3 times; last with E404: 404 Not Found - GET ${npm.REGISTRY}/-/npm/v1/attestations/@muxui%2freact@0.1.0-rc.5`);
+
+  // Any other npm error fails at once, with its code and message.
+  const usage = publishedRegistry();
+  const calls = [];
+  const failing = scripted(usage.registry, [{ status: 1, stdout: '', stderr: 'npm error code EUSAGE\nnpm error audit signatures needs a lockfile' }, notFound]);
+  await assert.rejects(check(usage, (args, options) => { calls.push(args[0]); return failing(args, options); }), /^Error: npm audit signatures failed with EUSAGE: npm error code EUSAGE npm error audit signatures needs a lockfile$/u);
+  assert.deepEqual(calls, ['install', 'audit']);
+
+  // A reported invalid signature is not retried.
+  const invalid = publishedRegistry();
+  invalid.registry.auditFaults[tooling] = 'invalid';
+  await assert.rejects(check(invalid, invalid.registry.npm), /invalid signatures or attestations: @muxui\/tooling@1\.1\.0-rc\.1/u);
+  assert.deepEqual(invalid.registry.npmCalls, ['install --ignore-scripts --no-audit --no-fund --legacy-peer-deps', 'audit signatures --json --include-attestations']);
 });
 
 test('a release whose post-publication check fails stops after the publish for a decision, and proposes no next release', async () => {

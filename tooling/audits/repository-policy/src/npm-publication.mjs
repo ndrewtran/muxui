@@ -424,6 +424,28 @@ function checkEnvironment(environment, project) {
 
 const npmOutput = (result) => (result.error?.message || result.stderr || result.stdout || `exited with ${result.signal ?? result.status}`).trim().slice(-2000);
 
+// npm error codes after which `npm audit signatures` is run again: an attestation endpoint that still lags the publish
+// (404), a throttled or failing registry, or a dropped or timed-out connection.
+const transientNpmCode = /^(?:E404|E408|E429|E5\d\d|ETIMEDOUT|ESOCKETTIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN)$/u;
+
+/**
+ * Reads one `npm audit signatures --json` run: { report } when npm reported its invalid, missing, and verified lists, or else
+ * { failure, transient }: npm's error code and message, and whether running it again may pass (a transient code, or no
+ * output and no code at all).
+ */
+function readAudit(audit) {
+  let parsed;
+  try {
+    parsed = JSON.parse(audit.stdout);
+  } catch {
+    parsed = undefined;
+  }
+  if (Array.isArray(parsed?.invalid) && Array.isArray(parsed.missing) && Array.isArray(parsed.verified)) return { report: parsed };
+  const code = audit.error?.code ?? parsed?.error?.code ?? /npm (?:error|ERR!) code (\S+)/u.exec(audit.stderr ?? '')?.[1];
+  const message = ([parsed?.error?.summary, parsed?.error?.detail].filter(Boolean).join(' ') || npmOutput(audit)).replace(/\s*\n\s*/gu, ' ');
+  return { failure: `${code ?? 'no error code'}: ${message}`, transient: code ? transientNpmCode.test(code) : !String(audit.stdout ?? '').trim() };
+}
+
 /**
  * Verifies a published release the way a consumer receives it. A new project outside the checkout, whose npm configuration
  * is empty but for the public registry, installs every package in `packages` ({ name, version, integrity }) at its exact
@@ -432,13 +454,15 @@ const npmOutput = (result) => (result.error?.message || result.stderr || result.
  * - the integrity npm installed it at (package-lock.json) is the authorized one;
  * - `npm audit signatures --json --include-attestations` exits 0 with no invalid and no missing signature, and its
  *   `verified` list (the packages whose attestation it verified: the Sigstore signature and certificate chain of the bundle,
- *   and the registry's signature over the version) holds the package as a direct dependency;
+ *   and the registry's signature over the version) holds the package as a direct dependency. The audit is retried, as the
+ *   install is, only while npm fails with a transient error (`readAudit`); a report of any invalid or missing signature
+ *   fails at once;
  * - the statement npm verified names those bytes, built from `sourceCommit` by this repository's publish workflow on main
  *   (`judgeAttestation`).
  * `run(args, { cwd, env })` runs npm; tests inject it so they touch no network.
  */
 export async function verifyPublished({
-  packages, sourceCommit, environment = process.env, run = runNpm, installAttempts = 10, intervalMs = 30_000,
+  packages, sourceCommit, environment = process.env, run = runNpm, installAttempts = 10, auditAttempts = installAttempts, intervalMs = 30_000,
   sleep = (ms) => new Promise((done) => setTimeout(done, ms)), log = console.log,
 }) {
   const title = 'Post-publication check failed';
@@ -467,16 +491,17 @@ export async function verifyPublished({
       }
     }
 
-    const audit = npm(['audit', 'signatures', '--json', '--include-attestations']);
-    let result;
-    try {
-      result = JSON.parse(audit.stdout);
-    } catch {
-      stop(title, `npm audit signatures printed output that is not JSON: ${npmOutput(audit)}`);
-    }
-    if (!Array.isArray(result?.invalid) || !Array.isArray(result.missing) || !Array.isArray(result.verified)) {
-      stop(title, 'npm audit signatures did not report invalid, missing, and verified packages.');
-    }
+    let auditRuns = 0;
+    const { audit, result } = await poll('npm audit signatures to read the published signatures and attestations', async () => {
+      auditRuns += 1;
+      const audit = npm(['audit', 'signatures', '--json', '--include-attestations']);
+      const { report, failure, transient } = readAudit(audit);
+      if (report) return { audit, result: report };
+      if (!transient) stop(title, `npm audit signatures failed with ${failure}`);
+      if (auditRuns === auditAttempts) stop(title, `npm audit signatures failed ${auditAttempts} times; last with ${failure}`);
+      log(`npm audit signatures failed with ${failure}`);
+      return undefined;
+    }, { attempts: auditAttempts, intervalMs, sleep, log });
     const named = (entries) => entries.map((entry) => `${entry.name}@${entry.version}`).join(', ');
     if (result.invalid.length > 0) stop(title, `npm audit signatures found invalid signatures or attestations: ${named(result.invalid)}.`);
     if (result.missing.length > 0) stop(title, `npm audit signatures found missing registry signatures: ${named(result.missing)}.`);
@@ -604,13 +629,13 @@ export async function assessAttempted(attempted, io = {}) {
  * The recovery plan after a failed publication. It is a plan and nothing here runs it. `set` is the publish set in order,
  * `assessed` the result of `assessAttempted`, and `failed` the phase that stopped the run. Recovery is the next release:
  * all four packages again, each at the version the registry's observed state admits. A package never attempted keeps its
- * version, which the registry still does not hold; a healthy version stays published and the next release moves past it;
- * only a version that published bad bytes is deprecated, with Andrew's yes, and moved past too. An outcome the registry
- * does not settle (an attempted package it does not show, the candidate bytes without provenance, or a failed
- * post-publication check) stops for a decision, never as "nothing to do" and never as a republish of the same version,
- * and the plan proposes no next release until it is settled.
+ * version; a healthy version stays published and the next release moves past it; only a version that published bad bytes
+ * is deprecated, with Andrew's yes, and moved past too. An outcome the registry does not settle (an attempted package it
+ * does not show, the candidate bytes without provenance, or a failed post-publication check) stops for a decision, never
+ * as "nothing to do" and never as a republish of the same version, and the plan proposes no next release until it is
+ * settled. So does `refused` (from `preflightNextRelease`): a proposed version the registry's current state does not admit.
  */
-export function planRecovery({ set, assessed, failed = null }) {
+export function planRecovery({ set, assessed, failed = null, refused = [] }) {
   const byName = new Map(assessed.map((entry) => [entry.name, entry]));
   const packages = set.map(({ name, version }) => {
     const state = byName.get(name)?.state ?? 'not-attempted';
@@ -624,7 +649,7 @@ export function planRecovery({ set, assessed, failed = null }) {
     }[state];
     return { name, version, state, ...action };
   });
-  const unsettled = failed?.phase === 'verify' || packages.some(({ nextVersion }) => nextVersion === undefined);
+  const unsettled = failed?.phase === 'verify' || refused.length > 0 || packages.some(({ nextVersion }) => nextVersion === undefined);
   const nextVersions = unsettled ? null : packages.map(({ name, nextVersion }) => `${name}=${nextVersion}`).join(',');
   return {
     packages,
@@ -632,6 +657,7 @@ export function planRecovery({ set, assessed, failed = null }) {
     steps: [
       'stop further publication; preserve every published version and the release manifest',
       ...(failed?.phase === 'verify' ? ['stop for a decision: the post-publication check failed on published versions; deprecate nothing until the failure is understood'] : []),
+      ...refused.map(({ name, version, reason }) => `stop for a decision: the registry does not admit ${name}@${version} for the next release (${reason})`),
       ...packages.filter(({ deprecate }) => deprecate).map(({ name, text }) => `${name}: ${text}`),
       unsettled
         ? 're-check the registry until every package above is settled, then prepare the next release from it'
@@ -641,6 +667,24 @@ export function planRecovery({ set, assessed, failed = null }) {
   };
 }
 
+/**
+ * Preflights every version a settled plan proposes (`packages` from `planRecovery`), against each package's current registry
+ * state, exactly as the next release's own preflight will. Returns the refusals as { name, version, reason }: a version
+ * already published, dist-tag drift, or a registry that cannot be read. Read-only, and it never throws.
+ */
+export async function preflightNextRelease(packages, io = {}) {
+  const refused = [];
+  for (const { name, nextVersion } of packages) {
+    try {
+      await preflight(nextVersion, io, name);
+    } catch (error) {
+      const reason = error instanceof NpmPublicationError ? `${error.title}: ${error.message}` : `the registry could not be read: ${error.message}`;
+      refused.push({ name, version: nextVersion, reason });
+    }
+  }
+  return refused;
+}
+
 const planLines = (plan) => [
   'Recovery plan (a plan only; nothing was deprecated, unpublished, or re-tagged):',
   ...plan.packages.map(({ name, version, state, text }) => `- ${name}@${version}: ${state}; ${text}`),
@@ -648,12 +692,19 @@ const planLines = (plan) => [
   ...(plan.nextVersions ? [`Next release: MUXUI_RELEASE_VERSIONS=${plan.nextVersions}`] : []),
 ];
 
-/** Reads the registry for what the failed run attempted and prints the recovery plan; never executes it. */
+/**
+ * Reads the registry for what the failed run attempted, and for whether it admits the proposed next release, and prints the
+ * recovery plan; never executes it.
+ */
 async function reportRecovery({ packages, error, environment, io }) {
   const log = io.log ?? console.log;
   const assessed = await assessAttempted(error.progress?.attempted ?? [], io);
   const { failed } = error.progress ?? {};
-  const plan = planRecovery({ set: packages, assessed, failed });
+  let plan = planRecovery({ set: packages, assessed, failed });
+  if (plan.nextVersions) {
+    const refused = await preflightNextRelease(plan.packages, io);
+    if (refused.length > 0) plan = planRecovery({ set: packages, assessed, failed, refused });
+  }
   const lines = planLines(plan);
   for (const line of lines) log(line);
   writeSummary(environment, [
