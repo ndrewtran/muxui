@@ -1456,6 +1456,7 @@
       ]
     },
     { "key": "./themes.css", "untyped": true, "reason": "a stylesheet" },
+    { "key": "./themes-apca.css", "untyped": true, "reason": "a stylesheet" },
     {
       "key": "./testing",
       "untyped": true,

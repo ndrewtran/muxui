@@ -272,8 +272,8 @@ test('the anchors of a page are unique, and every family page shows its owner\'s
 
 test('the package exports page lists every entry of the export map, the package-level exports and the shared types with their reasons', () => {
 	const exported = buildPackageExports(reference, facts.packageName);
-	assert.deepEqual(exported.entries.map(({ key }) => key), ['.', './compatibility', './styles.css', './themes', './themes.css', './testing', './text-editor', './markdown']);
-	assert.deepEqual(exported.entries.filter(({ untyped }) => untyped !== undefined).map(({ key }) => key), ['./compatibility', './styles.css', './themes.css', './testing']);
+	assert.deepEqual(exported.entries.map(({ key }) => key), ['.', './compatibility', './styles.css', './themes', './themes.css', './themes-apca.css', './testing', './text-editor', './markdown']);
+	assert.deepEqual(exported.entries.filter(({ untyped }) => untyped !== undefined).map(({ key }) => key), ['./compatibility', './styles.css', './themes.css', './themes-apca.css', './testing']);
 	assert.deepEqual(exported.packageLevel.map(({ name }) => name), ['reactCompatibility', 'supplementalFamilies', 'MUXUI_DEFAULT_THEME_PRESET_ID', 'MUXUI_THEME_ACTION_BACKGROUNDS', 'MUXUI_THEME_PRESETS', 'MUXUI_THEME_PRESETS_BY_ID']);
 	assert.ok(exported.packageLevel.every(({ reason }) => reason !== undefined));
 	assert.equal(exported.packageTypes.length, 6);

@@ -232,7 +232,8 @@ Part 3, React owns its public CSS contract, in two stages and one stylesheet:
     component stylesheet is one entry, `@muxui/react/styles.css`, and holds every
     family, including the supplemental families, Markdown, and TextEditor.
     `themes.css` stays a separate optional entry, and splitting it is not part of
-    this decision. Within a major, `styles.css` stays complete, so any finer
+    this decision. Decision 0036 adds `themes-apca.css` as a second optional
+    theme entry. Within a major, `styles.css` stays complete, so any finer
     entry can be added later only additively. The split was retired on 1
     November 2026 (see Acceptance), for two reasons. The editor and Markdown styles measure about
     29 KB (25.7 KB for TextEditor, 3.5 KB for Markdown) of a 675 KB
@@ -268,7 +269,8 @@ Part 3, React owns its public CSS contract, in two stages and one stylesheet:
     - `browser/hook-only-reach.test.mjs` shows in a browser that a consumer's rule
       reaches the elements of each of the 12 hooks no stylesheet selects.
     - `public-surface.test.mjs` checks that the style entries are exactly
-      `styles.css` and `themes.css`, that each starts with the layer order and
+      `styles.css`, `themes.css`, and `themes-apca.css` (Decision 0036), that
+      each starts with the layer order and
       holds every rule in a layer, and that a token with the `instance` policy is
       read through `var()`. No token has that policy, so there is no public
       custom property yet, and the browser test that setting one changes

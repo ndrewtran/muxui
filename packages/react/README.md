@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:6262e38986574165efc064c4dd32ed3abaa1cfffd98717f264ba650345ba8cb8 -->
+<!-- @generated-content-sha256: sha256:274fe98d3f9ddc0e7a879814d0d90add1a3ed58785b6c6be1e7be3708e9eced3 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -72,7 +72,7 @@ pnpm add ./muxui-react-0.1.0-rc.1.tgz
 
 ## Cascade layers
 
-Every rule in `styles.css` and `themes.css` sits in one of the cascade layers `muxui.tokens`, `muxui.components`, and `muxui.utilities`, in that order. Tokens, theme presets, and direction rules are in `muxui.tokens`; component, field, collection, overlay, and supplemental styles are in `muxui.components`; `muxui.utilities` is declared and empty. Each file starts with the full order statement.
+Every rule in `styles.css`, `themes.css`, and `themes-apca.css` sits in one of the cascade layers `muxui.tokens`, `muxui.components`, and `muxui.utilities`, in that order. Tokens, theme presets, and direction rules are in `muxui.tokens`; component, field, collection, overlay, and supplemental styles are in `muxui.components`; `muxui.utilities` is declared and empty. Each file starts with the full order statement.
 
 For ordinary declarations, CSS outside a layer beats CSS inside one, whatever its specificity, so your own unlayered rules override Mux UI without `!important` or a higher-specificity selector. A rule in a layer ranked after `muxui.components` beats it too, and `muxui.utilities` is the place in Mux UI's own order for rules of yours that should outrank component defaults. To restyle by token, assign the `--muxui-semantic-*` and `--muxui-component-*` variables a component's styles read on a theme scope element, not on one rendered component.
 
@@ -110,6 +110,17 @@ contrast combinations while leaving spacing, typography, motion, and density
 values in the base theme. An unknown ID matches no preset declarations; normal
 base and inherited styles apply on that scope. Forced-colors component rules
 retain their system-color priority.
+
+The optional `@muxui/react/themes-apca.css` holds the same presets as
+`themes.css`, with the same selectors, cascade layer, and rule order, so a page
+imports one or the other after `styles.css`; when both load, the one imported
+last wins wherever they differ. Only the way each shade's text color is chosen
+differs: `themes.css` picks the light or dark endpoint text with the higher
+WCAG 2 contrast ratio, and `themes-apca.css` picks the endpoint with the
+higher APCA 0.0.98G-4g score (absolute Lc). Choose it when your own tooling
+scores text with APCA. Each file only selects the endpoint with the higher score
+under its method and does not promise a minimum score for every pair. The
+`@muxui/react/themes` metadata is the same for both.
 
 Component styles consume semantic roles from `catalog/tokens/default-theme.json`: gaps, content insets, outer spacing, viewport clearance, surfaces, borders, typography, shapes, and motion are independently themeable. Explicit per-mode palette painting uses non-inverting semantic palette aliases so dark styles are not inverted twice. Choose tokens by their documented meaning, not because their default values happen to match.
 

@@ -175,7 +175,7 @@ test('all 86 recipes are valid: the README\'s layer statement, wrapper-scoped ru
 });
 
 test('the Mux layers the recipe relies on are as the README says: muxui.utilities is declared and empty in every shipped sheet', () => {
-  for (const name of ['styles.css', 'themes.css']) {
+  for (const name of ['styles.css', 'themes.css', 'themes-apca.css']) {
     const { rules } = readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
     assert.deepEqual(rules.filter(({ chain }) => chain.some((prelude) => prelude === '@layer muxui.utilities')).map(({ selector }) => selector), [], `${name} has no rule in muxui.utilities`);
   }
