@@ -535,7 +535,7 @@ test('a package\'s implementation digest follows what it ships and what generate
   }
 });
 
-test('a release names its prior release, or declares the first and agrees with the retained evidence', () => {
+test('a release names its prior release from the ledger, or declares the first and agrees with the tree', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'muxui-release-effects-test-'));
   try {
     const { commit, git, write } = scratchRepository(scratch);

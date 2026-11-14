@@ -402,7 +402,7 @@ jobs:
           name: npm-candidate
           path: ${{ runner.temp }}/npm-candidate
           if-no-files-found: error
-          # Long enough for a publish run to promote it and for evidence capture.
+          # Long enough for a publish run to promote it.
           retention-days: 30
 
   publish:

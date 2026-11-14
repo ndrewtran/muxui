@@ -398,7 +398,6 @@ export function generationArgs(plan) {
 const isolatedCheckPackages = ['@muxui/react'];
 export const storybookPackage = '@muxui/react-storybook';
 const laneCheckPackages = [storybookPackage];
-const evidencePackage = '@muxui/repository-policy';
 const checkConcurrency = 2;
 
 function checkCommand(concurrency, filters, task) {
@@ -436,12 +435,6 @@ export function checkStages(plan, { task, workspaceRootName, storybookCommands }
       if (workspaceRootName) filters.push('--filter', `!${workspaceRootName}`);
     }
     shared.push([{ args: checkCommand(checkConcurrency, filters, task) }]);
-  }
-  // Policy's `check` leaves out the retained-evidence tests so CI can run them
-  // only when their inputs change. Every workspace run (`pnpm check`,
-  // `check:all`, and so `release:prepare`) still runs them, in a lane of their own.
-  if (task === 'check' && selected([evidencePackage]).length > 0) {
-    shared.push([{ args: checkCommand(1, ['--filter', evidencePackage], 'check:evidence') }]);
   }
   // Parallel lanes interleave output, so pnpm prefixes each line with its package.
   const checkLanes = shared.length > 1

@@ -327,8 +327,8 @@ export async function fetchCandidate({ repository, sha, dryRunId, currentRunId, 
  * Verifies the extracted candidate set's bytes: exactly the tarballs of the published packages and the portfolio
  * manifest that `versions` (the published packages' versions) name, and the manifest holds to them
  * (`verifyPortfolioRelease`): every package's recorded integrity and tuple position, every published package built from
- * this commit (`sha`), the commit's tree, the compatibility of the tuple, and the retained evidence as committed at
- * `sha`. A package whose version is not given is reused: the manifest must record it as reused, `reusedArtifacts` holds
+ * this commit (`sha`), the commit's tree, the compatibility of the tuple, and the lockfile and token source as committed
+ * at `sha`. A package whose version is not given is reused: the manifest must record it as reused, `reusedArtifacts` holds
  * its bytes from the registry, and `priorManifests` the earlier manifests that published it. `expectedSha512` is the
  * tarball-sha512 input, the integrities of exactly the published tarballs: required when `requireDigest`, as promotion
  * does, and checked whenever given. Returns what the workflow reports.
