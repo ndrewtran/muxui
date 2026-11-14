@@ -1,6 +1,6 @@
-// Roadmap "P2.1 Public package graph and portfolio release": retain E-P2.1-01 to E-P2.1-06 for the first portfolio
-// release (@muxui/schema, @muxui/catalog, @muxui/tooling, and @muxui/react), published through
-// .github/workflows/npm-publish.yml and already retained as the R1 exit route of its React candidate.
+// Roadmap "P2.1 Public package graph and portfolio release": retain E-P2.1-01 to E-P2.1-06 for a portfolio release published
+// through .github/workflows/npm-publish.yml. The first portfolio release (@muxui/schema, @muxui/catalog, @muxui/tooling, and
+// @muxui/react) is already retained as the R1 exit route of its React candidate, and is read from it:
 //
 //   node tests/evidence/capture-p2.1.mjs --version=<0.1.0-rc.N> --capture-timestamp=<ISO-8601 UTC> <phase>...
 //
@@ -26,16 +26,39 @@
 //                          record bound to the full revision the reviewer read, as the BL1 reviews are. Records are
 //                          rebuilt with it; without it each record says the review is pending.
 //
-// A later release that publishes only some packages and reuses the rest has no R1 exit route (that is for a React candidate), so
+// --version is the first portfolio release only: it refuses a release that compares with a prior one. Every later release,
+// whichever packages it publishes or reuses, is
 //
 //   node tests/evidence/capture-p2.1.mjs --release=<@muxui/package>@<version> --dry-run-run=<id> --publish-run=<id> \
-//     --prior-route=tests/evidence/p2.1 --capture-timestamp=<ISO-8601 UTC> --evidence --publish-approval=<text> --publish-approval-date=<YYYY-MM-DD>
+//     --prior-route=<the prior release's route> --capture-timestamp=<ISO-8601 UTC> --evidence --publish-approval=<text> --publish-approval-date=<YYYY-MM-DD>
 //
-// reads its dry run and publish run itself (the R1 exit binders, with the published package as the candidate) and retains
+// which reads its dry run and publish run itself (the R1 exit binders, with the named published package as the candidate) and retains
 // them in a route of its own, tests/evidence/p2.1-<package>-<version>, with the release manifest under artifacts/ where the next
-// release names it as its prior release. The records are judged against the first release's route (--prior-route): the reused
-// records equal its manifest's, its tuple is installed again by exact version, and nothing it listed on the registry is gone.
-// The Roadmap must be unamended since the release commit, and so must every file the records cite.
+// release names it as its prior release. Each package's role (published or reused) is the manifest's, and how it published (OIDC,
+// or the temporary token of a first publish) is the publish run's authentication line; the claims follow from those. The records
+// are judged against the prior release's route (--prior-route): the reused records equal its manifest's, its tuple is installed
+// again by exact version, and nothing it listed on the registry is gone. The Roadmap must be unamended since the release commit, and
+// so must every file the records cite. When the release publishes @muxui/react, its R1 exit route (capture-r1-exit.mjs) holds the
+// E-R1-EXIT records of that candidate from the same runs, and this route holds E-P2.1-01 to 06 only; neither cites the other's records.
+//
+// Runbook for the next release, which publishes all four from one commit and compares with tests/evidence/p2.1-tooling-1.1.0-rc.2:
+//   1. After the publish run succeeds, and within 30 days (the npm-candidate artifact expires; logs after 90), find the run IDs. The
+//      publish run is the mode=publish run of npm-publish.yml on main; its prepare log names the dry run it promoted, which must have
+//      reused main CI's proof:
+//        gh run list --repo ndrewtran/muxui --workflow npm-publish.yml --branch main --limit 10
+//        gh run view <publish run id> --repo ndrewtran/muxui --log | grep -e 'from dry run'
+//   2. From a clean branch of origin/main that holds the release commit and this tool committed, with gh signed in and network access
+//      to GitHub and the public registry:
+//        node tests/evidence/capture-r1-exit.mjs --version=0.1.0-rc.6 --capture-timestamp=<ISO-8601 UTC> \
+//          --dry-run-run=<dry run id> --publish-run=<publish run id> --registry
+//        node tests/evidence/capture-p2.1.mjs --release=@muxui/react@0.1.0-rc.6 --dry-run-run=<dry run id> --publish-run=<publish run id> \
+//          --prior-route=tests/evidence/p2.1-tooling-1.1.0-rc.2 --capture-timestamp=<ISO-8601 UTC> --evidence \
+//          --publish-approval=<the exact authorization Andrew gave> --publish-approval-date=<YYYY-MM-DD>
+//      They write tests/evidence/r1-exit-0.1.0-rc.6 and tests/evidence/p2.1-react-0.1.0-rc.6, and both retain the same manifest bytes.
+//   3. After the independent release-integrity review, the same --release, --capture-timestamp, --review=<file>, and
+//      --review-revision=<sha>, without --evidence.
+//   4. Retain both routes in one pull request. The release after names
+//      tests/evidence/p2.1-react-0.1.0-rc.6/artifacts/release-manifest.json as its prior-release.
 //
 // Each phase is separate and re-runnable. Every run rebuilds the records, index, and README from verification.json in
 // memory and replaces the route, or leaves it untouched on failure. A record never claims P2.1 is complete, or a stable,
@@ -137,20 +160,54 @@ function sourceLine(revision, { file, after, pattern }) {
   return { file, line: at + 1, text: lines[at].trim() };
 }
 
+const reactName = '@muxui/react';
+// The first portfolio release (its route is `firstRoot`): its publish run first-published these three with the temporary token
+// and @muxui/react through its trusted publisher. A later release that reuses one of those versions inherits how it was published.
+export const firstRelease = { id: 'muxui-portfolio:40dcc0032b7db3a47e19797d4e73bc9d', tokenPublished: ['@muxui/schema', '@muxui/catalog', '@muxui/tooling'] };
+
+/**
+ * How each package of `release` is in its tuple, from the manifest's roles and the publish run's authentication lines: what the
+ * release published, by token or by trusted publishing (OIDC), and what it reused, with the reused versions a token publish made.
+ */
+export function releaseFacts(release) {
+  const published = release.packages.filter(({ role }) => role !== 'reused');
+  const reused = release.packages.filter(({ role }) => role === 'reused');
+  const tokenPublished = release.tokenPublished ?? [];
+  return {
+    published,
+    reused,
+    tokenPublished,
+    oidcPublished: published.filter(({ name }) => !tokenPublished.includes(name)),
+    reusedFromToken: reused.filter(({ name, provenance }) => provenance?.releaseId === firstRelease.id && firstRelease.tokenPublished.includes(name)),
+  };
+}
+
+/** How the records name the release a later release compares with: the first release, or the release after it that it follows. */
+const priorWords = (release) => (!release.reuse || release.reuse.priorRoute === firstRoot
+  ? { first: true, prior: 'the first release', Prior: 'The first release' }
+  : { first: false, prior: 'the prior release', Prior: 'The prior release' });
+const shortName = ({ name }) => (name === reactName ? 'React' : name.slice('@muxui/'.length));
+const countWord = (count) => ['no', 'one', 'two', 'three', 'four'][count] ?? String(count);
+const plural = (list, one, many) => (list.length === 1 ? one : many);
+const themWord = (list) => ({ 1: 'it', 2: 'those two' })[list.length] ?? 'them';
+
 /** The parts of every assertion; `release` holds the portfolio's package names, versions, and digests (see `claimsFor`). */
-function claimsFor(release) {
+export function claimsFor(release) {
   const { packages, manifestDigest, reuse } = release;
-  // The packages this release publishes: all four in the first release, the changed ones in a later release.
-  const published = packages.filter(({ role }) => role !== 'reused');
-  const reused = packages.filter(({ role }) => role === 'reused');
-  const others = published.filter(({ name }) => name !== '@muxui/react');
+  // The packages this release publishes (all four in the first release, the changed ones in a later release) and how each published.
+  const { published, reused, tokenPublished, oidcPublished, reusedFromToken } = releaseFacts(release);
+  const { first: firstPrior, prior, Prior } = priorWords(release);
+  const others = published.filter(({ name }) => name !== reactName);
+  const react = packages.find(({ name }) => name === reactName);
   const label = ({ name, version }) => `${name}@${version}`;
+  // A reuse chain: a package the prior release itself reused, so its record is that of an earlier release.
+  const chained = reused.filter(({ provenance }) => provenance?.releaseId !== reuse?.priorReleaseId);
   const dryRun = (pattern) => logLine('dryRun', pattern);
   const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
   const exact = (text) => new RegExp(`^${escape(text)}$`, 'u');
   const publishedAll = `Candidate verified: ${published.map((entry) => `${label(entry)} ${entry.integrity}`).join(', ')}`;
   const setLine = `P2.1 set consumer: ${packages.length} tarballs installed together, `;
-  const sinceFirst = reuse ? ` The first release's route ${reuse.priorRoute} holds the same assertion for its own source revision.` : '';
+  const sinceFirst = reuse ? ` ${Prior}'s route ${reuse.priorRoute} holds the same assertion for its own source revision.` : '';
   // In a later release the test that came after the first release's source is in the release commit's own main CI run.
   const afterJob = reuse ? 'tooling' : 'toolingAfter';
   return {
@@ -158,22 +215,22 @@ function claimsFor(release) {
       parts: [
         {
           part: reuse
-            ? `${joinNames(published.map(label))}, the tarball this release publishes, is audited against its declared public entries, files allowlist, carried manifest fields (engines included), dependency sources, and sibling edges. The reused tarballs (${joinNames(reused.map(label))}) are the recorded bytes of the release that published them and are not packed again.`
+            ? `${joinNames(published.map(label))}, the ${plural(published, 'tarball', 'tarballs')} this release publishes, ${plural(published, 'is audited against its', 'are audited against their')} declared public entries, files allowlist, carried manifest fields (engines included), dependency sources, and sibling edges.${reused.length > 0 ? ` The reused tarballs (${joinNames(reused.map(label))}) are the recorded bytes of the release that published them and are not packed again.` : ''}`
             : 'The three new tarballs are audited against their declared public entries, files allowlist, carried manifest fields (engines included), dependency sources, and sibling edges, and @muxui/react is audited the same way inside the same preparation.',
           state: 'shown',
-          ...(reuse ? { note: `The pack audit of a reused package is the one the release that published it made (${reuse.priorRoute}); it carries over because the bytes are the recorded ones: the dry run's npm audit signatures and registry read matched each reused tarball to its recorded integrity and attestation, and the publish run read each at that integrity before it published anything.` } : {}),
+          ...(reused.length > 0 ? { note: `The pack audit of a reused package is the one the release that published it made (${reuse.priorRoute}); it carries over because the bytes are the recorded ones: the dry run's npm audit signatures and registry read matched each reused tarball to its recorded integrity and attestation, and the publish run read each at that integrity before it published anything.` } : {}),
           evidence: [
             test('policy', releaseSet, 'E-P2.1-01 every candidate manifest passes the pack audit: public entries, allowed edges, rc ranges, no scripts'),
-            dryRun(exact(`P2.1 packed and audited ${others.map(label).join(', ')}`)),
+            dryRun(exact(`P2.1 packed and audited ${others.map(label).join(', ') || 'no support package'}`)),
             dryRun(new RegExp(`^R1 exit release preparation passed for ${packages.map(label).join(', ').replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')};`, 'u')),
             ...reused.map((entry) => dryRun(new RegExp(`^P2\\.1 reused .*${escape(label(entry))}`, 'u'))),
-            ...(reuse ? [dryRun(new RegExp(`^P2\\.1 npm audit signatures \\(npm \\S+\\) verified the registry signature and the Sigstore attestation of ${escape(reused.map(label).join(', '))}: 0 invalid, 0 missing,`, 'u'))] : []),
+            ...(reused.length > 0 ? [dryRun(new RegExp(`^P2\\.1 npm audit signatures \\(npm \\S+\\) verified the registry signature and the Sigstore attestation of ${escape(reused.map(label).join(', '))}: 0 invalid, 0 missing,`, 'u'))] : []),
             ...reused.map((entry) => logLine('publish', exact(`${label(entry)}: reused, on the registry with ${entry.integrity}`))),
           ],
         },
         {
-          part: reuse
-            ? 'The four tarballs of the set (the prepared tooling candidate and the three reused packages at their recorded bytes) install together, every public entry imports, and the tarball this release publishes publishes as a dry run without lifecycle hooks or a registry write.'
+          part: reused.length > 0
+            ? `The ${countWord(packages.length)} tarballs of the set (the prepared ${joinNames(published.map(shortName))} ${plural(published, 'candidate', 'candidates')} and the ${countWord(reused.length)} reused ${plural(reused, 'package', 'packages')} at their recorded bytes) install together, every public entry imports, and ${plural(published, 'the tarball', 'each tarball')} this release publishes publishes as a dry run without lifecycle hooks or a registry write.`
             : 'The four tarballs install together from their packed artifacts, every public entry imports, and each tarball publishes as a dry run without lifecycle hooks or a registry write.',
           state: 'shown',
           evidence: [
@@ -193,9 +250,8 @@ function claimsFor(release) {
         },
       ],
       limits: [
-        reuse
-          ? `The reused tarballs are not audited again here: their pack audit is that of ${reuse.priorRoute}, and this release's evidence for them is that their bytes are the recorded ones.`
-          : '@muxui/react\'s pack audit prints no line of its own; its pass rests on the dry run\'s release preparation completing for the whole set.',
+        ...(reused.length > 0 ? [`The reused tarballs are not audited again here: their pack audit is that of ${reuse.priorRoute}, and this release's evidence for them is that their bytes are the recorded ones.`] : []),
+        ...(react.role === 'published' ? ['@muxui/react\'s pack audit prints no line of its own; its pass rests on the dry run\'s release preparation completing for the whole set.'] : []),
         'Supported engines are checked as the carried `engines` field, equal to the source manifest; no tarball is installed or run on another Node version. Types are held by the exports and files the audit allows; there is no separate declaration check.',
       ],
     },
@@ -272,7 +328,7 @@ function claimsFor(release) {
           part: 'The CLI reports its own version: the manifest gives the CLI version and every response gives muxuiVersion, each the installed tooling\'s version (Architecture "Self-describing manifest" requires the CLI name and version; "Version units and compatibility", the exact package tuple in every response).',
           state: 'shown',
           note: ({ toolingVersion: version }, { priorTuple }) => (version.reportsInstalledVersion
-            ? `The installed tooling is ${version.installed}, and the manifest's CLI version and every response's muxuiVersion agree with it.${reuse ? ` This later release satisfies the part, and ${priorTuple.tooling.version}, the first release's tooling, does not and stays wrong: installed again for this capture, it reports muxuiVersion ${priorTuple.bin.muxuiVersion} and CLI version ${priorTuple.bin.cliVersion}.` : ''}`
+            ? `The installed tooling is ${version.installed}, and the manifest's CLI version and every response's muxuiVersion agree with it.${reuse && priorTuple.bin.muxuiVersion !== priorTuple.tooling.version ? ` This later release satisfies the part, and ${priorTuple.tooling.version}, ${prior}'s tooling, does not and stays wrong: installed again for this capture, it reports muxuiVersion ${priorTuple.bin.muxuiVersion} and CLI version ${priorTuple.bin.cliVersion}.` : ''}`
             : `The installed tooling is ${version.installed}, but its manifest reports CLI version ${version.cliVersionInManifest} and its responses report muxuiVersion ${version.muxuiVersionInResponses.join(', ')}. The source at the release commit fixes both as constants (the cited lines), not from the package version. The fix ships with tooling's next real release; this published version stays wrong. The catalog and renderer versions in the responses are the installed ones.`),
           evidence: [publishedChecks('tooling-reports-version'), ...(reuse ? readVersionSources : toolingVersionSources).map((spec) => ({ kind: 'source-line', spec })), ...(reuse ? [{ kind: 'prior-tuple', only: 'bin' }] : [])],
         },
@@ -333,7 +389,7 @@ function claimsFor(release) {
           {
             part: 'Every package the release publishes is built from the release commit.',
             state: 'shown',
-            note: `${joinNames(published.map(label))} is the only package this release publishes; the registry read-back's provenance names the release commit and the publish run.`,
+            note: `${joinNames(published.map(label))} ${plural(published, 'is the only package', 'are the packages')} this release publishes; the registry read-back's provenance names the release commit and the publish run.`,
             evidence: [
               test('policy', manifestTests, 'E-P2.1-03 the verifier rejects a published package built from another commit'),
               { kind: 'route', field: 'portfolio-roles' },
@@ -343,25 +399,31 @@ function claimsFor(release) {
           {
             part: 'The first portfolio release publishes all four.',
             state: 'not-applicable',
-            note: `This release is not the first portfolio release: it publishes ${joinNames(published.map(label))} and reuses ${joinNames(reused.map(label))}. That the first release published all four is the evidence of ${reuse.priorRoute}.`,
+            note: `This release is not the first portfolio release: it publishes ${joinNames(published.map(label))} and reuses ${reused.length > 0 ? joinNames(reused.map(label)) : 'none'}. That the first release published all four is the evidence of ${firstRoot}.`,
             evidence: [{ kind: 'route', field: 'portfolio-roles' }],
           },
           {
             part: 'A later release publishes only the packages whose version units changed.',
             state: 'shown',
-            note: 'Release preparation classified the change since the first release (the version-effects record cited here) and the release published only the packages it required; the check is that of release preparation, and this capture does not recompute it.',
+            note: `Release preparation classified the change since ${prior} (the version-effects record cited here) and the release published only the packages it required; the check is that of release preparation, and this capture does not recompute it.`,
             evidence: [
-              dryRun(new RegExp(`^P2\\.1 version effects match the change since ${escape(reuse.priorReleaseId)}; .*; reusing ${escape(reused.map(label).join(', '))}$`, 'u')),
+              // Release preparation lists what it reuses last, or, reusing nothing, ends with what it publishes.
+              dryRun(new RegExp(`^P2\\.1 version effects match the change since ${escape(reuse.priorReleaseId)}; .*; ${reused.length > 0 ? `reusing ${escape(reused.map(label).join(', '))}` : `publishing ${escape(published.map(({ name }) => name).join(', '))}`}$`, 'u')),
               { kind: 'route', field: 'version-effects' },
               test('policy', effectsTests, 'a release commit is classified from its committed sources against the prior release commit'),
               test('policy', effectsTests, 'the tooling-only release the first portfolio release needs: a real change to tooling publishes tooling and reuses the rest'),
               test('policy', `${policy}/release-set.test.mjs`, 'an empty version reuses a package, which only a later release can do, and a release publishes at least one'),
             ],
           },
-          {
+          reused.length === 0 ? {
+            part: 'Each reused package keeps its original recorded version, digest, and provenance, and the manifest verifies its compatibility with the new tuple.',
+            state: 'not-applicable',
+            note: 'This release reuses no package: every package of its tuple is published from the release commit (the manifest\'s roles, cited here).',
+            evidence: [{ kind: 'route', field: 'portfolio-roles' }],
+          } : {
             part: 'Each reused package keeps its original recorded version, digest, and provenance, and the manifest verifies its compatibility with the new tuple.',
             state: 'shown',
-            note: 'Each reused record in this release\'s manifest is, field for field, the record of the first release\'s manifest; the dry run read each reused package on the registry with npm audit signatures, and the publish run read each at its recorded integrity before it published anything. The compatibility edges are the manifest\'s, recomputed by the verifier the cited tests exercise.',
+            note: `Each reused record in this release's manifest is, field for field, the record of ${prior}'s manifest; the dry run read each reused package on the registry with npm audit signatures, and the publish run read each at its recorded integrity before it published anything. The compatibility edges are the manifest's, recomputed by the verifier the cited tests exercise.`,
             evidence: [
               { kind: 'reuse' },
               { kind: 'route', field: 'compatibility' },
@@ -410,9 +472,11 @@ function claimsFor(release) {
         },
       ],
       limits: [
-        reuse
-          ? `Reuse is shown by one real preparation, this release's, against the one prior release (${reuse.priorReleaseId}). A reuse chain, where a package the prior release itself reused is reused again, has not occurred in a real release and is modeled by fixtures only.`
-          : 'Reuse is modeled and tested only: the first portfolio release has no reused package and no prior manifest.',
+        !reuse ? 'Reuse is modeled and tested only: the first portfolio release has no reused package and no prior manifest.'
+          : reused.length === 0 ? `This release reuses no package, so it shows no reuse; the verifier's reuse checks rest on the fixture tests cited here. It compares with the prior release (${reuse.priorReleaseId}).`
+            : `Reuse is shown by one real preparation, this release's, against the one prior release (${reuse.priorReleaseId}). ${chained.length === 0
+              ? 'A reuse chain, where a package the prior release itself reused is reused again, has not occurred in a real release and is modeled by fixtures only.'
+              : `The prior release itself reused ${joinNames(chained.map(label))}, so this release reuses ${plural(chained, 'it', 'them')} again: ${plural(chained, 'its record is', 'each record is')} that of the release that published ${plural(chained, 'it', 'them')}, and capture checked it against the prior release's manifest field for field.`}`,
         'The repeated-preparation digest is shown by the fixture test. The dry run prepared this commit once, and the publish run promoted its candidate instead of preparing again, so no second real preparation is retained.',
       ],
     },
@@ -442,7 +506,7 @@ function claimsFor(release) {
         },
         {
           part: reuse
-            ? 'A release names the release it compares with: this one compares with the first portfolio release.'
+            ? `A release names the release it compares with: this one compares with ${firstPrior ? 'the first portfolio release' : `the prior release, ${reuse.priorReleaseId}`}.`
             : 'A release names the release it compares with, and the first portfolio release declares that it has none.',
           state: 'shown',
           evidence: [
@@ -456,8 +520,10 @@ function claimsFor(release) {
       ],
       limits: reuse
         ? [
-          'The version effects were classified by release preparation against the first release, and this capture reads the result (the manifest\'s version-effects record and the dry run\'s line); it does not classify the change again. The corpus is the evidence that the classification is right.',
-          'The candidate set is installed from tarballs (the prepared tooling candidate and the recorded bytes of the three reused packages), not resolved against the registry\'s dist-tags.',
+          `The version effects were classified by release preparation against ${prior}, and this capture reads the result (the manifest's version-effects record and the dry run's line); it does not classify the change again. The corpus is the evidence that the classification is right.`,
+          `The candidate set is installed from tarballs (${reused.length > 0
+            ? `the prepared ${joinNames(published.map(shortName))} ${plural(published, 'candidate', 'candidates')} and the recorded bytes of the ${countWord(reused.length)} reused ${plural(reused, 'package', 'packages')}`
+            : 'the prepared candidate of every package'}), not resolved against the registry's dist-tags.`,
         ]
         : [
           'The version effects of this release were not compared with a prior release, because it has none; the corpus is the evidence that the comparison classifies correctly.',
@@ -524,40 +590,41 @@ function claimsFor(release) {
     'E-P2.1-06': {
       parts: [
         {
-          part: reuse ? `A publish rehearsal for each package the release publishes, in order (${joinNames(published.map(label))} alone).` : 'A publish rehearsal for each package of the release, in order.',
+          part: reused.length > 0 ? `A publish rehearsal for each package the release publishes, in order (${joinNames(published.map(label))} alone).` : 'A publish rehearsal for each package of the release, in order.',
           state: 'shown',
           evidence: [
             ...published.map((entry) => dryRun(exact(`+ ${label(entry)}`))),
             dryRun(exact(`R1 exit npm publish dry-run passed for ${published.map(({ name }) => name).join(', ')} without lifecycle hooks or registry mutation`)),
           ],
         },
-        ...(reuse ? [
-          {
-            part: '@muxui/react publishes through its configured trusted publisher, and the publish carries provenance.',
-            state: 'not-applicable',
-            note: `This release does not publish @muxui/react: it reuses ${reused.map(label).find((text) => text.startsWith('@muxui/react@'))}. Its publish through the configured trusted publisher is the evidence of ${reuse.priorRoute}; the attestation of that publish was read from the registry again for this release (the read-back).`,
-            evidence: [{ kind: 'read-back' }],
-          },
-          {
-            part: 'Observation, not a Roadmap clause: @muxui/tooling publishes through a trusted publisher (OIDC), and the publish carries provenance.',
-            state: 'shown',
-            note: 'The publish job printed the authentication line cited here for @muxui/tooling, the workflow uses its temporary token only for a first publish, and the registry attestation names the publish workflow, the release commit, and this publish run. The trusted-publisher settings on npm are not observable from public data; this is the observation that the publish went through one.',
-            evidence: [{ kind: 'publish-package', name: '@muxui/tooling' }],
-          },
-        ] : [{
+        // The Roadmap clause for @muxui/react, as the release published or reused it; a token publish of it does not meet the clause.
+        react.role === 'reused' ? {
           part: '@muxui/react publishes through its configured trusted publisher, and the publish carries provenance.',
+          state: 'not-applicable',
+          note: `This release does not publish @muxui/react: it reuses ${label(react)}. Its publish through the configured trusted publisher is the evidence of ${reuse.priorRoute}; the attestation of that publish was read from the registry again for this release (the read-back).`,
+          evidence: [{ kind: 'read-back' }],
+        } : {
+          part: '@muxui/react publishes through its configured trusted publisher, and the publish carries provenance.',
+          state: tokenPublished.includes(reactName) ? 'not-met' : 'shown',
+          ...(reuse ? { note: 'The publish job printed the authentication line cited here for @muxui/react, and the registry attestation names the publish workflow, the release commit, and this publish run (the read-back).' } : {}),
+          evidence: [{ kind: 'publish-package', name: reactName }, reuse ? { kind: 'read-back' } : { kind: 'route', field: 'react-provenance' }],
+        },
+        // Every other package a later release published through OIDC; the Roadmap asks a trusted publisher of @muxui/react only.
+        ...(reuse ? oidcPublished.filter(({ name }) => name !== reactName).map(({ name }) => ({
+          part: `Observation, not a Roadmap clause: ${name} publishes through a trusted publisher (OIDC), and the publish carries provenance.`,
           state: 'shown',
-          evidence: [{ kind: 'publish-package', name: '@muxui/react' }, { kind: 'route', field: 'react-provenance' }],
-        }]),
+          note: `The publish job printed the authentication line cited here for ${name}, the workflow uses its temporary token only for a first publish, and the registry attestation names the publish workflow, the release commit, and this publish run. The trusted-publisher settings on npm are not observable from public data; this is the observation that the publish went through one.`,
+          evidence: [{ kind: 'publish-package', name }],
+        })) : []),
         {
-          part: reuse
-            ? 'A registry read-back of the exact version, integrity, provenance, and next at the verified rc, for each package: the published package by the publish run and by this capture, and each reused package by this capture, against its recorded integrity and the attestation of the publish that made it.'
+          part: reused.length > 0
+            ? `A registry read-back of the exact version, integrity, provenance, and next at the verified rc, for each package: ${plural(published, 'the published package', 'each published package')} by the publish run and by this capture, and each reused package by this capture, against its recorded integrity and the attestation of the publish that made it.`
             : 'A registry read-back of the exact version, integrity, provenance, and next at the verified rc, for each package.',
           state: 'shown',
           evidence: [
             ...published.map(({ name }) => ({ kind: 'publish-package', name })),
             { kind: 'read-back' },
-            ...(reuse ? [test('policy', publication, 'E-P2.1-06 a reused package keeps next at its recorded version: the dry run, the publish preflight, and the recheck before each publish')] : []),
+            ...(reused.length > 0 ? [test('policy', publication, 'E-P2.1-06 a reused package keeps next at its recorded version: the dry run, the publish preflight, and the recheck before each publish')] : []),
           ],
         },
         {
@@ -588,13 +655,14 @@ function claimsFor(release) {
         ...(reuse ? [{
           part: 'For each later release, the prior tuple stays installable and verifiable by exact version: nothing is unpublished and the prior release manifests are retained.',
           state: 'shown',
-          note: (_phase, { priorTuple }) => `Checked at capture time, after this release, against the first release's four packages (${joinNames(priorTuple.packages.map(label))}): ${priorTuple.checks.map(({ id, passed }) => `${id} ${passed ? 'passed' : 'did not pass'}`).join('; ')}. The prior tuple's tooling reports muxuiVersion ${priorTuple.bin.muxuiVersion} and CLI version ${priorTuple.bin.cliVersion}.`,
+          note: (_phase, { priorTuple }) => `Checked at capture time, after this release, against ${prior}'s four packages (${joinNames(priorTuple.packages.map(label))}): ${priorTuple.checks.map(({ id, passed }) => `${id} ${passed ? 'passed' : 'did not pass'}`).join('; ')}. The prior tuple's tooling reports muxuiVersion ${priorTuple.bin.muxuiVersion} and CLI version ${priorTuple.bin.cliVersion}.`,
           evidence: [{ kind: 'prior-tuple' }, { kind: 'route', field: 'prior-manifests' }],
         }] : []),
       ],
       limits: reuse
         ? [
-          'Andrew reported setting up trusted publishers on npm for @muxui/schema and @muxui/catalog. That is not observable from public data, no publish has used them, and tokenless publishing stays unproved for those two. As given to this capture, npm\'s documentation says a trusted publisher that goes unused lapses after 2 days; this capture did not read that documentation.',
+          ...(reusedFromToken.length > 0 ? [`Andrew reported setting up trusted publishers on npm for ${joinNames(reusedFromToken.map(({ name }) => name))}. That is not observable from public data, no publish has used them, and tokenless publishing stays unproved for ${themWord(reusedFromToken)}. As given to this capture, npm's documentation says a trusted publisher that goes unused lapses after 2 days; this capture did not read that documentation.`] : []),
+          ...(tokenPublished.length > 0 ? [`The trusted publishers of ${joinNames(tokenPublished)} are not set up and tokenless publishing is unproved for them: see the non-claim.`] : []),
           'Restoring the prior tuple stays owed by P2 exit: this release shows that the prior tuple stays installable and verifiable by exact version, not that a rollback restores it.',
           'Recovery is prepared, not exercised.',
         ]
@@ -605,6 +673,56 @@ function claimsFor(release) {
         ],
     },
   };
+}
+
+/**
+ * The claims of `claimsFor(release)` settled against what capture observed: the parts that rest on the published-run and
+ * prior-tuple phases follow their checks, every note is resolved, and the limits, non-claims, and placeholder observation those
+ * phases add are written in. `observed` is what verification.json keeps of them (`later` is the later CI phase of the first
+ * release), so a retained route's coverage can be derived again from its own record. Mutates and returns `claims`.
+ */
+export function settleClaims(claims, { release, published, priorTuple, placeholders = [], placeholderOrigin, later, amendedRoadmap }) {
+  const { reuse } = release;
+  const { published: publishedPackages, reused } = releaseFacts(release);
+  const { prior } = priorWords(release);
+  if (later) {
+    claims['E-P2.1-02'].limits.push(`The installed-catalog tamper test came after the release: it passed in pull request CI run ${later.execution.runId} at head ${later.execution.headRevision}, over a merge whose tree is the head's. The resolver source (packages/tooling/src, packages/catalog/src, packages/schema/src) is unchanged between the release commit and that head. The Roadmap row was amended after the release too, by ${amendedRoadmap.commits.length} commit${amendedRoadmap.commits.length === 1 ? '' : 's'} (${amendedRoadmap.commits.join(', ')}); the release was prepared and published against the earlier wording of the row.`);
+  }
+  if (placeholders.length > 0) {
+    const part = {
+      part: 'Observation, not a Roadmap clause: the read-back lists every version the registry holds for each package, so a version outside the release tuple is observed and not mistaken for part of it.',
+      state: 'shown',
+      note: `${joinNames(placeholders.map(({ name }) => name))} each also list ${placeholderVersion}, described by the registry as "${placeholders[0].description}". It carries no provenance, no dist-tag points at it, and it is no part of the release tuple or its manifest. Its origin is inferred, not proved: ${placeholderOrigin.inference}.`,
+      evidence: [{ kind: 'placeholders' }],
+    };
+    claims['E-P2.1-06'].parts.splice(claims['E-P2.1-06'].parts.findIndex((candidate) => candidate.part.startsWith('A registry read-back')) + 1, 0, part);
+    claims['E-P2.1-06'].limits.push(`Each of ${joinNames(placeholders.map(({ name }) => name))} lists a ${placeholderVersion} placeholder version beside its rc. The publish log names only the rc, and neither the release manifest nor the source revision names the placeholder; it carries no provenance and is not claimed. The registry read-back of the rc is unchanged by it.`);
+  }
+  for (const part of claims['E-P2.1-02'].parts) {
+    const failed = part.evidence.filter(({ kind }) => kind === 'published').flatMap(({ checks }) => checks).filter((id) => !published.checks.find((found) => found.id === id)?.passed);
+    const note = typeof part.note === 'function' ? part.note(published, { priorTuple }) : part.note;
+    Object.assign(part, { note: failed.length > 0 ? `${note ? `${note} ` : ''}Against the published tuple these checks did not pass: ${failed.join(', ')}.` : note, ...(failed.length > 0 ? { state: 'not-met' } : {}) });
+  }
+  const { toolingVersion } = published;
+  claims['E-P2.1-02'].limits.push(`The published-run phase installed the released packages from the public registry at capture time (${published.captureTimestamp}), after the release, not at publish time. Only the four @muxui packages are bound to the release manifest's integrity; their third-party dependencies resolved as the registry then served them. The goldens are not compared to the published output, and the descriptor and catalog tamper negatives are not repeated against the published install.`);
+  claims['E-P2.1-02'].limits.push(`Dense budget counts exclude the tokens of \`-rc.N\` version suffixes (the pattern ${published.countRule.pattern}, nothing wider), by the Roadmap row ${reuse ? 'at the source revision' : 'as amended after the release'}. ${published.rawOverBudget === '' ? 'No raw count exceeds a budget.' : `The published rc ${reuse ? 'exceeds a budget counted raw' : 'exceeded a budget as the row first wrote it'}: ${published.rawOverBudget}.`} Raw and counted numbers are kept for every fixture and get case; at a stable release the suffix is absent and the two are equal.`);
+  if (!toolingVersion.reportsInstalledVersion) {
+    const where = toolingVersion.sources.map(({ file, line, text }) => `${file}:${line} (\`${text}\`)`).join(' and ');
+    claims['E-P2.1-02'].limits.push(`The published @muxui/tooling@${toolingVersion.installed} reports muxuiVersion ${toolingVersion.muxuiVersionInResponses.join(', ')} in the meta of every response and ${toolingVersion.cliVersionInManifest} as the CLI version in its manifest, not its own version, because the source at the release commit hard-codes both: ${where}. Architecture "Self-describing manifest" requires the CLI version and "Version units and compatibility" the exact tuple in every response, so the part for the CLI's reported version is not met, and the goldens normalize the value. The fix ships with tooling's next real release; this published version stays wrong.`);
+    claims['E-P2.1-02'].nonClaims = [`This record does not claim that @muxui/tooling@${toolingVersion.installed} reports its own version: it reports ${toolingVersion.muxuiVersionInResponses.join(', ')} and ${toolingVersion.cliVersionInManifest} (see the limits). The catalog and renderer versions it reports are the installed ones.`];
+  }
+  if (reuse) {
+    // What the published tuple pairs, and whether the prior release's tooling, installed again, still misreports its version.
+    const pairs = reused.length > 0 ? `The published tuple pairs the new ${joinNames(publishedPackages.map(shortName))} with ${prior}'s ${joinNames(reused.map(shortName))}` : null;
+    const wrong = priorTuple.bin.muxuiVersion === priorTuple.tooling.version ? null
+      : `${priorTuple.tooling.version}, ${prior}'s tooling, does not satisfy the part for the CLI's reported version and stays installed and wrong (see ${reuse.priorRoute})`;
+    if (pairs || wrong) claims['E-P2.1-02'].limits.push(`${[pairs, wrong].filter(Boolean).join('; ')}.`);
+    const failedPrior = priorTuple.checks.filter(({ passed }) => !passed).map(({ id }) => id);
+    for (const part of claims['E-P2.1-06'].parts.filter(({ evidence }) => evidence.some(({ kind }) => kind === 'prior-tuple'))) {
+      Object.assign(part, { note: part.note(published, { priorTuple }), ...(failedPrior.length > 0 ? { state: 'not-met' } : {}) });
+    }
+  }
+  return claims;
 }
 
 // ---------------------------------------------------------------------------
@@ -700,7 +818,7 @@ const purl = ({ name, version }) => `pkg:npm/${name.replace('@', '%40')}@${versi
  * A package may list `placeholderVersion` beside the release candidate (`placeholders` holds what the registry says of it);
  * any other version of a first-published package stops the capture for a decision.
  */
-export function bindRegistryPackage({ entry, view, attestations, placeholders = [], publishRunId, sourceRevision, first, priorLatest, reused = false }) {
+export function bindRegistryPackage({ entry, view, attestations, placeholders = [], publishRunId, sourceRevision, first, priorLatest, reused = false, prior = 'the first release' }) {
   const { name, version, integrity, shasum } = entry;
   const label = `${name}@${version}`;
   if (view.integrity !== integrity || view.shasum !== shasum) fail('P2_1_REGISTRY_DIGEST_MISMATCH', `${label} has ${view.integrity} / ${view.shasum} on the registry; the manifest records ${integrity} / ${shasum}`);
@@ -755,7 +873,7 @@ export function bindRegistryPackage({ entry, view, attestations, placeholders = 
     }),
     registryPublishedAt: view.time?.[version] ?? null,
     provenance: { predicateType: view.attestations.provenance.predicateType, subject: subject.name, workflowPath: workflow.path, gitCommit: commit, invocationId: invocation },
-    latest: { observed: view.distTags.latest, basis: first ? 'no workflow step sets, claims, or promotes a dist-tag; Decision 0023 expects the registry to assign latest on a first publish' : reused ? `unchanged: this release did not publish the package, and the first release's read-back recorded ${priorLatest}` : `unchanged by this publish; the preflight recorded ${priorLatest}`, claimed: false, promoted: false },
+    latest: { observed: view.distTags.latest, basis: first ? 'no workflow step sets, claims, or promotes a dist-tag; Decision 0023 expects the registry to assign latest on a first publish' : reused ? `unchanged: this release did not publish the package, and ${prior}'s read-back recorded ${priorLatest}` : `unchanged by this publish; the preflight recorded ${priorLatest}`, claimed: false, promoted: false },
   };
 }
 
@@ -803,24 +921,36 @@ export function bindReview({ text, reviewedRevision, cwd = repositoryRoot, sourc
 // ---------------------------------------------------------------------------
 // Records, README, and index: derived only from verification.json.
 
-const nonClaims = (verification) => [
-  'P2.1 is not claimed complete, ready, or exited by this record; the exit condition is judged from the Roadmap, not from this root.',
-  'No stable release, support, or assistive-technology claim. Install guidance for these packages uses @next.',
-  verification.release.reuse
-    ? `latest is observed, not claimed or promoted: this release published ${joinNames(verification.release.reuse.publishedPackages.map(({ name }) => name))} to next and left latest where the first release's read-back saw it for every package (Decision 0023).`
-    : 'latest is observed, not claimed or promoted: on the registry it points at each new package\'s rc and stayed on @muxui/react\'s earlier rc (Decision 0023).',
-  ...(verification.release.reuse ? [
-    '@muxui/schema and @muxui/catalog: Andrew reported setting up their trusted publishers on npm. That is not observable from public data, no publish has used them, and tokenless publishing stays unproved for those two. As given to this capture, npm\'s documentation says a trusted publisher that goes unused lapses after 2 days; this capture did not read that documentation. @muxui/tooling\'s publish by trusted publishing (OIDC) is the observation in E-P2.1-06; @muxui/react\'s is the first release\'s.',
-  ] : [`The trusted publishers of ${joinNames(verification.release.tokenPublished)} are not yet set up and tokenless publishing is unproved for them; the provenance of their token publish proves neither (Decision 0032 item 10, as amended).`]),
-  ...((verification.phases.registry?.placeholders ?? []).length === 0 ? [] : [
-    `${joinNames(verification.phases.registry.placeholders.map(({ name }) => name))} each also list a ${placeholderVersion} placeholder version. It is no part of the release tuple, carries no provenance, and is not claimed; npm most likely created it, which is inferred and not proved.`,
-  ]),
-  verification.release.reuse
-    ? 'Recovery is prepared, not exercised. This release shows that the first release\'s tuple stays installable and verifiable by exact version; restoring a prior tuple stays owed by P2 exit.'
-    : 'Recovery is prepared, not exercised. The first portfolio release has no prior tuple; restoring a prior tuple stays owed by P2 exit.',
-  'No consumer validation, clean-consumer offline proof, docs, explorer, or MCP evidence (P2.2 and P2.3).',
-  ...(verification.phases.review && !verification.phases.review.passes ? [`The independent release-integrity review did not pass (retained at ${verification.phases.review.artifact.path}, read at ${verification.phases.review.reviewedRevision}); these records keep its finding and P2.1 is not closed by them.`] : []),
-];
+const nonClaims = (verification) => {
+  const { release } = verification;
+  const { oidcPublished, reused, tokenPublished, reusedFromToken } = releaseFacts(release);
+  const { prior } = priorWords(release);
+  const possessive = (list) => joinNames(list.map(({ name }) => `${name}'s`));
+  // Reused versions a token publish made, and how the rest of the tuple published: the trusted publishers Andrew reported setting up
+  // for them are not observable, and no publish has used them.
+  const reusedFromOidc = reused.filter((entry) => !reusedFromToken.includes(entry));
+  const unproved = reusedFromToken.length === 0 ? [] : [
+    `${joinNames(reusedFromToken.map(({ name }) => name))}: Andrew reported setting up their trusted publishers on npm. That is not observable from public data, no publish has used them, and tokenless publishing stays unproved for ${themWord(reusedFromToken)}. As given to this capture, npm's documentation says a trusted publisher that goes unused lapses after 2 days; this capture did not read that documentation.${oidcPublished.length > 0 ? ` ${possessive(oidcPublished)} ${plural(oidcPublished, 'publish', 'publishes')} by trusted publishing (OIDC) ${plural(oidcPublished, 'is the observation', 'are the observations')} in E-P2.1-06` : ''}${reusedFromOidc.length > 0 ? `; ${possessive(reusedFromOidc)} ${plural(reusedFromOidc, 'is', 'are')} ${prior}'s` : ''}.`,
+  ];
+  return [
+    'P2.1 is not claimed complete, ready, or exited by this record; the exit condition is judged from the Roadmap, not from this root.',
+    'No stable release, support, or assistive-technology claim. Install guidance for these packages uses @next.',
+    release.reuse
+      ? `latest is observed, not claimed or promoted: this release published ${joinNames(release.reuse.publishedPackages.map(({ name }) => name))} to next and left latest where ${prior}'s read-back saw it for every package (Decision 0023).`
+      : 'latest is observed, not claimed or promoted: on the registry it points at each new package\'s rc and stayed on @muxui/react\'s earlier rc (Decision 0023).',
+    // A package published without OIDC: the Roadmap's non-claim (E-P2.1-06).
+    ...(tokenPublished.length === 0 ? [] : [`The trusted publishers of ${joinNames(tokenPublished)} are not yet set up and tokenless publishing is unproved for them; the provenance of their token publish proves neither (Decision 0032 item 10, as amended).`]),
+    ...unproved,
+    ...((verification.phases.registry?.placeholders ?? []).length === 0 ? [] : [
+      `${joinNames(verification.phases.registry.placeholders.map(({ name }) => name))} each also list a ${placeholderVersion} placeholder version. It is no part of the release tuple, carries no provenance, and is not claimed; npm most likely created it, which is inferred and not proved.`,
+    ]),
+    release.reuse
+      ? `Recovery is prepared, not exercised. This release shows that ${prior}'s tuple stays installable and verifiable by exact version; restoring a prior tuple stays owed by P2 exit.`
+      : 'Recovery is prepared, not exercised. The first portfolio release has no prior tuple; restoring a prior tuple stays owed by P2 exit.',
+    'No consumer validation, clean-consumer offline proof, docs, explorer, or MCP evidence (P2.2 and P2.3).',
+    ...(verification.phases.review && !verification.phases.review.passes ? [`The independent release-integrity review did not pass (retained at ${verification.phases.review.artifact.path}, read at ${verification.phases.review.reviewedRevision}); these records keep its finding and P2.1 is not closed by them.`] : []),
+  ];
+};
 
 const independentReview = (verification) => {
   const review = verification.phases.review;
@@ -884,7 +1014,7 @@ export function buildRecords(verification) {
       environment: phases.ci.environment,
       release: { version: release.version, route: release.route, portfolioId: release.portfolioId, manifestDigest: release.manifestDigest, packages: release.packages, ...(release.reuse ? { candidate: release.candidate, reuse: release.reuse } : {}) },
       registryReadBack: phases.registry.readBack,
-      ...(verification.compared ? { compared: { firstRelease: verification.compared.firstRelease, headRevision: verification.compared.headRevision, ...verification.compared.records[assertionId] } } : {}),
+      ...(verification.compared ? { compared: (({ records: byRecord, ...compared }) => ({ ...compared, ...byRecord[assertionId] }))(verification.compared) } : {}),
       ...(assertionId === 'E-P2.1-06' ? { publishApproval: phases.approval, githubEnvironment: phases.registry.githubEnvironment, ...(release.reuse ? {} : { route: release.routeRecords }) } : {}),
       crossCutting: crossCuttingOf(coverage),
       nonClaims: [...nonClaims(verification), ...ownNonClaims],
@@ -913,8 +1043,13 @@ function readmeReuse(verification, records) {
   const review = phases.review;
   const checkLine = (checks) => `${checks.filter(({ passed }) => passed).length} of ${checks.length} checks passed${checks.some(({ passed }) => !passed) ? ` (did not pass: ${checks.filter(({ passed }) => !passed).map(({ id }) => id).join(', ')})` : ''}`;
   const label = ({ name, version }) => `\`${name}@${version}\``;
-  const published = release.packages.filter(({ role }) => role === 'published');
-  const reused = release.packages.filter(({ role }) => role === 'reused');
+  const code = ({ name }) => `\`${name}\``;
+  const { published, reused, oidcPublished, tokenPublished, reusedFromToken } = releaseFacts(release);
+  const { first: firstPrior, prior } = priorWords(release);
+  const react = release.packages.find(({ name }) => name === reactName);
+  // The prior release's tooling, installed again, may still misreport its version where this release's reports its own.
+  const priorToolingWrong = phases.published.toolingVersion.reportsInstalledVersion && phases.priorTuple.bin.muxuiVersion !== phases.priorTuple.tooling.version;
+  const fromPrior = `${firstPrior ? 'the first portfolio release' : 'the prior release'} (\`${reuse.priorReleaseId}\`, whose records are \`${reuse.priorRoute}\`)`;
   return `# P2.1 retained evidence for ${joinNames(published.map(label))}, a later portfolio release
 
 **P2.1 completion is not claimed by this route or by any record in it.** The records evidence one release and
@@ -924,8 +1059,8 @@ Roadmap "P2.1 Public package graph and portfolio release" requires \`E-P2.1-01\`
 retains them for the portfolio of release \`${release.portfolioId}\`, prepared and published from
 \`${verification.sourceRevision}\` (tree \`${verification.sourceTree}\`), captured by
 \`${verification.captureProcedure.replace(/ --publish-approval=.*$/u, '')} ...\`. It publishes ${joinNames(published.map(label))} and reuses
-${joinNames(reused.map(label))} from the first portfolio release (\`${reuse.priorReleaseId}\`, whose records are \`${reuse.priorRoute}\`).
-Each reused package keeps the version, digest, and provenance that release recorded.
+${reused.length > 0 ? `${joinNames(reused.map(label))} from ${fromPrior}.
+Each reused package keeps the version, digest, and provenance that release recorded.` : `no package. It compares with ${fromPrior}.`}
 
 | Record | Outcome |
 | --- | --- |
@@ -941,28 +1076,29 @@ Each record's \`parts\` splits the Roadmap assertion (as it stands at the releas
 passing line in the sanitized excerpt of the main CI job that ran it at the release commit (run ${phases.ci.execution.runId}, attempt ${phases.ci.execution.runAttempt}); capture fails
 if a cited line is missing. \`limits\` lists what the retained evidence does not show.
 
-This release has no R1 exit route: its dry run (${release.dryRun.runId}) and publish run (${release.publish.runId}) are read by the capture and retained here, as sanitized
+${react.role === 'reused' ? 'This release has no R1 exit route: its' : `The R1 exit route of its React candidate, \`${routeOf(react.version)}\`, holds the E-R1-EXIT records of \`@muxui/react@${react.version}\` from the same runs, and
+this route claims only \`E-P2.1-01\` to \`E-P2.1-06\`. Its`} dry run (${release.dryRun.runId}) and publish run (${release.publish.runId}) are read by the capture and retained here, as sanitized
 excerpts under \`validation/\` and as the release manifest under \`artifacts/release-manifest.json\`. The manifest is the one the release built, with its
 digest intact, and it is what the next release names as its prior release.
 
 \`E-P2.1-02\` rests on a published-run phase: at ${phases.published.captureTimestamp} the four packages of this release's tuple were installed from the public registry
 into a clean project outside the checkout and the installed \`muxui\` bin was run through the discovery matrix, the budget fixtures, an invalid-request
-corpus, and the commands P2.1 does not enable (\`${phases.published.output.path}\`); ${checkLine(phases.published.checks)}. This later release, not the first
-release's \`@muxui/tooling@${phases.priorTuple.tooling.version}\`, is the one whose CLI reports its own version; the first release's tooling stays wrong.
-\`E-P2.1-06\` rests on a prior-tuple phase: the first release's four packages installed again by exact version, its bin run once, every version it listed still
+corpus, and the commands P2.1 does not enable (\`${phases.published.output.path}\`); ${checkLine(phases.published.checks)}.${priorToolingWrong ? ` This later release, not ${prior.replace(/ release$/u, '')}
+release's \`@muxui/tooling@${phases.priorTuple.tooling.version}\`, is the one whose CLI reports its own version; ${prior}'s tooling stays wrong.` : ''}
+\`E-P2.1-06\` rests on a prior-tuple phase: ${prior}'s four packages installed again by exact version, its bin run once, every version it listed still
 listed, and its manifest retained; ${checkLine(phases.priorTuple.checks)}.
 
 No Roadmap row of \`E-P2.1-01\` to \`E-P2.1-06\` was amended after the release commit, and no file the records cite changed after it (each record's \`compared\` block states
-this and lists what differs from the first release's source revision).
+this and lists what differs from ${prior}'s source revision).
 
 ${review
     ? `The independent release-integrity review is retained as \`${review.artifact.path}\`, read by ${review.reviewer} at \`${review.reviewedRevision}\`. ${review.passes ? 'It is a pass.' : '**It did not pass.**'}`
     : 'No independent release-integrity review is retained: it is pending, and these records claim no outcome of it.'}
 
 The exact authorization to publish was given in chat and is recorded in \`E-P2.1-06\` as reported by the capture operator; the \`npm-publish\` environment had no
-required reviewer (Decision 0033), so the publish run's approvals list is empty. ${joinNames(published.map(label))} published by trusted publishing (OIDC). Andrew reported setting up
-trusted publishers for \`@muxui/schema\` and \`@muxui/catalog\`, which cannot be observed from public data and which no publish has used, so tokenless publishing stays
-unproved for them; unused trusted publishers lapse after 2 days (npm documentation, as given to this capture). These records do not claim P2.1 is complete, a stable
+required reviewer (Decision 0033), so the publish run's approvals list is empty.${oidcPublished.length > 0 ? ` ${joinNames(oidcPublished.map(label))} published by trusted publishing (OIDC).` : ''}${tokenPublished.length > 0 ? ` ${joinNames(tokenPublished.map((name) => code({ name })))} published with the temporary token, which does not prove tokenless publishing for ${plural(tokenPublished, 'it', 'them')}.` : ''}${reusedFromToken.length > 0 ? ` Andrew reported setting up
+trusted publishers for ${joinNames(reusedFromToken.map(code))}, which cannot be observed from public data and which no publish has used, so tokenless publishing stays
+unproved for them; unused trusted publishers lapse after 2 days (npm documentation, as given to this capture).` : ''} These records do not claim P2.1 is complete, a stable
 release, support, or any assistive-technology property.${verification.rehearsal ? '\n\nThis capture is a rehearsal and is not release evidence.' : ''}
 `;
 }
@@ -1511,37 +1647,39 @@ async function observePublishedTuple({ release, manifest, ceiling, sourceRevisio
 }
 
 /**
- * The first release's tuple, checked again after a later release: its packages installed from the public registry by exact version
+ * The prior release's tuple, checked again after a later release: its packages installed from the public registry by exact version
  * (the integrity its manifest records, the commit that built each as gitHead), its muxui bin run once, every version its read-back
- * listed still listed (nothing unpublished), and its manifest retained with the digest its route's index lists. `prior` is the first
+ * listed still listed (nothing unpublished), and its manifest retained with the digest its route's index lists. `prior` is the prior
  * release's verification.json, `priorReadBack` its registry read-back, and `readBack` this release's.
  */
 async function observePriorTuple({ prior, priorReadBack, readBack, release, manifestText, captureTimestamp }) {
-  const packages = prior.release.packages.map(({ name, version, integrity }) => ({ name, version, integrity, sourceCommit: prior.sourceRevision }));
+  // A package the prior release reused was built from the commit of the release that published it.
+  const packages = prior.release.packages.map(({ name, version, integrity, sourceCommit }) => ({ name, version, integrity, sourceCommit: sourceCommit ?? prior.sourceRevision }));
+  const whose = `${priorWords(release).prior}'s`;
   const checks = [];
   const check = (id, claim, passed, observed) => checks.push({ id, claim, passed: Boolean(passed), observed });
   const { bin, installs } = await withIsolatedTemp('muxui-p2-1-prior-', async ({ temp, env }) => {
     const installed = installTuple(temp, env, packages);
     const facts = installedFacts(installed, packages, ({ name }) => packages.find((entry) => entry.name === name).sourceCommit);
-    check('prior-install', 'each package of the first release\'s tuple is installed again from the public registry at its exact version, with the integrity its manifest records and the commit that built it as its gitHead', facts.holds, facts.installs);
+    check('prior-install', `each package of ${whose} tuple is installed again from the public registry at its exact version, with the integrity its manifest records and the commit that built it as its gitHead`, facts.holds, facts.installs);
     const run = spawnSync(join(installed.project, 'node_modules/.bin/muxui'), ['manifest', '--json'], { cwd: installed.project, env, encoding: 'utf8', maxBuffer: 1 << 26 });
     const response = run.status === 0 ? JSON.parse(run.stdout) : null;
     return { installs: facts.installs, bin: { args: ['manifest', '--json'], status: run.status, stderr: run.stderr, muxuiVersion: response?.meta.muxuiVersion ?? null, cliVersion: response?.data.cli.cli.version ?? null } };
   });
-  check('prior-bin-runs', 'the first release\'s installed muxui bin runs manifest --json and succeeds with empty stderr', bin.status === 0 && bin.stderr === '' && bin.cliVersion !== null, { ...bin, installed: installs.map(({ name, installedVersion }) => `${name}@${installedVersion}`) });
+  check('prior-bin-runs', `${whose} installed muxui bin runs manifest --json and succeeds with empty stderr`, bin.status === 0 && bin.stderr === '' && bin.cliVersion !== null, { ...bin, installed: installs.map(({ name, installedVersion }) => `${name}@${installedVersion}`) });
 
   const versions = readBack.map(({ name, version, versions: now }) => {
     const before = priorReadBack.packages.find((entry) => entry.name === name).versions;
     const published = release.packages.find((entry) => entry.name === name).role === 'published';
     return { name, missing: before.filter((other) => !now.includes(other)), added: now.filter((other) => !before.includes(other)), expectedAdded: published ? [version] : [] };
   });
-  check('versions-kept', 'every version the first release\'s read-back listed is still listed for each package (nothing is unpublished), and the only version added since is the one this release published', versions.every(({ missing, added, expectedAdded }) => missing.length === 0 && isDeepStrictEqual(added, expectedAdded)), versions);
+  check('versions-kept', `every version ${whose} read-back listed is still listed for each package (nothing is unpublished), and the only version added since is the one this release published`, versions.every(({ missing, added, expectedAdded }) => missing.length === 0 && isDeepStrictEqual(added, expectedAdded)), versions);
 
   const manifestPath = `${prior.release.route}/artifacts/release-manifest.json`;
   const index = JSON.parse(readFileSync(join(repositoryRoot, prior.release.route, 'index.json'), 'utf8'));
   const listed = index.artifacts.find(({ path }) => path === manifestPath);
   const retained = JSON.parse(manifestText);
-  check('prior-manifest-retained', 'the first release\'s manifest is retained under its route, listed with its sha256 by the route\'s index, and its digest recomputes', listed?.sha256 === sha256(manifestText) && retained.digest === portfolioDigest(retained) && retained.id === prior.release.portfolioId,
+  check('prior-manifest-retained', `${whose} manifest is retained under its route, listed with its sha256 by the route's index, and its digest recomputes`, listed?.sha256 === sha256(manifestText) && retained.digest === portfolioDigest(retained) && retained.id === prior.release.portfolioId,
     { path: manifestPath, sha256: sha256(manifestText), listedBy: `${prior.release.route}/index.json`, id: retained.id, digest: retained.digest });
   return {
     captureTimestamp,
@@ -1599,11 +1737,11 @@ function parseArguments(argv) {
     else fail('P2_1_ARGUMENT_INVALID', `unknown argument ${argv[index]}`);
   }
   if (options.release !== undefined) {
-    // A later release that reuses packages: the package it publishes, and its own runs.
+    // A later release: a package it publishes, which names its route, and its own runs.
     const [, candidate, version] = /^(@muxui\/[\w-]+)@(\d+\.\d+\.\d+-rc\.\d+)$/u.exec(options.release) ?? fail('P2_1_ARGUMENT_INVALID', '--release=<@muxui/package>@<version>, such as @muxui/tooling@1.1.0-rc.2');
     if (options.version !== undefined || options.afterCiRun !== undefined) fail('P2_1_ARGUMENT_INVALID', '--release replaces --version and --after-ci-run');
     Object.assign(options, { candidate, version, route: `tests/evidence/p2.1-${candidate.slice('@muxui/'.length)}-${version}` });
-    if (options.evidence && !(Number.isSafeInteger(options.dryRunRun) && Number.isSafeInteger(options.publishRun) && options.priorRoute)) fail('P2_1_ARGUMENT_INVALID', '--evidence with --release needs --dry-run-run=<id>, --publish-run=<id>, and --prior-route=<the first release\'s route>');
+    if (options.evidence && !(Number.isSafeInteger(options.dryRunRun) && Number.isSafeInteger(options.publishRun) && options.priorRoute)) fail('P2_1_ARGUMENT_INVALID', '--evidence with --release needs --dry-run-run=<id>, --publish-run=<id>, and --prior-route=<the prior release\'s route>');
   } else {
     if (!/^0\.1\.0-rc\.\d+$/u.test(options.version ?? '')) fail('P2_1_ARGUMENT_INVALID', 'pass --version=<the React candidate, such as 0.1.0-rc.5> or --release=<package>@<version>');
     options.route = firstRoot;
@@ -1866,7 +2004,7 @@ function readRoadmapRule({ sourceRevision, rows, ceilingConstant }) {
   return { path: roadmap, revision: sourceRevision, checkedAtHead: git('rev-parse', 'HEAD'), ceiling: pinnedCeiling(assertion, sourceRevision, ceilingConstant), prereleaseSuffixes: { clause: suffixClause, pattern: rcSuffix.source } };
 }
 
-/** The release a later release's runs describe, checked against the first release's route (`options.priorRoute`). */
+/** The release a later release's runs describe, checked against the prior release's route (`options.priorRoute`). */
 function reuseOf({ bound, options }) {
   const { dryRun, publish, manifest, sourceRevision } = bound;
   const prior = JSON.parse(readIndexed(options.priorRoute, 'verification.json'));
@@ -1877,9 +2015,10 @@ function reuseOf({ bound, options }) {
   const { versionEffects } = manifest.preparation?.verification ?? {};
   if (versionEffects?.priorRelease !== priorManifest.id || versionEffects.status !== 'checked') fail('P2_1_PRIOR_RELEASE_MISMATCH', `release preparation compared with ${versionEffects?.priorRelease}, not ${priorManifest.id}`);
   const reused = manifest.packages.filter(({ role }) => role === 'reused').map((record) => {
-    // A reused record is the origin record, field for field, with the role it has here; the origin must be the first release.
+    // A reused record is the prior release's record, field for field, with the role it has here: published by the prior release, or
+    // reused by it in turn, when its provenance keeps the release that published it.
     const origin = priorManifest.packages.find(({ name }) => name === record.name);
-    if (canonicalJson(record) !== canonicalJson({ ...origin, role: 'reused' }) || record.provenance?.releaseId !== priorManifest.id) fail('P2_1_REUSE_RECORD_MISMATCH', `${record.name}@${record.version} is not the record of ${priorManifest.id}`);
+    if (canonicalJson(record) !== canonicalJson({ ...origin, role: 'reused' }) || (origin.role !== 'reused' && record.provenance?.releaseId !== priorManifest.id)) fail('P2_1_REUSE_RECORD_MISMATCH', `${record.name}@${record.version} is not the record of ${priorManifest.id}`);
     return { name: record.name, version: record.version, integrity: record.integrity, provenance: record.provenance, recordEqualsOrigin: true };
   });
   const packages = dryRun.portfolio.packages.map(({ name, version, role, file, integrity, shasum, bytes, files }) => {
@@ -1965,7 +2104,11 @@ export async function capture(options, github = createGitHub(), observe = viewPa
       routeRecords,
       ...(reuse ? { candidate: options.candidate, reuse: chain.reuse } : {}),
     };
-    if (!reuse && release.tokenPublished.length === 0) fail('P2_1_NO_TOKEN_PUBLISH', 'no package of the publish run used the first-publish token; the trusted-publisher non-claim has nothing to name');
+    // --version binds the first portfolio release, which names no prior release; every later release, whichever packages it
+    // publishes, is --release. How each package published (token or OIDC) is read from the publish run either way.
+    if (!reuse && JSON.parse(manifestText).preparation?.verification?.versionEffects?.status !== 'first-portfolio-release') {
+      fail('P2_1_NOT_FIRST_RELEASE', `${portfolio.id} compares with a prior release; --version binds the first portfolio release only, so capture this release with --release (see the usage)`);
+    }
     verification.release = release;
     verification.sourceRevision = sourceRevision;
     verification.sourceTree = bound.sourceTree;
@@ -2028,7 +2171,6 @@ export async function capture(options, github = createGitHub(), observe = viewPa
       later = readLaterCi({ github, run: options.afterCiRun, sourceRevision, cites: cited('toolingAfter'), stage });
       verification.retained.ciToolingAfter = later.ref;
       verification.amendedRoadmap = readAmendedRoadmap({ laterHead: later.head, sourceRevision, rows: verification.rows, ceilingConstant: amendment.ceilingConstant });
-      claims['E-P2.1-02'].limits.push(`The installed-catalog tamper test came after the release: it passed in pull request CI run ${later.phase.execution.runId} at head ${later.head}, over a merge whose tree is the head's. The resolver source (packages/tooling/src, packages/catalog/src, packages/schema/src) is unchanged between the release commit and that head. The Roadmap row was amended after the release too, by ${verification.amendedRoadmap.commits.length} commit${verification.amendedRoadmap.commits.length === 1 ? '' : 's'} (${verification.amendedRoadmap.commits.join(', ')}); the release was prepared and published against the earlier wording of the row.`);
     }
     // The released packages, installed from the registry and run through their own muxui bin; the parts that rest on it follow its checks.
     const releaseManifest = JSON.parse(manifestText);
@@ -2040,27 +2182,30 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     const readBack = [];
     for (const entry of release.packages) {
       const { view, attestations, placeholders: documents } = await observe(entry);
-      // A reused package was published by the first release: its attestation names that release's run and commit, and `latest` stays
-      // where the first release's read-back saw it. The package this release publishes was preflighted by this release's publish run.
+      // A reused package was published by an earlier release: its attestation names the run and commit the prior release's read-back
+      // recorded for it, and `latest` stays where that read-back saw it. A package this release publishes was preflighted by its publish run.
       const record = publish.portfolio.packages.find(({ name }) => name === entry.name);
       const earlier = chain?.priorReadBack.packages.find(({ name }) => name === entry.name);
-      if (record && earlier && record.preflight.latest !== earlier.latest.observed) fail('P2_1_REGISTRY_TAGS_UNEXPECTED', `${entry.name}: the publish preflight saw latest ${record.preflight.latest}; the first release's read-back saw ${earlier.latest.observed}`);
+      if (record && earlier && record.preflight.latest !== earlier.latest.observed) fail('P2_1_REGISTRY_TAGS_UNEXPECTED', `${entry.name}: the publish preflight saw latest ${record.preflight.latest}; ${priorWords(release).prior}'s read-back saw ${earlier.latest.observed}`);
+      const earlierRun = /\/actions\/runs\/(\d+)\//u.exec(earlier?.provenance?.invocationId ?? '')?.[1];
+      if (!record && !earlierRun) fail('P2_1_REUSE_RECORD_MISMATCH', `${entry.name}@${entry.version} has no publish run in ${priorWords(release).prior}'s read-back`);
       readBack.push({
         ...bindRegistryPackage({
           entry,
           view,
           attestations,
           placeholders: documents,
-          publishRunId: record ? publish.execution.runId : chain.prior.release.publish.runId,
+          publishRunId: record ? publish.execution.runId : Number(earlierRun),
           sourceRevision: entry.sourceCommit ?? sourceRevision,
           first: record?.preflight.kind === 'first',
           priorLatest: record ? record.preflight.latest : earlier.latest.observed,
           reused: !record,
+          prior: priorWords(release).prior,
         }),
         attestationDocument: { url: view.attestations.url, sha256: sha256(canonicalJson(attestations)), retained: false },
       });
     }
-    // The first release's tuple, installed and read again (a later release only): the parts that rest on it follow its checks.
+    // The prior release's tuple, installed and read again (a later release only): the parts that rest on it follow its checks.
     const priorTuple = reuse ? await observePriorTuple({ prior: chain.prior, priorReadBack: chain.priorReadBack, readBack, release, manifestText: chain.priorManifestText, captureTimestamp: options.captureTimestamp }) : undefined;
     // A version beside the candidate that is no part of the tuple (npm's placeholder): what is observed of it, and when it
     // appeared against the package's publish block. Its origin is an inference; the record says so.
@@ -2068,10 +2213,11 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     const mentioned = spawnSync('git', ['grep', '-l', '-e', placeholderVersion, sourceRevision, '--', '.', ':!tests/evidence'], { cwd: repositoryRoot, encoding: 'utf8' });
     if (mentioned.status > 1) fail('P2_1_GIT_GREP_FAILED', mentioned.stderr);
     const placeholders = reuse
-      // A release that publishes no new package adds no placeholder: each is the document the first release's read-back recorded.
+      // A release that publishes no new package adds no placeholder: each is the document the prior release's read-back recorded (which
+      // the first release's capture derived and every later one carried unchanged).
       ? readBack.flatMap(({ name, otherVersions }) => otherVersions.filter((other) => other.version === placeholderVersion).map((other) => {
         const before = chain.priorReadBack.packages.find((entry) => entry.name === name).otherVersions.find((entry) => entry.version === placeholderVersion);
-        if (!isDeepStrictEqual(other, before)) fail('P2_1_PLACEHOLDER_CHANGED', `${name} lists ${placeholderVersion} as ${JSON.stringify(other)}; the first release's read-back recorded ${JSON.stringify(before)}`);
+        if (!isDeepStrictEqual(other, before)) fail('P2_1_PLACEHOLDER_CHANGED', `${name} lists ${placeholderVersion} as ${JSON.stringify(other)}; ${priorWords(release).prior}'s read-back recorded ${JSON.stringify(before)}`);
         return { name, ...other, partOfReleaseTuple: false, unchangedSinceFirstRelease: true };
       }))
       : readBack.flatMap(({ name, version, otherVersions }) => otherVersions.filter((other) => other.version === placeholderVersion).map((other) => {
@@ -2104,7 +2250,9 @@ export async function capture(options, github = createGitHub(), observe = viewPa
       status: chain.priorReadBack.placeholderOrigin.status,
       proved: chain.priorReadBack.placeholderOrigin.proved,
       inference: chain.priorReadBack.placeholderOrigin.inference,
-      basis: 'derived by the first release\'s capture from its publish run (carriedFrom) and not derived again: this release published no new package, and each placeholder document equals the one that read-back recorded',
+      basis: priorWords(release).first
+        ? 'derived by the first release\'s capture from its publish run (carriedFrom) and not derived again: this release published no new package, and each placeholder document equals the one that read-back recorded'
+        : 'derived by the first release\'s capture from its publish run, carried unchanged by each later read-back, and not derived again: this release published no new package, and each placeholder document equals the one the prior release\'s read-back (carriedFrom) recorded',
       carriedFrom: { path: `${options.priorRoute}/artifacts/registry-read-back.json`, sha256: sha256(readIndexed(options.priorRoute, 'artifacts/registry-read-back.json')) },
       namedIn,
     } : {
@@ -2115,40 +2263,11 @@ export async function capture(options, github = createGitHub(), observe = viewPa
       namedIn,
       sourceRevisionMentions: mentioned.stdout.split('\n').filter(Boolean).map((line) => line.slice(sourceRevision.length + 1)),
     };
-    if (placeholders.length > 0) {
-      const part = {
-        part: 'Observation, not a Roadmap clause: the read-back lists every version the registry holds for each package, so a version outside the release tuple is observed and not mistaken for part of it.',
-        state: 'shown',
-        note: `${joinNames(placeholders.map(({ name }) => name))} each also list ${placeholderVersion}, described by the registry as "${placeholders[0].description}". It carries no provenance, no dist-tag points at it, and it is no part of the release tuple or its manifest. Its origin is inferred, not proved: ${placeholderOrigin.inference}.`,
-        evidence: [{ kind: 'placeholders' }],
-      };
-      claims['E-P2.1-06'].parts.splice(claims['E-P2.1-06'].parts.findIndex((candidate) => candidate.part.startsWith('A registry read-back')) + 1, 0, part);
-      claims['E-P2.1-06'].limits.push(`Each of ${joinNames(placeholders.map(({ name }) => name))} lists a ${placeholderVersion} placeholder version beside its rc. The publish log names only the rc, and neither the release manifest nor the source revision names the placeholder; it carries no provenance and is not claimed. The registry read-back of the rc is unchanged by it.`);
-    }
     const secretCount = github.environmentSecrets();
     const observation = stage(`${root}/artifacts/registry-read-back.json`, canonicalJson({ schema: 'muxui-p2-1-registry-read-back-v1', registry, captureTimestamp: options.captureTimestamp, packages: readBack, placeholderOrigin }));
     verification.retained.registryReadBack = observation;
 
-    for (const part of claims['E-P2.1-02'].parts) {
-      const failed = part.evidence.filter(({ kind }) => kind === 'published').flatMap(({ checks }) => checks).filter((id) => !published.checks.find((found) => found.id === id)?.passed);
-      const note = typeof part.note === 'function' ? part.note(published, { priorTuple }) : part.note;
-      Object.assign(part, { note: failed.length > 0 ? `${note ? `${note} ` : ''}Against the published tuple these checks did not pass: ${failed.join(', ')}.` : note, ...(failed.length > 0 ? { state: 'not-met' } : {}) });
-    }
-    const { toolingVersion } = published;
-    claims['E-P2.1-02'].limits.push(`The published-run phase installed the released packages from the public registry at capture time (${options.captureTimestamp}), after the release, not at publish time. Only the four @muxui packages are bound to the release manifest's integrity; their third-party dependencies resolved as the registry then served them. The goldens are not compared to the published output, and the descriptor and catalog tamper negatives are not repeated against the published install.`);
-    claims['E-P2.1-02'].limits.push(`Dense budget counts exclude the tokens of \`-rc.N\` version suffixes (the pattern ${published.countRule.pattern}, nothing wider), by the Roadmap row ${reuse ? 'at the source revision' : 'as amended after the release'}. ${published.rawOverBudget === '' ? 'No raw count exceeds a budget.' : `The published rc ${reuse ? 'exceeds a budget counted raw' : 'exceeded a budget as the row first wrote it'}: ${published.rawOverBudget}.`} Raw and counted numbers are kept for every fixture and get case; at a stable release the suffix is absent and the two are equal.`);
-    if (!toolingVersion.reportsInstalledVersion) {
-      const where = toolingVersion.sources.map(({ file, line, text }) => `${file}:${line} (\`${text}\`)`).join(' and ');
-      claims['E-P2.1-02'].limits.push(`The published @muxui/tooling@${toolingVersion.installed} reports muxuiVersion ${toolingVersion.muxuiVersionInResponses.join(', ')} in the meta of every response and ${toolingVersion.cliVersionInManifest} as the CLI version in its manifest, not its own version, because the source at the release commit hard-codes both: ${where}. Architecture "Self-describing manifest" requires the CLI version and "Version units and compatibility" the exact tuple in every response, so the part for the CLI's reported version is not met, and the goldens normalize the value. The fix ships with tooling's next real release; this published version stays wrong.`);
-      claims['E-P2.1-02'].nonClaims = [`This record does not claim that @muxui/tooling@${toolingVersion.installed} reports its own version: it reports ${toolingVersion.muxuiVersionInResponses.join(', ')} and ${toolingVersion.cliVersionInManifest} (see the limits). The catalog and renderer versions it reports are the installed ones.`];
-    }
-    if (reuse) {
-      claims['E-P2.1-02'].limits.push(`The published tuple pairs the new tooling with the first release's schema, catalog, and React; ${chain.prior.release.packages.find(({ name }) => name === '@muxui/tooling').version}, the first release's tooling, does not satisfy the part for the CLI's reported version and stays installed and wrong (see ${options.priorRoute}).`);
-      const failedPrior = priorTuple.checks.filter(({ passed }) => !passed).map(({ id }) => id);
-      for (const part of claims['E-P2.1-06'].parts.filter(({ evidence }) => evidence.some(({ kind }) => kind === 'prior-tuple'))) {
-        Object.assign(part, { note: part.note(published, { priorTuple }), ...(failedPrior.length > 0 ? { state: 'not-met' } : {}) });
-      }
-    }
+    settleClaims(claims, { release, published, priorTuple, placeholders, placeholderOrigin, later: later?.phase, amendedRoadmap: verification.amendedRoadmap });
 
     // Retained route excerpts, by key, with their lines.
     const logs = { dryRun: excerpts.dryRunExcerpt, publish: excerpts.publishExcerpt, publishPrepare: excerpts.publishPrepareExcerpt };
@@ -2239,20 +2358,22 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     }]));
     if (reuse) {
       verification.route = root;
-      // What each record cites that differs from the first release's source revision (so its route still speaks for the rest), and what
-      // came after the release commit (nothing may: the records are judged at the release commit).
+      // What each record cites that differs from the prior release's source revision (so its route still speaks for the rest), and what
+      // came after the release commit (nothing may: the records are judged at the release commit). The keys name the first release
+      // when it is the prior one, as the first later release's records do.
       const headRevision = git('rev-parse', 'HEAD');
+      const since = priorWords(release).first ? 'FirstRelease' : 'PriorRelease';
       const priorRows = roadmapRows(gitShow(chain.reuse.priorSourceRevision, roadmap));
       const changedBetween = (from, to, files) => (files.length === 0 ? [] : git('diff', '--name-only', from, to, '--', ...files).split('\n').filter(Boolean));
       verification.compared = {
-        firstRelease: { route: options.priorRoute, sourceRevision: chain.reuse.priorSourceRevision },
+        [`${since[0].toLowerCase()}${since.slice(1)}`]: { route: options.priorRoute, sourceRevision: chain.reuse.priorSourceRevision },
         headRevision,
         records: Object.fromEntries(assertionIds.map((assertionId) => {
           const files = [...new Set(verification.coverage[assertionId].parts.flatMap(({ evidence }) => evidence.flatMap((item) => (item.file ? [item.file] : []))))].sort();
           return [assertionId, {
-            rowChangedSinceFirstRelease: JSON.stringify(priorRows[assertionId]) !== JSON.stringify(verification.rows[assertionId]),
+            [`rowChangedSince${since}`]: JSON.stringify(priorRows[assertionId]) !== JSON.stringify(verification.rows[assertionId]),
             citedFiles: files,
-            citedFilesChangedSinceFirstRelease: changedBetween(chain.reuse.priorSourceRevision, sourceRevision, files),
+            [`citedFilesChangedSince${since}`]: changedBetween(chain.reuse.priorSourceRevision, sourceRevision, files),
             citedFilesChangedAfterRelease: changedBetween(sourceRevision, headRevision, files),
           }];
         })),
