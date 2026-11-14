@@ -3781,7 +3781,7 @@ test('every pinned Storybook unit-test title still names a test in its file', as
       }
     }
   }
-  assert.equal(pinned, 10);
+  assert.equal(pinned, 9);
 });
 
 test('a shared Storybook path covers every page, Block pages included', async () => {

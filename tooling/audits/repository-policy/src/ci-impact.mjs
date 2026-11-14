@@ -902,7 +902,6 @@ function storybookUnitRoute(path) {
       'Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity',
       'Storybook colour declarations reference Mux tokens, including values that happen to match the palette',
       'Storybook canvas palette adapter rejects upstream drift and removes generated alpha',
-      'Storybook search status icons use canonical action and option-state colours',
     ]);
   }
   if (file === 'test/helpers/storybook-index.mjs' || file === 'test/storybook-page-selection.mjs'
@@ -920,9 +919,6 @@ function storybookUnitRoute(path) {
   // The component Docs page: its catalog projection, its layout, and the test that renders every family's entry.
   if (file === 'src/component-docs.mjs' || file === '.storybook/component-docs-page.mjs' || file === 'test/component-docs.test.mjs') {
     return { file: 'test/component-docs.test.mjs' };
-  }
-  if (file === 'test/storybook-colors-report.mjs' || file === 'test/storybook-colors-report.test.mjs') {
-    return { file: 'test/storybook-colors-report.test.mjs' };
   }
   if (file === 'test/storybook-audit-failures.mjs' || file === 'test/storybook-audit-failures.test.mjs') {
     return { file: 'test/storybook-audit-failures.test.mjs' };
