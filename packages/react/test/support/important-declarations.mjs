@@ -1,5 +1,5 @@
 // Reads every `!important` declaration in a stylesheet with the rules and at-rules around it, so a test
-// can pin each one by identity and category rather than by count.
+// can compare declarations by identity and category across the authored and generated sheets.
 
 const collapse = (text) => text.replace(/\s+/gu, ' ').trim();
 

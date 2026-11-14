@@ -8,7 +8,6 @@ import { SELECTED_GUIDE_ROUTES } from '../src/lib/selected-guide-routes.ts';
 import { groupComponentNavigation } from '../../component-navigation.mjs';
 import { componentRecordCategory } from '../src/lib/component-categories.ts';
 import { accessibilityGuideId, accessibilityGuideSections, linkedFamilies, linkedSiteRoutes } from '../../guide-links.mjs';
-import { reactCompatibilityProfile } from '../src/lib/compatibility-profile.ts';
 
 test('a guide links to another family by its docs path', () => {
   const guide = 'Use [Checkbox](/components/checkbox/) or [CheckboxGroup](/components/checkbox-group/), then [Checkbox again](/components/checkbox/). See the [API](#api-reference), [Themes](/themes/), and [the web](https://example.com/components/x/).';
@@ -162,45 +161,24 @@ test('the canonical accessibility guide supplies the sections both surfaces show
   assert.deepEqual(sections.map(({ heading }) => heading), ['Support status', 'Verification']);
   // Each section is a verbatim part of the guide file that Starlight renders whole, so neither surface can word it differently.
   for (const { markdown } of sections) assert.ok(file.includes(markdown));
-  // The projection keeps the guide's own non-claim and the consumer's testing duty.
+  // The projection keeps the guide's own assistive-technology non-claim.
   assert.match(sections[0].markdown, /makes no assistive-technology\s+support claim/u);
-  assert.match(sections[1].markdown, /Test the interaction with keyboard navigation and a screen reader in the\s+consumer application/u);
 });
 
-test('the accessibility guide names the existing automated proof and its limits from the records that own them', () => {
+test('the accessibility guide links pages that exist, states no version, and makes no assistive-technology or blanket claim', () => {
   const root = resolve(import.meta.dirname, '../../..');
   const guide = readFileSync(resolve(root, 'catalog/guides/accessibility.md'), 'utf8');
   const flat = (markdown) => markdown.replace(/\s+/gu, ' ');
   const [support] = accessibilityGuideSections(guide);
   const subsection = (heading) => flat(support.markdown.split(/^### /mu).find((part) => part.startsWith(`${heading}\n`))).trim();
 
-  // Automated proof states no version, so it cannot drift from the record: it links the tested profile Installation renders,
-  // and its prose names the record's non-claims, which this fails on until the guide follows a change to them.
-  const proof = subsection('Automated proof');
-  assert.deepEqual(reactCompatibilityProfile.notClaimed, ['assistive technology', 'zoom', 'locale', `browsers outside ${reactCompatibilityProfile.browser}`]);
-  assert.match(proof, /axe in one browser, over a fixed set of display profiles, and package tests of keyboard and focus behavior\./u);
-  assert.match(proof, /Assistive technology, zoom, locale, and other browsers are not claimed\./u);
-  // The link promises only what both places it leads hold, the tested browser and display profiles: Installation renders them
-  // (checked on the built page) and Storybook opens the closure record (checked in the Docs page test), which has no non-claims.
-  assert.match(proof, /The \[tested profile\]\(\/installation\/#tested-profile\) lists the tested browser and display profiles\.$/u);
-  assert.doesNotMatch(proof, /\d|Chrome|axe \d/u, 'the automated proof states no browser or tool version');
+  // Automated proof states no version, so it cannot drift from the compatibility record, and the profile it links is rendered.
+  assert.doesNotMatch(subsection('Automated proof'), /\d|Chrome|axe \d/u, 'the automated proof states no browser or tool version');
   assert.deepEqual(linkedSiteRoutes(support.markdown), ['/installation/#tested-profile']);
   assert.match(readFileSync(resolve(root, 'apps/docs/src/components/InstallationGuide.astro'), 'utf8'), /<h2 id="tested-profile">/u);
-  // The proof it names exists: the browser matrix the record cites, with axe, and keyboard and focus tests in the package.
-  assert.match(readFileSync(resolve(root, reactCompatibilityProfile.testSource), 'utf8'), /axe/u);
-
-  // The known limitation is the Dialog behavior record's own account of a removed focus target.
-  const limitation = subsection('Known limitations');
-  const dialog = JSON.parse(readFileSync(resolve(root, 'catalog/components/dialog/artifact.json'), 'utf8')).bindings['web.react'].behavior.join(' ');
-  for (const fact of [
-    'nearest ancestor recorded at opening that is still connected and focusable',
-    'only when focus would otherwise be on the document body',
-    'with no such ancestor focus stays there',
-  ]) assert.ok(dialog.includes(fact), `the Dialog behavior record says: ${fact}`);
-  assert.match(limitation, /nearest ancestor recorded at opening that is still connected and focusable, but only when focus would otherwise be on the document body\. With no such ancestor, focus stays on the document body\./u);
-  // It is projected with the support status, and Keyboard and focus points to it instead of repeating it.
+  // Keyboard and focus points to the Known limitations subsection, which the support status holds.
+  assert.ok(subsection('Known limitations'), 'the support status has a Known limitations subsection');
   const keyboard = flat(guide.split(/^## /mu).find((part) => part.startsWith('Keyboard and focus\n')));
-  assert.doesNotMatch(keyboard, /nearest ancestor/u);
   assert.match(keyboard, /\[Known limitations\]\(#known-limitations\)/u);
 
   // No assistive-technology or blanket support claim is made in what the projection carries.

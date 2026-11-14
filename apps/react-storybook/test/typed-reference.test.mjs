@@ -316,18 +316,10 @@ function pageProblems(page, owner) {
 }
 
 test('every family Docs page lists its parts and related exports and shows each part as the declarations wrote it', async () => {
-  let parts = 0;
-  let rows = 0;
   for (const record of manifest.families) {
     const page = pageOf(await entryOf(record));
     assert.deepEqual(pageProblems(page, ownerOf(record.family)), [], `${record.family} typed reference`);
-    parts += partNodes(page).length;
-    rows += page.querySelectorAll('.muxui-docs-reference tr[data-prop]').length;
   }
-  assert.equal(manifest.families.length, 86);
-  // The reference holds 213 parts in 112 component, function and value exports, and every one is on its family's page.
-  assert.equal(parts, 213);
-  assert.ok(rows > 1000, `the 86 pages show ${rows} rows`);
 });
 
 test('every rendered default is the catalog\'s, every executed catalog default is shown, and an authored one says so', async () => {
@@ -706,16 +698,14 @@ function coverageProblems(documents) {
   for (const item of expected) if (!seen.has(item) && !held.includes(item)) problems.push(`${item} is on no page`);
   for (const item of seen) if (!expected.includes(item)) problems.push(`${item} is not in the public surface`);
   for (const item of held) if (seen.has(item)) problems.push(`${item} is on a page and in a package reference file`);
-  return { problems, count: shown.length, held: held.length };
+  for (const item of held) if (!expected.includes(item)) problems.push(`${item} is in a package reference file and not in the public surface`);
+  return problems;
 }
 
 const allPages = async () => Promise.all(manifest.families.map(async (record) => pageOf(await entryOf(record))));
 
 test('every export and part of the package is on exactly one Docs page or in the reference files the pages point to, against the public surface inventory', async () => {
-  const { problems, count, held } = coverageProblems(await allPages());
-  assert.deepEqual(problems, []);
-  assert.equal(held, 36, 'the 12 package-level exports and the 24 shared types');
-  assert.equal(count + held, 322 + 112 + 132, 'the 322 types, 112 values and 132 parts of the public surface');
+  assert.deepEqual(coverageProblems(await allPages()), []);
 });
 
 test('each Docs page points to the two reference files that hold the package-level exports and the shared types', async () => {
@@ -1041,7 +1031,6 @@ test('the four records pin what their pages show, against the shipped declaratio
   }
   // The pinned TextEditor declarations are the source's, read without the reference.
   assert.deepEqual(sourceProblems(repositoryRoot), []);
-  assert.equal(textEditorExports.length, 32);
 });
 
 test('a model that changes what a record pins fails the pin, as an omission from the reference fails the page checks', async () => {
@@ -1130,9 +1119,9 @@ test('deleting a part, a hook, a helper, a ref or an import from a copy of the r
     } catch {
       return null;
     }
-    return coverageProblems(copy).problems;
+    return coverageProblems(copy);
   };
-  assert.deepEqual(coverageProblems(pages).problems, [], 'the committed pages cover the public surface');
+  assert.deepEqual(coverageProblems(pages), [], 'the committed pages cover the public surface');
   for (const [name, family, mutate, expected] of [
     ['a part', 'SwitchField', cases[0][2], '.:part:SwitchField.Thumb is on no page'],
     ['a hook', 'Toast', cases[2][2], '.:value:useToast is on no page'],

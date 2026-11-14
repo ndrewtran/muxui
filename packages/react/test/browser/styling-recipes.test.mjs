@@ -13,13 +13,13 @@ import { awaitFontsAndFrames, launchBrowser, packageRoot, pageShell, repositoryR
 
 // The generated recipe, run in Chromium: the authority for the recipe. The static cascade model that picks the steps cannot be
 // complete against an arbitrary stylesheet, so this file is what holds it to the stylesheet that ships: the sweep at the end applies
-// every step the generator makes, for all 86 families, to the real stylesheet in light and dark, and fails when a step does not change
+// every step the generator makes, for every family, to the real stylesheet in light and dark, and fails when a step does not change
 // its property or when a step that paints a color leaves what it paints under the contrast guard (below). A real stylesheet change that
 // breaks a step is caught here (this file runs in the `browser-chromium-only` group the planner selects for the module); the cascade
 // cases below are hypothetical stylesheets that show the model never claims a step the browser would not bear out.
 //
-// The static test (test/styling-recipes.test.mjs) proves every recipe is valid for all 86
-// families; this proves that the changes work in a browser, for 18 families chosen by what could go wrong: a role reached from the
+// The static test (test/styling-recipes.test.mjs) proves every recipe is valid for every
+// family; this proves that the changes work in a browser, for 18 families chosen by what could go wrong: a role reached from the
 // wrapper, a field or collection scoped through a shared hook, a role read through a state, a change or a pseudo-class, a popup that
 // portals out of the wrapper, a root that renders no element, motion, and elements with no text. Each family has one explicit fixture
 // below, and the test asserts the recipe the

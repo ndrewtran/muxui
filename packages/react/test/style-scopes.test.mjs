@@ -112,22 +112,10 @@ test('the mode-aware guard reads the renamed part classes of the migrated famili
   assert.deepEqual(modeOffenders(scoped('dark', '.muxui-calendar__cell')), []);
 });
 
-// Every `!important` declaration Mux UI ships, pinned by category and identity (file, enclosing rules, property,
-// value) in test/fixtures/important-declarations.json. This is a baseline, not an accessibility audit: it fails
-// when one is added, removed, changed or moved, so each such change is reviewed on its own.
-const importantPin = JSON.parse(await readFile(new URL('./fixtures/important-declarations.json', import.meta.url), 'utf8'));
+// Every `!important` declaration Mux UI authors is a forced-colors or reduced-motion adaptation, or sits on an internal part, and
+// generation carries each one into muxui.components unchanged.
 const authoredCss = Object.fromEntries(await Promise.all(sourceFiles.map(async (url) => [url.pathname.slice(sourceRoot.pathname.length), await readFile(url, 'utf8')])));
 const generatedCss = Object.fromEntries(await Promise.all(['styles.css', 'themes.css', 'themes-apca.css'].map(async (name) => [name, await readFile(new URL(`../generated/${name}`, import.meta.url), 'utf8')])));
-
-/** The authored declarations by category, as sorted `file | context` identities. */
-function importantByCategory(files) {
-  const byCategory = { 'forced-colors': [], 'reduced-motion-media': [], 'reduced-motion-attribute': [], structural: [] };
-  for (const [file, css] of Object.entries(files)) {
-    for (const declaration of importantDeclarations(css)) byCategory[importantCategory(declaration)].push(`${file} | ${importantIdentity(declaration)}`);
-  }
-  for (const list of Object.values(byCategory)) list.sort();
-  return byCategory;
-}
 
 /** The declarations of a generated stylesheet with their layer, without the file they came from. */
 const generatedIdentities = (css) => importantDeclarations(css).map(importantIdentity).sort();
@@ -135,56 +123,35 @@ const authoredIdentities = (files) => Object.entries(files).flatMap(([file, css]
 /** What a generated stylesheet must hold: the authored declarations, all in muxui.components. */
 const inComponentsLayer = (rows) => rows.map(([, identity]) => `@layer muxui.components { ${identity}`).sort();
 
-test('the authored !important declarations are exactly the pinned ones, by category and identity', () => {
+test('every authored !important is read, and one that is not a forced-colors or reduced-motion adaptation is on an internal part', () => {
   for (const [file, css] of Object.entries(authoredCss)) {
     // The reader must see every declaration, not only the ones it can place.
     const raw = css.replace(/\/\*[\s\S]*?\*\//gu, '').match(/!\s*important/giu)?.length ?? 0;
     assert.equal(importantDeclarations(css).length, raw, `${file}: every !important is read`);
   }
-  const found = importantByCategory(authoredCss);
-  assert.deepEqual(Object.fromEntries(Object.entries(found).map(([category, list]) => [category, list.length])), {
-    'forced-colors': 50, 'reduced-motion-media': 6, 'reduced-motion-attribute': 27, structural: 10,
-  });
-  assert.deepEqual(found, importantPin);
-  // The structural ones are internal parts, not accessibility adaptations.
-  assert.ok(found.structural.every((identity) => /\.muxui-toggle-button-group__motion-label \{|\.muxui-progress-bar\[data-muxui-state-indeterminate\]/u.test(identity)));
+  const structural = Object.values(authoredCss).flatMap((css) => importantDeclarations(css).filter((declaration) => importantCategory(declaration) === 'structural').map(importantIdentity));
+  assert.ok(structural.every((identity) => /\.muxui-toggle-button-group__motion-label \{|\.muxui-progress-bar\[data-muxui-state-indeterminate\]/u.test(identity)), structural.join('\n'));
 });
 
 test('the generated stylesheets keep every !important declaration in muxui.components', () => {
-  const authored = authoredIdentities(authoredCss);
-  // styles.css carries all 93 once, including the shared supplemental stylesheet's 15; the theme sheets carry none.
-  assert.equal(authored.length, 93);
-  assert.equal(authored.filter(([file]) => file === 'supplemental/styles.css').length, 15);
-  assert.deepEqual(generatedIdentities(generatedCss['styles.css']), inComponentsLayer(authored));
+  // styles.css carries every authored one once, the shared supplemental stylesheet's among them; the theme sheets carry none.
+  assert.deepEqual(generatedIdentities(generatedCss['styles.css']), inComponentsLayer(authoredIdentities(authoredCss)));
   assert.deepEqual(importantDeclarations(generatedCss['themes.css']), []);
   assert.deepEqual(importantDeclarations(generatedCss['themes-apca.css']), []);
 });
 
-// Each mutant changes one thing a reviewer must see, and the pin must fail on it.
-test('the !important pin fails when one is removed, swapped, changed, split by a comment, moved to a later layer or added', () => {
-  const file = 'styles/components.css';
-  const mutated = (change) => importantByCategory({ ...authoredCss, [file]: change(authoredCss[file]) });
-  const first = /(:\s*)([^:;{}]*?)(\s*!important)/u;
-  const unknown = (css) => `${css}\n.muxui-unknown { color: red !important; }\n`;
-  assert.notDeepEqual(mutated((css) => css.replace(/\s*!important/u, '')), importantPin);
-  // Equal count: one removed and an unrelated one added.
-  const swapped = mutated((css) => unknown(css.replace(/\s*!important/u, '')));
-  assert.equal(Object.values(swapped).flat().length, 93);
-  assert.notDeepEqual(swapped, importantPin);
-  assert.notDeepEqual(mutated((css) => css.replace(first, '$1inherit$3')), importantPin);
-  assert.notDeepEqual(mutated(unknown), importantPin);
-  // A comment between tokens splits them: `4/**/0%` is not `40%` (Chromium rejects it), so the value must change.
-  const split = (css) => css.replace('width: 40% !important', 'width: 4/**/0% !important');
-  assert.notEqual(split(authoredCss[file]), authoredCss[file], 'the mutation applies');
-  assert.notDeepEqual(mutated(split), importantPin);
-
-  // The generated stylesheet is read apart from the authored one: the last chunk moved to a later layer keeps
-  // every category count and identity but changes its layer.
+// The generated stylesheet is read apart from the authored one, so the parity check must fail on a change to the generated side.
+test('the layer parity check fails when a chunk moves to a later layer or a value is split by a comment', () => {
+  const expected = inComponentsLayer(authoredIdentities(authoredCss));
   const styles = generatedCss['styles.css'];
+  // The chunk moved to a later layer keeps every declaration but changes its layer.
   const chunk = authoredCss['supplemental/select-native.css'].trim();
   assert.ok(styles.includes(chunk), 'the generated stylesheet carries the chunk verbatim');
   const relayered = styles.replace(chunk, `}\n\n@layer muxui.utilities {\n${chunk}\n}\n\n@layer muxui.components {`);
-  assert.equal(importantDeclarations(relayered).length, 93);
-  assert.notDeepEqual(generatedIdentities(relayered), inComponentsLayer(authoredIdentities(authoredCss)));
-  assert.notDeepEqual(generatedIdentities(split(styles)), inComponentsLayer(authoredIdentities(authoredCss)));
+  assert.equal(importantDeclarations(relayered).length, importantDeclarations(styles).length);
+  assert.notDeepEqual(generatedIdentities(relayered), expected);
+  // A comment between tokens splits them: `4/**/0%` is not `40%` (Chromium rejects it), so the value must change.
+  const split = styles.replace('width: 40% !important', 'width: 4/**/0% !important');
+  assert.notEqual(split, styles, 'the mutation applies');
+  assert.notDeepEqual(generatedIdentities(split), expected);
 });

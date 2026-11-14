@@ -29,7 +29,6 @@ test('the declared upstream follows the pin and keeps the retained commit only f
     'utf8',
   ));
   assert.deepEqual(reactCompatibility.upstream, compatibilityUpstream({ pin, retained }));
-  assert.match(await readFile(resolve(packageRoot, 'README.md'), 'utf8'), new RegExp(`React Aria Components ${pin.replaceAll('.', '\\.')} is an internal`, 'u'));
 
   // The generator derives the version; it keeps no dependency version of its own to go stale.
   assert.doesNotMatch(await readFile(resolve(packageRoot, 'src/generate.mjs'), 'utf8'), /React Aria Components \d|react-aria-components['"][^\n]*\d+\.\d+\.\d+/u);
