@@ -1,37 +1,15 @@
 ## Summary
 
-Important changes across the complete branch diff.
+What changed.
 
 ## Why
 
-Problem, goal, or reason.
+The problem or goal.
 
 ## Validation
 
-- `command` — observed result
+- `command`: result
 
 ## Impact and risks
 
-Compatibility, rollout, or operational risk, or why it is low.
-
-## Model and harness
-
-Model and harness that did the work, e.g. `Opus 5.5, Claude Code`.
-
-## Authority change
-
-Keep this section only for a PR that changes a file listed in
-`.github/scripts/validate-planning-pr.cjs`: the strategy documents, the platform
-safety contract, or the protection and publishing machinery. Delete it
-otherwise. Add the `type:decision` or `type:architecture-maintenance` label.
-
-- Authority change record: <#issue or an existing decisions/NNNN-name.md path>
-- Scope version effect: <none, patch, minor, or major; only if strategy/product-scope.md changes>
-
-Fill these four, each on its own line, only when Product Scope changes with a
-version effect other than `none`. `None` is a valid answer.
-
-- Affected Scope IDs / commitment transitions:
-- Roadmap / evidence effect:
-- Release additions / removals:
-- Open tracker migration:
+Compatibility or consumer impact, or why it is low.
