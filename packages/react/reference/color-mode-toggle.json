@@ -1,7 +1,10 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "color-mode-toggle",
-  "sources": { "color-mode-toggle": "packages/react/src/supplemental/color-mode-toggle.ts" },
+  "sources": {
+    "color-mode": "packages/react/src/supplemental/color-mode.ts",
+    "color-mode-toggle": "packages/react/src/supplemental/color-mode-toggle.ts"
+  },
   "exports": [
     {
       "name": "ColorModeToggle",
@@ -18,7 +21,7 @@
               "optional": true,
               "type": "ColorMode",
               "values": ["light", "dark"],
-              "refs": ["color-mode-toggle#ColorMode"],
+              "refs": ["color-mode#ColorMode"],
               "doc": "The color mode, when the page controls it."
             },
             {
@@ -26,7 +29,7 @@
               "optional": true,
               "type": "ColorMode",
               "values": ["light", "dark"],
-              "refs": ["color-mode-toggle#ColorMode"],
+              "refs": ["color-mode#ColorMode"],
               "doc": "The mode the toggle starts in, before a saved mode or the operating system's preference is read."
             },
             {
@@ -45,7 +48,7 @@
               "name": "onModeChange",
               "optional": true,
               "type": "(mode: ColorMode) => void",
-              "refs": ["color-mode-toggle#ColorMode"],
+              "refs": ["color-mode#ColorMode"],
               "doc": "Called with the new mode when the toggle changes it."
             }
           ],
@@ -59,9 +62,9 @@
   ],
   "types": [
     {
-      "id": "color-mode-toggle#ColorMode",
+      "id": "color-mode#ColorMode",
       "name": "ColorMode",
-      "module": "color-mode-toggle",
+      "module": "color-mode",
       "public": [
         { "entry": ".", "name": "ColorMode" }
       ],
@@ -80,7 +83,7 @@
           "optional": true,
           "type": "ColorMode",
           "values": ["light", "dark"],
-          "refs": ["color-mode-toggle#ColorMode"],
+          "refs": ["color-mode#ColorMode"],
           "doc": "The color mode, when the page controls it."
         },
         {
@@ -88,7 +91,7 @@
           "optional": true,
           "type": "ColorMode",
           "values": ["light", "dark"],
-          "refs": ["color-mode-toggle#ColorMode"],
+          "refs": ["color-mode#ColorMode"],
           "doc": "The mode the toggle starts in, before a saved mode or the operating system's preference is read."
         },
         {
@@ -107,11 +110,11 @@
           "name": "onModeChange",
           "optional": true,
           "type": "(mode: ColorMode) => void",
-          "refs": ["color-mode-toggle#ColorMode"],
+          "refs": ["color-mode#ColorMode"],
           "doc": "Called with the new mode when the toggle changes it."
         }
       ],
-      "refs": ["color-mode-toggle#ColorMode"]
+      "refs": ["color-mode#ColorMode"]
     },
     {
       "id": "color-mode-toggle#ColorModeToggleProps",

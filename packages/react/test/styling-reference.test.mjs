@@ -1,5 +1,5 @@
 // The styling reference (CSS Stage 2 PR 4a): what the docs "Styling" section and the Storybook Anatomy table print about a component,
-// derived from five sources by one code path for all 84 families. These tests pin the derived facts to numbers the plan measured
+// derived from five sources by one code path for all 86 families. These tests pin the derived facts to numbers the plan measured
 // separately, recompute the ones that can be recomputed another way (jsdom's parse of the renders, an independent selector scan), and
 // run source mutants through a mirror of the repository, so the reference is shown to read the sources it says it reads.
 import assert from 'node:assert/strict';
@@ -49,9 +49,9 @@ const allRows = (pick) => slugs.flatMap((slug) => pick(all.get(slug)).map((row) 
 
 test('the stylesheet reader models the shipped sheets and refuses what it does not model', () => {
   const read = (name) => readStyleRules(readFileSync(resolve(packageRoot, `generated/${name}`), 'utf8'));
-  assert.equal(read('styles.css').rules.length, 2090);
+  assert.equal(read('styles.css').rules.length, 2181);
   const shared = readFileSync(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').trim();
-  assert.equal(readStyleRules(shared).rules.length, 520);
+  assert.equal(readStyleRules(shared).rules.length, 511);
   assert.equal(readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8').split(shared).length, 2, 'styles.css includes the shared stylesheet verbatim exactly once');
   assert.equal(read('themes.css').rules.length, 60);
   // The shapes it models: grouping at-rules with a chain, statements, leaf at-rules it skips, !important, a block in a custom property.
@@ -76,8 +76,8 @@ test('the stylesheet reader models the shipped sheets and refuses what it does n
 // Observations.
 // ---------------------------------------------------------------------------------------------------------------------------
 
-test('the observation reader agrees with jsdom on every element of the 217 renders and refuses markup it does not model', () => {
-  assert.equal(renders.length, 217);
+test('the observation reader agrees with jsdom on every element of the 220 renders and refuses markup it does not model', () => {
+  assert.equal(renders.length, 220);
   const signature = (tag, classes, attributes) => `${tag}|${classes.join(' ')}|${[...attributes].filter(([name]) => name.startsWith('data-muxui')).sort(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}=${value}`).join(',')}`;
   // The DOM's text of an element, without the content of a descendant script or style (code, which the reader keeps out of an ancestor's text).
   const domText = (node, top = true) => (node.nodeType === 3 ? node.data
@@ -94,7 +94,7 @@ test('the observation reader agrees with jsdom on every element of the 217 rende
     assert.deepEqual(mine.map((element) => element.text), theirs.map((element) => domText(element)), `${name}: the same text in every element`);
     elements += mine.length;
   }
-  assert.equal(elements, 3758); // Sidebar's grouping example adds six elements with its newly demonstrated public parts.
+  assert.equal(elements, 3865); // Sidebar's grouping example adds six elements with its newly demonstrated public parts, the ThemePicker and ColorModePicker examples 97 more, and the Popover color scheme example three.
   // A <template> holds React Aria's collection and is inert: the template is an element, its content is not.
   const inert = parseObservation('<template><b class="muxui-x">in</b></template><i>out</i>');
   assert.deepEqual(inert.elements.map(({ tag }) => tag), ['template', 'i']);
@@ -193,7 +193,7 @@ test('a match is true, false or unknown: a pseudo-class the caller answers null 
 const { partRows, selectorOf } = facts.parts;
 
 test('every part-map row is a class row of its family, once and in anatomy order, with the note its fields call for', () => {
-  assert.equal(slugs.length, 84);
+  assert.equal(slugs.length, 86);
   let total = 0;
   for (const slug of slugs) {
     const expected = partRows.filter((row) => row.family === slug);
@@ -212,14 +212,34 @@ test('every part-map row is a class row of its family, once and in anatomy order
       assert.equal(row.origin, 'part');
     }
   }
-  assert.equal(total, 448);
+  assert.equal(total, 457);
   const dispositions = Object.groupBy(allRows(classRows), ({ row }) => row.disposition);
-  assert.deepEqual(Object.fromEntries(Object.entries(dispositions).map(([name, list]) => [name, list.length])), { class: 352, 'root-element': 8, field: 48, composed: 11, internal: 10, none: 19 });
+  assert.deepEqual(Object.fromEntries(Object.entries(dispositions).map(([name, list]) => [name, list.length])), { class: 360, 'root-element': 8, field: 48, composed: 12, internal: 10, none: 19 });
   const byNote = (pattern) => allRows(classRows).filter(({ row }) => pattern.test(row.note));
-  assert.equal(allRows(classRows).filter(({ row }) => row.hookOnly).length, 12);
-  assert.equal(byNote(/Hook only: no Mux rule styles it\./u).length, 12);
+  assert.equal(allRows(classRows).filter(({ row }) => row.hookOnly).length, 13);
+  assert.equal(byNote(/Hook only: no Mux rule styles it\./u).length, 13);
   assert.equal(byNote(/^Internal: no hook\.$/u).length, 10);
   assert.equal(byNote(/^Renders no element \(/u).length, 19);
+});
+
+// SwitchField draws Switch's switch, so no rule selects its Button and Thumb hooks: the part map says the hooks are styled through the
+// classes the elements also carry, and the reference reads those rules as the parts' own instead of reporting a hook nothing styles.
+test('SwitchField parts are styled through the classes Switch and the field text give them, and their states are those rules\'', () => {
+  const styling = all.get('switch-field');
+  const row = (hook) => classRows(styling).find((candidate) => candidate.hook === hook);
+  const html = new JSDOM(renders.filter(({ family }) => family === 'switch-field').map((render) => render.html).join('')).window.document;
+  for (const [hook, through, owner] of [['muxui-switch-field__button', 'muxui-switch', ' \\(Switch\\)'], ['muxui-switch-field__thumb', 'muxui-switch__indicator', ' \\(Switch\\)'], ['muxui-switch-field__description', 'muxui-field-description', ''], ['muxui-switch-field__error', 'muxui-field-error', '']]) {
+    const part = row(`.${hook}`);
+    assert.deepEqual([part.selectedOn.length, part.hookOnly, part.styledThrough], [1, undefined, through], hook);
+    assert.match(part.note, new RegExp(`Styled through \\.${through}, which the element also carries${owner}\\.`, 'u'), hook);
+    // The note's claim is the markup's: every element of the part in the examples carries the class (the error shows only while invalid).
+    const found = [...html.querySelectorAll(`.${hook}`)];
+    assert.ok(found.every((element) => element.classList.contains(through)) && (found.length > 0 || hook.endsWith('__error')), `${hook} elements carry ${through}`);
+  }
+  const selectedOn = new Map(stateRowsOf(styling).map((state) => [state.hook, state.selectedOn]));
+  for (const name of ['disabled', 'invalid', 'hovered', 'focus-visible']) assert.deepEqual(selectedOn.get(`data-muxui-state-${name}`), ['button'], name);
+  assert.deepEqual(selectedOn.get('data-muxui-state-selected'), ['button', 'thumb']);
+  assert.deepEqual(allRows(classRows).filter(({ row: candidate }) => candidate.styledThrough !== undefined).map(({ slug, row: candidate }) => `${slug}.${candidate.part}`), ['switch-field.button', 'switch-field.thumb', 'switch-field.description', 'switch-field.error']);
 });
 
 test('class notes keep the part map\'s conditions: caller-supplied elements, composed roots, wrapper exceptions and scopes', () => {
@@ -235,7 +255,7 @@ test('class notes keep the part map\'s conditions: caller-supplied elements, com
   assert.equal(allRows(classRows).filter(({ row: candidate }) => candidate.conditional !== undefined).length, 2);
   // The other composedOf rows say Composed from Button, and the family they are composed of is data.
   const composedOf = allRows(classRows).filter(({ row: candidate }) => candidate.composedOf !== undefined && candidate.conditional === undefined);
-  assert.equal(composedOf.length, 15);
+  assert.equal(composedOf.length, 16);
   for (const { row: candidate } of composedOf) assert.match(candidate.note, /Composed from Button: also carries \.muxui-button\./u);
   // The three wrapper exceptions keep their explanation; the six scoped rows name their scope.
   assert.match(row('input', 'root').note, /Input\.Root renders the wrapper as muxui-input__root/u);
@@ -422,7 +442,7 @@ test('the selection index is a second reading of the stylesheet, pair for pair, 
   const mine = new Set([...facts.selection].flatMap(([attribute, byClass]) => [...byClass.keys()].map((name) => `${attribute}|${name}`)));
   assert.deepEqual([...second].filter((pair) => !mine.has(pair)).sort(), [], 'a pair the second reading finds and the module lacks');
   assert.deepEqual([...mine].filter((pair) => !second.has(pair)).sort(), [], 'a pair the module holds and the second reading does not');
-  assert.equal(mine.size, 493);
+  assert.equal(mine.size, 503);
   // The scoping rules, on selectors written for them, by both readings. An attribute in :has() belongs to the element asked for;
   // each :where() / :is() branch stands alone; a :not() test counts for the element it is on; an ancestor's tests are its own.
   const cases = [
@@ -449,7 +469,7 @@ test('the selection index is a second reading of the stylesheet, pair for pair, 
 
 test('catalog state rows: one per attribute and family, in catalog order, with the validated counts under the same definition', () => {
   const catalogRows = allRows(stateRowsOf).filter(({ row }) => row.origin === 'catalog');
-  assert.equal(catalogRows.length, 264, '258 state and enumerated pairs plus 6 status rows');
+  assert.equal(catalogRows.length, 270, '264 state and enumerated pairs plus 6 status rows');
   assert.deepEqual(catalogRows.filter(({ row }) => isStatus(row)).map(({ slug, row }) => `${slug} ${row.hook}`), [
     'avatar data-muxui-loaded', 'avatar data-muxui-fallback', 'avatar data-muxui-error', 'image data-muxui-fallback', 'image data-muxui-error', 'prompt-composer data-muxui-error',
   ]);
@@ -462,19 +482,21 @@ test('catalog state rows: one per attribute and family, in catalog order, with t
   const orientation = stateRowsOf(all.get('separator')).find(({ hook }) => hook === 'data-muxui-state-orientation');
   assert.deepEqual([orientation.values, orientation.catalog, orientation.origin], [['horizontal', 'vertical'], ['horizontal', 'vertical'], 'catalog']);
   assert.match(orientation.note, /^Catalog states horizontal, vertical\./u);
-  // 258 pairs. The plan counted 126 of them as selected on a class or root-element hook of the family, reading a test in :has() or in
+  // 264 pairs. The plan counted 126 of them as selected on a class or root-element hook of the family, reading a test in :has() or in
   // another :where() branch as the outer class's (ToggleButtonGroup's disabled and selected, which are the buttons', landed on the
-  // group). Counted per compound by a second reading of the stylesheet, 124 are, and 134 are not. The module also counts shared field
+  // group). Counted per compound by a second reading of the stylesheet, 130 are, and 134 are not: the native choice state rules,
+  // which select focused on the choice controls, made four more of them. The module also counts shared field
   // hooks, composed roots and a root companion, which can only add pairs, and the extra ones are named.
   const pairs = catalogRows.filter(({ row }) => !isStatus(row));
-  assert.equal(pairs.length, 258);
-  const ownHooks = (slug) => new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element'].includes(row.disposition)).map((row) => row.hook));
+  assert.equal(pairs.length, 264);
+  const ownHooks = (slug) => new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element'].includes(row.disposition)).flatMap((row) => [row.hook, row.styledThrough].filter(Boolean)));
   const own = pairs.filter(({ slug, row }) => [...ownHooks(slug)].some((name) => secondHas(row.hook, name)));
-  assert.equal(own.length, 124, 'selected on a class or root-element hook of the family');
+  assert.equal(own.length, 130, 'selected on a class or root-element hook of the family');
   assert.equal(pairs.length - own.length, 134);
   assert.ok(own.every(({ row }) => row.selectedOn.length > 0));
   // The two ToggleButtonGroup rows leave the first count and join this one: its buttons are composed Buttons, and Button's rules select them.
-  assert.deepEqual(pairs.filter(({ row }) => row.selectedOn.length > 0).length - own.length, 12, 'selected only through a shared field hook, a composed root or a companion');
+  // ColorModePicker's selected and disabled rows do the same, since its options are the group's ToggleButtons.
+  assert.deepEqual(pairs.filter(({ row }) => row.selectedOn.length > 0).length - own.length, 14, 'selected only through a shared field hook, a composed root or a companion');
   // Each pair that no documented hook selects says so exactly: either only an internal part does, or nothing does.
   for (const { slug, row } of pairs.filter(({ row: candidate }) => candidate.selectedOn.length === 0)) {
     assert.match(row.note, /No Mux rule selects this attribute on a documented hook\.|only on an internal part|No emitted CSS state hook/u, `${slug} ${row.hook}`);
@@ -486,8 +508,8 @@ test('catalog state rows: one per attribute and family, in catalog order, with t
 
 test('interaction rows: per family, only for a state the CSS selects on the family\'s own class hooks, labelled as such', () => {
   const interaction = allRows(stateRowsOf).filter(({ row }) => row.origin === 'interaction');
-  assert.equal(interaction.length, 84);
-  assert.equal(new Set(interaction.map(({ slug }) => slug)).size, 40);
+  assert.equal(interaction.length, 88);
+  assert.equal(new Set(interaction.map(({ slug }) => slug)).size, 41);
   const names = interaction.map(({ row }) => row.hook.replace('data-muxui-state-', ''));
   assert.ok(names.every((name) => interactionStates.includes(name)));
   assert.equal(interactionStates.length, 12);
@@ -500,14 +522,14 @@ test('interaction rows: per family, only for a state the CSS selects on the fami
   const recount = [];
   for (const slug of slugs) {
     const declared = new Set(records.get(slug).states.map(attributeOfState));
-    const hooks = new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element'].includes(row.disposition)).map((row) => row.hook));
+    const hooks = new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element'].includes(row.disposition)).flatMap((row) => [row.hook, row.styledThrough].filter(Boolean)));
     for (const name of interactionStates) {
       const attribute = `data-muxui-state-${name}`;
       if (!declared.has(attribute) && [...hooks].some((hook) => secondHas(attribute, hook))) recount.push(`${slug} ${attribute}`);
     }
   }
-  assert.equal(recount.length, 84, 'the plan\'s 84 rows over 40 families, own class hooks');
-  assert.equal(new Set(recount.map((entry) => entry.split(' ')[0])).size, 40);
+  assert.equal(recount.length, 88, 'the plan\'s 84 rows over 40 families, own class hooks, the 2 rows ColorModePicker adds, and focused on Checkbox and Switch, which the native choice state rules select');
+  assert.equal(new Set(recount.map((entry) => entry.split(' ')[0])).size, 41);
   const printed = new Set(interaction.map(({ slug, row }) => `${slug} ${row.hook}`));
   assert.deepEqual(recount.filter((entry) => !printed.has(entry)), []);
   assert.deepEqual([...printed].filter((entry) => !recount.includes(entry)), [], 'a root companion adds no interaction row today');
@@ -697,12 +719,12 @@ const tokenRows = (styling) => styling.tokens.groups.flatMap(({ rows }) => rows)
 
 test('token rows are the recipe requirements, each with the record\'s meaning, policy, alias and light and dark values', () => {
   const rows = allRows(tokenRows);
-  assert.equal(rows.length, 839);
-  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.group)).map(([name, list]) => [name, list.length])), { semantic: 628, component: 211 });
-  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.policy)).map(([name, list]) => [name, list.length])), { theme: 768, fixed: 71 });
+  assert.equal(rows.length, 861);
+  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.group)).map(([name, list]) => [name, list.length])), { semantic: 642, component: 219 });
+  assert.deepEqual(Object.fromEntries(Object.entries(Object.groupBy(rows, ({ row }) => row.policy)).map(([name, list]) => [name, list.length])), { theme: 788, fixed: 73 });
   assert.deepEqual([...new Set(rows.filter(({ row }) => row.policy === 'fixed').map(({ row }) => row.token))], ['semantic.focus.ring']);
-  assert.equal(new Set(rows.filter(({ row }) => row.group === 'component').map(({ row }) => row.token)).size, 196);
-  assert.equal(new Set(rows.filter(({ row }) => row.group === 'component').map(({ slug }) => slug)).size, 18);
+  assert.equal(new Set(rows.filter(({ row }) => row.group === 'component').map(({ row }) => row.token)).size, 198);
+  assert.equal(new Set(rows.filter(({ row }) => row.group === 'component').map(({ slug }) => slug)).size, 19);
   for (const slug of slugs) {
     const required = records.get(slug).bindings['web.react'].tokenRecipe.requirements;
     assert.deepEqual(tokenRows(all.get(slug)).map(({ token }) => token).sort(), required.map(({ token }) => token).sort(), `${slug}: every requirement is a row`);
@@ -729,16 +751,16 @@ test('groups: component roles first, semantic roles second, and only the long se
   assert.deepEqual(collapsed, ['code-block semantic 30', 'data-diff semantic 25', 'text semantic 50']);
   assert.ok(slugs.every((slug) => all.get(slug).tokens.groups.every(({ id, label, caption }, index) => (id === 'component' ? index === 0 && label === 'Component roles' : label === 'Semantic roles') && caption.length > 0)));
   const noRoles = slugs.filter((slug) => !all.get(slug).tokens.groups.some(({ id }) => id === 'component'));
-  assert.equal(noRoles.length, 66, '66 families have no component role');
-  assert.equal(slugs.length - noRoles.length, 18);
+  assert.equal(noRoles.length, 67, '67 families have no component role');
+  assert.equal(slugs.length - noRoles.length, 19);
 });
 
-test('read-by: 194 roles are read by rules, one through structured parts and one through a compiled dependency, and none by nothing', () => {
+test('read-by: 196 roles are read by rules, one through structured parts and one through a compiled dependency, and none by nothing', () => {
   const components = new Map();
   for (const { row } of allRows(tokenRows)) if (row.group === 'component') components.set(row.token, row.readBy);
-  assert.equal(components.size, 196);
+  assert.equal(components.size, 198);
   const kinds = Object.groupBy([...components], ([, readBy]) => readBy.kind);
-  assert.deepEqual(Object.fromEntries(Object.entries(kinds).map(([name, list]) => [name, list.length])), { rules: 194, parts: 1, compiled: 1 });
+  assert.deepEqual(Object.fromEntries(Object.entries(kinds).map(([name, list]) => [name, list.length])), { rules: 196, parts: 1, compiled: 1 });
   assert.deepEqual(kinds.parts.map(([id]) => id), ['component.disclosuregroup.transition']);
   assert.deepEqual(kinds.compiled.map(([id]) => id), ['component.disclosuregroup.motion-duration']);
   // The same classification from the authored sources by the rule the tokens test uses for reachability: a role is read when a rule
@@ -762,11 +784,11 @@ test('read-by: 194 roles are read by rules, one through structured parts and one
   const distinct = new Set();
   let entries = 0; const internalTokens = new Set();
   for (const [id, readBy] of components) for (const entry of readBy.selectors) { distinct.add(`${id}|${entry.selector}`); entries += 1; if (!entry.public) internalTokens.add(id); }
-  assert.equal(distinct.size, 237, '237 token and selector pairs');
+  assert.equal(distinct.size, 251, '251 token and selector pairs');
   const implementation = new Set();
   for (const [id, readBy] of components) for (const entry of readBy.selectors) if (!entry.public) implementation.add(`${id}|${entry.selector}`);
-  assert.equal(implementation.size, 10, '10 of the 237 are implementation selectors');
-  assert.equal(internalTokens.size, 8, 'in 8 tokens');
+  assert.equal(implementation.size, 15, '15 of the 251 are implementation selectors');
+  assert.equal(internalTokens.size, 10, 'in 10 tokens');
   assert.ok(selectors.length >= distinct.size && entries === selectors.length);
   const buttonBackground = components.get('component.button.background');
   assert.deepEqual(buttonBackground.selectors.map(({ selector, property }) => [selector, property]).sort(), [
@@ -844,11 +866,11 @@ test('reduced motion: two public inputs and an internal marker, as motion.mjs re
   assert.ok(overlays.includes("node.toggleAttribute('data-muxui-motion-reduced', reduced)"));
   assert.equal(all.get('button').overrides.motion, 'Mux UI treats motion as reduced when the system asks for it (`prefers-reduced-motion: reduce`) or when `data-muxui-motion="reduced"` is on the component or one of its ancestors; for an overlay, also on its trigger or the trigger\'s ancestors. Some overlays copy that result onto an internal `data-muxui-motion-reduced` marker; it is not an input.');
   assert.deepEqual(facts.motion, { mediaQuery: 'prefers-reduced-motion: reduce', scopeAttribute: 'data-muxui-motion', scopeValue: 'reduced', marker: 'data-muxui-motion-reduced' });
-  // 3 selectors on the internal marker beside 20 on the public attribute and 9 media blocks: not three independent triggers.
+  // 3 selectors on the internal marker beside 22 on the public attribute and 10 media blocks: not three independent triggers.
   const css = readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8');
   const literal = (pattern) => (css.match(pattern) ?? []).length;
-  assert.deepEqual(facts.motionCauses, { markerSelectors: 3, scopeAttributeSelectors: 20, mediaBlocks: 9 });
-  assert.deepEqual([literal(/\[data-muxui-motion-reduced/gu), literal(/\[data-muxui-motion='reduced'\]/gu), literal(/@media[^{]*prefers-reduced-motion/gu)], [3, 20, 9]);
+  assert.deepEqual(facts.motionCauses, { markerSelectors: 3, scopeAttributeSelectors: 22, mediaBlocks: 10 });
+  assert.deepEqual([literal(/\[data-muxui-motion-reduced/gu), literal(/\[data-muxui-motion='reduced'\]/gu), literal(/@media[^{]*prefers-reduced-motion/gu)], [3, 22, 10]);
   // The paragraph is built from what the code reads, so a changed input is a changed paragraph, and a removed one fails.
   assert.throws(() => readMotionInputs(motion.replace("'(prefers-reduced-motion: reduce)'", "'(prefers-reduced-motion: no-preference)'"), overlays), /no longer read the reduced-motion inputs/u);
   assert.throws(() => readMotionInputs(motion, overlays.replace("toggleAttribute('data-muxui-motion-reduced'", "toggleAttribute('data-muxui-motion-quiet'")), /no longer read the reduced-motion inputs/u);
@@ -856,10 +878,10 @@ test('reduced motion: two public inputs and an internal marker, as motion.mjs re
 });
 
 test('!important counts are classified by selector and at-rule chain, per family, and agree with a second walk of the stylesheet', () => {
-  assert.deepEqual(facts.importantTotals, { declarations: 86, rules: 42 });
+  assert.deepEqual(facts.importantTotals, { declarations: 93, rules: 47 });
   const css = readFileSync(resolve(packageRoot, 'generated/styles.css'), 'utf8');
   const walked = importantDeclarations(css);
-  assert.equal(walked.length, 86 + walked.filter(({ chain }) => chain.some((prelude) => prelude.startsWith('@layer muxui.tokens'))).length, 'the second walk finds the same declarations');
+  assert.equal(walked.length, 93 + walked.filter(({ chain }) => chain.some((prelude) => prelude.startsWith('@layer muxui.tokens'))).length, 'the second walk finds the same declarations');
   const hooksOf = (slug) => new Set(partRows.filter((row) => row.family === slug && ['class', 'root-element', 'composed'].includes(row.disposition)).map((row) => row.hook));
   const classesIn = (text) => [...text.replace(/\[[^\]]*\]/gu, '').matchAll(/\.(muxui-[\w-]+)/gu)].map(([, name]) => name);
   let withImportant = 0;
@@ -879,7 +901,7 @@ test('!important counts are classified by selector and at-rule chain, per family
     assert.deepEqual(all.get(slug).overrides.important, expected, slug);
     if (total > 0) withImportant += 1;
   }
-  assert.equal(withImportant, 50);
+  assert.equal(withImportant, 52);
   assert.equal(slugs.length - withImportant, 34, '34 families have none on their own hooks');
   // Button: 8 forced colors, 2 reduced motion by media query and 2 by the scope attribute (the v1 count called those two other).
   assert.deepEqual(all.get('button').overrides.important, { total: 12, byCause: { 'forced-colors': 8, 'reduced-motion-media': 2, 'reduced-motion-attribute': 2 } });

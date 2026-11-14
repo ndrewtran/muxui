@@ -159,8 +159,8 @@ test('a bundle that uses one collections family keeps its own module and only th
     Select: ['overlay-positioning.mjs', ...popupMotion],
     RadioGroup: ['radio-motion.mjs', ...pageMotion],
     Slider: ['slider-motion.mjs', ...pageMotion],
-    Tabs: ['tabs-motion.mjs', ...pageMotion],
-    ToggleButtonGroup: ['toggle-button-context.mjs', 'toggle-button-group-motion.mjs', ...pageMotion],
+    Tabs: ['hover-layer-motion.mjs', 'tabs-motion.mjs', ...pageMotion],
+    ToggleButtonGroup: ['hover-layer-motion.mjs', 'toggle-button-context.mjs', 'toggle-button-group-motion.mjs', ...pageMotion],
     Tree: ['tree-motion.mjs', ...pageMotion],
   };
   // Every motion module and motion context in generated/; choice-context is shared form plumbing and is left out.
@@ -208,10 +208,10 @@ test('a bundle that uses Menu keeps its own module, the collection helpers, and 
 });
 
 // Select keeps its own module, the item helpers it normalizes with, the trigger it renders, the shared class and name helper,
-// the choice size and overlay geometry helpers, and the popup motion. Through the barrel or the index, a bundle keeps exactly
-// these package modules and no other family's, which the context and the geometry constant at the module's top level must not change.
+// the choice size and overlay geometry helpers, the field error part, and the popup motion. Through the barrel or the index, a bundle
+// keeps exactly these package modules and no other family's, which the context and the geometry constant at the module's top level must not change.
 test('a bundle that uses Select keeps its own module, the collection helpers, and the popup motion modules', async () => {
-  const kept = ['choice-context.mjs', 'collection-items.js', 'collection-trigger.js', 'control-utils.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'overlay-positioning.mjs', 'popover-motion.mjs', 'select.js', 'styling-contract.js', 'substrate.js'];
+  const kept = ['choice-context.mjs', 'collection-items.js', 'collection-trigger.js', 'control-utils.js', 'field-error.js', 'motion-components.mjs', 'motion-geometry.mjs', 'motion.mjs', 'overlay-positioning.mjs', 'popover-motion.mjs', 'select.js', 'styling-contract.js', 'substrate.js'];
   assert.deepEqual((await bundledModules('Select', 'collections.mjs')).sort(), kept);
   assert.deepEqual((await bundledModules('Select', 'index.mjs')).sort(), kept);
 });
@@ -249,7 +249,7 @@ test('a bundle that uses one control family keeps its own module and only the sh
     RadioGroup: ['choice-context.mjs', 'control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'radio-group.js', 'radio-motion.mjs', 'styling-contract.js', 'substrate.js'],
     Slider: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'read-only-guard.js', 'slider-motion.mjs', 'slider.js', 'styling-contract.js', 'substrate.js'],
     TokenField: ['control-utils.js', 'styling-contract.js', 'substrate.js', 'token-field.js'],
-    ToggleButtonGroup: ['control-utils.js', 'motion-geometry.mjs', 'motion.mjs', 'styling-contract.js', 'substrate.js', 'toggle-button-context.mjs', 'toggle-button-group-motion.mjs', 'toggle-button-group.js'],
+    ToggleButtonGroup: ['control-utils.js', 'hover-layer-motion.mjs', 'motion-geometry.mjs', 'motion.mjs', 'styling-contract.js', 'substrate.js', 'toggle-button-context.mjs', 'toggle-button-group-motion.mjs', 'toggle-button-group.js'],
     Toolbar: ['control-utils.js', 'styling-contract.js', 'substrate.js', 'toolbar.js'],
   };
   for (const [name, expected] of Object.entries(kept)) {

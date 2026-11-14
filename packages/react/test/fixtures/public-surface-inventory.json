@@ -815,5 +815,33 @@
       "partValues": []
     }
   },
-  "added": {}
+  "added": {
+    ".": {
+      "types": [
+        "ColorModeChoice",
+        "ColorModePickerProps",
+        "ThemePickerProps",
+        "ThemePickerValue"
+      ],
+      "values": [
+        "ColorModePicker",
+        "ThemePicker"
+      ],
+      "components": [
+        "ColorModePicker",
+        "ThemePicker"
+      ],
+      "parts": [],
+      "partValues": []
+    },
+    "./themes": {
+      "types": [],
+      "values": [
+        "MUXUI_THEME_ACTION_BACKGROUNDS"
+      ],
+      "components": [],
+      "parts": [],
+      "partValues": []
+    }
+  }
 }

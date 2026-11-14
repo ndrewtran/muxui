@@ -229,6 +229,11 @@ test('the part map check refuses a missing row, a duplicate, an unknown key and 
   assert.match(change('menu.list', { hookOnly: undefined }), /menu\.list: no authored rule selects muxui-menu__list and the row is not hookOnly/u);
   assert.match(change('menu.list', { hookOnly: '' }), /menu\.list: hookOnly without a reason/u);
   assert.match(change('button.root', { hookOnly: 'x' }), /button\.root: hookOnly, but an authored rule now selects muxui-button/u);
+  // A hook styled through another class names a documented hook of another family or a shared field class, on a class row that is not hookOnly too.
+  assert.match(change('switch-field.button', { styledThrough: 'muxui-bogus' }), /switch-field\.button: styledThrough muxui-bogus is neither a documented hook of another family nor a shared field class/u);
+  assert.match(change('switch-field.button', { styledThrough: undefined }), /switch-field\.button: no authored rule selects muxui-switch-field__button and the row is not hookOnly/u);
+  assert.match(change('switch-field.button', { hookOnly: 'x' }), /switch-field\.button: styledThrough names the class that styles the hook, so the row is not hookOnly/u);
+  assert.match(change('alert-dialog.root', { styledThrough: 'muxui-button' }), /alert-dialog\.root: a none row names no element/u);
   // A selector names the hook, the family root, one of the five scope classes and the recorded element predicates, and nothing else.
   assert.match(change('switch.description', { selector: '.muxui-switch-field .muxui-field-label' }), /switch\.description: selector \.muxui-switch-field \.muxui-field-label does not contain \.muxui-field-description/u);
   assert.match(change('switch.description', { selector: '.muxui-switch__label .muxui-field-description' }), /switch\.description: selector class muxui-switch__label is neither the hook, the family root nor a scope class/u);
@@ -265,7 +270,7 @@ function hookOnlyRuleFailures(css, rows) {
 test('the hookOnly fixture stylesheet has one unlayered consumer rule for each hookOnly row and no other', async () => {
   const css = await readFile(new URL('./support/hook-only.css', import.meta.url), 'utf8');
   assert.deepEqual(hookOnlyRuleFailures(css, partRows), []);
-  assert.equal(partRows.filter((row) => row.hookOnly !== undefined).length, 12);
+  assert.equal(partRows.filter((row) => row.hookOnly !== undefined).length, 13);
   // Controls: a missing rule, an extra one, a layered one, a duplicate and a rule that paints something else each fail.
   const failures = (changed, rows = partRows) => hookOnlyRuleFailures(changed, rows).join('\n');
   assert.match(failures(css.replace('.muxui-menu__list { outline-color: rgb(1, 2, 3); }\n', '')), /\.muxui-menu__list: a hookOnly row without a fixture rule/u);

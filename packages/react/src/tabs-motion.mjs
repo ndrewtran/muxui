@@ -4,6 +4,7 @@ import ChevronLeftIcon from 'lucide-react/dist/esm/icons/chevron-left.mjs';
 import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
 import ChevronUpIcon from 'lucide-react/dist/esm/icons/chevron-up.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
+import { observeHoverLayer } from './hover-layer-motion.mjs';
 import { sameGeometry } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
 import { IconButton } from './supplemental/icon-button.ts';
@@ -186,6 +187,7 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
   const reducedRef = React.useRef(false);
   const readyRef = React.useRef(false);
   const indicatorRef = React.useRef(null);
+  const hoverRef = React.useRef(null);
   const foregroundRef = React.useRef(null);
   const viewportRef = React.useRef(null);
   const contentRef = React.useRef(null);
@@ -206,6 +208,7 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
     const host = contentRef.current ?? root;
     const list = root.querySelector('.muxui-tabs__list') ?? root.querySelector('[role="tablist"]');
     const indicator = indicatorRef.current;
+    const hoverLayer = hoverRef.current;
     const foreground = foregroundRef.current;
     const scrollIsVertical = orientation === 'vertical';
     let indicatorRadius = '0px';
@@ -424,9 +427,14 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
     viewport?.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('resize', onResize);
     sync(true, true, true);
+    // The layer rides under the selected shape, so it crosses the selected tab on its way between tabs.
+    const stopHover = hoverLayer
+      ? observeHoverLayer({ root, host, layer: hoverLayer, items: () => [...root.querySelectorAll(TAB_SELECTOR)] })
+      : undefined;
 
     return () => {
       active = false;
+      stopHover?.();
       stopIndicatorAnimation();
       stopScrollAnimation();
       scrollByRef.current = null;
@@ -458,7 +466,7 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
       'aria-disabled': disabled || !edges.before || undefined,
       disabled: disabled || !edges.before,
       onActivate: () => scrollByRef.current?.(-1),
-    }, React.createElement(orientation === 'vertical' ? ChevronUpIcon : ChevronLeftIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))
+    }, React.createElement(orientation === 'vertical' ? ChevronUpIcon : ChevronLeftIcon, { className: 'muxui-tabs__scroll-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 }))
     : null;
   const afterButton = variant === 'overflow' && edges.overflow
     ? React.createElement(IconButton, {
@@ -469,9 +477,14 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
       'aria-disabled': disabled || !edges.after || undefined,
       disabled: disabled || !edges.after,
       onActivate: () => scrollByRef.current?.(1),
-    }, React.createElement(orientation === 'vertical' ? ChevronDownIcon : ChevronRightIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))
+    }, React.createElement(orientation === 'vertical' ? ChevronDownIcon : ChevronRightIcon, { className: 'muxui-tabs__scroll-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 }))
     : null;
 
+  const hover = React.createElement('span', {
+    ref: hoverRef,
+    className: 'muxui-tabs__hover',
+    'aria-hidden': 'true',
+  });
   const indicator = React.createElement('span', {
     ref: indicatorRef,
     className: 'muxui-tabs__motion-underline',
@@ -488,8 +501,8 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
   });
   const content = variant === 'overflow'
     ? React.createElement('div', { ref: viewportRef, id: `${instanceId}-viewport`, className: 'muxui-tabs__motion-overflow-viewport' },
-      React.createElement('div', { ref: contentRef, className: 'muxui-tabs__motion-overflow-content' }, children, indicator, foreground))
-    : React.createElement(React.Fragment, null, children, indicator, foreground);
+      React.createElement('div', { ref: contentRef, className: 'muxui-tabs__motion-overflow-content' }, children, hover, indicator, foreground))
+    : React.createElement(React.Fragment, null, children, hover, indicator, foreground);
 
   return React.createElement('div', {
     ref: setRoot,

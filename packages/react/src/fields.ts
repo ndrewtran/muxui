@@ -12,9 +12,8 @@ import type {
   RefAttributes,
   RefObject,
 } from 'react';
-import { animate } from 'motion/react';
 import { CalendarHeightMotion } from './calendar-height-motion.mjs';
-import { Autocomplete as AriaAutocomplete, CalendarGrid as AriaCalendarGrid, CalendarGridBody as AriaCalendarGridBody, CalendarGridHeader as AriaCalendarGridHeader, CalendarHeaderCell as AriaCalendarHeaderCell, CalendarHeading as AriaCalendarHeading, Dialog as AriaDialog, FieldError as AriaFieldError, Form as AriaForm, InputContext as AriaInputContext, Label as AriaLabel, Text as AriaText } from 'react-aria-components';
+import { Autocomplete as AriaAutocomplete, CalendarGrid as AriaCalendarGrid, CalendarGridBody as AriaCalendarGridBody, CalendarGridHeader as AriaCalendarGridHeader, CalendarHeaderCell as AriaCalendarHeaderCell, CalendarHeading as AriaCalendarHeading, DateFieldContext as AriaDateFieldContext, DatePickerContext as AriaDatePickerContext, DateRangePickerContext as AriaDateRangePickerContext, Dialog as AriaDialog, Form as AriaForm, InputContext as AriaInputContext, Label as AriaLabel, Text as AriaText, TimeFieldContext as AriaTimeFieldContext } from 'react-aria-components';
 import { AriaCalendar, AriaCalendarCell, AriaCheckboxGroup, AriaDateField, AriaDateInput, AriaDatePicker, AriaDateRangePicker, AriaDateSegment, AriaGroup, AriaInput, AriaListBox, AriaListBoxItem, AriaNumberField, AriaRangeCalendar, AriaSearchField, AriaSwitchButton, AriaSwitchField, AriaTextField, AriaTimeField } from './substrate.ts';
 import type { DateValue, FormProps as AriaFormProps, InputProps as AriaInputProps, Key, TimeValue } from 'react-aria-components';
 import { parseDate, parseTime } from '@internationalized/date';
@@ -26,10 +25,11 @@ import PlusIcon from 'lucide-react/dist/esm/icons/plus.mjs';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 import { DatePopoverMotion } from './date-popover-motion.mjs';
-import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { RangeSelectionMotion } from './range-selection-motion.mjs';
+import { SwitchMotionIndicator } from './switch-motion.ts';
 import { IconButton } from './supplemental/icon-button.ts';
+import { FieldErrorText, lateErrorScope } from './field-error.ts';
 import type { IconButtonProps } from './supplemental/icon-button.ts';
 
 // React Aria hands the attributes its types do not name, such as the data-* hooks the styles read,
@@ -517,7 +517,6 @@ type DiscardedDateRangeProps = DiscardedDateProps & { allowsNonContiguousRanges?
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
 const TIME_PLACEHOLDER = /*#__PURE__*/ parseTime('00:00');
-const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const MUX_RUNTIME_SCOPE_SELECTOR = /*#__PURE__*/ [
   '[data-muxui-color-scheme]',
   '[data-muxui-contrast]',
@@ -535,116 +534,6 @@ function autocompletePortalContainer(input: Element | null) {
 
 function classNames(base: string | undefined, className?: unknown) {
   return [base, className].filter(Boolean).join(' ');
-}
-
-function readTransform(node: Element) {
-  if (typeof window === 'undefined') return 'none';
-  return window.getComputedStyle(node).transform || 'none';
-}
-
-interface SwitchMotionIndicatorProps {
-  isSelected: boolean;
-  isPressed: boolean;
-  isDisabled: boolean;
-  isReadOnly: boolean;
-}
-
-function SwitchMotionIndicator({ isSelected, isPressed, isDisabled, isReadOnly }: SwitchMotionIndicatorProps) {
-  const indicatorRef = React.useRef<HTMLSpanElement>(null);
-  const controlsRef = React.useRef<ReturnType<typeof animate> | null>(null);
-  const settledTransformRef = React.useRef<string | null>(null);
-  const previousStateRef = React.useRef<{ isSelected: boolean; isPressed: boolean; blocked: boolean } | null>(null);
-  const [reduced, setReduced] = React.useState(false);
-  const blocked = isDisabled || isReadOnly;
-
-  useIsomorphicLayoutEffect(() => () => {
-    const controls = controlsRef.current;
-    controlsRef.current = null;
-    controls?.stop();
-    indicatorRef.current?.style.removeProperty('transform');
-  }, []);
-
-  React.useEffect(() => {
-    const node = indicatorRef.current;
-    if (!node) return undefined;
-    return observeReducedMotion(node, node.parentElement, (nextReduced) => {
-      setReduced(nextReduced);
-      if (!nextReduced) return;
-      const controls = controlsRef.current;
-      controlsRef.current = null;
-      controls?.cancel();
-      node.style.removeProperty('transform');
-      settledTransformRef.current = readTransform(node);
-    });
-  }, []);
-
-  useIsomorphicLayoutEffect(() => {
-    const node = indicatorRef.current;
-    if (!node) return undefined;
-    const nextState = {
-      isSelected: Boolean(isSelected),
-      isPressed: Boolean(isPressed),
-      blocked: Boolean(blocked),
-    };
-    const previousState = previousStateRef.current;
-    previousStateRef.current = nextState;
-    if (!previousState) {
-      settledTransformRef.current = readTransform(node);
-      return undefined;
-    }
-
-    const controls = controlsRef.current;
-    const interruptedTransform = controls ? readTransform(node) : settledTransformRef.current;
-    controlsRef.current = null;
-    controls?.stop();
-    node.style.removeProperty('transform');
-
-    if (reduced || blocked) {
-      settledTransformRef.current = readTransform(node);
-      return undefined;
-    }
-
-    const targetTransform = readTransform(node);
-    const fromTransform = interruptedTransform || targetTransform;
-    settledTransformRef.current = targetTransform;
-    if (fromTransform === targetTransform) return undefined;
-
-    const transition = resolvedMotionSpring(node, node.parentElement, 'state', 'interaction');
-    if (!transition) return undefined;
-
-    node.style.transform = fromTransform;
-    let active = true;
-    const complete = () => {
-      if (!active || controlsRef.current !== nextControls) return;
-      requestAnimationFrame(() => {
-        if (!active || controlsRef.current !== nextControls) return;
-        controlsRef.current = null;
-        node.style.removeProperty('transform');
-        settledTransformRef.current = targetTransform;
-      });
-    };
-    const nextControls = animate(node, { transform: [fromTransform, targetTransform] }, transition);
-    controlsRef.current = nextControls;
-    nextControls.then(() => {
-      complete();
-    });
-
-    return () => {
-      active = false;
-      if (controlsRef.current !== nextControls) return;
-      settledTransformRef.current = readTransform(node);
-      controlsRef.current = null;
-      nextControls.stop();
-    };
-  }, [blocked, isPressed, isSelected, reduced]);
-
-  return React.createElement('span', {
-    ref: indicatorRef,
-    className: 'muxui-switch__indicator',
-    'aria-hidden': 'true',
-    'data-muxui-state-selected': isSelected || undefined,
-    'data-muxui-motion-pressed': isPressed && !blocked && !reduced ? '' : undefined,
-  });
 }
 
 // TextField and SearchField own the field semantics and their serialized value.
@@ -729,7 +618,7 @@ function fieldDescription(description: ReactNode) {
 }
 
 function fieldError(errorMessage: ReactNode) {
-  return React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage);
+  return React.createElement(FieldErrorText, { className: 'muxui-field-error' }, errorMessage);
 }
 
 // Keep the calendar geometry Mux UI-owned instead of importing a newer glyph.
@@ -762,14 +651,19 @@ interface FieldChildrenParts {
   input?: ReactNode;
 }
 
-function fieldChildren({ label, description, errorMessage, children, input }: FieldChildrenParts) {
-  return React.createElement(React.Fragment, null,
-    fieldLabel(label),
-    input,
-    children,
-    fieldDescription(description),
-    fieldError(errorMessage),
-  );
+function fieldParts({ label, description, errorMessage, children, input }: FieldChildrenParts): ReactNode[] {
+  return [fieldLabel(label), input, children, fieldDescription(description), fieldError(errorMessage)];
+}
+
+// The scope adds an error that appears after the field mounted to the aria-describedby React Aria gives the input.
+function fieldChildren(parts: FieldChildrenParts) {
+  return lateErrorScope(AriaInputContext, ...fieldParts(parts));
+}
+
+// A date or time field or picker describes its group and segments, not an input, from its root's props, so its scope
+// (lateErrorScope with the root's own context) sits outside the root.
+function fieldRootChildren(parts: FieldChildrenParts) {
+  return React.createElement(React.Fragment, null, ...fieldParts(parts));
 }
 
 // RAC's named validation context covers its own field serialization. These
@@ -1102,7 +996,7 @@ export const SearchField: ForwardRefExoticComponent<SearchFieldProps & RefAttrib
           ref: inputRef,
         }),
       }),
-      React.createElement(IconButton, { slot: 'clear', type: 'button', className: 'muxui-search-field__clear', 'aria-label': 'Clear search' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
+      React.createElement(IconButton, { slot: 'clear', type: 'button', className: 'muxui-search-field__clear', 'aria-label': 'Clear search' }, React.createElement(XIcon, { className: 'muxui-search-field__clear-icon', 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
   }));
 });
 
@@ -1154,9 +1048,9 @@ export const NumberField: ForwardRefExoticComponent<NumberFieldProps & RefAttrib
     description,
     errorMessage,
     input: React.createElement(AriaGroup, { className: 'muxui-number-field__control' },
-      React.createElement(StepperButton, { slot: 'decrement', type: 'button', className: 'muxui-number-field__stepper muxui-number-field__decrement' }, React.createElement(MinusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })),
+      React.createElement(StepperButton, { slot: 'decrement', type: 'button', className: 'muxui-number-field__stepper muxui-number-field__decrement' }, React.createElement(MinusIcon, { className: 'muxui-number-field__stepper-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 })),
       React.createElement(AriaInput, { className: 'muxui-field-input' }),
-      React.createElement(StepperButton, { slot: 'increment', type: 'button', className: 'muxui-number-field__stepper muxui-number-field__increment' }, React.createElement(PlusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
+      React.createElement(StepperButton, { slot: 'increment', type: 'button', className: 'muxui-number-field__stepper muxui-number-field__increment' }, React.createElement(PlusIcon, { className: 'muxui-number-field__stepper-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
   }));
 });
 
@@ -1324,7 +1218,7 @@ export const DateField: ForwardRefExoticComponent<DateFieldProps & RefAttributes
   const parsedValue = React.useMemo(() => controlledTemporal(value, dateOrUndefined), [value]);
   const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
   const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-  return React.createElement(AriaDateField, {
+  return lateErrorScope(AriaDateFieldContext, React.createElement(AriaDateField, {
     ...props,
     ref,
     ...validationProps({ disabled, readOnly, required, invalid }),
@@ -1339,7 +1233,7 @@ export const DateField: ForwardRefExoticComponent<DateFieldProps & RefAttributes
     ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({ label, description, errorMessage, input: dateInput() }));
+  }, fieldRootChildren({ label, description, errorMessage, input: dateInput() })));
 });
 
 DateField.displayName = 'DateField';
@@ -1389,7 +1283,7 @@ export const TimeField: ForwardRefExoticComponent<TimeFieldProps & RefAttributes
   // Mux owns TimeField state, so RAC always receives a controlled value.
   const submittedValue = value !== undefined ? serializeTimeValue(parsedValue) : formValue;
   const effectiveParsedValue = React.useMemo(() => timeOrUndefined(submittedValue) ?? null, [submittedValue]);
-  return React.createElement(AriaTimeField, {
+  return lateErrorScope(AriaTimeFieldContext, React.createElement(AriaTimeField, {
     ...props,
     ref,
     ...validationProps({ disabled, readOnly, required, invalid: invalid ? invalid : externalValidation.isInvalid }),
@@ -1405,15 +1299,15 @@ export const TimeField: ForwardRefExoticComponent<TimeFieldProps & RefAttributes
     ...{ 'data-muxui-size': resolvedSize },
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({
+  }, fieldRootChildren({
     label,
     description,
     errorMessage: effectiveErrorMessage,
     input: dateInput(),
     children: React.createElement(React.Fragment, null,
       formResetAnchor(resetInputRef),
-      name ? React.createElement('input', { type: 'hidden', name, value: submittedValue ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
-  }));
+      name ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name, value: submittedValue ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
+  })));
 });
 
 TimeField.displayName = 'TimeField';
@@ -1451,7 +1345,7 @@ export const DatePicker: ForwardRefExoticComponent<DatePickerProps & RefAttribut
     const parsedValue = React.useMemo(() => controlledTemporal(value, dateOrUndefined), [value]);
     const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
     const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-    return React.createElement(AriaDatePicker, {
+    return lateErrorScope(AriaDatePickerContext, React.createElement(AriaDatePicker, {
       ...props,
       ref,
       ...validationProps({ disabled, readOnly, required, invalid }),
@@ -1469,13 +1363,13 @@ export const DatePicker: ForwardRefExoticComponent<DatePickerProps & RefAttribut
       ...{ 'data-muxui-size': resolvedSize },
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
-    }, fieldChildren({
+    }, fieldRootChildren({
       label,
       description,
       errorMessage,
       input: React.createElement(AriaGroup, { className: 'muxui-date-picker__control' }, dateInput(), React.createElement(IconButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
       children: datePopover(),
-    }));
+    })));
   });
   component.displayName = 'DatePicker';
   return component;
@@ -1537,7 +1431,7 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
     const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue) ?? null, [formValue?.start, formValue?.end]);
     // Mux owns range state, so RAC always receives a controlled value.
     const effectiveValueObject = value !== undefined ? parsedValue : parsedFormValue;
-    return React.createElement(AriaDateRangePicker, {
+    return lateErrorScope(AriaDateRangePickerContext, React.createElement(AriaDateRangePicker, {
       ...props,
       ref,
       ...validationProps({ disabled, readOnly, required, invalid: invalid ? invalid : externalValidation.isInvalid }),
@@ -1555,7 +1449,7 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
       ...{ 'data-muxui-size': resolvedSize },
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
-    }, fieldChildren({
+    }, fieldRootChildren({
       label,
       description,
       errorMessage: effectiveErrorMessage,
@@ -1575,9 +1469,9 @@ export const DateRangePicker: ForwardRefExoticComponent<DateRangePickerProps & R
       children: React.createElement(React.Fragment, null,
         rangeDatePopover(triggerRef),
         formResetAnchor(resetInputRef),
-        startName ? React.createElement('input', { type: 'hidden', name: startName, value: submittedValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
-        endName ? React.createElement('input', { type: 'hidden', name: endName, value: submittedValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
-    }));
+        startName ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name: startName, value: submittedValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
+        endName ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name: endName, value: submittedValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
+    })));
   });
   component.displayName = 'DateRangePicker';
   return component;
@@ -1884,7 +1778,7 @@ export const Autocomplete: ForwardRefExoticComponent<AutocompleteProps & RefAttr
           if (event.key === 'ArrowDown') setIsOpen(!disabled);
         },
       }),
-      children: name ? React.createElement('input', { type: 'hidden', name, value: submittedValue, disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
+      children: name ? React.createElement('input', { className: 'muxui-form__value', type: 'hidden', name, value: submittedValue, disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
     })),
     React.createElement(PopoverMotion, {
       ref: setPopoverRef,

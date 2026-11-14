@@ -324,10 +324,10 @@ test('every family Docs page lists its parts and related exports and shows each 
     parts += partNodes(page).length;
     rows += page.querySelectorAll('.muxui-docs-reference tr[data-prop]').length;
   }
-  assert.equal(manifest.families.length, 84);
-  // The reference holds 211 parts in 109 component, function and value exports, and every one is on its family's page.
-  assert.equal(parts, 211);
-  assert.ok(rows > 1000, `the 84 pages show ${rows} rows`);
+  assert.equal(manifest.families.length, 86);
+  // The reference holds 213 parts in 112 component, function and value exports, and every one is on its family's page.
+  assert.equal(parts, 213);
+  assert.ok(rows > 1000, `the 86 pages show ${rows} rows`);
 });
 
 test('every rendered default is the catalog\'s, every executed catalog default is shown, and an authored one says so', async () => {
@@ -714,8 +714,8 @@ const allPages = async () => Promise.all(manifest.families.map(async (record) =>
 test('every export and part of the package is on exactly one Docs page or in the reference files the pages point to, against the public surface inventory', async () => {
   const { problems, count, held } = coverageProblems(await allPages());
   assert.deepEqual(problems, []);
-  assert.equal(held, 35, 'the 11 package-level exports and the 24 shared types');
-  assert.equal(count + held, 318 + 109 + 132, 'the 318 types, 109 values and 132 parts of the public surface');
+  assert.equal(held, 36, 'the 12 package-level exports and the 24 shared types');
+  assert.equal(count + held, 322 + 112 + 132, 'the 322 types, 112 values and 132 parts of the public surface');
 });
 
 test('each Docs page points to the two reference files that hold the package-level exports and the shared types', async () => {

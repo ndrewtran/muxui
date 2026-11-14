@@ -83,6 +83,7 @@ export const ColorSwatchPicker: ForwardRefExoticComponent<ColorSwatchPickerProps
   return React.createElement(
     'div',
     {
+      className: 'muxui-color-swatch-picker__field',
       'aria-disabled': effectiveDisabled || undefined,
       // The styles read these data attributes, which React's props do not name, and TypeScript accepts such a key in a call only from a spread.
       ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'data-muxui-state-read-only': effectiveReadOnly || undefined },

@@ -448,3 +448,76 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
     await close();
   }
 });
+
+// React Aria marks a required Checkbox invalid when a blocked submit reports it, unless the component tells it the
+// Checkbox is controlled-valid. Native validation runs only in a real browser, so this is a browser test: the blocked
+// submit must give the plain Checkbox aria-invalid, the invalid state attribute and the invalid edge, as it does
+// CheckboxField, ticking it must clear all three, and an explicit invalid must still show.
+test('a required Checkbox is marked invalid after a blocked submit and clears once ticked', { timeout: 120_000 }, async () => {
+  const entry = `import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { Checkbox } from '/src/components.ts';
+    import { Form } from '/src/fields.ts';
+    import '/generated/styles.css';
+    const h = React.createElement;
+    window.__submits = 0;
+    function App() {
+      // The explicitly invalid Checkbox sits outside the form: React Aria gives it a custom validity, which would block the submit.
+      return h('main', { 'data-required-fixture': true },
+        h(Form, { onSubmit: (event) => { event.preventDefault(); window.__submits += 1; } },
+          h(Checkbox, { 'data-testid': 'required', name: 'terms', required: true }, 'Accept the terms'),
+          h('button', { type: 'submit' }, 'Send')),
+        h(Checkbox, { 'data-testid': 'flagged', name: 'flagged', invalid: true }, 'Flagged'));
+    }
+    createRoot(document.getElementById('root')).render(h(App));`;
+  const html = pageShell({ head: '<style>body { margin: 24px; background: var(--muxui-semantic-surface-canvas); }</style>', body: '<div id="root"></div>', entry: '/checkbox-required-entry.mjs' });
+  const { url, close } = await startServer({
+    entries: ['src/components.ts', 'src/fields.ts'],
+    pages: { '/checkbox-required.html': html },
+    modules: { '/checkbox-required-entry.mjs': entry },
+  });
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const page = await browser.newPage({ viewport: { width: 600, height: 400 } });
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(`${url}/checkbox-required.html`, { waitUntil: 'load' });
+    await page.locator('[data-required-fixture]').waitFor();
+    await awaitFontsAndFrames(page);
+    const invalidEdge = (await resolvedTokenPaint(page, '--muxui-semantic-feedback-invalid-border')).borderColor;
+    const state = (testId) => page.locator(`[data-testid="${testId}"]`).evaluate(async (label) => {
+      const indicator = label.querySelector('.muxui-checkbox__indicator');
+      await Promise.all(indicator.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+      return {
+        ariaInvalid: label.querySelector('input').getAttribute('aria-invalid'),
+        invalid: label.getAttribute('data-muxui-state-invalid'),
+        edge: getComputedStyle(indicator).borderColor,
+      };
+    });
+    const marked = { ariaInvalid: 'true', invalid: 'true', edge: invalidEdge };
+
+    const before = await state('required');
+    assert.deepEqual([before.ariaInvalid, before.invalid], [null, null], 'a required Checkbox starts unmarked');
+    assert.notEqual(before.edge, invalidEdge, 'and without the invalid edge');
+    assert.deepEqual(await state('flagged'), marked, 'an explicit invalid marks the Checkbox');
+
+    await page.getByRole('button', { name: 'Send' }).click();
+    assert.equal(await page.evaluate(() => window.__submits), 0, 'the unticked required Checkbox blocks the submit');
+    // React Aria commits the reported validity in an effect after the invalid event, so wait for it before reading.
+    await page.locator('[data-testid="required"][data-muxui-state-invalid]').waitFor({ timeout: 5_000 }).catch(() => undefined);
+    assert.deepEqual(await state('required'), marked, 'the blocked submit marks it invalid, with its invalid edge');
+
+    await page.locator('[data-testid="required"]').click();
+    await page.locator('[data-testid="required"]:not([data-muxui-state-invalid])').waitFor({ timeout: 5_000 }).catch(() => undefined);
+    const ticked = await state('required');
+    assert.deepEqual([ticked.ariaInvalid, ticked.invalid], [null, null], 'ticking it clears the invalid state');
+    assert.notEqual(ticked.edge, invalidEdge, 'and the invalid edge');
+    await page.getByRole('button', { name: 'Send' }).click();
+    assert.equal(await page.evaluate(() => window.__submits), 1, 'the ticked Checkbox submits');
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser?.close();
+    await close();
+  }
+});

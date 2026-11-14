@@ -2585,7 +2585,7 @@
       "alias": "semantic.content.muted",
       "modes": {
         "colorScheme.dark": {
-          "alias": "semantic.color.neutral-default-50"
+          "alias": "semantic.color.neutral-default-40"
         }
       }
     },
@@ -2612,6 +2612,32 @@
       "modes": {
         "colorScheme.dark": {
           "alias": "semantic.color.neutral-default-92"
+        }
+      }
+    },
+    "component.tabs.selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of the selected tab in pill, segment, and overflow tabs; both schemes use their lightest neutral.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-5",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-100"
+        }
+      }
+    },
+    "component.tabs.selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label color of the selected tab in pill, segment, and overflow tabs, paired with its fill.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-5-fg",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-100-fg"
         }
       }
     },

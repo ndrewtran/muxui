@@ -1,5 +1,6 @@
 import React from 'react';
 import { Switch } from '../../src/fields.ts';
+import { SwitchField } from '../../src/supplemental/switch-field.ts';
 
 export function SwitchMotionFixture() {
   const [selected, setSelected] = React.useState(false);
@@ -14,5 +15,8 @@ export function SwitchMotionFixture() {
       React.createElement(Switch, { label: 'Disabled on', defaultSelected: true, disabled: true })),
     React.createElement('div', { id: 'readonly-switch' },
       React.createElement(Switch, { label: 'Read only', defaultSelected: true, readOnly: true })),
+    React.createElement('div', { id: 'primary-field' },
+      React.createElement(SwitchField.Root, null,
+        React.createElement(SwitchField.Button, null, React.createElement(SwitchField.Thumb), 'Field notifications'))),
   );
 }

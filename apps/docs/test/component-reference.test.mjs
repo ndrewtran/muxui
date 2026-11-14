@@ -366,7 +366,7 @@ test('every family of the compiled catalog gets its styling from the facts, the 
   const facts = await readStylingFacts(repositoryRoot);
   const packageReactFacts = readReactPackageFacts(repositoryRoot);
   const slugs = readdirSync(resolve(repositoryRoot, 'catalog/components'), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);
-  assert.equal(slugs.length, 84);
+  assert.equal(slugs.length, 86);
   for (const slug of slugs) {
     const response = catalog.getArtifact({ platform: 'web.react', detail: 'full', id: `muxui:component:${slug}` });
     assert.equal(response.type, 'artifact.detail');

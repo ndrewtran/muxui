@@ -1,4 +1,4 @@
-// The generated recipe (CSS Stage 2 PR 4a): copyable CSS for each of the 84 families, and the static proof that it is valid. Every
+// The generated recipe (CSS Stage 2 PR 4a): copyable CSS for each of the 86 families, and the static proof that it is valid. Every
 // recipe is checked against facts it was not derived from (the README's own text, the family's Hooks and token rows, a jsdom parse of
 // the Basic example), then two stylesheet mutants show the checks have teeth. That the changes work in a browser is the Chromium
 // test's job (browser/styling-recipes.test.mjs); this file proves what is true for every family without one.
@@ -163,11 +163,11 @@ const basicDocument = (slug) => new JSDOM(observations.find(({ family, source })
 const documentedHooks = (slug) => all.get(slug).hooks.groups.flatMap(({ rows }) => rows).filter(({ kind, hook }) => kind === 'class' && hook !== null).map(({ hook }) => hook);
 
 // ---------------------------------------------------------------------------------------------------------------------------
-// All 84 families.
+// All 86 families.
 // ---------------------------------------------------------------------------------------------------------------------------
 
-test('all 84 recipes are valid: the README\'s layer statement, wrapper-scoped rules, theme roles with a reader, real hooks and observed targets', () => {
-  assert.equal(slugs.length, 84);
+test('all 86 recipes are valid: the README\'s layer statement, wrapper-scoped rules, theme roles with a reader, real hooks and observed targets', () => {
+  assert.equal(slugs.length, 86);
   const failures = slugs.flatMap((slug) => failuresOf(slug));
   assert.deepEqual(failures, []);
   // Each family has a Basic example to take targets from.
@@ -204,15 +204,15 @@ test('the picks: which families get a token step and which of their roles, how m
   });
   // A family with roles and no token step says why, and the reason is the one that holds: Activity's only role is a transition, which is
   // never a step; for seven others no rule that reads a color or size role matches an element the Basic example renders (checked against
-  // the example by jsdom in the notes test below); and for DataDiff, Switch, Tabs and TextField the roles are ones the recipe leaves out.
+  // the example by jsdom in the notes test below); and for DataDiff, Switch, SwitchField, Tabs and TextField the roles are ones the recipe leaves out.
   const reachless = slugs.filter((slug) => all.get(slug).tokens.groups.some(({ id }) => id === 'component') && declarations(slug, 'token').length === 0);
-  assert.deepEqual(reachless, ['activity', 'code-block', 'data-diff', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar', 'switch', 'tabs', 'text-field']);
+  assert.deepEqual(reachless, ['activity', 'code-block', 'data-diff', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar', 'switch', 'switch-field', 'tabs', 'text-field']);
   const tokenNote = (slug) => all.get(slug).recipe.notes.find((note) => note.startsWith('No token step:'));
   const droppedNote = (slug) => all.get(slug).recipe.notes.find((note) => note.startsWith('No token step for '));
   assert.equal(tokenNote('activity'), 'No token step: Activity has no color or size role that a Mux rule reads.');
   const roles = (slug) => all.get(slug).tokens.groups.flatMap(({ id, rows }) => (id === 'component' ? rows : []));
   assert.deepEqual(roles('activity').map(({ type }) => type), ['transition']);
-  const leftOut = ['data-diff', 'switch', 'tabs', 'text-field'];
+  const leftOut = ['data-diff', 'switch', 'switch-field', 'tabs', 'text-field'];
   for (const slug of reachless.filter((candidate) => !['activity', ...leftOut].includes(candidate))) {
     assert.match(tokenNote(slug), /^No token step: no rule that reads [A-Za-z]+'s color or size roles matches an element its Basic example renders \(for example .+\), so a role assigned on a wrapper would change nothing there\.$/u, slug);
     assert.equal(droppedNote(slug), undefined, slug);
@@ -234,11 +234,11 @@ test('the picks: which families get a token step and which of their roles, how m
     'No token step for --muxui-component-switch-selected-thumb (background-color of .muxui-switch[data-muxui-state-selected] .muxui-switch__indicator): it paints a part that holds no text, and the generator cannot tell what that part is drawn on (a track, a fill or the page), so it cannot choose a color that stands apart from it in both schemes.',
   ]);
   // A family that keeps another step still says which role it left out; the rest say nothing of the kind.
-  assert.deepEqual(slugs.filter((slug) => droppedNote(slug) !== undefined), ['data-diff', 'disclosure-group', 'switch', 'tabs', 'tag-group', 'text-field']);
+  assert.deepEqual(slugs.filter((slug) => droppedNote(slug) !== undefined), ['data-diff', 'disclosure-group', 'switch', 'switch-field', 'tabs', 'tag-group', 'text-field']);
   for (const slug of Object.keys(tokens)) assert.equal(tokenNote(slug), undefined, `${slug} has a token step and no such note`);
   assert.deepEqual(slugs.filter((slug) => all.get(slug).recipe.steps.length === 0), [], 'every family has a nonempty recipe');
   const steps = slugs.flatMap((slug) => all.get(slug).recipe.steps);
-  assert.deepEqual(['token', 'part', 'state'].map((kind) => steps.filter((step) => step.kind === kind).length), [10, 84, 54]);
+  assert.deepEqual(['token', 'part', 'state'].map((kind) => steps.filter((step) => step.kind === kind).length), [10, 86, 56]);
   assert.equal(steps.filter((step) => step.scope === 'unavailable').length, 41);
   assert.deepEqual(slugs.filter((slug) => !all.get(slug).recipe.preview), ['dialog', 'preview-trigger', 'toast', 'tooltip']);
 });
@@ -285,7 +285,7 @@ test('the recipe targets the Basic example, which is the first one, and not anot
 // The cascade model: what a pseudo-class is at rest, and what an order or a condition decides.
 // ---------------------------------------------------------------------------------------------------------------------------
 
-test('a selector at rest is true, false or unknown: interaction pseudo-classes are false, and unknown stays unknown through :not(), :is(), :where() and :has()', () => {
+test('a selector at rest is true, false or unknown: interaction pseudo-classes are false, :has() of one compound and :checked are decided, and unknown stays unknown through :not(), :is(), :where() and :has()', () => {
   const element = parseObservation('<div class="x"></div>').elements[0];
   const at = (selector) => matchAtRest(parseSelectorList(selector)[0], element);
   for (const [selector, expected] of [
@@ -295,9 +295,16 @@ test('a selector at rest is true, false or unknown: interaction pseudo-classes a
     ['.x:not(:hover)', true], ['.x:not(:focus-visible)', true], ['.x:not(.y)', true], ['.x:not(.x)', false],
     ['.x:not(:disabled)', null], ['.x:not(.y, :disabled)', null], ['.x:not(.x, :disabled)', false], ['.x:not(:not(:disabled))', null],
     ['.x:is(:disabled, .x)', true], ['.x:is(:disabled, .y)', null], ['.x:is(.y, :hover)', false], ['.x:where(:disabled)', null], ['.x:where(.x)', true],
-    ['.x:has(.y)', null], ['.x:not(:has(.y))', null], ['.x:is(:has(.y), .z)', null],
+    ['.x:has(.y)', false], ['.x:not(:has(.y))', true], ['.x:is(:has(.y), .z)', false],
+    ['.x:has(+ .y)', null], ['.x:has(.y .z)', null], ['.x:has(.y:disabled)', false],
     [':where(.x):not([data-muxui-state-invalid])', true],
   ]) assert.equal(at(selector), expected, selector);
+  // :has() of one compound looks at the descendants, or the children for >, and :checked at an input's checked attribute.
+  const box = parseObservation('<label class="x"><span><input type="checkbox" checked=""></span><i class="y"></i></label>').elements[0];
+  for (const [selector, expected] of [
+    ['.x:has(input:checked)', true], ['.x:has(input:not(:checked))', false], ['.x:has(> input)', false], ['.x:has(> .y)', true],
+    ['.x:has(input:focus-visible)', false], ['.x:has(input:disabled)', null], ['.x:has(.z, input:checked)', true],
+  ]) assert.equal(matchAtRest(parseSelectorList(selector)[0], box), expected, selector);
   assert.equal(matchAtRest(parseSelectorList(':where(.x):not([data-muxui-state-invalid])')[0], parseObservation('<div class="x" data-muxui-state-invalid=""></div>').elements[0]), false);
 });
 

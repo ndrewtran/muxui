@@ -271,6 +271,28 @@ export const clientFixtures = [
     }],
   },
   {
+    // The document's own nodes: the host-independence guard holds their typography to the editor's, not to the host's element rules.
+    family: 'text-editor', name: 'TextEditor with a document', state: 'document',
+    element: ({ h, TextEditor }) => {
+      const text = (value, ...types) => ({ type: 'text', text: value, ...(types.length ? { marks: types.map((type) => ({ type })) } : {}) });
+      const paragraph = (...content) => ({ type: 'paragraph', content });
+      const item = (value) => ({ type: 'listItem', content: [paragraph(text(value))] });
+      return h(TextEditor, {
+        label: 'Draft', toolbar: false,
+        defaultValue: { type: 'doc', content: [
+          { type: 'heading', attrs: { level: 1 }, content: [text('Heading one')] },
+          { type: 'heading', attrs: { level: 2 }, content: [text('Heading two')] },
+          paragraph(text('Plain text, '), text('bold', 'bold'), text(', '), text('italic', 'italic'), text(', '), text('underlined', 'underline'), text(' and '), text('code', 'code'), text('.')),
+          { type: 'bulletList', content: [item('First'), item('Second')] },
+          { type: 'orderedList', content: [item('One'), item('Two')] },
+          { type: 'blockquote', content: [paragraph(text('Quoted text'))] },
+          { type: 'codeBlock', content: [text('const answer = 42;')] },
+          { type: 'horizontalRule' },
+        ] },
+      });
+    },
+  },
+  {
     family: 'text-editor', name: 'TextEditor color popup', state: 'open',
     element: ({ h, TextEditor }) => h(TextEditor, { label: 'Draft', toolbar: 'advanced' }),
     steps: [({ window, document }) => press(window, find(document, '[aria-label="Text color"]'))],
@@ -284,6 +306,10 @@ export const clientFixtures = [
  * @type {Readonly<Record<string, { name: string, element: (lib: any) => any }>>}
  */
 export const hookOnlyFixtures = {
+  'color-mode-picker.root': {
+    name: 'ColorModePicker',
+    element: ({ h, M }) => h(M.ColorModePicker),
+  },
   'lightbox.root': {
     name: 'Lightbox open',
     element: ({ h, M }) => h(M.Lightbox, { items: [{ key: 'one', label: 'One' }], defaultOpen: true, renderContent: (item) => h('p', null, item.label) },

@@ -36,14 +36,23 @@ export function captured(render) {
 /**
  * Server-renders every canonical example of the given catalog families, in family and file order.
  * `source` is the repository-relative example file; `owned` is the Mux classes the example styles for itself in a <style> block.
+ * With `markCallerElements`, every native element the example's own JSX creates carries `data-caller` (see
+ * caller-marked-jsx-runtime.mjs), so the markup tells caller content from what a component renders. The option changes the markup, so
+ * only the test that asks for it should, and once per process: the modules are cached.
  * @param {readonly string[]} slugs The catalog family slugs.
+ * @param {{ markCallerElements?: boolean }} [options]
  * @returns {Promise<{ family: string, name: string, source: string, html: string, errors: string[], owned: Set<string> }[]>}
  */
-export async function renderCatalogExamples(slugs) {
+export async function renderCatalogExamples(slugs, { markCallerElements = false } = {}) {
   const anchor = pathToFileURL(resolve(packageRoot, 'test/anchor.mjs')).href;
   const catalogUrl = pathToFileURL(resolve(repositoryRoot, 'catalog')).href;
+  const markedRuntime = pathToFileURL(resolve(import.meta.dirname, 'caller-marked-jsx-runtime.mjs')).href;
   const hooks = registerHooks({
-    resolve: (specifier, context, next) => next(specifier, context.parentURL?.startsWith(catalogUrl) && !/^[./]/u.test(specifier) ? { ...context, parentURL: anchor } : context),
+    resolve(specifier, context, next) {
+      const fromCatalog = context.parentURL?.startsWith(catalogUrl);
+      if (markCallerElements && fromCatalog && specifier === 'react/jsx-runtime') return { url: markedRuntime, shortCircuit: true };
+      return next(specifier, fromCatalog && !/^[./]/u.test(specifier) ? { ...context, parentURL: anchor } : context);
+    },
     load(url, context, next) {
       if (!url.endsWith('.tsx') || !url.startsWith(catalogUrl)) return next(url, context);
       const source = ts.transpileModule(readFileSync(fileURLToPath(url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;

@@ -429,6 +429,9 @@
   font-weight: var(--muxui-semantic-typography-body-weight);
 }
 /* MuxUI component source: switch.css */
+/* SwitchField.Button and SwitchField.Thumb carry .muxui-switch and .muxui-switch__indicator too, so this block is the
+   switch of both families and a second copy of it would drift. The rules elsewhere that name .muxui-switch (disabled
+   opacity, forced colours, the hover wash and focus ring in this file) reach SwitchField the same way. */
 .muxui-switch {
   --muxui-component-switch-track-width: 2.5rem;
   --muxui-component-switch-track-height: 1.375rem;
@@ -445,6 +448,7 @@
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
+  line-height: var(--muxui-semantic-typography-text-line-height);
   cursor: pointer;
   outline: none;
   flex-shrink: 0;
@@ -574,6 +578,43 @@
   --muxui-switch-indicator-scale-x: 1;
   --muxui-switch-indicator-scale-y: 1;
 }
+/* Forced colours paint the track and the thumb the same Canvas, so a switch would show no state. The thumb takes the
+   text colour, an on switch a Highlight track with a HighlightText thumb, and a disabled one GrayText on Canvas, its
+   thumb's place being its state. On follows the native input, which React keeps in step and a click before hydration
+   sets. The state rules above outrank a forced rule, so these are important, as the checkbox's forced rules are. */
+@media (forced-colors: active) {
+  .muxui-switch__indicator {
+    background-color: CanvasText !important;
+  }
+
+  .muxui-switch:has(input:checked)::before {
+    background-color: Highlight !important;
+    border-color: Highlight !important;
+  }
+
+  .muxui-switch:has(input:checked) .muxui-switch__indicator {
+    background-color: HighlightText !important;
+  }
+
+  .muxui-switch[data-muxui-state-disabled]::before,
+  .muxui-switch[data-muxui-state-disabled]:has(input:checked)::before {
+    background-color: Canvas !important;
+    border-color: GrayText !important;
+  }
+
+  .muxui-switch[data-muxui-state-disabled] .muxui-switch__indicator,
+  .muxui-switch[data-muxui-state-disabled]:has(input:checked) .muxui-switch__indicator {
+    background-color: GrayText !important;
+  }
+
+  /* Forced colours drop the box-shadow ring, so keyboard focus draws the outline Checkbox and RadioGroup draw. */
+  .muxui-switch[data-muxui-state-focus-visible]::before {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+}
+
 /* MuxUI component source: text-field.css */
 .muxui-field-input {
   display: block;
@@ -1197,5 +1238,177 @@
 
   .muxui-switch[data-muxui-state-disabled] {
     opacity: 1;
+  }
+}
+
+/* MuxUI shared source: native choice state */
+/* Checkbox (and CheckboxGroup's checkboxes), CheckboxField, the RadioGroup radios, RadioField, Switch and
+   SwitchField hide their native input and draw their state from the data-muxui-state-* attributes React writes.
+   Before hydration, and with scripts off, those attributes keep their server values while a click checks or
+   clears the input, so these rules draw the state the input is in. Each one matches only while the attribute and
+   the input disagree: once React runs it keeps them equal, so none of these match and the look after hydration is
+   the components' own. Each rule repeats the declarations of the state it stands for, so keep them in step with
+   the checkbox, radio and switch blocks. The tick React renders only while selected, so a box ticked here draws
+   the same check (lucide check, stroke 4) as a mask. An indeterminate box is left as React drew it. */
+:is(.muxui-checkbox, .muxui-checkbox-field__button):not([data-muxui-state-selected], [data-muxui-state-indeterminate]):has(input:checked) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator) {
+  background-color: var(--muxui-component-checkbox-selected-background);
+  border-color: var(--muxui-component-checkbox-selected-background);
+}
+
+:is(.muxui-checkbox, .muxui-checkbox-field__button):not([data-muxui-state-selected], [data-muxui-state-indeterminate]):has(input:checked) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator)::after {
+  content: '';
+  inline-size: var(--muxui-checkbox-tick-size, 0.75rem);
+  block-size: var(--muxui-checkbox-tick-size, 0.75rem);
+  background-color: var(--muxui-component-checkbox-selected-foreground);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* The small tick's size, set on the box, so it reaches the tick above whatever that rule's specificity. */
+.muxui-checkbox--sm .muxui-checkbox__indicator,
+.muxui-checkbox-field--sm .muxui-checkbox-field__indicator {
+  --muxui-checkbox-tick-size: 0.5625rem;
+}
+
+:is(.muxui-checkbox, .muxui-checkbox-field__button)[data-muxui-state-selected]:not([data-muxui-state-indeterminate]):has(input:not(:checked)) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator) {
+  background-color: var(--muxui-component-checkbox-indicator-background);
+  border-color: var(--muxui-component-checkbox-indicator-border);
+}
+
+:is(.muxui-checkbox, .muxui-checkbox-field__button)[data-muxui-state-selected]:not([data-muxui-state-indeterminate]):has(input:not(:checked)) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator) svg {
+  visibility: hidden;
+}
+
+/* The invalid edge wins in every state, as in the checkbox block. */
+.muxui-checkbox[data-muxui-state-invalid]:not([data-muxui-state-selected], [data-muxui-state-indeterminate]):has(input:checked) .muxui-checkbox__indicator,
+.muxui-checkbox-field[data-muxui-state-invalid] .muxui-checkbox-field__button:not([data-muxui-state-selected], [data-muxui-state-indeterminate]):has(input:checked) .muxui-checkbox-field__indicator {
+  border-color: var(--muxui-component-checkbox-selected-invalid-border);
+}
+
+.muxui-checkbox[data-muxui-state-invalid][data-muxui-state-selected]:not([data-muxui-state-indeterminate]):has(input:not(:checked)) .muxui-checkbox__indicator,
+.muxui-checkbox-field[data-muxui-state-invalid] .muxui-checkbox-field__button[data-muxui-state-selected]:not([data-muxui-state-indeterminate]):has(input:not(:checked)) .muxui-checkbox-field__indicator {
+  border-color: var(--muxui-semantic-feedback-invalid-border);
+}
+
+.muxui-radio-group__radio:not([data-muxui-state-selected]):has(input:checked) .muxui-radio-group__indicator {
+  border-color: var(--muxui-semantic-selection-track);
+}
+
+.muxui-radio-group__radio[data-muxui-state-selected]:has(input:not(:checked)) .muxui-radio-group__indicator {
+  border-color: var(--muxui-semantic-border-indicator);
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-radio-group__radio:not([data-muxui-state-selected]):has(input:checked) .muxui-radio-group__indicator {
+    border-color: var(--muxui-semantic-action-selection-background);
+  }
+
+  :scope .muxui-radio-group__radio[data-muxui-state-selected]:has(input:not(:checked)) .muxui-radio-group__indicator {
+    border-color: var(--muxui-semantic-color-neutral-default-60);
+  }
+}
+
+.muxui-radio-field__button:not([data-muxui-state-selected]):has(input:checked) .muxui-radio-field__indicator {
+  border-color: var(--muxui-semantic-color-color-60);
+}
+
+.muxui-radio-field__button[data-muxui-state-selected]:has(input:not(:checked)) .muxui-radio-field__indicator {
+  border-color: var(--muxui-semantic-color-neutral-40);
+}
+
+.muxui-radio-group__radio:not([data-muxui-state-selected]):has(input:checked) .muxui-radio-group__indicator::after,
+.muxui-radio-field__button:not([data-muxui-state-selected]):has(input:checked) .muxui-radio-field__dot {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.muxui-radio-group__radio[data-muxui-state-selected]:has(input:not(:checked)) .muxui-radio-group__indicator::after,
+.muxui-radio-field__button[data-muxui-state-selected]:has(input:not(:checked)) .muxui-radio-field__dot {
+  transform: scale(0);
+  opacity: 0;
+}
+
+/* The invalid edge wins in every state, as in the radio blocks; the scope outranks the dark rules above. */
+@scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
+  :scope .muxui-radio-group__radio[data-muxui-state-invalid]:is(:not([data-muxui-state-selected]):has(input:checked), [data-muxui-state-selected]:has(input:not(:checked))) .muxui-radio-group__indicator,
+  :scope .muxui-radio-field[data-muxui-state-invalid] .muxui-radio-field__button:is(:not([data-muxui-state-selected]):has(input:checked), [data-muxui-state-selected]:has(input:not(:checked))) .muxui-radio-field__indicator {
+    border-color: var(--muxui-semantic-feedback-invalid-border);
+  }
+}
+
+.muxui-radio-group__radio[data-muxui-state-invalid]:is(:not([data-muxui-state-selected]):has(input:checked), [data-muxui-state-selected]:has(input:not(:checked))) .muxui-radio-group__indicator,
+.muxui-radio-field[data-muxui-state-invalid] .muxui-radio-field__button:is(:not([data-muxui-state-selected]):has(input:checked), [data-muxui-state-selected]:has(input:not(:checked))) .muxui-radio-field__indicator {
+  border-color: var(--muxui-semantic-feedback-invalid-border);
+}
+
+.muxui-switch:not([data-muxui-state-selected]):has(input:checked)::before {
+  background-color: var(--muxui-component-switch-selected-track);
+  border-color: var(--muxui-component-switch-selected-track);
+}
+
+.muxui-switch[data-muxui-state-selected]:has(input:not(:checked))::before {
+  border-color: var(--muxui-semantic-color-neutral-30);
+  background-color: var(--muxui-semantic-color-neutral-20);
+}
+
+.muxui-switch:not([data-muxui-state-selected]):has(input:checked) .muxui-switch__indicator {
+  --muxui-switch-indicator-x: var(--muxui-component-switch-thumb-travel);
+  background-color: var(--muxui-component-switch-selected-thumb);
+}
+
+.muxui-switch:dir(rtl):not([data-muxui-state-selected]):has(input:checked) .muxui-switch__indicator {
+  --muxui-switch-indicator-x: calc(var(--muxui-component-switch-thumb-travel) * -1);
+}
+
+.muxui-switch[data-muxui-state-selected]:has(input:not(:checked)) .muxui-switch__indicator {
+  --muxui-switch-indicator-x: 0px;
+  background-color: var(--muxui-semantic-surface-emphasis);
+}
+
+.muxui-switch[data-muxui-state-invalid]:not([data-muxui-state-selected]):has(input:checked)::before {
+  border-color: var(--muxui-component-switch-selected-invalid-border);
+}
+
+.muxui-switch[data-muxui-state-invalid][data-muxui-state-selected]:has(input:not(:checked))::before {
+  border-color: var(--muxui-component-switch-invalid-border);
+}
+
+/* Keyboard focus before React tracks it. Once hydrated, React marks every focus with data-muxui-state-focused and
+   draws the ring from data-muxui-state-focus-visible, so these stop matching. */
+:is(.muxui-checkbox, .muxui-checkbox-field__button):not([data-muxui-state-focused]):has(input:focus-visible) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator),
+.muxui-radio-field__button:not([data-muxui-state-focused]):has(input:focus-visible) .muxui-radio-field__indicator {
+  box-shadow:
+    0 0 0 2px var(--muxui-semantic-focus-inner),
+    0 0 0 4px var(--muxui-focus-ring-color);
+}
+
+.muxui-radio-group__radio:not([data-muxui-state-focused]):has(input:focus-visible) .muxui-radio-group__indicator,
+.muxui-switch:not([data-muxui-state-focused]):has(input:focus-visible)::before {
+  box-shadow:
+    0 0 0 2px var(--muxui-focus-ring-inner),
+    0 0 0 4px var(--muxui-focus-ring-outer);
+}
+
+@media (forced-colors: active) {
+  :is(.muxui-checkbox, .muxui-checkbox-field__button):not([data-muxui-state-selected], [data-muxui-state-indeterminate]):has(input:checked) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator)::after {
+    background-color: CanvasText;
+    forced-color-adjust: none;
+  }
+
+  /* The dot a radio draws before RadioGroup's motion dot takes over, which only a selected radio shows. Forced colours
+     would paint it Canvas on the Canvas box, so it takes the motion dot's CanvasText. With forced-color-adjust none the
+     dot's own colour would show through, so these outrank the later radio blocks that set it, the dark @scope one too. */
+  .muxui-radio-group .muxui-radio-group__radio .muxui-radio-group__indicator::after,
+  .muxui-radio-field__indicator .muxui-radio-field__dot {
+    background-color: CanvasText;
+    forced-color-adjust: none;
+  }
+
+  :is(.muxui-checkbox, .muxui-checkbox-field__button):not([data-muxui-state-focused]):has(input:focus-visible) :is(.muxui-checkbox__indicator, .muxui-checkbox-field__indicator),
+  .muxui-radio-group__radio:not([data-muxui-state-focused]):has(input:focus-visible) .muxui-radio-group__indicator,
+  .muxui-radio-field__button:not([data-muxui-state-focused]):has(input:focus-visible) .muxui-radio-field__indicator,
+  .muxui-switch:not([data-muxui-state-focused]):has(input:focus-visible)::before {
+    box-shadow: none;
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
   }
 }

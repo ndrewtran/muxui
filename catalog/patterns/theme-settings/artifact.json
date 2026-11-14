@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:theme-settings",
+  "kind": "pattern",
+  "name": "Theme settings",
+  "summary": "A Theme button that opens a dark popover, whatever the page's colour scheme, with a colour mode, a theme grid with Random, and the current theme's name.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "theme",
+    "themes",
+    "preset",
+    "colour",
+    "color",
+    "mode",
+    "dark",
+    "random",
+    "preferences",
+    "appearance"
+  ],
+  "platforms": ["web.react"],
+  "category": "forms",
+  "intent": {
+    "useWhen": [
+      "Letting people choose a preset theme and a light or dark mode from one control",
+      "Rotating the theme at random while keeping manual choices one click away"
+    ],
+    "avoidWhen": [
+      "The page offers only light and dark; use ColorModePicker or ColorModeToggle",
+      "Appearance settings belong in a full settings page"
+    ]
+  },
+  "participants": [
+    {
+      "role": "overlay",
+      "component": "muxui:component:popover",
+      "requirement": "required"
+    },
+    {
+      "role": "trigger",
+      "component": "muxui:component:icon-button",
+      "requirement": "required"
+    },
+    {
+      "role": "mode",
+      "component": "muxui:component:color-mode-picker",
+      "requirement": "required"
+    },
+    {
+      "role": "themes",
+      "component": "muxui:component:theme-picker",
+      "requirement": "required"
+    },
+    {
+      "role": "rule",
+      "component": "muxui:component:separator",
+      "requirement": "required"
+    },
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    }
+  ],
+  "variants": [{ "example": "muxui:example:theme-settings-popover" }],
+  "accessibility": [
+    "The icon button is named Theme and opens a dialog named Theme settings; Escape closes it and returns focus to the button.",
+    "The popover is a dark colour scheme scope on a light page and on a dark one, so the pickers and the foot read on it; it carries the page's preset theme and follows a pick while it is open.",
+    "The color mode and the themes are each one radio group with a single tab stop, so Tab crosses the popover in two stops.",
+    "The foot names the current theme, or the one Random rolled, in a role=status element, so a new theme is announced, including the one Random picks."
+  ],
+  "unsupported": [
+    "Saving the choice: it lives in React state and resets when the page reloads",
+    "Applying a saved or default theme before first paint: the page sets it on the document root, and the block selects that preset after mount",
+    "Restoring the colour scheme on unmount: ColorModePicker leaves its last scheme on the document",
+    "A popover that follows the page's colour scheme: it is always dark",
+    "Seeing a preset's colours on a page that does not import themes.css"
+  ],
+  "workflowValue": "Replaces wiring a theme menu by hand: the popover, the colour mode, the theme grid, and the Random roll are one small component, so you replace the in-memory choice with your storage and keep the layout."
+}

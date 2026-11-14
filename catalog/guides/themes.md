@@ -38,15 +38,19 @@ Each axis is selected by a data attribute:
 
 Set an attribute on the document root to apply a mode to the whole page, or on any element to apply it to that subtree.
 
-`ColorModeToggle` switches the color scheme at runtime. It sets `data-muxui-color-scheme` on the document root to `light` or `dark` and saves the choice in `localStorage` under `storageKey`, which defaults to `muxui-color-mode`. After mount it restores the saved choice, then `defaultMode`, then the operating system's `prefers-color-scheme`; the first render uses `defaultMode`, or light, so server rendering hydrates cleanly. Pass `mode` and `onModeChange` to control it. The package has no switch for the other axes, so set their attributes yourself.
+[ColorModeToggle](/components/color-mode-toggle/) switches the page between light and dark, and [ColorModePicker](/components/color-mode-picker/) offers Light and Dark with a System choice that follows the operating system. Both write the result to `data-muxui-color-scheme` on the document root, so they set the scheme for the whole page, and both remember the choice in the browser. Each component's generated reference lists its props, defaults, and how a saved choice is restored.
+
+The package has no switch for the other axes, so set their attributes yourself.
 
 ## Preset themes
 
-Import `@muxui/react/themes.css` after `@muxui/react/styles.css` to enable the preset palettes, and read their IDs from `MUXUI_THEME_PRESETS` in `@muxui/react/themes`. Set `data-muxui-theme` on the same element as any `data-muxui-color-scheme` or `data-muxui-contrast` attribute, because the preset palette is chosen from the attributes on that element. `ColorModeToggle` writes to the document root, so put `data-muxui-theme` on `<html>` for the toggle to drive a preset. Presets recompute the color dependency closure; spacing, typography, motion, and density come from the base theme. An unknown preset ID matches no preset declarations, so normal base and inherited styles apply.
+Import `@muxui/react/themes.css` after `@muxui/react/styles.css` to enable the preset palettes, and read their IDs from `MUXUI_THEME_PRESETS` in `@muxui/react/themes`. Set `data-muxui-theme` on the same element as any `data-muxui-color-scheme` or `data-muxui-contrast` attribute, because the preset palette is chosen from the attributes on that element. `ColorModeToggle` and `ColorModePicker` write to the document root, so put `data-muxui-theme` on `<html>` for them to drive a preset. Presets recompute the color dependency closure; spacing, typography, motion, and density come from the base theme. An unknown preset ID matches no preset declarations, so normal base and inherited styles apply.
 
 ```tsx
 <div data-muxui-theme="standard-harbour" data-muxui-color-scheme="dark">{children}</div>
 ```
+
+[ThemePicker](/components/theme-picker/) lets people choose a preset from swatches grouped by collection, and can offer a Random option. It reports the chosen theme ID and changes nothing outside itself, so the application sets `data-muxui-theme` to that ID, and decides which theme Random means. Its swatches carry each preset's own colours for the color scheme in force, so the picker needs neither `themes.css` nor a theme scope. The component's generated reference lists its props, defaults, and events.
 
 ## Cascade layers
 

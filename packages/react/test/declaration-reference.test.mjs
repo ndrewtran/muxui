@@ -263,10 +263,10 @@ const EXPLAINED_DIFFERENCES = [
   'type-layout text-editor.TextEditorSelectionRequest',
 ].sort();
 
-test('the declarations and the catalog agree on every prop, event and named type of the 84 derived families, bar the explained differences', () => {
+test('the declarations and the catalog agree on every prop, event and named type of the 86 derived families, bar the explained differences', () => {
   const result = crossCheckDerived({ files });
   assert.deepEqual(result.problems, []);
-  assert.deepEqual(result.counts, { families: 84, parts: 124, props: 757, events: 122, types: 151, references: 151 });
+  assert.deepEqual(result.counts, { families: 86, parts: 126, props: 766, events: 124, types: 158, references: 158 });
   assert.deepEqual(result.differences, EXPLAINED_DIFFERENCES);
   assert.equal(DERIVED_API_COMPONENTS.length, result.counts.families);
 });

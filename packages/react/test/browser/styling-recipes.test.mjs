@@ -13,12 +13,12 @@ import { awaitFontsAndFrames, launchBrowser, packageRoot, pageShell, repositoryR
 
 // The generated recipe, run in Chromium: the authority for the recipe. The static cascade model that picks the steps cannot be
 // complete against an arbitrary stylesheet, so this file is what holds it to the stylesheet that ships: the sweep at the end applies
-// every step the generator makes, for all 84 families, to the real stylesheet in light and dark, and fails when a step does not change
+// every step the generator makes, for all 86 families, to the real stylesheet in light and dark, and fails when a step does not change
 // its property or when a step that paints a color leaves what it paints under the contrast guard (below). A real stylesheet change that
 // breaks a step is caught here (this file runs in the `browser-chromium-only` group the planner selects for the module); the cascade
 // cases below are hypothetical stylesheets that show the model never claims a step the browser would not bear out.
 //
-// The static test (test/styling-recipes.test.mjs) proves every recipe is valid for all 84
+// The static test (test/styling-recipes.test.mjs) proves every recipe is valid for all 86
 // families; this proves that the changes work in a browser, for 18 families chosen by what could go wrong: a role reached from the
 // wrapper, a field or collection scoped through a shared hook, a role read through a state, a change or a pseudo-class, a popup that
 // portals out of the wrapper, a root that renders no element, motion, and elements with no text. Each family has one explicit fixture
@@ -462,7 +462,7 @@ test('every family\'s recipe changes what it says it changes, in light and dark'
   assert.deepEqual(unreadable, [], `every element a color step paints keeps the contrast guard: text 1.5x the WCAG rule for its size and weight, a mark or a fill that holds no text 3:1, nothing lower than it was`);
   // The readings: every element each color step paints, in light and in dark.
   assert.deepEqual(kinds, { text: 12, mark: 6, fill: 6 }, 'readings: TagGroup\'s three tags under both its steps, then the mark and the fill of Checkbox, CheckboxField and IconButton, in two color schemes');
-  assert.equal(steps, 288, 'steps measured in 80 Basic examples, each in two color schemes; four visible portal recipes have live proof');
+  assert.equal(steps, 296, 'steps measured in 82 Basic examples, each in two color schemes; four visible portal recipes have live proof');
 });
 
 test('the rule the guard holds text to: 4.5:1 for normal text, 3:1 for large text and for a glyph, by the element\'s own size and weight', () => {
