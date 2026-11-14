@@ -9,7 +9,7 @@ import { canonicalJson } from '../src/canonical-json.mjs';
 import { readArchive } from '../src/release-archive.mjs';
 import { FIRST_RELEASE_VARIABLE, PRIOR_RELEASE_VARIABLE, findPriorManifestProblems, planReuse, resolvePriorRelease } from '../src/release-effects.mjs';
 import {
-  caretAllows, readEvidenceRecord, readLedgerManifest, readRetainedManifests, releaseIdFor, releaseLedgerPath, sha256, sha512Integrity, verifyPortfolioRelease,
+  caretAllows, readLedgerManifest, readRetainedManifests, releaseIdFor, releaseLedgerPath, sha256, sha512Integrity, verifyPortfolioRelease,
 } from '../src/release-manifest.mjs';
 import { readPublishSet } from '../src/release-set.mjs';
 import {
@@ -46,10 +46,10 @@ const catalogOf = (change) => {
   return fixture;
 };
 
-test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts, descriptors, profile, evidence, rollback', () => {
+test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts, descriptors, profile, rollback', () => {
   const { artifacts, manifest } = honest();
   assert.equal(manifest.schema, 'muxui-portfolio-release-v1');
-  assert.deepEqual(Object.keys(manifest).sort(), ['catalog', 'compatibility', 'contracts', 'descriptors', 'digest', 'evidence', 'id', 'packages', 'preparation', 'publication', 'react', 'reactCompatibility', 'rollback', 'schema', 'source']);
+  assert.deepEqual(Object.keys(manifest).sort(), ['catalog', 'compatibility', 'contracts', 'descriptors', 'digest', 'id', 'packages', 'preparation', 'publication', 'react', 'reactCompatibility', 'rollback', 'schema', 'source']);
   assert.deepEqual(manifest.source, { revision: commit, tree });
   assert.deepEqual(manifest.packages.map(({ name, version, role }) => [name, version, role]), [
     ['@muxui/schema', '0.6.0-rc.1', 'published'], ['@muxui/catalog', '3.0.0-rc.1', 'published'],
@@ -69,9 +69,6 @@ test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts,
     '@muxui/catalog>@muxui/schema@^0.6.0-rc.1', '@muxui/tooling>@muxui/catalog@^3.0.0-rc.1', '@muxui/tooling>@muxui/schema@^0.6.0-rc.1',
   ]);
   assert.equal(manifest.reactCompatibility.schema, 'muxui-react-compatibility-v1');
-  assert.deepEqual(manifest.evidence.capturedCiEvidence.map(({ milestone }) => milestone), ['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']);
-  assert.deepEqual(manifest.evidence.retainedReviewEvidence[0].milestones, ['R1.2', 'R1.3', 'R1.4']);
-  assert.deepEqual(manifest.evidence.activeExceptions, []);
   assert.deepEqual(manifest.rollback.packages.map(({ name, fixForward }) => [name, fixForward]), [
     ['@muxui/schema', '0.6.0-rc.2'], ['@muxui/catalog', '3.0.0-rc.2'], ['@muxui/tooling', '1.1.0-rc.2'], ['@muxui/react', '0.1.0-rc.6'],
   ]);
@@ -184,30 +181,21 @@ test('E-P2.1-03 the catalog bundle is recomputed: an emptied bundle under the ol
   }, /the package record's token requirement sets differ from the bundle's/u);
 });
 
-// ---- contracts, evidence, exceptions, rollback are recomputed ----
+// ---- contracts, publication, and rollback are recomputed ----
 
-test('E-P2.1-03 contracts, evidence, exceptions, publication, and rollback are recomputed, not trusted', () => {
+test('E-P2.1-03 contracts, publication, and rollback are recomputed, not trusted', () => {
   const { artifacts, manifest } = honest();
   const forged = (key, value) => redigest({ ...manifest, [key]: value });
   const rejects = (key, value) => assert.throws(() => verify(forged(key, value), artifacts), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded .* is not what the tarballs and the committed sources hold/u, key);
   rejects('contracts', { ...manifest.contracts, schemaVersion: '9.9.9' });
   rejects('contracts', { ...manifest.contracts, tokenContractVersion: '1.0.0' });
-  rejects('evidence', { ...manifest.evidence, activeExceptions: [digest('e')] });
-  rejects('evidence', { ...manifest.evidence, capturedCiEvidence: [] });
-  rejects('evidence', { ...manifest.evidence, retainedReviewEvidence: [] });
-  rejects('evidence', { capturedCiEvidence: [], retainedReviewEvidence: [], activeExceptions: [] });
   rejects('rollback', {});
   rejects('rollback', { ...manifest.rollback, forbidden: [] });
   rejects('publication', { ...manifest.publication, mutationPerformed: true });
   rejects('publication', undefined);
 
-  // An exception the React package declares is bound by digest; one it does not declare cannot be recorded.
-  const exception = { id: 'EX-1', reason: 'documented' };
-  const excepted = artifactsOf(tupleFixture({ exceptions: [exception] }));
-  const exceptedManifest = manifestOf(excepted);
-  assert.deepEqual(exceptedManifest.evidence.activeExceptions, [sha256(canonicalJson(exception))]);
-  verify(exceptedManifest, excepted);
-  assert.throws(() => verify(redigest({ ...exceptedManifest, evidence: { ...exceptedManifest.evidence, activeExceptions: [] } }), excepted), /the recorded evidence is not what/u);
+  // A manifest written while releases recorded evidence digests keeps that block under its own digest; nothing recomputes it.
+  verify(redigest({ ...manifest, evidence: { capturedCiEvidence: [], retainedReviewEvidence: [], activeExceptions: [] } }), artifacts);
 
   // The schema package must declare the contract versions the catalog bundle implements.
   const schema = tupleFixture();
@@ -215,21 +203,12 @@ test('E-P2.1-03 contracts, evidence, exceptions, publication, and rollback are r
   assert.throws(() => manifestOf(artifactsOf(schema)), /P2_1_MANIFEST_CONTRACT_MISMATCH: @muxui\/schema declares schema 4\.1\.0 and query API 3\.0\.0/u);
 });
 
-test('E-P2.1-03 the retained evidence is bound to the committed bytes, and must be committed', () => {
+test('E-P2.1-03 the committed sources a release reads must be committed and readable', () => {
   const { artifacts, manifest } = honest();
-  // A retained index edited after the manifest was written.
-  const edited = committedStore();
-  edited.set('tests/evidence/r1.3/index.json', Buffer.from('{"milestone":"R1.3","edited":true}\n'));
-  assert.throws(() => verify(manifest, artifacts, { readCommitted: edited.read }), /the recorded evidence is not what/u);
-  const review = committedStore();
-  review.set('tests/evidence/r1-retro-review/index.json', Buffer.from('{"milestones":["R1.2"],"records":[]}\n'));
-  assert.throws(() => verify(manifest, artifacts, { readCommitted: review.read }), /the recorded evidence is not what/u);
-  // An index that is not committed, or no way to read them, is not a verified release.
   const missing = committedStore();
-  missing.delete('tests/evidence/r1.5/index.json');
-  assert.throws(() => verify(manifest, artifacts, { readCommitted: missing.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: tests\/evidence\/r1\.5\/index\.json is not committed/u);
-  assert.throws(() => verify(manifest, artifacts, { readCommitted: undefined }), /P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE/u);
-  assert.throws(() => readEvidenceRecord(undefined), /P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE/u);
+  missing.delete('pnpm-lock.yaml');
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: missing.read }), /P2_1_MANIFEST_SOURCE_MISSING: pnpm-lock\.yaml is not committed/u);
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: undefined }), /P2_1_MANIFEST_SOURCE_UNVERIFIABLE/u);
 });
 
 // ---- the React correlation is recomputed ----
@@ -288,10 +267,10 @@ test('E-P2.1-03 the react correlation block is recomputed from the tarballs and 
   assert.throws(() => verify(manifest, artifacts, { readCommitted: retokened.read }), recordMismatch);
   const unlocked = committedStore();
   unlocked.delete('pnpm-lock.yaml');
-  assert.throws(() => verify(manifest, artifacts, { readCommitted: unlocked.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: pnpm-lock\.yaml is not committed/u);
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: unlocked.read }), /P2_1_MANIFEST_SOURCE_MISSING: pnpm-lock\.yaml is not committed/u);
   const untokened = committedStore();
   untokened.delete('catalog/tokens/default-theme.json');
-  assert.throws(() => manifestOf(artifacts, { readCommitted: untokened.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: catalog\/tokens\/default-theme\.json is not committed/u);
+  assert.throws(() => manifestOf(artifacts, { readCommitted: untokened.read }), /P2_1_MANIFEST_SOURCE_MISSING: catalog\/tokens\/default-theme\.json is not committed/u);
 
   // A lockfile that does not lock the renderer's Lucide version gives the visual contract nothing to bind.
   const unlockedLucide = committedStore();

@@ -16,9 +16,6 @@ const RENDERER_PACKAGE = '@muxui/react';
 const RENDERER_BINDING = 'web.react';
 const SCHEMA_PACKAGE = '@muxui/schema';
 const CATALOG_PACKAGE = '@muxui/catalog';
-/** The retained evidence a release is bound to: the CI evidence of these milestones and the retroactive review index. */
-export const RETAINED_EVIDENCE_MILESTONES = Object.freeze(['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']);
-export const RETAINED_REVIEW_INDEX = 'tests/evidence/r1-retro-review/index.json';
 const gitObject = /^[0-9a-f]{40}$/u;
 
 export const sha256 = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
@@ -175,19 +172,8 @@ export function readRetainedManifests({ ids, revision, cwd }) {
 
 /** A file as committed at the release commit; a missing one stops the release. */
 function requireCommitted(readCommitted, path) {
-  if (typeof readCommitted !== 'function') fail('P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE', 'the committed sources must be readable to build or verify a release');
-  return readCommitted(path) ?? fail('P2_1_MANIFEST_EVIDENCE_MISSING', `${path} is not committed at the release commit`);
-}
-
-/** The evidence digests of a release: the retained indexes as committed (`readCommitted(path)` returns their bytes). */
-export function readEvidenceRecord(readCommitted) {
-  const read = (path) => requireCommitted(readCommitted, path);
-  const indexPath = (milestone) => `tests/evidence/${milestone.toLowerCase()}/index.json`;
-  const review = read(RETAINED_REVIEW_INDEX);
-  return {
-    capturedCiEvidence: RETAINED_EVIDENCE_MILESTONES.map((milestone) => ({ milestone, path: indexPath(milestone), sha256: sha256(read(indexPath(milestone))) })),
-    retainedReviewEvidence: [{ milestones: JSON.parse(review.toString('utf8')).milestones, path: RETAINED_REVIEW_INDEX, sha256: sha256(review) }],
-  };
+  if (typeof readCommitted !== 'function') fail('P2_1_MANIFEST_SOURCE_UNVERIFIABLE', 'the committed sources must be readable to build or verify a release');
+  return readCommitted(path) ?? fail('P2_1_MANIFEST_SOURCE_MISSING', `${path} is not committed at the release commit`);
 }
 
 // A generated file's `.provenance` sidecar: a header with the sha256 of its body, and a record of the file's path and sha256.
@@ -320,15 +306,12 @@ export function readTupleFacts({ publishSet, artifacts }) {
   if (profileBytes === undefined || !profileBytes.toString('utf8').includes(`"schema":"${REACT_COMPATIBILITY_SCHEMA}"`)) {
     fail('P2_1_MANIFEST_PACKAGE_INVALID', `${RENDERER_PACKAGE} has no ${REACT_COMPATIBILITY_SCHEMA} compatibility profile`);
   }
-  const exceptions = JSON.parse(renderer.files.get('package/generated/release.json')?.toString('utf8') ?? 'null')?.exceptions;
-  if (!Array.isArray(exceptions)) fail('P2_1_MANIFEST_PACKAGE_INVALID', `${RENDERER_PACKAGE} has no generated/release.json with its exceptions`);
   return {
     packages,
     catalogPackage,
     bundle,
     contracts,
     descriptors,
-    exceptionDigests: exceptions.map((exception) => sha256(canonicalJson(exception))),
     reactCompatibility: { schema: REACT_COMPATIBILITY_SCHEMA, path: 'generated/compatibility.mjs', digest: sha256(profileBytes) },
   };
 }
@@ -416,7 +399,7 @@ function manifestDigest(manifest) {
  * The portfolio manifest. `artifacts` maps every member of the set to its tarball bytes. `reused` maps a package the
  * release does not publish to its package record in the manifest that published it; the bytes must be the ones that
  * record names, and the new record keeps its version, digests, and provenance. `readCommitted(path)` reads the
- * retained evidence indexes, the lockfile and the token source as committed at the release commit. A published React
+ * lockfile and the token source as committed at the release commit. A published React
  * package brings its `react` correlation block, derived here; a reused one keeps the record of its own release.
  * `preparation` says how the checks ran and is not part of the digest, so two preparations of one commit and tuple have
  * one digest whatever the run was.
@@ -460,7 +443,6 @@ export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map
     descriptors: facts.descriptors.map(({ descriptor: _descriptor, ...record }) => record),
     reactCompatibility: facts.reactCompatibility,
     ...(reused.has(RENDERER_PACKAGE) ? {} : { react: deriveReactCorrelation(facts, readCommitted) }),
-    evidence: { ...readEvidenceRecord(readCommitted), activeExceptions: facts.exceptionDigests },
     publication: buildPublication({ published }),
     rollback: buildRollbackPlan({ published }),
   };
@@ -472,9 +454,10 @@ export function buildPortfolioManifest({ publishSet, artifacts, reused = new Map
  * published ones from the candidate and a reused one from where it was first published). It rejects repacked bytes
  * under one version, a package missing from the tuple, a published package built from another commit, and a reused
  * package that is not exactly the record of the earlier release it names (`priorManifests`: release id to that
- * release's manifest) or whose compatibility no longer holds. Contracts, evidence, exceptions, rollback, and
- * publication are recomputed, not trusted: from the packed catalog, schema, and renderer, from the retained
- * evidence, lockfile and token source as committed (`readCommitted`), and from the verified records. The `react`
+ * release's manifest) or whose compatibility no longer holds. Contracts, rollback, and publication are recomputed,
+ * not trusted: from the packed catalog, schema, and renderer, from the lockfile and token source as committed
+ * (`readCommitted`), and from the verified records. A manifest written before releases stopped recording evidence
+ * keeps its `evidence` block; nothing recomputes it, and its own digest still covers it. The `react`
  * correlation is recomputed for a published React package and absent for a reused one. `expected` may name the commit and tree the
  * release must come from. Returns the facts read from the tarballs.
  */
@@ -553,7 +536,7 @@ export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expect
     }
   }
 
-  // Everything else the manifest records is recomputed from the same bytes, the committed evidence, and the records above.
+  // Everything else the manifest records is recomputed from the same bytes, the committed sources, and the records above.
   const recomputed = {
     catalog: { id: catalogPackage.releaseManifest.catalog.id, version: catalogPackage.catalogVersion, digest: catalogPackage.catalogDigest },
     contracts: facts.contracts,
@@ -561,7 +544,6 @@ export function verifyPortfolioRelease({ manifest, artifacts, publishSet, expect
     descriptors: facts.descriptors.map(({ descriptor: _descriptor, ...record }) => record),
     reactCompatibility: facts.reactCompatibility,
     react: recorded.get(RENDERER_PACKAGE).role === 'published' ? deriveReactCorrelation(facts, readCommitted) : null,
-    evidence: { ...readEvidenceRecord(readCommitted), activeExceptions: facts.exceptionDigests },
     publication: buildPublication({ published }),
     rollback: buildRollbackPlan({ published }),
   };

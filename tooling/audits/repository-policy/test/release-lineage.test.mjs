@@ -467,10 +467,10 @@ test('a promoted candidate set must match the authorized digest, the versions, t
     assert.throws(() => verified({ versions: new Map([...versions, ['@muxui/react', '0.1.0-rc.6']]) }), /Expected exactly the tarball of each published package and one release manifest/u);
     assert.throws(() => verified({ sha: 'c'.repeat(40) }), /P2_1_MANIFEST_SOURCE_MISMATCH: the manifest source revision is a+, not c+/u);
     assert.throws(() => verified({ tree: 'd'.repeat(40) }), /the manifest source tree is b+, not d+/u);
-    // The retained evidence is read as committed at the commit: an index changed since the dry run fails the promotion.
+    // The lockfile is read as committed at the commit: one changed since the dry run fails the promotion.
     const edited = committedStore();
-    edited.set('tests/evidence/r1.1/index.json', Buffer.from('{"milestone":"R1.1","edited":true}\n'));
-    assert.throws(() => verified({ readCommitted: edited.read }), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded evidence is not what/u);
+    edited.set('pnpm-lock.yaml', Buffer.concat([edited.get('pnpm-lock.yaml'), Buffer.from('\n')]));
+    assert.throws(() => verified({ readCommitted: edited.read }), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded react is not what/u);
     // One tarball repacked under its recorded version.
     const other = tupleFixture();
     other.files['@muxui/tooling']['src/extra.mjs'] = 'export {};\n';

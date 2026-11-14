@@ -208,7 +208,7 @@ export function assertReactR15GeneratedContracts({
     || closure.evidenceCapture?.collection !== 'default-off'
     || !same(closure.evidenceCapture?.allowed, ['sanitized repository-relative paths', 'canonical IDs'])
     || !same(closure.evidenceCapture?.prohibited, ['credentials', 'consumer data'])
-    || closure.evidenceCapture?.retention !== 'tests/evidence/r1.5 retained check evidence'
+    || closure.evidenceCapture?.retention !== 'tests/evidence/r1.5 retained check evidence, at git tag pre-simplification'
     || !same(closure.exceptions, [])
     || !same(closure.advisories, [])
     || closure.publication?.candidateVersion !== '0.1.0-rc.1'

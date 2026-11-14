@@ -27,8 +27,6 @@ import {
   isolatedPackageManagerEnvironment,
   nodeBundledCli,
   readGeneratedOutputNames,
-  readRetainedEvidence,
-  readRetainedReviewEvidence,
   replaceVersions,
   summarizeBundleModules,
   verifyReusedSignatures,
@@ -36,7 +34,7 @@ import {
 import { canonicalJson } from './canonical-json.mjs';
 import { deterministicArchive, readArchive } from './release-archive.mjs';
 import { assertVersionEffects, findCandidateSetProblems, planReuse, resolvePriorRelease } from './release-effects.mjs';
-import { RETAINED_EVIDENCE_MILESTONES, buildPortfolioManifest, committedFileReader, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
+import { buildPortfolioManifest, committedFileReader, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
 import {
   CANDIDATE_PUBLISH_CONFIG,
   assertCatalogRangeBound,
@@ -1197,9 +1195,6 @@ try {
   }
   console.log(`R1 exit npm publish dry-run passed for ${publishing.map(([name]) => name).join(', ')} without lifecycle hooks or registry mutation`);
 
-  // The retained evidence is validated as the checkout holds it (fail closed); the manifest binds it as committed.
-  readRetainedEvidence(repositoryRoot, RETAINED_EVIDENCE_MILESTONES);
-  readRetainedReviewEvidence(repositoryRoot);
   const readCommitted = committedFileReader(sourceRevision, repositoryRoot);
   // The manifest recomputes the React correlation from the tarballs and the committed lockfile and token source.
   const releaseManifest = buildPortfolioManifest({
@@ -1220,13 +1215,13 @@ try {
       },
     },
   });
-  // The retained indexes and the lockfile were read from the worktree for validation; bind them to the commit.
+  // The checks read the worktree; bind them to the commit.
   assertSourceIdentity(sourceRevision, 'after release correlation');
-  const { react, evidence } = releaseManifest;
+  const { react } = releaseManifest;
   // A reused React package keeps the correlation block of the release that published it, so this manifest has none.
   console.log(react === undefined
-    ? `P2.1 correlation: ${reactEntry.name} is reused, so its generated outputs and visual contract stay those of ${provenanceOf(reactEntry.name).releaseId}; ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index`
-    : `R1 exit correlation: ${react.bindings.length} binding-spec revisions, ${react.generatedOutputs.entries.length} generated outputs, ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index, visual contract ${react.visualContract.digest}`);
+    ? `P2.1 correlation: ${reactEntry.name} is reused, so its generated outputs and visual contract stay those of ${provenanceOf(reactEntry.name).releaseId}`
+    : `R1 exit correlation: ${react.bindings.length} binding-spec revisions, ${react.generatedOutputs.entries.length} generated outputs, visual contract ${react.visualContract.digest}`);
   const outputDirectory = mkdtempSync(join(tmpdir(), 'muxui-r1-exit-output-'));
   // The candidate holds the published tarballs and the manifest; a reused package stays on the registry where it is.
   for (const [name, { archiveBytes: bytes }] of publishing) writeFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))), bytes);
