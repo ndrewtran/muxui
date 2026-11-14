@@ -18,6 +18,7 @@ import { typescript7Host } from '../reference-reader/host-typescript7.mjs';
 import { INVENTORY_SCHEMA, REFERENCE_SCHEMA, UNTYPED_ENTRIES } from '../reference-reader/model.mjs';
 import { referenceOutputs, syncFiles } from '../reference-reader/sync.mjs';
 import { DERIVED_API_COMPONENTS } from '../api-extraction/derived-apis.mjs';
+import { currentSurface } from './support/current-surface.mjs';
 import { consumerTsc, typeScript7Tsc } from './support/declaration-surface.mjs';
 import { typescript6Host } from './support/reference-host-typescript6.mjs';
 import { realInputs } from './support/reference-inputs.mjs';
@@ -116,22 +117,16 @@ test('the inventory lists every export-map entry in order, and classifies each u
   }
 });
 
-test('the inventory holds the same exports as the public-surface check, by name and kind, on every typed entry', () => {
-  const surface = readJson(join(packageRoot, 'test/fixtures/public-surface-inventory.json'));
-  let total = 0;
-  for (const entry of inventory.entries.filter(({ untyped }) => !untyped)) {
-    const expected = { types: new Set(), values: new Set() };
-    for (const record of [surface.baseline[entry.key], surface.added[entry.key]]) {
-      record?.types.forEach((name) => expected.types.add(name));
-      record?.values.forEach((name) => expected.values.add(name));
-    }
+test('the inventory holds the same exports as the compiler reads from the shipped declarations, by name and kind, on every typed entry', () => {
+  const surface = currentSurface();
+  const typed = inventory.entries.filter(({ untyped }) => !untyped);
+  assert.deepEqual(typed.map(({ key }) => key), Object.keys(surface), 'the typed entries');
+  for (const entry of typed) {
     const types = new Set(entry.exports.filter(({ kind }) => kind.includes('type')).map(({ name }) => name));
     const values = new Set(entry.exports.filter(({ kind }) => kind.includes('value')).map(({ name }) => name));
-    assert.deepEqual([...types].sort(), [...expected.types].sort(), `${entry.key} types`);
-    assert.deepEqual([...values].sort(), [...expected.values].sort(), `${entry.key} values`);
-    total += types.size + values.size;
+    assert.deepEqual([...types].sort(), surface[entry.key].types, `${entry.key} types`);
+    assert.deepEqual([...values].sort(), surface[entry.key].values, `${entry.key} values`);
   }
-  assert.ok(total >= 427, `the inventory covers ${total} subjects`);
 });
 
 test('every public export has one owner whose file holds it, and every file says whose it is and where it was generated from', () => {

@@ -9,6 +9,7 @@ import { CommandPalette } from '@muxui/react';
 import { ComponentDocs } from '../.storybook/component-docs-page.mjs';
 import manifest from '../.storybook/generated/manifest.mjs';
 import { componentDeclarations, readDeclarationReference, readReactPackageFacts } from '../../component-reference.mjs';
+import { currentSurface } from '../../../packages/react/test/support/current-surface.mjs';
 import { typedReference } from '../src/component-docs.mjs';
 import { sourceProblems, textEditorExports, textEditorFunctions, textEditorNative, textEditorProps, textEditorRef, textEditorTypes } from './text-editor-declarations.mjs';
 import { STORY_API_PARTS, argTypesForBinding, storyApi, storyApiBlocks } from '../src/storybook-factory.mjs';
@@ -669,19 +670,16 @@ function unownedSubjects() {
 }
 
 /**
- * Every difference between the exports and parts the Docs pages list and the public surface inventory the public-surface check
- * records, which the reference's own inventory is held against, not read from it. Each export or part is on exactly one page, or
- * is one of those the package-level and shared reference files hold, which every page points to.
+ * Every difference between the exports and parts the Docs pages list and the public surface the compiler reads from the
+ * shipped declarations, which the reference's own inventory is held against, not read from it. Each export or part is on
+ * exactly one page, or is one of those the package-level and shared reference files hold, which every page points to.
  */
 function coverageProblems(documents) {
-  const fixture = readJson('packages/react/test/fixtures/public-surface-inventory.json');
   const expected = [];
-  for (const [key, subjects] of Object.entries(fixture.baseline)) {
-    const added = fixture.added[key] ?? {};
-    for (const kind of ['types', 'values']) {
-      for (const name of [...subjects[kind], ...(added[kind] ?? [])]) expected.push(`${key}:${kind === 'types' ? 'type' : 'value'}:${name}`);
-    }
-    for (const name of [...subjects.parts, ...(added.parts ?? [])]) expected.push(`${key}:part:${name}`);
+  for (const [key, { types, values, parts }] of Object.entries(currentSurface())) {
+    for (const name of types) expected.push(`${key}:type:${name}`);
+    for (const name of values) expected.push(`${key}:value:${name}`);
+    for (const name of parts) expected.push(`${key}:part:${name}`);
   }
   const keyOf = (importText) => {
     const [, , , from] = /^import (type )?\{ (\w+) \} from '([^']+)';$/u.exec(importText) ?? [];

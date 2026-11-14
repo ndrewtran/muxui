@@ -58,8 +58,8 @@
     "prepack": "pnpm --filter @muxui/react^... generate && node src/generate.mjs",
     "prepublishOnly": "node src/publish-guard.mjs",
     "check": "node src/generate.mjs --check && node --test 'test/*.test.mjs' && tsc --noEmit -p test/tsconfig.json",
-    "check:types": "node --test test/public-surface-controls.test.mjs test/api-extraction.test.mjs test/public-surface-baseline.test.mjs test/declaration-reference.test.mjs test/generic-types-mutations.test.mjs test/reference-reader.test.mjs test/declaration-validity.test.mjs test/consumer-tsc.test.mjs",
-    "check:rest": "node src/generate.mjs --check && node --test 'test/!(public-surface-controls|api-extraction|public-surface-baseline|declaration-reference|generic-types-mutations|reference-reader|declaration-validity|consumer-tsc).test.mjs' && tsc --noEmit -p test/tsconfig.json",
+    "check:types": "node --test test/api-extraction.test.mjs test/declaration-reference.test.mjs test/generic-types-mutations.test.mjs test/reference-reader.test.mjs test/declaration-validity.test.mjs test/consumer-tsc.test.mjs",
+    "check:rest": "node src/generate.mjs --check && node --test 'test/!(api-extraction|declaration-reference|generic-types-mutations|reference-reader|declaration-validity|consumer-tsc).test.mjs' && tsc --noEmit -p test/tsconfig.json",
     "check:browser": "node --test --test-concurrency=1 test/browser/*.test.mjs",
     "generate": "node src/generate.mjs",
     "generate:check": "node src/generate.mjs --check"
