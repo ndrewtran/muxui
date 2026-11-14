@@ -39,7 +39,7 @@ import {
 import { compileTokenRequirementSet } from '@muxui/tokens';
 import { semanticDiff } from '@muxui/tooling/authoring';
 import { canonicalJson } from './canonical-json.mjs';
-import { PORTFOLIO_SCHEMA, caretAllows, readIndexedArtifact, readRetainedManifests, releaseIdFor, sha256 } from './release-manifest.mjs';
+import { PORTFOLIO_SCHEMA, RELEASE_LEDGER, caretAllows, readLedgerManifest, readRetainedManifests, releaseIdFor, sha256 } from './release-manifest.mjs';
 import { releaseVersions, reusedNames } from './release-set.mjs';
 
 const SCHEMA_PACKAGE = '@muxui/schema';
@@ -834,9 +834,9 @@ function portfolioManifestsIn(revision, cwd) {
 /**
  * What a release compares with. It must say so: `MUXUI_PRIOR_RELEASE_MANIFEST` is the path of the prior portfolio
  * manifest, or `MUXUI_FIRST_PORTFOLIO_RELEASE=true` declares there is none, which holds only while no tracked file at
- * `revision` is a portfolio release manifest of any schema version. Neither, both, or a flag that contradicts the evidence
+ * `revision` is a portfolio release manifest of any schema version. Neither, both, or a flag that contradicts the tree
  * is refused, so a later release cannot skip the check by leaving the variable unset. The prior manifest is the one
- * committed at `revision`, listed with its digest by its evidence route's index (`readIndexedArtifact`).
+ * committed at `revision` in the release ledger (`readLedgerManifest`).
  */
 export function resolvePriorRelease({ environment, revision, cwd }) {
   const path = environment[PRIOR_RELEASE_VARIABLE] ?? '';
@@ -851,12 +851,12 @@ export function resolvePriorRelease({ environment, revision, cwd }) {
     if (retained.length > 0) fail('P2_1_FIRST_RELEASE_CONTRADICTED', `${FIRST_RELEASE_VARIABLE}=true, but ${retained.join(', ')} is a portfolio release; give ${PRIOR_RELEASE_VARIABLE}`);
     return { first: true };
   }
-  // The prior manifest is the one the repository retains at the release commit, not whatever file the path names.
-  const retainedPath = relative(cwd, resolve(cwd, path)).split(sep).join(posix.sep);
+  // The prior manifest is the one the ledger holds at the release commit, not whatever file the path names.
+  const ledgerPath = relative(cwd, resolve(cwd, path)).split(sep).join(posix.sep);
   try {
-    return { first: false, priorManifest: JSON.parse(readIndexedArtifact({ path: retainedPath, revision, cwd }).toString('utf8')) };
+    return { first: false, priorManifest: readLedgerManifest({ path: ledgerPath, revision, cwd }) };
   } catch (error) {
-    return fail('P2_1_PRIOR_RELEASE_UNAVAILABLE', `${PRIOR_RELEASE_VARIABLE} ${path} cannot be read as retained evidence (${error.message.split('\n')[0]})`);
+    return fail('P2_1_PRIOR_RELEASE_UNAVAILABLE', `${PRIOR_RELEASE_VARIABLE} ${path} cannot be read from the release ledger (${error.message.split('\n')[0]})`);
   }
 }
 
@@ -880,8 +880,8 @@ export function reusedRecords({ names, priorRelease, publishSet }) {
 /**
  * What a release that reuses packages is: the records it keeps (`reusedRecords`, for every member of the set the
  * published versions `published` leave out), the manifests that published them (the prior release's, and for a package
- * the prior release itself reused, the manifest of the release before, retained at `revision` as
- * `tests/evidence/**\/release-manifest.json`; a reuse whose origin is not retained stops here), and the version of every
+ * the prior release itself reused, the manifest of the release before, committed at `revision` in the release ledger;
+ * a reuse whose origin is not in the ledger stops here), and the version of every
  * member of the set. A release that reuses nothing needs no prior release.
  */
 export function planReuse({ publishSet, published, priorRelease, revision, cwd, readRetained = readRetainedManifests }) {
@@ -890,7 +890,7 @@ export function planReuse({ publishSet, published, priorRelease, revision, cwd, 
   if (!priorRelease.first) priorManifests.set(priorRelease.priorManifest.id, priorRelease.priorManifest);
   for (const [name, { version, provenance }] of reused) {
     if (!priorManifests.has(provenance?.releaseId)) {
-      fail('P2_1_REUSE_ORIGIN_UNAVAILABLE', `${name}@${version} was published by ${provenance?.releaseId}, whose manifest is not retained as tests/evidence/**/release-manifest.json at ${revision}`);
+      fail('P2_1_REUSE_ORIGIN_UNAVAILABLE', `${name}@${version} was published by ${provenance?.releaseId}, whose manifest is not in ${RELEASE_LEDGER}/ at ${revision}`);
     }
   }
   return { reused, priorManifests, versions: releaseVersions(publishSet, published, reused) };

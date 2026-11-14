@@ -659,16 +659,6 @@ test('R1 exit capture rebuilds each committed route byte for byte from its verif
   }
 });
 
-// The next release names this retained manifest as its prior release (`prior-release`, tests/evidence path ending .json), and
-// the first-release flag is refused once it is tracked, so it must stay a manifest the prior-release check reads.
-test('the retained rc.5 release manifest passes the prior-release check against the publish set', async () => {
-  const { findPriorManifestProblems } = await import('../src/release-effects.mjs');
-  const { readPublishSet } = await import('../src/release-set.mjs');
-  const manifest = JSON.parse(readFileSync(join(repositoryRoot, r1Exit.routeFor('0.1.0-rc.5'), 'artifacts/release-manifest.json'), 'utf8'));
-  assert.equal(manifest.schema, 'muxui-portfolio-release-v1');
-  assert.deepEqual(findPriorManifestProblems(manifest, readPublishSet(repositoryRoot)), []);
-});
-
 // A rehearsal route holding a captured dry run, written as the tool would.
 async function seedR1ExitRoute(out, fixture) {
   const bound = r1Exit.bindDryRun(fixture.dryRunInput);
@@ -4317,42 +4307,5 @@ test('the content reviews earlier BL1 captures retained are the coverage candida
     } finally {
       await rm(copy, { recursive: true, force: true });
     }
-  });
-
-  // The next release names this route's manifest as its prior release, so it must stay a manifest that check reads, retained once.
-  test('the manifest of tooling 1.1.0-rc.2 is retained evidence a later release can name as its prior release or reuse from', async () => {
-    const { PRIOR_RELEASE_VARIABLE, findPriorManifestProblems, planReuse, resolvePriorRelease } = await import('../src/release-effects.mjs');
-    const { readIndexedArtifact, readRetainedManifests } = await import('../src/release-manifest.mjs');
-    const { readPublishSet } = await import('../src/release-set.mjs');
-    const publishSet = readPublishSet(repositoryRoot);
-    const path = 'tests/evidence/p2.1-tooling-1.1.0-rc.2/artifacts/release-manifest.json';
-    const originPath = 'tests/evidence/r1-exit-0.1.0-rc.5/artifacts/release-manifest.json';
-    const cwd = repositoryRoot;
-    const revision = 'HEAD';
-    const manifest = JSON.parse(readIndexedArtifact({ path, revision, cwd }).toString('utf8'));
-    const origin = JSON.parse(readIndexedArtifact({ path: originPath, revision, cwd }).toString('utf8'));
-    assert.equal(manifest.schema, 'muxui-portfolio-release-v1');
-    assert.deepEqual(findPriorManifestProblems(manifest, publishSet), [], 'its digest and release id recompute and it inventories the whole publish set');
-    assert.equal(manifest.digest, `sha256:${createHash('sha256').update(canonicalJson((({ digest: _digest, preparation: _preparation, ...body }) => body)(manifest))).digest('hex')}`);
-    // The release names it as `prior-release`, and the first-release flag is refused once it is tracked.
-    const prior = resolvePriorRelease({ environment: { [PRIOR_RELEASE_VARIABLE]: path }, revision, cwd });
-    assert.deepEqual([prior.first, prior.priorManifest.id], [false, manifest.id]);
-    // Both manifests are retained once each, so a reuse chain never finds two different manifests of one release.
-    const retained = readRetainedManifests({ ids: [manifest.id, origin.id], revision, cwd });
-    assert.deepEqual([...retained.keys()].sort(), [manifest.id, origin.id].sort());
-    const tracked = gitIn(repositoryRoot, 'ls-tree', '-r', '--name-only', revision, '--', 'tests/evidence').split('\n').filter((file) => file.endsWith('/release-manifest.json'));
-    const ids = tracked.map((file) => JSON.parse(gitIn(repositoryRoot, 'show', `${revision}:${file}`)).id);
-    assert.equal(ids.filter((id) => id === manifest.id).length, 1);
-    assert.equal(ids.filter((id) => id === origin.id).length, 1);
-    // A later release that publishes tooling alone reuses the other three from this one (their origin is the first release's manifest), and a
-    // release that publishes React reuses tooling from this one: either chain finds every manifest it needs.
-    const [schemaName, catalogName, toolingName, reactName] = publishSet.packages.map(({ name }) => name);
-    const alone = planReuse({ publishSet, published: new Map([[toolingName, '1.1.0-rc.3']]), priorRelease: prior, revision, cwd });
-    assert.deepEqual([...alone.reused.keys()], [schemaName, catalogName, reactName]);
-    assert.deepEqual([...alone.priorManifests.keys()].sort(), [manifest.id, origin.id].sort());
-    const react = planReuse({ publishSet, published: new Map([[reactName, '0.1.0-rc.6']]), priorRelease: prior, revision, cwd });
-    assert.deepEqual([...react.reused.keys()], [schemaName, catalogName, toolingName]);
-    assert.equal(react.reused.get(toolingName).provenance.releaseId, manifest.id);
-    assert.deepEqual([...react.priorManifests.keys()].sort(), [manifest.id, origin.id].sort());
   });
 }

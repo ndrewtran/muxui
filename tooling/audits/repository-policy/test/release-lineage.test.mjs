@@ -748,7 +748,7 @@ test('npm-publish.yml names the prior release in a dry run, validates it before 
   assert.ok(titles.indexOf('Validate prior release inputs') < titles.indexOf('Install workspace'));
   const validating = step('Validate prior release inputs');
   assert.match(validating, /env:\n          MODE: \$\{\{ inputs\.mode \}\}\n          PRIOR_RELEASE: \$\{\{ inputs\.prior-release \}\}\n          FIRST_RELEASE: \$\{\{ inputs\.first-portfolio-release \}\}\n        run: \|/u);
-  // Run the step's script: a dry run needs exactly one of the two, and the path is a tracked-evidence JSON path.
+  // Run the step's script: a dry run needs exactly one of the two, and the path is a release ledger path.
   const script = validating.split('        run: |\n')[1].replace(/^ {10}/gmu, '');
   const outcome = (mode, prior, first) => {
     try {
@@ -758,16 +758,17 @@ test('npm-publish.yml names the prior release in a dry run, validates it before 
       return /title=([^:]+)::/u.exec(error.stdout)?.[1] ?? error.message;
     }
   };
-  const evidence = 'tests/evidence/p2-1/release-manifest.json';
-  assert.equal(outcome('dry-run', evidence, 'false'), 'accepted');
+  const ledger = 'releases/901c8c6dbc6a22e970b37a726594b286.json';
+  assert.equal(outcome('dry-run', ledger, 'false'), 'accepted');
   assert.equal(outcome('dry-run', '', 'true'), 'accepted');
   assert.equal(outcome('dry-run', '', 'false'), 'Prior release required');
-  assert.equal(outcome('dry-run', evidence, 'true'), 'Prior release ambiguous');
-  for (const bad of ['/etc/release.json', 'release.json', 'docs/release.json', 'tests/evidence/release.txt', 'tests/evidence/../../release.json', 'tests/evidence/a..b.json', 'tests/evidence/a b.json', 'tests/evidence/$(id).json']) {
+  assert.equal(outcome('dry-run', ledger, 'true'), 'Prior release ambiguous');
+  for (const bad of ['/etc/release.json', 'release.json', 'docs/release.json', 'releases/README.md', 'releases/../release.json', 'releases/901C8C6DBC6A22E970B37A726594B286.json',
+    'releases/901c8c6d.json', 'releases/a/901c8c6dbc6a22e970b37a726594b286.json', 'tests/evidence/p2-1/release-manifest.json', 'releases/$(id).json']) {
     assert.equal(outcome('dry-run', bad, 'false'), 'Prior release path', bad);
     assert.equal(outcome('publish', bad, 'false'), 'Prior release path', bad);
   }
   // Publish promotes the dry run's candidate: it neither needs the setting nor reads it.
   assert.equal(outcome('publish', '', 'false'), 'accepted');
-  assert.equal(outcome('publish', evidence, 'false'), 'accepted');
+  assert.equal(outcome('publish', ledger, 'false'), 'accepted');
 });

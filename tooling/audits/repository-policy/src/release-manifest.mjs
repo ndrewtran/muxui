@@ -124,52 +124,51 @@ export function committedFileReader(revision, cwd) {
 }
 
 /**
- * A retained artifact's bytes as committed at `revision`, authenticated by its evidence route: `tests/evidence/<route>/index.json`
- * must list the artifact's path with the sha256 of exactly these bytes. A file that is merely tracked, or whose own digest
- * agrees with itself, is not retained evidence.
+ * The release ledger: the manifest of each portfolio release a later release names or reuses from, byte for byte as
+ * the release wrote it, at `releases/<hex>.json` for the release id `muxui-portfolio:<hex>`. One path per id, so a
+ * ledger cannot hold two manifests of one release.
  */
-export function readIndexedArtifact({ path, revision, cwd }) {
-  const read = committedFileReader(revision, cwd);
-  const route = /^tests\/evidence\/[^/]+(?=\/)/u.exec(path)?.[0];
-  const bytes = read(path);
-  let listed;
+export const RELEASE_LEDGER = 'releases';
+const ledgerName = /^releases\/([0-9a-f]{32})\.json$/u;
+const releaseIdHex = /^muxui-portfolio:([0-9a-f]{32})$/u;
+
+/** The ledger path of a release id, or undefined for a string that is not one. */
+export const releaseLedgerPath = (id) => {
+  const hex = releaseIdHex.exec(typeof id === 'string' ? id : '')?.[1];
+  return hex === undefined ? undefined : `${RELEASE_LEDGER}/${hex}.json`;
+};
+
+/**
+ * The ledger manifest at `path` as committed at `revision`: a portfolio manifest whose id is the one its file name
+ * gives. An uncommitted edit is not read, and a missing file, another path, or a mismatched manifest stops the release.
+ */
+export function readLedgerManifest({ path, revision, cwd }) {
+  const hex = ledgerName.exec(path)?.[1] ?? fail('P2_1_RELEASE_LEDGER_PATH_INVALID', `${path} is not ${RELEASE_LEDGER}/<hex of a release id>.json`);
+  const bytes = committedFileReader(revision, cwd)(path) ?? fail('P2_1_RELEASE_LEDGER_MISSING', `${path} is not committed at ${revision}`);
+  let manifest;
   try {
-    listed = JSON.parse(read(`${route}/index.json`)).artifacts.find((artifact) => artifact.path === path);
+    manifest = JSON.parse(bytes.toString('utf8'));
   } catch {
-    listed = undefined;
+    fail('P2_1_RELEASE_LEDGER_MISMATCH', `${path} is not JSON`);
   }
-  if (bytes === undefined || listed?.sha256 !== sha256(bytes)) {
-    fail('P2_1_MANIFEST_EVIDENCE_UNINDEXED', `${path} is not listed with its sha256 by the index.json of its evidence route at ${revision}`);
+  if (manifest?.schema !== PORTFOLIO_SCHEMA || manifest.id !== `muxui-portfolio:${hex}`) {
+    fail('P2_1_RELEASE_LEDGER_MISMATCH', `${path} is not the ${PORTFOLIO_SCHEMA} manifest of muxui-portfolio:${hex}`);
   }
-  return bytes;
+  return manifest;
 }
 
 /**
- * The portfolio manifests retained at `revision` (a tracked `tests/evidence/**\/release-manifest.json`, authenticated by its
- * route's index, see `readIndexedArtifact`) for the releases `ids` name: where a reused package's record is checked against
- * the release that published it. A release whose manifest is not retained is absent from the Map, and
- * `verifyPortfolioRelease` then refuses the reuse. A manifest of a wanted release that its route's index does not
- * vouch for stops the release, as do two different manifests with one id.
+ * The ledger manifests committed at `revision` for the releases `ids` name: where a reused package's record is checked
+ * against the release that published it. A release with no ledger file is absent from the Map, and
+ * `verifyPortfolioRelease` then refuses the reuse.
  */
 export function readRetainedManifests({ ids, revision, cwd }) {
   const found = new Map();
-  const wanted = new Set(ids);
-  if (wanted.size === 0) return found;
-  const listing = execFileSync('git', ['ls-tree', '-r', '--name-only', '-z', revision, '--', 'tests/evidence'], { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   const read = committedFileReader(revision, cwd);
-  for (const path of listing.split('\0').filter((entry) => entry.endsWith('/release-manifest.json'))) {
-    let retained;
-    try {
-      retained = JSON.parse(read(path));
-    } catch {
-      continue;
-    }
-    if (retained?.schema !== PORTFOLIO_SCHEMA || !wanted.has(retained.id)) continue;
-    const bytes = readIndexedArtifact({ path, revision, cwd });
-    if (found.has(retained.id) && canonicalJson(found.get(retained.id)) !== canonicalJson(retained)) {
-      fail('P2_1_MANIFEST_EVIDENCE_AMBIGUOUS', `${path} is a second, different manifest of ${retained.id}`);
-    }
-    found.set(retained.id, JSON.parse(bytes.toString('utf8')));
+  for (const id of new Set(ids)) {
+    const path = releaseLedgerPath(id);
+    if (path === undefined || read(path) === undefined) continue;
+    found.set(id, readLedgerManifest({ path, revision, cwd }));
   }
   return found;
 }

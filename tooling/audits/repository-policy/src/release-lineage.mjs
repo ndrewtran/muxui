@@ -379,7 +379,7 @@ export function verifyCandidate({
 /**
  * What a candidate that reuses packages needs beyond its own files: the reused tarballs, from the public registry by exact
  * version and held to the integrity the manifest records (`fetchReusedTarball`), and the manifests that published them,
- * retained in the repository at the release commit. Nothing is fetched for a release that reuses nothing.
+ * in the release ledger at the release commit. Nothing is fetched for a release that reuses nothing.
  */
 export async function loadReuse({ directory, publishSet, versions, sha, cwd = repositoryRoot, readRetained = readRetainedManifests, io = {} }) {
   let manifest;

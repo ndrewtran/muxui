@@ -474,7 +474,7 @@ test('a reuse takes its records from the prior release, which must exist, be usa
   assert.throws(() => plan({ priorRelease: { first: false, priorManifest: { ...prior, packages: prior.packages.slice(0, 3) } } }), /P2_1_PRIOR_RELEASE_INVALID: the prior release manifest is unusable/u);
   // A package the prior release reused is vouched for by the manifest of the release that published it, retained in the repository.
   const second = withProvenance(priorManifest, originId, 'e'.repeat(40));
-  assert.throws(() => plan({ priorRelease: { first: false, priorManifest: second } }), /P2_1_REUSE_ORIGIN_UNAVAILABLE: @muxui\/schema@0\.6\.0-rc\.1 was published by muxui-portfolio:origin, whose manifest is not retained as tests\/evidence/u);
+  assert.throws(() => plan({ priorRelease: { first: false, priorManifest: second } }), /P2_1_REUSE_ORIGIN_UNAVAILABLE: @muxui\/schema@0\.6\.0-rc\.1 was published by muxui-portfolio:origin, whose manifest is not in releases\/ at /u);
   const retained = new Map([[originId, { id: originId }]]);
   const chained = plan({ priorRelease: { first: false, priorManifest: second }, readRetained: ({ ids }) => new Map([...retained].filter(([id]) => ids.includes(id))) });
   assert.deepEqual([...chained.priorManifests.keys()].sort(), [originId, second.id].sort());
@@ -555,23 +555,22 @@ test('a release names its prior release, or declares the first and agrees with t
     assert.match(refusal({ [FIRST_RELEASE_VARIABLE]: 'yes' }), /P2_1_PRIOR_RELEASE_REQUIRED: MUXUI_FIRST_PORTFOLIO_RELEASE must be true/u);
     assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: 'x.json', [FIRST_RELEASE_VARIABLE]: 'true' }), /P2_1_PRIOR_RELEASE_AMBIGUOUS/u);
     assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: join(scratch, 'missing.json') }), /P2_1_PRIOR_RELEASE_UNAVAILABLE/u);
-    // The first release is declared, and holds while no portfolio manifest is retained under tests/evidence.
+    // The first release is declared, and holds while no portfolio manifest is tracked.
     assert.deepEqual(resolve({ [FIRST_RELEASE_VARIABLE]: 'true' }), { first: true });
-    write('tests/evidence/p2-1/notes.json', { schema: 'something-else' });
+    write('releases/notes.json', { schema: 'something-else' });
     git('add', '-A');
-    git('commit', '-q', '-m', 'unrelated evidence');
+    git('commit', '-q', '-m', 'unrelated file');
     assert.deepEqual(resolve({ [FIRST_RELEASE_VARIABLE]: 'true' }, git('rev-parse', 'HEAD')), { first: true });
-    write('tests/evidence/p2-1/release.json', priorManifest);
-    const indexed = (bytes) => ({ schema: 'muxui-evidence-index-v1', artifacts: [{ path: 'tests/evidence/p2-1/release.json', sha256: sha256(Buffer.from(bytes)) }] });
-    write('tests/evidence/p2-1/index.json', indexed(`${JSON.stringify(priorManifest)}\n`));
+    const ledgerPath = `releases/${priorManifest.id.slice('muxui-portfolio:'.length)}.json`;
+    write(ledgerPath, priorManifest);
     git('add', '-A');
-    git('commit', '-q', '-m', 'retain a portfolio release');
+    git('commit', '-q', '-m', 'a portfolio release in the ledger');
     const retained = git('rev-parse', 'HEAD');
-    assert.match(refusal({ [FIRST_RELEASE_VARIABLE]: 'true' }, retained), /P2_1_FIRST_RELEASE_CONTRADICTED: .*tests\/evidence\/p2-1\/release\.json/u);
+    assert.match(refusal({ [FIRST_RELEASE_VARIABLE]: 'true' }, retained), new RegExp(`P2_1_FIRST_RELEASE_CONTRADICTED: .*${ledgerPath.replace(/[./]/gu, '\\$&')}`, 'u'));
     // A manifest is found by what it says, not where it lives, which schema version it names, or how it is spaced.
     const attacks = {
-      'a manifest outside tests/evidence': ['release/portfolio.json', priorManifest],
-      'a later schema version': ['tests/evidence/p2-1/next.json', { ...priorManifest, schema: 'muxui-portfolio-release-v2' }],
+      'a manifest outside the ledger': ['release/portfolio.json', priorManifest],
+      'a later schema version': ['tests/p2-1/next.json', { ...priorManifest, schema: 'muxui-portfolio-release-v2' }],
       'a newline after the schema key': ['docs/archive/old.json', `{\n  "schema":\n    "muxui-portfolio-release-v1",\n  "id": "x"\n}\n`],
     };
     for (const [what, [path, content]] of Object.entries(attacks)) {
@@ -582,23 +581,22 @@ test('a release names its prior release, or declares the first and agrees with t
       rmSync(join(scratch, path));
       assert.match(refusal({ [FIRST_RELEASE_VARIABLE]: 'true' }, revision), new RegExp(`P2_1_FIRST_RELEASE_CONTRADICTED: .*${path.replace(/[./]/gu, '\\$&')}`, 'u'), what);
     }
-    // The prior manifest is read as committed, from the path given (absolute or relative to the repository).
-    const path = join(scratch, 'tests/evidence/p2-1/release.json');
+    // The prior manifest is read as committed in the ledger, from the path given (absolute or relative to the repository).
+    const path = join(scratch, ledgerPath);
     assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, retained), { first: false, priorManifest });
-    assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: 'tests/evidence/p2-1/release.json' }, retained), { first: false, priorManifest });
-    // A forged prior manifest, self-consistent and in the working tree or tracked, is not retained evidence unless its route's index lists it.
-    const forged = { ...priorManifest, packages: priorManifest.packages.map((record, index) => (index === 0 ? { ...record, integrity: `sha512-${'f'.repeat(86)}==` } : record)) };
-    const forgedText = `${JSON.stringify(forged)}\n`;
-    write('tests/evidence/p2-1/release.json', forged);
+    assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: ledgerPath }, retained), { first: false, priorManifest });
+    write(ledgerPath, { ...priorManifest, packages: [] });
     assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, retained), { first: false, priorManifest }, 'an edit that is not committed is not read');
+    // A ledger file must hold the manifest its name gives, and only a ledger path is read.
+    write(ledgerPath, { ...priorManifest, id: `muxui-portfolio:${'0'.repeat(32)}` });
     git('add', '-A');
-    git('commit', '-q', '-m', 'a forged prior manifest, its index left alone');
-    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: path }, git('rev-parse', 'HEAD')), /P2_1_PRIOR_RELEASE_UNAVAILABLE: .* cannot be read as retained evidence \(P2_1_MANIFEST_EVIDENCE_UNINDEXED: tests\/evidence\/p2-1\/release\.json is not listed with its sha256/u);
-    write('tests/evidence/p2-1/index.json', indexed(forgedText));
+    git('commit', '-q', '-m', 'another release under this name');
+    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: path }, git('rev-parse', 'HEAD')), /P2_1_PRIOR_RELEASE_UNAVAILABLE: .* cannot be read from the release ledger \(P2_1_RELEASE_LEDGER_MISMATCH/u);
+    write('release/portfolio.json', priorManifest);
     git('add', '-A');
-    git('commit', '-q', '-m', 'its index updated');
-    assert.deepEqual(resolve({ [PRIOR_RELEASE_VARIABLE]: path }, git('rev-parse', 'HEAD')), { first: false, priorManifest: forged }, 'the index alone is not the last defence: the registry attestation is');
-    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: join(tmpdir(), 'elsewhere.json') }, retained), /cannot be read as retained evidence/u, 'a path outside the repository');
+    git('commit', '-q', '-m', 'a copy outside the ledger');
+    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: 'release/portfolio.json' }, git('rev-parse', 'HEAD')), /P2_1_RELEASE_LEDGER_PATH_INVALID/u);
+    assert.match(refusal({ [PRIOR_RELEASE_VARIABLE]: join(tmpdir(), 'elsewhere.json') }, retained), /cannot be read from the release ledger/u, 'a path outside the repository');
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
