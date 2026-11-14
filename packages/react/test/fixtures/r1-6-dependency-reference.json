@@ -1,6 +1,6 @@
 {
   "schema": "muxui-r1-6-dependency-reference-v3",
-  "authority": "decisions/0013-theme-parity-and-private-authoring.md",
+  "authority": "packages/react (runtime dependency licences; see ARCHITECTURE.md)",
   "verificationBoundary": "Unchanged license texts for the disclosed runtime packages. Versions, lockfile resolution and integrity come from package.json and pnpm-lock.yaml, not from this file; packed evaluation isolation and runtime/SSR proof are separate obligations.",
   "licenses": {
     "@internationalized/date": {

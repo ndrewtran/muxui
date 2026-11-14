@@ -44,6 +44,8 @@
     "pnpm-workspace.yaml"
   ],
   "affectedPathOwners": {
+    ".agents/": ["@muxui/repository-policy"],
+    ".claude/": ["@muxui/repository-policy"],
     ".github/": ["@muxui/repository-policy"],
     ".gitattributes": ["@muxui/repository-policy"],
     ".gitignore": ["@muxui/repository-policy"],
@@ -51,10 +53,13 @@
     "LICENSE": ["@muxui/repository-policy"],
     "ARCHITECTURE.md": ["@muxui/repository-policy"],
     "README.md": ["@muxui/repository-policy"],
+    "apps/AGENTS.md": ["@muxui/repository-policy"],
     "catalog/": ["@muxui/catalog"],
+    "decisions/": ["@muxui/repository-policy"],
     "docs/": ["@muxui/repository-policy"],
     "packages/": ["@muxui/repository-policy"],
     "releases/": ["@muxui/repository-policy"],
+    "strategy/": ["@muxui/repository-policy"],
     "tests/": ["@muxui/repository-policy"],
     "tooling/": ["@muxui/repository-policy"]
   },

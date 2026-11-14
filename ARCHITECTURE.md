@@ -63,7 +63,8 @@ React (`tooling/audits/repository-policy/publish-set.json`).
 | Another web framework | Not planned until demand |
 
 No cross-platform parity, stable support or assistive-technology support is
-claimed.
+claimed. Server rendering and hydration are tested; React Server Components and
+client-boundary integration are not supported.
 
 ## Ownership
 
