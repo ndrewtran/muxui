@@ -2,8 +2,7 @@
 // with the class a consumer selects or the reason Mux has no element to class. Tests, Storybook's anatomy proof and the Figma
 // anatomy specs import this file by relative path; nothing ships from it (the state half is src/styling-contract.ts, which the
 // substrate adapter reads). Keep it erasable TypeScript (no enums, no namespaces), and keep every reader on this one module: the
-// planner routes a change here to both consumers (tooling/audits/repository-policy/src/ci-impact.mjs), and the row type and
-// `selectorOf` live here so that no reader needs a second support file.
+// row type and `selectorOf` live here so that no reader needs a second support file.
 
 /** The class scheme: a part is a BEM element of the family class, `muxui-<slug>__<part>`; the root is `muxui-<slug>`. */
 export const partClass = (slug: string, part: string): string => part === 'root' ? `muxui-${slug}` : `muxui-${slug}__${part}`;

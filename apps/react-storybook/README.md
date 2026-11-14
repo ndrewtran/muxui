@@ -85,30 +85,26 @@ pnpm --filter @muxui/react-storybook check
 pnpm --filter @muxui/react-storybook build
 ```
 
-For bounded verification, `pnpm check --component <family-or-slug>` runs
-selected React and Storybook family audits and `pnpm check --package
-@muxui/react-storybook` covers the package scope. `pnpm check --files <paths>`
-and the default `pnpm check` run the same story selection, with the same
-`MUXUI_STORYBOOK_*` environment, that CI plans for those paths, and keep the
-complete audit, with a printed notice, when that selection needs more than one
-CI shard (80 pages) or cannot be planned. Common scope and proof rules live in
-the root [`AGENTS.md`](../../AGENTS.md) Verification section.
+For bounded verification, `pnpm check --component <family-or-slug>` runs the
+React check plus the Storybook audit of only those families' pages, and `pnpm
+check --package @muxui/react-storybook` covers the package scope. `pnpm check
+--files <paths>` and the default `pnpm check` run the whole Storybook check
+when Storybook is affected. Common scope rules live in the root
+[`AGENTS.md`](../../AGENTS.md) Verification section.
 
 Direct package checks run the complete browser audits. The page audits visit
 each page once at 1440x1000 and run its axe (or theme contrast) and canonical
 colour checks in that visit. The page and manager audits each use two isolated
 browser contexts by default, one per colour scheme. Set
-`MUXUI_STORYBOOK_A11Y_WORKERS=1` (page audits) or
-`MUXUI_STORYBOOK_COLORS_WORKERS=1` (manager and docs audit) to run an audit
-serially when comparing timings.
+`MUXUI_STORYBOOK_A11Y_WORKERS=1` to run the page audits serially when comparing
+timings.
 
-The policy runner uses `pnpm --filter @muxui/react-storybook run check:scoped`
-for focused Storybook work. Set `MUXUI_STORYBOOK_AUDIT_PROOF=story` with
+`pnpm --filter @muxui/react-storybook run check:scoped` runs focused Storybook
+work. Set `MUXUI_STORYBOOK_AUDIT_PROOF=story` with
 `MUXUI_STORYBOOK_FAMILIES` and exact `MUXUI_STORYBOOK_STORY_IDS` to check only
 those pages in both schemes. `component` checks every page in the selected
 families, `theme` checks palette paints and colour contrast across both schemes
-for all consumer pages unless family or page filters narrow it, and `chrome`
-checks manager and docs colours. `full` delegates to the complete package audit.
+for all consumer pages unless family or page filters narrow it. `full` delegates to the complete package audit.
 Canonical page IDs and authored example source mappings come from the generated
 `.storybook/generated/manifest.mjs` page index.
 

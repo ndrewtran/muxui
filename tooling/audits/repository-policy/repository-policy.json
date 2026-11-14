@@ -44,21 +44,17 @@
     "pnpm-workspace.yaml"
   ],
   "affectedPathOwners": {
-    ".agents/": ["@muxui/repository-policy"],
-    ".claude/": ["@muxui/repository-policy"],
     ".github/": ["@muxui/repository-policy"],
     ".gitattributes": ["@muxui/repository-policy"],
     ".gitignore": ["@muxui/repository-policy"],
     "AGENTS.md": ["@muxui/repository-policy"],
     "LICENSE": ["@muxui/repository-policy"],
+    "ARCHITECTURE.md": ["@muxui/repository-policy"],
     "README.md": ["@muxui/repository-policy"],
-    "apps/AGENTS.md": ["@muxui/repository-policy"],
     "catalog/": ["@muxui/catalog"],
-    "decisions/": ["@muxui/repository-policy"],
-    "docs/agents/": ["@muxui/repository-policy"],
+    "docs/": ["@muxui/repository-policy"],
     "packages/": ["@muxui/repository-policy"],
     "releases/": ["@muxui/repository-policy"],
-    "strategy/": ["@muxui/repository-policy"],
     "tests/": ["@muxui/repository-policy"],
     "tooling/": ["@muxui/repository-policy"]
   },
@@ -76,7 +72,7 @@
     "packages/catalog/src/pattern-imports.mjs": ["@muxui/react"],
     "packages/catalog/token-section-page-budget-profile.json": ["@muxui/react"],
     "packages/tooling/command-registry.json": ["@muxui/react"],
-    "strategy/platform-safety-contract.json": ["@muxui/react"]
+    "packages/schema/platform-safety-contract.json": ["@muxui/react"]
   },
   "generationPrerequisites": {
     "@muxui/repository-policy": ["@muxui/react"]

@@ -200,9 +200,9 @@ test('repository policy routes navigation and CI paths to the policy check with 
   ]);
   const reactClosure = dependencyClosure(realPackages, ['@muxui/react']).map(({ name }) => name);
   const policyPaths = [
-    'README.md', 'LICENSE', '.gitignore', 'docs/agents/domain.md', 'apps/AGENTS.md',
-    'AGENTS.md', '.github/workflows/ci.yml', '.agents/skills/example/SKILL.md', '.claude/skills',
-    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/fixed-slice-needs.json', 'releases/README.md',
+    'README.md', 'ARCHITECTURE.md', 'LICENSE', '.gitignore', 'docs/releasing.md',
+    'AGENTS.md', '.github/workflows/ci.yml',
+    'tests/fixtures/g0.4/corpus.json', 'releases/README.md',
   ];
   for (const path of policyPaths) {
     const plan = planScopedTask({

@@ -23,8 +23,7 @@ const testTimeoutMs = 420_000;
 // platform-mode, and Button-matrix proofs, with one browser context per scheme.
 const fullAuditTimeoutMs = 600_000;
 
-// CI shards large page selections by family (ci-impact storyShardPageBudget),
-// so a scoped run stays well inside the full-audit cap.
+// A scoped run covers a few families, so it stays well inside the full-audit cap.
 function pageScopedAuditTimeout() {
   const { proof, pages } = resolveStorybookPageSelection();
   if (!['story', 'component', 'theme'].includes(proof)) return fullAuditTimeoutMs;

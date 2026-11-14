@@ -357,7 +357,6 @@ export const renamedPropAttributes = Object.freeze({
  * own markup and styles and never load the shipped stylesheet. They keep the names they were written with.
  */
 export const historicalPaths = Object.freeze({
-  'decisions/': 'decision records state what the attributes were when they were decided',
   'packages/react/advisory/': 'advisory mockups are self-contained pages with their own styles',
 });
 
