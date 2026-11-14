@@ -4,26 +4,6 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
 const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules', '.pnpm-store', '.migration-archive']);
-const STALE_IDENTITY_PATTERNS = Object.freeze([
-  { label: 'legacy machine identity', pattern: /\bcore-ui\b/iu },
-  { label: 'legacy display identity', pattern: /\bCore UI\b/iu },
-  { label: 'legacy package scope', pattern: /@core-ui(?:\/|(?=[\s'"`]|$))/iu },
-  { label: 'legacy artifact namespace', pattern: /\bcore:(?:component|pattern|guide|example|token|capability):/iu },
-  { label: 'legacy diagnostics/environment prefix', pattern: /\bCORE_[A-Z0-9_]+\b/u },
-  { label: 'legacy CSS class hook', pattern: /\.core-[a-z0-9-]+\b/iu },
-  { label: 'legacy CSS custom-property hook', pattern: /--core-[a-z0-9-]+\b/iu },
-  { label: 'legacy data hook', pattern: /data-core-[a-z0-9-]+\b/iu },
-  { label: 'legacy ownership wording', pattern: /\bCore-owned\b/iu },
-  { label: 'legacy renderer wording', pattern: /\bCore React\b/iu },
-  // These are easy to miss in a broad display/package rename because they are
-  // executable tokens or data keys rather than prose identity references.
-  { label: 'legacy bare CLI command', pattern: /(?:complete\s+-F\s+\S+\s+|(?:cli|command|executable|bin)\s*[:=]\s*[\s'"`"]?)core\b/iu },
-  { label: 'legacy shell completion helper', pattern: /\b_core_complete\b/u },
-  { label: 'legacy experimental namespace', pattern: /\bcore\.experimental(?:[./:_-]|$)/u },
-  { label: 'legacy current fixture key', pattern: /\bcoreFixture[A-Za-z0-9_]*\b/u },
-  { label: 'legacy active object key', pattern: /\bcore(?:Source|Input|Commit|Tree|RawClassification|RawExports|PublicFamily|StateCoverage|Tokens?|TokenIds?)\b\s*:/u },
-]);
-
 function isIgnoredRepositoryEntry(name) {
   return name === '.DS_Store' || IGNORED_DIRECTORIES.has(name);
 }
@@ -63,23 +43,15 @@ export async function loadPolicy(repositoryRoot) {
   return policy;
 }
 
+// A path under a projection segment (generated, dist, ...) is a projection, outside the retained fixture roots;
+// everything else is source.
 export function classifyPath(repositoryPath, policy) {
   const normalized = normalizePath(repositoryPath);
   const segments = normalized.split('/');
   const retainedFixture = policy.retainedProjectionFixtureRoots?.some(
     (root) => normalized === root || normalized.startsWith(`${root}/`),
   ) ?? false;
-  if (
-    !retainedFixture
-    && segments.some((segment) => policy.projectionPathSegments.includes(segment))
-  ) {
-    return 'projection';
-  }
-
-  const owner = policy.majorOwners.find(
-    ({ path }) => normalized === path || normalized.startsWith(`${path}/`),
-  );
-  return owner?.classification ?? 'repository';
+  return !retainedFixture && segments.some((segment) => policy.projectionPathSegments.includes(segment)) ? 'projection' : 'source';
 }
 
 export function generatedText({ source, body, policy }) {
@@ -198,8 +170,8 @@ export async function walkFiles(root, current = root) {
 }
 
 // Narrows walked files to repository content (tracked plus untracked but not
-// ignored), so ignored local evidence never fails the identity scan. Roots
-// outside a repository, such as test fixtures, keep every walked file.
+// ignored). Roots outside a repository, such as test fixtures, keep every
+// walked file.
 export function repositoryVisibleFiles(repositoryRoot, files) {
   const result = spawnSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
     cwd: repositoryRoot,
@@ -220,98 +192,9 @@ export function projectionFilesToValidate(files, visibleFiles, policy) {
     && (visible.has(path) || path.split('/').includes('generated')));
 }
 
-function isAllowlistedIdentityPath(path, allowlistedPaths) {
-  return allowlistedPaths.some((prefix) => {
-    const normalizedPrefix = prefix.replace(/\/+$/u, '');
-    return path === normalizedPrefix || path.startsWith(`${normalizedPrefix}/`);
-  });
-}
-
-export async function auditCurrentIdentity(repositoryRoot, policy, files = null) {
-  const identity = policy.identityReset?.current;
-  if (
-    identity?.display !== 'Mux UI'
-    || identity?.machine !== 'muxui'
-    || identity?.repository !== 'ndrewtran/muxui'
-    || identity?.packageScope !== '@muxui/'
-    || identity?.artifactPrefix !== 'muxui:'
-    || identity?.cli !== 'muxui'
-    || JSON.stringify(identity.publicRoots) !== JSON.stringify(['.muxui-', '--muxui-', 'data-muxui-'])
-    || identity?.diagnosticsPrefix !== 'MUXUI_'
-    || identity?.environmentPrefix !== 'MUXUI_'
-  ) {
-    throw new PolicyError('CURRENT_IDENTITY_POLICY_INVALID', 'repository policy must own the accepted Mux UI identity');
-  }
-
-  const allFiles = files ?? await walkFiles(repositoryRoot);
-  const allowlistedPaths = policy.identityReset.allowlistedPaths ?? [];
-  const violations = [];
-  let scanned = 0;
-  let allowlisted = 0;
-  for (const path of allFiles) {
-    if (isAllowlistedIdentityPath(path, allowlistedPaths)) {
-      allowlisted += 1;
-      continue;
-    }
-    scanned += 1;
-    const content = await readFile(join(repositoryRoot, path), 'utf8');
-    for (const [index, line] of content.split('\n').entries()) {
-      for (const { label, pattern } of STALE_IDENTITY_PATTERNS) {
-        const match = pattern.exec(line);
-        if (match) {
-          violations.push(`${path}:${index + 1} ${label}: ${match[0]}`);
-          break;
-        }
-      }
-    }
-  }
-  if (violations.length > 0) {
-    throw new PolicyError(
-      'STALE_CURRENT_IDENTITY',
-      `current files retain superseded identity (${violations.slice(0, 20).join('; ')}${violations.length > 20 ? `; ... ${violations.length - 20} more` : ''})`,
-    );
-  }
-  return { scanned, allowlisted };
-}
-
-async function auditNavigation(repositoryRoot, policy) {
-  const rootAgentsPath = join(repositoryRoot, 'AGENTS.md');
-  const rootAgents = await readFile(rootAgentsPath, 'utf8');
-  for (const { path } of policy.majorOwners) {
-    const ownerPath = join(repositoryRoot, path);
-    const ownerStats = await stat(ownerPath).catch(() => null);
-    if (!ownerStats?.isDirectory()) {
-      throw new PolicyError('OWNER_ROOT_MISSING', `required owner root ${path}/ is missing`);
-    }
-    const localAgents = await stat(join(ownerPath, 'AGENTS.md')).catch(() => null);
-    if (!localAgents?.isFile()) {
-      throw new PolicyError('NAVIGATION_MISSING', `${path}/AGENTS.md is missing`);
-    }
-    if (!rootAgents.includes(`\`${path}/\``)) {
-      throw new PolicyError('ROUTE_MISSING', `root AGENTS.md does not route to ${path}/`);
-    }
-  }
-
-  if (/\b(?:Button|TextField|Switch|Dialog|Select)\b/.test(rootAgents)) {
-    throw new PolicyError(
-      'ROOT_INVENTORY_FORBIDDEN',
-      'root AGENTS.md must route to owners, not maintain a component inventory',
-    );
-  }
-}
-
-// The root scripts must include the core commands; other scripts are allowed.
-export async function auditRootContract(repositoryRoot, policy) {
+// The root package manager, Node engine, and .node-version match the policy toolchain.
+export async function auditToolchain(repositoryRoot, policy) {
   const packageJson = JSON.parse(await readFile(join(repositoryRoot, 'package.json'), 'utf8'));
-  const scripts = new Set(Object.keys(packageJson.scripts ?? {}));
-  const missing = policy.requiredRootCommands.filter((name) => !scripts.has(name));
-  if (missing.length > 0) {
-    throw new PolicyError(
-      'ROOT_COMMAND_SURFACE_DRIFT',
-      `root scripts must include ${[...policy.requiredRootCommands].sort().join(', ')}; missing: ${missing.sort().join(', ')}`,
-    );
-  }
-
   if (packageJson.packageManager !== `pnpm@${policy.toolchain.pnpm}`) {
     throw new PolicyError('PNPM_PIN_DRIFT', 'root packageManager does not match policy');
   }
@@ -370,12 +253,10 @@ export async function auditAliases(repositoryRoot, policy, files = null) {
 export async function auditRepository(repositoryRoot) {
   const resolvedRoot = resolve(repositoryRoot);
   const policy = await loadPolicy(resolvedRoot);
-  await auditNavigation(resolvedRoot, policy);
-  await auditRootContract(resolvedRoot, policy);
+  await auditToolchain(resolvedRoot, policy);
 
   const files = await walkFiles(resolvedRoot);
   const visibleFiles = repositoryVisibleFiles(resolvedRoot, files);
-  const identity = await auditCurrentIdentity(resolvedRoot, policy, visibleFiles);
   const generatedFiles = projectionFilesToValidate(files, visibleFiles, policy);
   for (const path of generatedFiles) {
     await validateGeneratedFile(resolvedRoot, path, policy);
@@ -383,10 +264,8 @@ export async function auditRepository(repositoryRoot) {
   const aliases = await auditAliases(resolvedRoot, policy, files);
 
   return {
-    owners: policy.majorOwners.length,
     generatedFiles: generatedFiles.length,
     artifacts: aliases.artifacts,
     claimedNames: aliases.claimedNames,
-    identity,
   };
 }

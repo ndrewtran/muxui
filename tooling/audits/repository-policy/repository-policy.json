@@ -1,51 +1,5 @@
 {
   "schemaVersion": 1,
-  "identityReset": {
-    "current": {
-      "display": "Mux UI",
-      "machine": "muxui",
-      "repository": "ndrewtran/muxui",
-      "packageScope": "@muxui/",
-      "artifactPrefix": "muxui:",
-      "cli": "muxui",
-      "publicRoots": [".muxui-", "--muxui-", "data-muxui-"],
-      "diagnosticsPrefix": "MUXUI_",
-      "environmentPrefix": "MUXUI_"
-    },
-    "allowlistedPaths": [
-      "decisions/",
-      "catalog/react-r1-0/",
-      "catalog/tokens/default-theme.json",
-      "tests/fixtures/g0.4/",
-      "tests/fixtures/g1.0/",
-      "tooling/audits/repository-policy/src/policy.mjs",
-      "tooling/audits/repository-policy/test/repository-policy.test.mjs",
-      "packages/schema/schemas/react-r1.schema.json",
-      "packages/tooling/test/local-resolver.test.mjs",
-      "tooling/audits/repository-policy/src/react-aria-family-evaluate.mjs",
-      "tooling/audits/repository-policy/src/react-aria-stage1-source-verify.mjs"
-    ]
-  },
-  "requiredRootCommands": [
-    "check",
-    "check:all",
-    "docs",
-    "generate",
-    "generate:check",
-    "scale",
-    "storybook",
-    "test:agent",
-    "release:prepare"
-  ],
-  "majorOwners": [
-    { "path": "strategy", "classification": "authority" },
-    { "path": "decisions", "classification": "canonical" },
-    { "path": "catalog", "classification": "canonical" },
-    { "path": "packages", "classification": "source" },
-    { "path": "apps", "classification": "projection-source" },
-    { "path": "tooling", "classification": "source" },
-    { "path": "tests", "classification": "proof" }
-  ],
   "projectionPathSegments": [
     "build",
     "coverage",

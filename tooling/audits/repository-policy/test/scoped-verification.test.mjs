@@ -336,7 +336,7 @@ test('repository policy routes navigation and CI paths to the policy check with 
   const policyPaths = [
     'README.md', 'LICENSE', '.gitignore', 'docs/agents/domain.md', 'apps/AGENTS.md',
     'AGENTS.md', '.github/workflows/ci.yml', '.agents/skills/example/SKILL.md', '.claude/skills',
-    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/entry-contract.test.mjs',
+    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/fixed-slice-needs.json',
   ];
   for (const path of policyPaths) {
     const plan = planWithoutInheritedStorybookSelection({
