@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmod, copyFile, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -215,7 +215,7 @@ test('full check boundary overrides inherited focused Storybook selection', asyn
   });
 });
 
-test('component checks route substrate and public names from the generated contracts', async () => {
+test('component checks run the React check and the selected Storybook families from the generated contracts', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-task-components-'));
   await mkdir(join(root, 'packages/react/generated'), { recursive: true });
   await mkdir(join(root, 'apps/react-storybook'), { recursive: true });
@@ -242,7 +242,7 @@ test('component checks route substrate and public names from the generated contr
   await writeFile(join(root, 'bin/pnpm'), [
     '#!/usr/bin/env node',
     "import { appendFileSync } from 'node:fs';",
-    "appendFileSync(process.env.MUXUI_TASK_LOG, JSON.stringify({ args: process.argv.slice(2), components: process.env.MUXUI_COMPONENT_FAMILIES, stories: process.env.MUXUI_STORYBOOK_FAMILIES }) + '\\n');",
+    "appendFileSync(process.env.MUXUI_TASK_LOG, JSON.stringify({ args: process.argv.slice(2), proof: process.env.MUXUI_STORYBOOK_AUDIT_PROOF, stories: process.env.MUXUI_STORYBOOK_FAMILIES, storyIds: process.env.MUXUI_STORYBOOK_STORY_IDS }) + '\\n');",
     '',
   ].join('\n'));
   await chmod(join(root, 'bin/pnpm'), 0o755);
@@ -257,14 +257,16 @@ test('component checks route substrate and public names from the generated contr
       MUXUI_TASK_REPOSITORY_ROOT: root,
       MUXUI_STORYBOOK_AUDIT_EVENT: 'pull_request',
       MUXUI_STORYBOOK_AUDIT_FORCE: '0',
-      MUXUI_COMPONENT_FAMILIES: 'DatePicker',
+      // An inherited selection is replaced by the requested families.
+      MUXUI_STORYBOOK_AUDIT_PROOF: 'story',
       MUXUI_STORYBOOK_FAMILIES: 'DatePicker',
+      MUXUI_STORYBOOK_STORY_IDS: 'date-picker--default',
     },
   });
   assert.match(result.stdout, /Storybook families: Button, Dialog/u);
   assert.deepEqual((await readFile(logPath, 'utf8')).trim().split('\n').map((line) => JSON.parse(line)), [
-    { args: ['--filter', '@muxui/react', 'run', 'check:component'], components: 'Button,Modal', stories: 'Button,Dialog' },
-    { args: ['--filter', '@muxui/react-storybook', 'run', 'check:scoped'], components: 'Button,Modal', stories: 'Button,Dialog' },
+    { args: ['--filter', '@muxui/react', 'run', 'check'], proof: 'component', stories: 'Button,Dialog' },
+    { args: ['--filter', '@muxui/react-storybook', 'run', 'check:scoped'], proof: 'component', stories: 'Button,Dialog' },
   ]);
 });
 
@@ -326,87 +328,31 @@ test('a failing isolated React check still runs the later check stage and exits 
   await readFile(join(root, 'packages/app/ran'), 'utf8');
 });
 
-// A workspace with just enough React and Storybook for the CI planner to select
-// stories: a Slider family with two pages, committed, then its source edited.
-// The fake pnpm records every invocation and the Storybook selection it sees.
+// A workspace with React and Storybook packages and a fake pnpm that records
+// every invocation and the Storybook selection it sees.
 async function writeStorybookWorkspace(root) {
   await mkdir(join(root, 'tooling/audits/repository-policy'), { recursive: true });
-  await mkdir(join(root, 'packages/react/src'), { recursive: true });
-  await mkdir(join(root, 'packages/react/test'), { recursive: true });
-  await mkdir(join(root, 'packages/react/generated'), { recursive: true });
-  await mkdir(join(root, 'apps/react-storybook/.storybook/generated'), { recursive: true });
+  await mkdir(join(root, 'packages/react'), { recursive: true });
+  await mkdir(join(root, 'apps/react-storybook/src'), { recursive: true });
   await mkdir(join(root, 'bin'), { recursive: true });
   await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n  - apps/*\n');
   await writeRootManifest(root);
-  await copyFile(resolve(import.meta.dirname, '../repository-policy.json'), join(root, 'tooling/audits/repository-policy/repository-policy.json'));
-  await writeFile(join(root, 'packages/react/package.json'), JSON.stringify({
-    name: '@muxui/react',
-    version: '0.0.0',
-    private: true,
-    scripts: { 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' },
-  }));
+  await writeFile(join(root, 'tooling/audits/repository-policy/repository-policy.json'), JSON.stringify({ globalTaskInputs: [] }));
+  await writeFile(join(root, 'packages/react/package.json'), JSON.stringify({ name: '@muxui/react', version: '0.0.0', private: true }));
   await writeFile(join(root, 'apps/react-storybook/package.json'), JSON.stringify({
     name: '@muxui/react-storybook',
     version: '0.0.0',
     private: true,
     dependencies: { '@muxui/react': 'workspace:*' },
-    scripts: { 'check:scoped': 'node src/check-scoped.mjs' },
   }));
-  await writeFile(join(root, 'packages/react/generated/r1-6-contract.json'), JSON.stringify({
-    components: [{ family: 'Slider', slug: 'slider', source: 'packages/react/src/slider.mjs', parts: ['root'] }],
-  }));
-  await writeFile(join(root, 'apps/react-storybook/.storybook/generated/manifest.mjs'), [
-    'export const manifest = Object.freeze({',
-    "  schema: 'muxui-react-storybook-manifest-v1',",
-    '  pageIndex: [{',
-    "    family: 'Slider',",
-    "    storyFile: 'apps/react-storybook/.storybook/generated/slider.stories.mjs',",
-    '    stories: [',
-    "      { id: 'slider--default', exportName: 'Default', name: 'Default' },",
-    "      { id: 'slider--states', exportName: 'States', name: 'States' },",
-    '    ],',
-    '  }],',
-    '});',
-    '',
-  ].join('\n'));
-  await writeFile(join(root, 'packages/react/src/slider.mjs'), 'export const Slider = () => null;\n');
-  // The component route needs a test that names the family plus the shared tests.
-  for (const [file, name] of [['slider', 'Slider renders'], ['public-surface-baseline', 'public surface'], ['style-scopes', 'style scopes'], ['styling-tokens', 'styling tokens']]) {
-    await writeFile(join(root, `packages/react/test/${file}.test.mjs`), `import test from 'node:test';\ntest('${name}', () => {});\n`);
-  }
   await writeFile(join(root, 'bin/pnpm'), [
     '#!/usr/bin/env node',
     "import { appendFileSync } from 'node:fs';",
     'const { env } = process;',
-    "appendFileSync(env.MUXUI_TASK_LOG, JSON.stringify({ args: process.argv.slice(2), proof: env.MUXUI_STORYBOOK_AUDIT_PROOF, families: env.MUXUI_STORYBOOK_FAMILIES, storyIds: env.MUXUI_STORYBOOK_STORY_IDS }) + '\\n');",
+    "appendFileSync(env.MUXUI_TASK_LOG, JSON.stringify({ args: process.argv.slice(2), proof: env.MUXUI_STORYBOOK_AUDIT_PROOF, families: env.MUXUI_STORYBOOK_FAMILIES }) + '\\n');",
     '',
   ].join('\n'));
   await chmod(join(root, 'bin/pnpm'), 0o755);
-  run('git', ['init', '--quiet'], { cwd: root });
-  run('git', ['config', 'user.name', 'Mux UI fixture'], { cwd: root });
-  run('git', ['config', 'user.email', 'fixture@example.invalid'], { cwd: root });
-  run('git', ['add', '.'], { cwd: root });
-  run('git', ['commit', '--quiet', '-m', 'fixture base'], { cwd: root });
-  await writeFile(join(root, 'packages/react/src/slider.mjs'), 'export const Slider = () => 1;\n');
-}
-
-async function runFilesCheck(root, extraEnv = {}, scope = ['--files', 'packages/react/src/slider.mjs']) {
-  const logPath = join(root, 'runner-invocations.jsonl');
-  const result = run(process.execPath, [affectedTaskRunner, 'check', ...scope], {
-    cwd: root,
-    env: {
-      ...process.env,
-      PATH: `${join(root, 'bin')}:${process.env.PATH}`,
-      MUXUI_BASE_REF: 'HEAD',
-      MUXUI_TASK_LOG: logPath,
-      MUXUI_TASK_REPOSITORY_ROOT: root,
-      MUXUI_STORYBOOK_AUDIT_EVENT: 'pull_request',
-      MUXUI_STORYBOOK_AUDIT_FORCE: '0',
-      ...extraEnv,
-    },
-  });
-  const invocations = (await readFile(logPath, 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
-  return { result, invocations };
 }
 
 test('full checks finish React and Storybook before the remaining lane, including after failures', async (t) => {
@@ -462,44 +408,23 @@ test('full checks finish React and Storybook before the remaining lane, includin
   }
 });
 
-test('--files runs the Storybook audit CI would plan for those files, with per-command environment', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'muxui-task-story-selection-'));
+test('a file scope runs each owner package check whole, Storybook included', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-task-files-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
   await writeStorybookWorkspace(root);
-  // Inherited selections must not reach the scoped Storybook audit.
-  const { result, invocations } = await runFilesCheck(root, {
-    MUXUI_STORYBOOK_FAMILIES: 'Ambient',
-    MUXUI_STORYBOOK_STORY_IDS: 'ambient--story',
+  const logPath = join(root, 'runner-invocations.jsonl');
+  run(process.execPath, [affectedTaskRunner, 'check', '--files', 'apps/react-storybook/src/stories.mjs'], {
+    cwd: root,
+    env: {
+      ...process.env,
+      PATH: `${join(root, 'bin')}:${process.env.PATH}`,
+      MUXUI_TASK_LOG: logPath,
+      MUXUI_TASK_REPOSITORY_ROOT: root,
+      MUXUI_STORYBOOK_AUDIT_PROOF: 'component',
+      MUXUI_STORYBOOK_FAMILIES: 'Ambient',
+    },
   });
-
-  assert.match(result.stdout, /Storybook: CI's selection of 2 pages in 2 command\(s\)/u);
-  assert.deepEqual(invocations.map(({ args }) => args), [
-    ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check'],
-    ['--filter', '@muxui/react-storybook', 'run', 'generate:check'],
-    ['--filter', '@muxui/react-storybook', 'run', 'check:scoped'],
+  assert.deepEqual((await readFile(logPath, 'utf8')).trim().split('\n').map((line) => JSON.parse(line)), [
+    { args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check'] },
   ]);
-  // The scoped audit gets CI's selection and none of the inherited one.
-  const { proof, families, storyIds } = invocations.at(-1);
-  assert.deepEqual({ proof, families, storyIds }, { proof: 'component', families: 'Slider', storyIds: undefined });
-});
-
-test('--files keeps the full Storybook audit, with a notice, when CI selection is unavailable', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'muxui-task-story-fallback-'));
-  await writeStorybookWorkspace(root);
-  await rm(join(root, 'apps/react-storybook/.storybook/generated/manifest.mjs'));
-  const { result, invocations } = await runFilesCheck(root);
-
-  assert.match(result.stdout, /notice: running the full Storybook audit: .*MUXUI_CI_IMPACT_METADATA_MISSING/u);
-  assert.deepEqual(invocations.at(-1), {
-    args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check'],
-  });
-});
-
-test('the default affected check selects stories from the uncommitted changes it collects', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'muxui-task-story-affected-'));
-  await writeStorybookWorkspace(root);
-  const { result, invocations } = await runFilesCheck(root, {}, ['--affected']);
-
-  assert.match(result.stdout, /changed paths: packages\/react\/src\/slider\.mjs/u);
-  assert.match(result.stdout, /Storybook: CI's selection of 2 pages in 2 command\(s\)/u);
-  assert.deepEqual(invocations.at(-1).families, 'Slider');
 });

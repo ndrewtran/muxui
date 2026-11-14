@@ -7,7 +7,6 @@ import {
   changedPackageSelection,
   checkStages,
   dependencyClosure,
-  dependencyOrder,
   generationArgs,
   parseTaskArguments,
   planScopedTask,
@@ -40,81 +39,38 @@ const records = [
   { family: 'Modal', export: 'Dialog', slug: 'dialog', source: 'packages/react/src/overlays.ts' },
 ];
 
-const inheritedStorybookEnvironmentKeys = ['MUXUI_STORYBOOK_AUDIT_EVENT', 'MUXUI_STORYBOOK_AUDIT_FORCE', 'GITHUB_EVENT_NAME'];
-
-function planWithoutInheritedStorybookSelection(input) {
-  const previous = new Map(inheritedStorybookEnvironmentKeys.map((key) => [key, process.env[key]]));
-  try {
-    for (const key of inheritedStorybookEnvironmentKeys) delete process.env[key];
-    return planScopedTask(input);
-  } finally {
-    for (const [key, value] of previous) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
-  }
-}
-
 test('task arguments accept repeatable selectors and reject empty or mixed scopes', () => {
   assert.deepEqual(parseTaskArguments(['check', '--component', 'date-picker', '--component=calendar', '--preview']), {
     task: 'check', affected: false, full: false, generate: false, preview: true,
     components: ['date-picker', 'calendar'], packages: [], files: [],
   });
   assert.throws(() => parseTaskArguments(['check', '--component=']), /MUXUI_TASK_OPTION_VALUE_REQUIRED/u);
-  assert.throws(() => planWithoutInheritedStorybookSelection({
+  assert.throws(() => planScopedTask({
     options: parseTaskArguments(['check', '--component', 'button', '--package', '@muxui/react']),
     packages, policy, familyRecords: records,
   }), /MUXUI_TASK_SCOPE_CONFLICT/u);
-  assert.throws(() => planWithoutInheritedStorybookSelection({
+  assert.throws(() => planScopedTask({
     options: parseTaskArguments(['check', '--full', '--component', 'button']),
     packages, policy, familyRecords: records,
   }), /MUXUI_TASK_SCOPE_CONFLICT/u);
 });
 
-test('scoped selectors reject inherited forced-full Storybook events', () => {
-  const previousEvent = process.env.MUXUI_STORYBOOK_AUDIT_EVENT;
-  const previousForce = process.env.MUXUI_STORYBOOK_AUDIT_FORCE;
-  try {
-    process.env.MUXUI_STORYBOOK_AUDIT_EVENT = 'release';
-    delete process.env.MUXUI_STORYBOOK_AUDIT_FORCE;
-    assert.throws(() => planScopedTask({
-      options: parseTaskArguments(['check', '--component', 'button']),
-      packages,
-      policy,
-      familyRecords: records,
-    }), /forced-full Storybook event/u);
-
-    delete process.env.MUXUI_STORYBOOK_AUDIT_EVENT;
-    process.env.MUXUI_STORYBOOK_AUDIT_FORCE = '1';
-    assert.throws(() => planScopedTask({
-      options: parseTaskArguments(['check', '--package', '@muxui/react']),
-      packages,
-      policy,
-    }), /forced-full Storybook event/u);
-  } finally {
-    if (previousEvent === undefined) delete process.env.MUXUI_STORYBOOK_AUDIT_EVENT;
-    else process.env.MUXUI_STORYBOOK_AUDIT_EVENT = previousEvent;
-    if (previousForce === undefined) delete process.env.MUXUI_STORYBOOK_AUDIT_FORCE;
-    else process.env.MUXUI_STORYBOOK_AUDIT_FORCE = previousForce;
-  }
-});
-
-test('component scope expands the canonical date family group and keeps generation prerequisites bounded', () => {
-  const plan = planWithoutInheritedStorybookSelection({
+test('component scope selects the named family and keeps generation prerequisites bounded', () => {
+  const plan = planScopedTask({
     options: parseTaskArguments(['check', '--component', 'date-picker']),
     packages,
     policy,
     familyRecords: records,
   });
   assert.equal(plan.scope, 'component');
-  assert.deepEqual(plan.familySelection, ['Calendar', 'DateField', 'DatePicker', 'DateRangePicker', 'RangeCalendar']);
+  assert.deepEqual(plan.familySelection, ['DatePicker']);
   assert.deepEqual(plan.storybookFamilySelection, plan.familySelection);
   assert.deepEqual(plan.checkPackages.map(({ name }) => name).sort(), ['@muxui/react', '@muxui/react-storybook']);
   assert.deepEqual(plan.generationPackages.map(({ name }) => name), ['@muxui/schema', '@muxui/react', '@muxui/react-storybook']);
 });
 
 test('component aliases retain substrate families while Storybook selects public exports', () => {
-  const plan = planWithoutInheritedStorybookSelection({
+  const plan = planScopedTask({
     options: parseTaskArguments(['check', '--component', 'dialog,Dialog,Modal,muxui:component:dialog#web.react,button']),
     packages,
     policy,
@@ -125,7 +81,7 @@ test('component aliases retain substrate families while Storybook selects public
 });
 
 test('package and file scopes include dependents while generation includes their prerequisite closure', () => {
-  const packagePlan = planWithoutInheritedStorybookSelection({
+  const packagePlan = planScopedTask({
     options: parseTaskArguments(['check', '--package', '@muxui/react']),
     packages,
     policy,
@@ -133,18 +89,18 @@ test('package and file scopes include dependents while generation includes their
   assert.deepEqual(packagePlan.checkPackages.map(({ name }) => name).sort(), ['@muxui/docs', '@muxui/react', '@muxui/react-storybook']);
   assert.deepEqual(packagePlan.generationPackages.map(({ name }) => name), ['@muxui/schema', '@muxui/react', '@muxui/react-storybook', '@muxui/docs']);
 
-  const filePlan = planWithoutInheritedStorybookSelection({
+  const filePlan = planScopedTask({
     options: parseTaskArguments(['check', '--files', 'packages/react/src/styles/fields.css']),
     packages,
     policy,
   });
   assert.deepEqual(filePlan.checkPackages.map(({ name }) => name).sort(), ['@muxui/docs', '@muxui/react', '@muxui/react-storybook']);
-  assert.throws(() => planWithoutInheritedStorybookSelection({
+  assert.throws(() => planScopedTask({
     options: parseTaskArguments(['check', '--files', 'unknown/file.css']),
     packages,
     policy,
   }), /MUXUI_FILE_SCOPE_UNMAPPED/u);
-  assert.throws(() => planWithoutInheritedStorybookSelection({
+  assert.throws(() => planScopedTask({
     options: parseTaskArguments(['check', '--files', 'packages/react/src/styles/fields.css,unknown/file.css']),
     packages,
     policy,
@@ -174,7 +130,7 @@ test('component resolution fails clearly for unknown IDs', () => {
 const step = (...args) => ({ args });
 
 test('affected check args exclude the workspace root that dependent filters would select', () => {
-  const plan = planWithoutInheritedStorybookSelection({
+  const plan = planScopedTask({
     options: parseTaskArguments(['check', '--affected']),
     packages,
     policy,
@@ -194,7 +150,7 @@ test('affected check args exclude the workspace root that dependent filters woul
 });
 
 test('scoped check stages isolate React and run Storybook beside the remaining checks', () => {
-  const plan = planWithoutInheritedStorybookSelection({
+  const plan = planScopedTask({
     options: parseTaskArguments(['check', '--package', '@muxui/schema']),
     packages,
     policy,
@@ -217,7 +173,7 @@ test('scoped check stages isolate React and run Storybook beside the remaining c
 });
 
 test('full checks separate Storybook after React without changing the command multiset or generation order', () => {
-  const plan = planWithoutInheritedStorybookSelection({
+  const plan = planScopedTask({
     options: parseTaskArguments(['check', '--full']), packages, policy,
   });
   const react = [step('--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check')];
@@ -236,96 +192,6 @@ test('full checks separate Storybook after React without changing the command mu
   assert.deepEqual(generationArgs(plan), ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'generate']);
 });
 
-test('selected Storybook commands replace only the Storybook lane and keep their own environment', () => {
-  const plan = planWithoutInheritedStorybookSelection({
-    options: parseTaskArguments(['check', '--files', 'packages/react/src/fields.ts']),
-    packages,
-    policy,
-  });
-  const storybookCommands = [
-    { command: 'pnpm', args: ['--filter', '@muxui/react-storybook', 'run', 'generate:check'], env: {}, unsetEnv: [] },
-    {
-      command: 'pnpm',
-      args: ['--filter', '@muxui/react-storybook', 'run', 'check:scoped'],
-      env: { MUXUI_STORYBOOK_AUDIT_PROOF: 'component', MUXUI_STORYBOOK_FAMILIES: 'DatePicker' },
-      unsetEnv: ['MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS'],
-    },
-  ];
-  assert.deepEqual(checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace', storybookCommands }), [
-    [[step('--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check')]],
-    [
-      // One lane: its steps run in order, each with its own environment.
-      [
-        { args: ['--stream', '--filter', '@muxui/react-storybook', 'run', 'generate:check'], env: {}, unsetEnv: [] },
-        {
-          args: ['--stream', '--filter', '@muxui/react-storybook', 'run', 'check:scoped'],
-          env: { MUXUI_STORYBOOK_AUDIT_PROOF: 'component', MUXUI_STORYBOOK_FAMILIES: 'DatePicker' },
-          unsetEnv: ['MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS'],
-        },
-      ],
-      [step(
-        '--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail',
-        '--filter', '@muxui/docs', 'run', 'check',
-      )],
-    ],
-  ]);
-
-  // CI plans no Storybook proof: the lane is dropped, the other checks stay.
-  const without = checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace', storybookCommands: [] });
-  assert.deepEqual(without.map((stage) => stage.length), [1, 1]);
-  assert.match(without[1][0][0].args.join(' '), /--filter @muxui\/docs run check$/u);
-
-  // A full plan normally uses the full check, but separation must still retain
-  // any supplied command substitutions and omit an empty lane.
-  const full = { ...plan, full: true, scope: 'full' };
-  const fullStages = checkStages(full, { task: 'check', workspaceRootName: '@muxui/workspace', storybookCommands });
-  assert.deepEqual(fullStages[1], [checkStages(plan, { task: 'check', storybookCommands })[1][0]]);
-  assert.deepEqual(checkStages(full, { task: 'check', storybookCommands: [] }).map((stage) => stage.length), [1, 1]);
-  const onlyStorybook = { ...plan, checkPackages: packages.filter(({ name }) => name === '@muxui/react-storybook') };
-  assert.deepEqual(checkStages(onlyStorybook, { task: 'check', storybookCommands: [] }), []);
-});
-
-test('file and affected scopes expose the exact paths whose Storybook selection CI can plan', () => {
-  const files = planWithoutInheritedStorybookSelection({
-    options: parseTaskArguments(['check', '--files', './packages/react/src/fields.ts,packages\\react\\src\\button.mjs']),
-    packages,
-    policy,
-  });
-  assert.deepEqual(files.selectionPaths, ['packages/react/src/button.mjs', 'packages/react/src/fields.ts']);
-
-  const affected = planWithoutInheritedStorybookSelection({
-    options: parseTaskArguments(['check', '--affected']),
-    packages,
-    policy,
-    changedPaths: ['packages/react/src/fields.ts', 'packages/react/src/button.mjs'],
-  });
-  assert.deepEqual(affected.selectionPaths, ['packages/react/src/button.mjs', 'packages/react/src/fields.ts']);
-
-  // Package, component, and full scopes keep their current behaviour.
-  for (const args of [['--package', '@muxui/react'], ['--full']]) {
-    assert.deepEqual(planWithoutInheritedStorybookSelection({
-      options: parseTaskArguments(['check', ...args]), packages, policy,
-    }).selectionPaths, []);
-  }
-});
-
-test('dependencyOrder puts each package after the workspace packages it depends on and keeps the input order otherwise', () => {
-  const item = (name, dependencies = {}, devDependencies = {}) => ({ name, manifest: { dependencies, devDependencies } });
-  const input = [
-    item('@muxui/docs', { '@muxui/catalog': 'workspace:*' }, { '@muxui/tooling': 'workspace:*' }),
-    item('@muxui/catalog', { '@muxui/schema': 'workspace:*', 'not-in-workspace': '1.0.0' }),
-    item('@muxui/schema'),
-    item('@muxui/tooling', { '@muxui/catalog': 'workspace:*' }),
-    item('@muxui/scale'),
-  ];
-  assert.deepEqual(dependencyOrder(input).map(({ name }) => name), [
-    '@muxui/schema', '@muxui/catalog', '@muxui/tooling', '@muxui/docs', '@muxui/scale',
-  ]);
-  // A cycle (which the workspace forbids) cannot loop or drop a package.
-  const cyclic = [item('a', { b: '1' }), item('b', { a: '1' })];
-  assert.deepEqual(dependencyOrder(cyclic).map(({ name }) => name).sort(), ['a', 'b']);
-});
-
 test('repository policy routes navigation and CI paths to the policy check with React generation', async () => {
   const repositoryRoot = resolve(import.meta.dirname, '../../../..');
   const [realPolicy, realPackages] = await Promise.all([
@@ -336,10 +202,10 @@ test('repository policy routes navigation and CI paths to the policy check with 
   const policyPaths = [
     'README.md', 'LICENSE', '.gitignore', 'docs/agents/domain.md', 'apps/AGENTS.md',
     'AGENTS.md', '.github/workflows/ci.yml', '.agents/skills/example/SKILL.md', '.claude/skills',
-    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/fixed-slice-needs.json',
+    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/fixed-slice-needs.json', 'releases/README.md',
   ];
   for (const path of policyPaths) {
-    const plan = planWithoutInheritedStorybookSelection({
+    const plan = planScopedTask({
       options: parseTaskArguments(['check', '--affected']),
       packages: realPackages,
       policy: realPolicy,
@@ -361,7 +227,7 @@ test('shared app source selects its declared consumers without a workspace depen
     loadPolicy(repositoryRoot),
     discoverWorkspacePackages(repositoryRoot),
   ]);
-  const selected = (path) => planWithoutInheritedStorybookSelection({
+  const selected = (path) => planScopedTask({
     options: parseTaskArguments(['check', '--files', path]),
     packages: realPackages,
     policy: realPolicy,

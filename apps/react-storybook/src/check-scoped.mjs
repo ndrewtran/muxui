@@ -39,13 +39,8 @@ export function scopedStorybookCheckPlan(selection) {
       'page workers keep paint collection, axe, and the dedicated check independent',
       'Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity',
     ].join('|');
-  } else if (selection.proof === 'chrome') {
-    files.push(testFiles.colours);
-    testNamePattern = [
-      'storybook page|storybook scoped check runner',
-      'Storybook manager and docs paint only canonical Mux colours in light and dark',
-    ].join('|');
   } else {
+    // `chrome` is unknown here too: the manager and docs colour proof it ran was removed.
     throw new Error(`MUXUI_STORYBOOK_AUDIT_PROOF_UNKNOWN: ${selection.proof}`);
   }
 

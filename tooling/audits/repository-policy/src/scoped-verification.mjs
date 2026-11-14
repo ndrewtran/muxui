@@ -98,23 +98,6 @@ export function dependencyClosure(packages, names) {
   return packages.filter(({ name }) => selected.has(name));
 }
 
-/** The packages ordered so each follows the workspace packages it depends on; otherwise they keep their order. */
-export function dependencyOrder(packages) {
-  const byName = new Map(packages.map((item) => [item.name, item]));
-  const visited = new Set();
-  const ordered = [];
-  const visit = (item) => {
-    if (visited.has(item.name)) return;
-    visited.add(item.name);
-    for (const name of localDependencies(item.manifest)) {
-      if (byName.has(name)) visit(byName.get(name));
-    }
-    ordered.push(item);
-  };
-  packages.forEach(visit);
-  return ordered;
-}
-
 export function dependentClosure(packages, names) {
   const dependents = new Map(packages.map(({ name }) => [name, []]));
   for (const item of packages) {
@@ -172,22 +155,6 @@ export function resolveComponents(requested, familyRecords) {
   return records;
 }
 
-// These families share the same calendar/date interaction surface. The groups
-// are routing metadata only; family ownership remains in the generated contract.
-const SHARED_FAMILY_GROUPS = Object.freeze([
-  ['Calendar', 'RangeCalendar', 'DateField', 'DatePicker', 'DateRangePicker'],
-]);
-
-function expandRelatedFamilies(records, selected) {
-  const selectedNames = new Set(selected.map(({ family }) => family));
-  for (const group of SHARED_FAMILY_GROUPS) {
-    if (group.some((family) => selectedNames.has(family))) {
-      for (const family of group) selectedNames.add(family);
-    }
-  }
-  return records.filter(({ family }) => selectedNames.has(family));
-}
-
 function matchesPath(path, patterns) {
   return patterns.some((pattern) => pattern.endsWith('/')
     ? path.startsWith(pattern)
@@ -208,14 +175,6 @@ function ownerPackagesForPath(path, packages, policy) {
   const direct = packageForPath(packages, path);
   const owners = direct ? [direct.name] : policyPackagesForPath(path, packages, policy.affectedPathOwners);
   return [...new Set([...owners, ...policyPackagesForPath(path, packages, policy.affectedPathConsumers)])];
-}
-
-const FULL_STORYBOOK_EVENTS = new Set(['schedule', 'workflow_dispatch', 'check:all', 'release']);
-
-export function inheritedFullStorybookSelection() {
-  const event = process.env.MUXUI_STORYBOOK_AUDIT_EVENT ?? process.env.GITHUB_EVENT_NAME;
-  return process.env.MUXUI_STORYBOOK_AUDIT_FORCE === '1'
-    || FULL_STORYBOOK_EVENTS.has(event);
 }
 
 export function changedPackageSelection({ changedPaths, packages, policy }) {
@@ -257,8 +216,6 @@ export function familyRecordsFromContract(contract, bindings = []) {
     export: record.export ?? exportsByBinding.get(record.binding),
     name: record.name,
     slug: record.slug ?? String(record.family ?? record.export).replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(),
-    source: record.source,
-    parts: record.parts ?? record.api?.parts ?? [],
   })).filter(({ family, slug }) => family && slug);
 }
 
@@ -282,11 +239,6 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
   if (options.full && hasExplicitScope) {
     throw new Error('MUXUI_TASK_SCOPE_CONFLICT: --full cannot be combined with component, package, or file selectors');
   }
-  if (hasExplicitScope && inheritedFullStorybookSelection()) {
-    throw new Error(
-      'MUXUI_TASK_SCOPE_CONFLICT: scoped selectors cannot run while a forced-full Storybook event is active; use --full or clear MUXUI_STORYBOOK_AUDIT_FORCE/MUXUI_STORYBOOK_AUDIT_EVENT',
-    );
-  }
   const selectorKinds = [options.components, options.packages, options.files].filter((values) => values.length > 0);
   if (selectorKinds.length > 1) {
     throw new Error('MUXUI_TASK_SCOPE_CONFLICT: choose one selector kind: component, package, or files');
@@ -298,14 +250,12 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
   let familySelection = [];
   let storybookFamilySelection = [];
   let focusedComponent = false;
-  // The paths whose Storybook proof CI's planner can select locally.
-  let selectionPaths = [];
 
   if (options.full) {
     scope = 'full';
     reason = 'explicit full graph requested';
   } else if (options.components.length > 0) {
-    const records = expandRelatedFamilies(familyRecords, resolveComponents(options.components, familyRecords));
+    const records = resolveComponents(options.components, familyRecords);
     familySelection = records.map(({ family }) => family);
     storybookFamilySelection = records.map((record) => record.export ?? record.family);
     directPackages = packages.filter(({ name }) => ['@muxui/react', '@muxui/react-storybook'].includes(name));
@@ -333,14 +283,12 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
       directPackages = packages.filter(({ name }) => owners.includes(name));
       scope = 'files';
       reason = `file scope: ${normalizedFiles.join(', ')}`;
-      selectionPaths = [...new Set(normalizedFiles)].sort();
     }
   } else if (options.affected && !hasExplicitScope) {
     const affected = changedPackageSelection({ changedPaths, packages, policy });
     scope = affected.mode;
     reason = affected.reason;
     directPackages = affected.directPackages;
-    selectionPaths = affected.changedPaths;
   }
 
   const full = scope === 'full';
@@ -370,7 +318,6 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
     checkPackages,
     generationPackages,
     changedPaths,
-    selectionPaths,
   };
 }
 
@@ -396,8 +343,7 @@ export function generationArgs(plan) {
 // Checks use --no-bail so one run reports every failing package; pnpm still
 // exits non-zero. Generation stays fail-fast because checks depend on it.
 const isolatedCheckPackages = ['@muxui/react'];
-export const storybookPackage = '@muxui/react-storybook';
-const laneCheckPackages = [storybookPackage];
+const laneCheckPackages = ['@muxui/react-storybook'];
 const checkConcurrency = 2;
 
 function checkCommand(concurrency, filters, task) {
@@ -405,25 +351,17 @@ function checkCommand(concurrency, filters, task) {
 }
 
 // Returns stages of lanes: stages run in order, the lanes in one stage run at
-// the same time, and a lane's steps run one after another. A step is a pnpm
-// argument list plus the environment it changes (`env` is set, `unsetEnv` is
-// cleared first). Dependent filters (`...name`) and exclusion filters also
+// the same time, and a lane's steps run one after another. A step is
+// `{ args }`, a pnpm argument list. Dependent filters (`...name`) and exclusion filters also
 // select the workspace root when it depends on a changed package; its `check`
 // script is this runner, so exclude it.
-// `storybookCommands` replaces Storybook's single full check with those
-// planned CI commands (see ci-impact.mjs planStorybookCommands); an empty list
-// drops the Storybook lane.
-export function checkStages(plan, { task, workspaceRootName, storybookCommands }) {
+export function checkStages(plan, { task, workspaceRootName }) {
   const selected = (names) => names.filter((name) => plan.checkPackages.some((item) => item.name === name));
   const isolated = selected(isolatedCheckPackages);
   const lanes = selected(laneCheckPackages);
   const separate = [...isolated, ...lanes];
   const stages = isolated.map((name) => [[{ args: checkCommand(1, ['--filter', name], task) }]]);
-  const shared = lanes
-    .map((name) => name === storybookPackage && storybookCommands
-      ? storybookCommands.map(({ args, env = {}, unsetEnv = [] }) => ({ args, env, unsetEnv }))
-      : [{ args: checkCommand(1, ['--filter', name], task) }])
-    .filter((lane) => lane.length > 0);
+  const shared = lanes.map((name) => [{ args: checkCommand(1, ['--filter', name], task) }]);
   const storybookLaneCount = shared.length;
   const remaining = plan.checkPackages.filter(({ name }) => !separate.includes(name));
   if (plan.full || remaining.length > 0) {
