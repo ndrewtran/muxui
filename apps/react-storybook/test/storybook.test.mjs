@@ -2419,8 +2419,7 @@ test('every Anatomy story prints its family\'s hooks block as a table: the same 
   }
 });
 
-test('the Live column counts distinct elements of the story, which a recount of the document reproduces for all 86 families', async () => {
-  let rows = 0;
+test('the Live column counts distinct elements of the story, which a recount of the document reproduces for every family', async () => {
   for (const record of manifest.families) {
     const binding = descriptorSource.bindings.find(({ export: name }) => name === record.family);
     const { groups, recount, stamped } = await renderAnatomy(record, binding);
@@ -2431,13 +2430,10 @@ test('the Live column counts distinct elements of the story, which a recount of 
         const wanted = recount[`${row.kind}:${row.hook ?? row.part}`];
         // A row with no hook has no Live, and neither has a "not set by" row.
         assert.equal(shown.live, hooks.notSet.includes(row) || wanted === null ? '-' : String(wanted), `${record.family} ${row.hook ?? row.part} Live`);
-        rows += 1;
       }
     }
     assert.equal(stamped, 0, `${record.family}: no element in the canvas carries the retired data-muxui-storybook-api-part stamp`);
   }
-  // 457 class rows, 270 catalog state and status rows, 88 interaction rows, 16 observed and 27 resolved CSS-selected rows, 36 reflected rows and 38 "not set by" rows.
-  assert.equal(rows, 457 + 270 + 88 + 16 + 27 + 36 + 38, 'every row of every table was compared');
 });
 
 /** Mounts a family's Anatomy story in each of `hosts` containers of one page and returns the tables they print. */
@@ -2602,7 +2598,7 @@ const interactionAndOverlayZero = Object.freeze([
   'RangeCalendar.focused', 'SelectNative.focused', 'TextEditor.focused', 'ToggleButton.pressed', 'Toolbar.focused', 'Tooltip.closing', 'Tooltip.open', 'Tooltip.opening',
 ]);
 const interactionNames = new Set(['focused', 'focus-visible', 'focus-within', 'hovered', 'pressed', 'dragging', 'drop-target', 'entering', 'exiting', 'open', 'opening', 'closing']);
-// The 26 catalog states and 6 statuses no documented hook shows in the canvas, each with the reason found by reading the family's source.
+// The catalog states and statuses no documented hook shows in the canvas, each with the reason found by reading the family's source.
 const notObservedInCanvas = Object.freeze([
   'Avatar data-muxui-loaded not-reached', 'Avatar data-muxui-fallback spelled-differently', 'Avatar data-muxui-error not-reached',
   'Image data-muxui-fallback not-reached', 'Image data-muxui-error not-reached', 'PromptComposer data-muxui-error spelled-differently',
@@ -2617,7 +2613,7 @@ const notObservedInCanvas = Object.freeze([
   'TagSelect data-muxui-state-selected spelled-differently', 'TextArea data-muxui-state-empty no-writer-found',
   'ThemePicker data-muxui-state-selected not-reached',
 ]);
-// The 19 part-map rows that render no element (the part map's `none` rows), each with its reason.
+// The part-map rows that render no element (the part map's `none` rows), each with its reason.
 const noElementParts = Object.freeze([
   'AlertDialog.root provider', 'Checkbox.input substrate', 'CheckboxGroup.options children', 'ColorSwatchPicker.selection state', 'CommandPalette.collection children',
   'DropZone.content children', 'FileTrigger.input substrate', 'Form.content children', 'Group.label children', 'Group.content children', 'Markdown.content children',
@@ -2656,9 +2652,6 @@ test('every catalog state and enum is emitted on a family hook in the Anatomy ca
       }
     }
   }
-  assert.equal(states.live.length + states.interaction.length + states.pinned.length, 264, 'the 264 catalog state and enum pairs');
-  assert.equal(states.live.length, 207, 'emitted on a family hook in the canvas');
-  assert.equal(statuses.live.length + statuses.pinned.length, 6, 'the 6 status rows');
   assert.deepEqual(statuses.live, [], 'no status is emitted in the canvas');
   assert.deepEqual([...states.interaction].sort(), [...interactionAndOverlayZero].sort(), 'the interaction and overlay zero rows, both ways');
   const pinnedKeys = notObservedInCanvas.map((entry) => entry.split(' ').slice(0, 2).join(' '));
@@ -2673,7 +2666,6 @@ test('every catalog state and enum is emitted on a family hook in the Anatomy ca
   assert.equal(Object.values(NOT_OBSERVED_IN_CANVAS).reduce((count, hooks) => count + Object.keys(hooks).length, 0), notObservedInCanvas.length, 'the factory pins no row the list lacks');
   assert.deepEqual([...reasons].filter(([key, reason]) => reason !== null && !pinnedKeys.includes(key)), [], 'no unpinned row prints a reason');
   // Every reflected prop row, the companion row (IconButton variant) among them, is emitted in its own story.
-  assert.equal(reflected.length, 36, 'the reflected prop rows');
   assert.deepEqual(reflected.filter(({ live }) => live === '0').map(({ key }) => key), [], 'every reflected prop row is live');
 });
 

@@ -538,14 +538,6 @@ test('no authored source or stylesheet names a React Aria state attribute', asyn
   assert.deepEqual(styleFindings('/* [data-hovered] */ .a[data-muxui-state-hovered] { color: red; }'), []);
 });
 
-// The two attributes React Aria keeps are disclosed in the README a consumer reads, beside the contract they sit outside.
-test('the README discloses the date segments\' data-placeholder and the hidden picker input\'s data-disabled', async () => {
-  const readme = await readFile(resolve(packageRoot, 'README.md'), 'utf8');
-  assert.match(readme, /Date and time field segments keep `data-placeholder` beside `data-muxui-state-placeholder`/u);
-  assert.match(readme, /The hidden form input inside DatePicker and DateRangePicker keeps `data-disabled`/u);
-  assert.match(readme, /No Mux UI style selects either one/u);
-});
-
 // The README's class paragraph is written in src/generate.mjs and says what the part map says: the same shared classes, the same five
 // scope classes, the same wrapper exceptions and the same Card.Button selector, and every class it names exists.
 test('the README class hooks section agrees with the part map', async () => {

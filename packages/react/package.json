@@ -57,16 +57,13 @@
   "scripts": {
     "prepack": "pnpm --filter @muxui/react^... generate && node src/generate.mjs",
     "prepublishOnly": "node src/publish-guard.mjs",
-    "check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check && node --test 'test/*.test.mjs' && tsc --noEmit -p test/tsconfig.json",
+    "check": "node src/generate.mjs --check && node --test 'test/*.test.mjs' && tsc --noEmit -p test/tsconfig.json",
     "check:types": "node --test test/public-surface-controls.test.mjs test/api-extraction.test.mjs test/public-surface-baseline.test.mjs test/declaration-reference.test.mjs test/generic-types-mutations.test.mjs test/reference-reader.test.mjs test/declaration-validity.test.mjs test/consumer-tsc.test.mjs",
-    "check:rest": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check && node --test 'test/!(public-surface-controls|api-extraction|public-surface-baseline|declaration-reference|generic-types-mutations|reference-reader|declaration-validity|consumer-tsc).test.mjs' && tsc --noEmit -p test/tsconfig.json",
+    "check:rest": "node src/generate.mjs --check && node --test 'test/!(public-surface-controls|api-extraction|public-surface-baseline|declaration-reference|generic-types-mutations|reference-reader|declaration-validity|consumer-tsc).test.mjs' && tsc --noEmit -p test/tsconfig.json",
     "check:component": "node ../../tooling/audits/repository-policy/src/run-component-check.mjs",
     "check:browser": "node --test --test-concurrency=1 test/browser/*.test.mjs",
-    "check:capability-enrichment:strict": "MUXUI_CAPABILITY_ENRICHMENT_STRICT=1 node --test test/capability-enrichment.test.mjs",
-    "generate": "node src/generate.mjs && node advisory/capability-enrichment/generate-status.mjs",
-    "generate:capability-enrichment": "node advisory/capability-enrichment/generate-status.mjs",
-    "generate:check:capability-enrichment": "node advisory/capability-enrichment/generate-status.mjs --check",
-    "generate:check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check"
+    "generate": "node src/generate.mjs",
+    "generate:check": "node src/generate.mjs --check"
   },
   "dependencies": {
     "@internationalized/date": "3.12.4",

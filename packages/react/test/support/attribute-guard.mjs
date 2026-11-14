@@ -374,7 +374,6 @@ export const foreignAttributes = Object.freeze([
   { path: 'apps/react-storybook/.storybook/preview.css', names: ['data-part'], reason: "the component docs page marks its own parts" },
   { path: 'apps/react-storybook/test/typed-reference.test.mjs', names: ['data-part', 'data-type', 'data-${...}'], reason: "reads the docs page's own markers" },
   { path: 'apps/react-storybook/test/storybook-a11y.test.mjs', names: ['data-part', 'data-type'], reason: "reads the docs page's own markers" },
-  { path: 'apps/react-storybook/test/storybook-colors.test.mjs', names: ['data-status', 'data-hovered', 'data-selected'], reason: "draws and reads Storybook's manager UI" },
   { path: 'apps/scale/test/browser/docs-blocks.test.mjs', names: ['data-mode'], reason: 'reads the docs block viewer' },
   { path: 'packages/react/test/browser/data-diff.test.mjs', names: ['data-${...}'], reason: 'the template builds screenshot file names that start with data-diff-' },
   { path: 'catalog/patterns/agent-trace/', names: ['data-open'], reason: "the pattern's own element marks its disclosure" },
@@ -390,8 +389,6 @@ export const probePaths = Object.freeze([
   'packages/react/src/substrate.ts', 'packages/react/src/styling-contract.ts',
   'packages/react/test/support/attribute-guard.mjs', 'packages/react/test/support/state-matrix.mjs',
   'packages/react/test/styling-tokens.test.mjs', 'packages/react/test/substrate.test.mjs',
-  // Asserts on the wording of the retained advisory text, which keeps the names it was written with.
-  'packages/react/test/capability-enrichment.test.mjs',
 ]);
 
 /** Every use of a name in `forbidden` in one file, by what kind of file it is: stylesheet, script or other text. */
