@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:50ec7a36ec6d0606918e48dedd1f66b2976983f00da695149ae7904b881f0f0c -->
+<!-- @generated-content-sha256: sha256:700ca20ec169d2bde6a6e415b03814649772a74f88f4b0e670f9cabcfa2da952 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -44,6 +44,8 @@ export function Example() {
 The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle, and public prop names. React Aria Components is an internal implementation substrate; this package does not transfer its APIs or styling boundary.
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
+
+`styles.css` loads the bundled Inter, Playfair Display and Roboto Mono faces from `assets/fonts` as woff2 slices by script and falls back to a face's complete TTF only for a character no slice holds, so a page of Latin text fetches the 106 kB Latin slice of upright Inter instead of its 877 kB TTF.
 
 ## State attributes
 
