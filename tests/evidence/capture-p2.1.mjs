@@ -38,8 +38,10 @@
 // or the temporary token of a first publish) is the publish run's authentication line; the claims follow from those. The records
 // are judged against the prior release's route (--prior-route): the reused records equal its manifest's, its tuple is installed
 // again by exact version, and nothing it listed on the registry is gone. The Roadmap must be unamended since the release commit, and
-// so must every file the records cite. When the release publishes @muxui/react, its R1 exit route (capture-r1-exit.mjs) holds the
-// E-R1-EXIT records of that candidate from the same runs, and this route holds E-P2.1-01 to 06 only; neither cites the other's records.
+// so must every file the records cite. When the release publishes @muxui/react, the R1 exit route of that candidate
+// (capture-r1-exit.mjs) holds its E-R1-EXIT records and must be captured first, all three of its phases: --evidence reads it and
+// refuses it unless it binds the same dry run, publish run, release commit, and React version and integrity. This route holds
+// E-P2.1-01 to 06 only and names that route by its index digest. --r1-exit-route=<dir> reads it elsewhere (a rehearsal's --out).
 //
 // Runbook for the next release, which publishes all four from one commit and compares with tests/evidence/p2.1-tooling-1.1.0-rc.2:
 //   1. After the publish run succeeds, and within 30 days (the npm-candidate artifact expires; logs after 90), find the run IDs. The
@@ -48,7 +50,7 @@
 //        gh run list --repo ndrewtran/muxui --workflow npm-publish.yml --branch main --limit 10
 //        gh run view <publish run id> --repo ndrewtran/muxui --log | grep -e 'from dry run'
 //   2. From a clean branch of origin/main that holds the release commit and this tool committed, with gh signed in and network access
-//      to GitHub and the public registry:
+//      to GitHub and the public registry, capture the R1 exit route first (the P2.1 capture refuses to run without it):
 //        node tests/evidence/capture-r1-exit.mjs --version=0.1.0-rc.6 --capture-timestamp=<ISO-8601 UTC> \
 //          --dry-run-run=<dry run id> --publish-run=<publish run id> --registry
 //        node tests/evidence/capture-p2.1.mjs --release=@muxui/react@0.1.0-rc.6 --dry-run-run=<dry run id> --publish-run=<publish run id> \
@@ -1076,8 +1078,9 @@ Each record's \`parts\` splits the Roadmap assertion (as it stands at the releas
 passing line in the sanitized excerpt of the main CI job that ran it at the release commit (run ${phases.ci.execution.runId}, attempt ${phases.ci.execution.runAttempt}); capture fails
 if a cited line is missing. \`limits\` lists what the retained evidence does not show.
 
-${react.role === 'reused' ? 'This release has no R1 exit route: its' : `The R1 exit route of its React candidate, \`${routeOf(react.version)}\`, holds the E-R1-EXIT records of \`@muxui/react@${react.version}\` from the same runs, and
-this route claims only \`E-P2.1-01\` to \`E-P2.1-06\`. Its`} dry run (${release.dryRun.runId}) and publish run (${release.publish.runId}) are read by the capture and retained here, as sanitized
+${react.role === 'reused' ? 'This release has no R1 exit route: its' : `The R1 exit route of its React candidate, \`${verification.r1ExitRoute.route}\` (index ${verification.r1ExitRoute.index.sha256}), holds the
+E-R1-EXIT records of \`@muxui/react@${react.version}\`; capture checked that it binds the same dry run, publish run, release commit, and React
+integrity. This route claims only \`E-P2.1-01\` to \`E-P2.1-06\`. Its`} dry run (${release.dryRun.runId}) and publish run (${release.publish.runId}) are read by the capture and retained here, as sanitized
 excerpts under \`validation/\` and as the release manifest under \`artifacts/release-manifest.json\`. The manifest is the one the release built, with its
 digest intact, and it is what the next release names as its prior release.
 
@@ -1646,6 +1649,9 @@ async function observePublishedTuple({ release, manifest, ceiling, sourceRevisio
   });
 }
 
+/** The prior release's tuple: a package it reused was built from the commit of the release that published it, the rest from its own. */
+export const priorTuplePackages = (prior) => prior.release.packages.map(({ name, version, integrity, sourceCommit }) => ({ name, version, integrity, sourceCommit: sourceCommit ?? prior.sourceRevision }));
+
 /**
  * The prior release's tuple, checked again after a later release: its packages installed from the public registry by exact version
  * (the integrity its manifest records, the commit that built each as gitHead), its muxui bin run once, every version its read-back
@@ -1653,8 +1659,7 @@ async function observePublishedTuple({ release, manifest, ceiling, sourceRevisio
  * release's verification.json, `priorReadBack` its registry read-back, and `readBack` this release's.
  */
 async function observePriorTuple({ prior, priorReadBack, readBack, release, manifestText, captureTimestamp }) {
-  // A package the prior release reused was built from the commit of the release that published it.
-  const packages = prior.release.packages.map(({ name, version, integrity, sourceCommit }) => ({ name, version, integrity, sourceCommit: sourceCommit ?? prior.sourceRevision }));
+  const packages = priorTuplePackages(prior);
   const whose = `${priorWords(release).prior}'s`;
   const checks = [];
   const check = (id, claim, passed, observed) => checks.push({ id, claim, passed: Boolean(passed), observed });
@@ -1730,6 +1735,7 @@ function parseArguments(argv) {
     else if (flag === '--dry-run-run') options.dryRunRun = Number(value());
     else if (flag === '--publish-run') options.publishRun = Number(value());
     else if (flag === '--prior-route') options.priorRoute = value();
+    else if (flag === '--r1-exit-route') options.r1ExitRoute = value();
     else if (flag === '--review') options.review = resolve(value());
     else if (flag === '--review-revision') options.reviewRevision = value();
     else if (flag === '--out') options.out = resolve(value());
@@ -1819,7 +1825,7 @@ function readCiJob({ github, jobs, name, group, cites }) {
 }
 
 /** Retains the excerpt of a job read by `readCiJob`, headed by `heading`, and returns it with the job's record. */
-function retainCiJob(read, { heading, stage, root }) {
+export function retainCiJob(read, { heading, stage, root }) {
   const { job, name, group, raw, lines, kept, totals } = read;
   const text = `${[heading, ...kept.map(({ text: line }) => line)].join('\n')}\n`;
   const ref = stage(`${root}/validation/${group}-${job.id}.txt`, text);
@@ -1995,7 +2001,7 @@ function pinnedCeiling(assertion, revision, ceilingConstant) {
  * capture runs from (so nothing is judged against an amendment), and the E-P2.1-02 row at the source revision names the ceiling the test
  * pins and the prerelease-suffix rule the counts apply.
  */
-function readRoadmapRule({ sourceRevision, rows, ceilingConstant }) {
+export function readRoadmapRule({ sourceRevision, rows, ceilingConstant }) {
   const headRows = roadmapRows(gitShow('HEAD', roadmap));
   const changedIds = assertionIds.filter((id) => JSON.stringify(headRows[id]) !== JSON.stringify(rows[id]));
   if (changedIds.length > 0) fail('P2_1_ROADMAP_AMENDED', `${changedIds.join(', ')} differs between ${sourceRevision} and HEAD; the records would be judged against an amended row`);
@@ -2005,7 +2011,7 @@ function readRoadmapRule({ sourceRevision, rows, ceilingConstant }) {
 }
 
 /** The release a later release's runs describe, checked against the prior release's route (`options.priorRoute`). */
-function reuseOf({ bound, options }) {
+export function reuseOf({ bound, options }) {
   const { dryRun, publish, manifest, sourceRevision } = bound;
   const prior = JSON.parse(readIndexed(options.priorRoute, 'verification.json'));
   const priorReadBack = JSON.parse(readIndexed(options.priorRoute, 'artifacts/registry-read-back.json'));
@@ -2043,6 +2049,230 @@ function reuseOf({ bound, options }) {
       publishedPackages: publish.portfolio.packages.map(({ name, version, authentication }) => ({ name, version, authentication })),
     },
   };
+}
+
+/** The release a capture binds, from the bound runs (and, for a later release, the prior route it was checked against). */
+export function releaseOf({ options, bound, chain }) {
+  const { dryRun, publish, sourceRevision, routeRecords } = bound;
+  const { portfolio } = dryRun;
+  return {
+    version: options.version,
+    route: bound.route,
+    portfolioId: portfolio.id,
+    manifestDigest: portfolio.digest,
+    sourceRevision,
+    packages: chain?.packages ?? portfolio.packages.map(({ name, version, role, integrity, shasum, bytes, files, file }) => ({ name, version, role, file, integrity, shasum, bytes, files })),
+    // How each package published is the publish run's authentication line for it (bindPublish refuses a block without one).
+    tokenPublished: publish.portfolio.packages.filter(({ authentication }) => authentication === 'temporary npm token (first publish)').map(({ name }) => name),
+    dryRun: { runId: dryRun.execution.runId, runAttempt: dryRun.execution.runAttempt, jobId: dryRun.execution.jobId, conclusion: dryRun.execution.conclusion, mode: 'dry-run', preparation: dryRun.preparation.mode },
+    publish: { runId: publish.execution.runId, runAttempt: publish.execution.runAttempt, jobId: publish.execution.publish.jobId, conclusion: publish.execution.conclusion, mode: 'publish', environmentApprovals: publish.approvals.length },
+    routeRecords,
+    ...(options.candidate !== undefined ? { candidate: options.candidate, reuse: chain.reuse } : {}),
+  };
+}
+
+/**
+ * The registry read-back of every package of `release`, bound by `bindRegistryPackage`. A package this release published must carry
+ * the attestation of this publish run and the release commit; a reused one, the run and commit `priorReadBack` (the prior release's
+ * read-back) recorded for it, with `latest` where that read-back saw it. `observe(entry)` reads the registry.
+ */
+export async function bindReadBack({ release, publish, priorReadBack, observe }) {
+  const { prior } = priorWords(release);
+  const readBack = [];
+  for (const entry of release.packages) {
+    const { view, attestations, placeholders: documents } = await observe(entry);
+    const record = publish.portfolio.packages.find(({ name }) => name === entry.name);
+    const earlier = priorReadBack?.packages.find(({ name }) => name === entry.name);
+    if (record && earlier && record.preflight.latest !== earlier.latest.observed) fail('P2_1_REGISTRY_TAGS_UNEXPECTED', `${entry.name}: the publish preflight saw latest ${record.preflight.latest}; ${prior}'s read-back saw ${earlier.latest.observed}`);
+    const earlierRun = /\/actions\/runs\/(\d+)\//u.exec(earlier?.provenance?.invocationId ?? '')?.[1];
+    if (!record && !earlierRun) fail('P2_1_REUSE_RECORD_MISMATCH', `${entry.name}@${entry.version} has no publish run in ${prior}'s read-back`);
+    readBack.push({
+      ...bindRegistryPackage({
+        entry,
+        view,
+        attestations,
+        placeholders: documents,
+        publishRunId: record ? publish.execution.runId : Number(earlierRun),
+        sourceRevision: entry.sourceCommit ?? release.sourceRevision,
+        first: record?.preflight.kind === 'first',
+        priorLatest: record ? record.preflight.latest : earlier.latest.observed,
+        reused: !record,
+        prior,
+      }),
+      attestationDocument: { url: view.attestations.url, sha256: sha256(canonicalJson(attestations)), retained: false },
+    });
+  }
+  return readBack;
+}
+
+/** The test titles, and the title prefixes of a corpus, that the claims cite from CI job `job` (policy, tooling, or toolingAfter). */
+export function citedTitles(claims, job) {
+  const titles = new Set();
+  let prefixes = [];
+  for (const { parts } of Object.values(claims)) {
+    for (const item of parts.flatMap(({ evidence }) => evidence)) {
+      if (item.kind === 'test' && item.job === job) titles.add(item.title);
+      if (item.kind === 'corpus' && item.job === job) prefixes = [...prefixes, item.prefix];
+    }
+  }
+  return { titles, prefixes };
+}
+
+/**
+ * One evidence item of a claim resolved against what capture retained, as the record cites it: a test's passing line in its CI
+ * excerpt (and its title in the file at the revision that ran it), a log line, a package's publish block, a route field. Fails when
+ * the item is not there. `ctx.sources` holds the CI excerpts by job, `ctx.logs` and `ctx.excerpts` the run excerpts.
+ */
+export function resolveEvidence(item, ctx) {
+  const { release, sourceRevision, sources, logs, excerpts, manifestText, publish, published, priorTuple, observation, placeholders, placeholderOrigin, roadmapRule, amendedRoadmap, routeRecords, observed } = ctx;
+  if (item.kind === 'test') {
+    const { lines, group, excerpt, head, runId } = sources[item.job];
+    const revision = item.job === 'toolingAfter' ? head : sourceRevision;
+    const at = lines.findIndex((line) => testLine.exec(content(line))?.[1] === item.title);
+    if (at < 0) fail('P2_1_CI_TEST_MISSING', `${excerpt.path} has no passing line for "${item.title}"`);
+    if (!hasTitle(gitShow(revision, item.file), item.title)) fail('P2_1_TEST_NOT_IN_FILE', `${item.file} at ${revision} has no test titled "${item.title}"`);
+    return { kind: 'test', job: group, file: item.file, title: item.title, excerpt: excerpt.path, line: at, ...(item.scope ? { scope: item.scope } : {}), ...(item.job === 'toolingAfter' ? { ciRun: runId, revision } : {}) };
+  }
+  if (item.kind === 'roadmap-amendment') {
+    const { rows: _rows, ...amended } = amendedRoadmap;
+    return { kind: 'roadmap-amendment', id: item.id, ...amended };
+  }
+  if (item.kind === 'roadmap-rule') return { kind: 'roadmap-rule', id: item.id, ...roadmapRule };
+  if (item.kind === 'prior-tuple') return { kind: 'prior-tuple', ...(item.only === 'bin' ? { tooling: priorTuple.tooling, bin: priorTuple.bin } : { packages: priorTuple.packages, checks: priorTuple.checks, manifest: priorTuple.manifest }) };
+  if (item.kind === 'reuse') return { kind: 'reuse', ...release.reuse, manifest: { path: excerpts.manifest.path, sha256: excerpts.manifest.sha256 } };
+  if (item.kind === 'source-absence') return toolingReaderSurface(sourceRevision);
+  if (item.kind === 'source-line') return { kind: 'source-line', revision: sourceRevision, ...sourceLine(sourceRevision, item.spec) };
+  if (item.kind === 'published') {
+    return { kind: 'published', output: published.output, checks: item.checks.map((id) => {
+      const found = published.checks.find((candidate) => candidate.id === id);
+      return found ?? fail('P2_1_CLAIM_UNKNOWN', `no published-run check ${id}`);
+    }) };
+  }
+  if (item.kind === 'corpus') {
+    // Every fixture of the corpus is a test, and each passes.
+    const names = execFileSync('git', ['ls-tree', '--name-only', sourceRevision, `${item.fixtures}/`], { cwd: repositoryRoot, encoding: 'utf8' }).split('\n')
+      .map((path) => /\/(\d\d-.+)\.json$/u.exec(path)?.[1]).filter(Boolean).sort();
+    const { lines, group, excerpt } = sources[item.job];
+    const lineOf = names.map((name) => lines.findIndex((line) => testLine.exec(content(line))?.[1] === `${item.prefix}${name}`));
+    if (names.length === 0 || lineOf.includes(-1)) fail('P2_1_CI_TEST_MISSING', `the SemVer corpus has ${names.length} fixtures and ${lineOf.filter((at) => at === -1).length} have no passing line`);
+    if (!gitShow(sourceRevision, item.file).includes(item.prefix)) fail('P2_1_TEST_NOT_IN_FILE', `${item.file} at ${sourceRevision} has no "${item.prefix}" tests`);
+    return { kind: 'corpus', job: group, file: item.file, fixtures: item.fixtures, cases: names.length, excerpt: excerpt.path, firstLine: Math.min(...lineOf), lastLine: Math.max(...lineOf) };
+  }
+  if (item.kind === 'log') {
+    const source = logs[item.source === 'dryRunCollect' ? 'dryRun' : item.source];
+    return { kind: 'log', source: item.source, excerpt: source.path, ...findLine(source.lines, item.pattern, item.source) };
+  }
+  if (item.kind === 'publish-package') {
+    const { lines } = excerpts.publishExcerpt;
+    const entry = release.packages.find(({ name }) => name === item.name);
+    const label = `${entry.name}@${entry.version}`;
+    const { start, end } = publishBlock(lines, label);
+    const block = lines.slice(start, end);
+    const at = (pattern) => {
+      const index = block.findIndex((line) => pattern.test(content(line)));
+      if (index < 0) fail('P2_1_LOG_LINE_MISSING', `${label}: no publish line matches ${pattern}`);
+      return { line: start + index + 1, text: content(block[index]) };
+    };
+    const packageRecord = publish.portfolio.packages.find(({ name }) => name === item.name);
+    if (packageRecord.state !== 'verified') fail('P2_1_PUBLISH_NOT_VERIFIED', `${label} is ${packageRecord.state} in the publish run`);
+    return {
+      kind: 'publish-package',
+      name: entry.name,
+      version: entry.version,
+      excerpt: excerpts.publishExcerpt.path,
+      authentication: { ...at(/^Authentication for /u), value: packageRecord.authentication },
+      readBack: { integrity: at(/^dist\.integrity: /u), provenance: at(/^provenance: /u), distTags: at(/^dist-tags: /u), published: at(/^Published /u), values: packageRecord.readBack },
+    };
+  }
+  if (item.kind === 'read-back') return { kind: 'read-back', artifact: 'the registry read-back of every package (see registryReadBack)' };
+  if (item.kind === 'placeholders') return { kind: 'placeholders', artifact: { path: observation.path, sha256: observation.sha256 }, origin: placeholderOrigin, versions: placeholders };
+  if (item.kind === 'route') {
+    if (item.field === 'portfolio-roles') return { kind: 'route', field: item.field, packages: release.packages.map(({ name, version, role }) => ({ name, version, role })), manifest: { path: excerpts.manifest.path, sha256: excerpts.manifest.sha256, source: JSON.parse(manifestText).source } };
+    if (item.field === 'version-effects') return { kind: 'route', field: item.field, manifest: { path: excerpts.manifest.path, pointer: '/preparation/verification/versionEffects', value: release.reuse.versionEffects } };
+    if (item.field === 'compatibility') return { kind: 'route', field: item.field, manifest: { path: excerpts.manifest.path, pointer: '/compatibility/edges', value: JSON.parse(manifestText).compatibility.edges } };
+    if (item.field === 'prior-manifests') {
+      const role = priorWords(release).first ? 'the first release (the prior release)' : 'the prior release';
+      return { kind: 'route', field: item.field, manifests: [{ role, ...priorTuple.manifest }, { role: 'this release', path: excerpts.manifest.path, sha256: excerpts.manifest.sha256, id: release.portfolioId }] };
+    }
+    if (item.field === 'react-provenance') {
+      return { kind: 'route', field: item.field, artifact: { path: excerpts.registry.path, sha256: excerpts.registry.sha256 }, provenance: observed.provenance.slsa, predicateTypes: observed.provenance.predicateTypes };
+    }
+    if (item.field === 'rollback') {
+      const manifest = JSON.parse(manifestText);
+      if (release.reuse) return { kind: 'route', field: item.field, manifest: { path: excerpts.manifest.path, pointer: '/rollback', value: manifest.rollback } };
+      const e04 = JSON.parse(readFileSync(join(repositoryRoot, routeRecords['E-R1-EXIT-04'].path), 'utf8'));
+      return { kind: 'route', field: item.field, manifest: { path: excerpts.manifest.path, pointer: '/rollback', value: manifest.rollback }, record: { path: routeRecords['E-R1-EXIT-04'].path, sha256: routeRecords['E-R1-EXIT-04'].sha256, rollbackStatus: e04.rollback.status, latest: e04.distTags.latest } };
+    }
+  }
+  return fail('P2_1_CLAIM_UNKNOWN', JSON.stringify(item));
+}
+
+/** The coverage verification.json keeps: each settled claim with its evidence resolved by `resolveEvidence(item, ctx)`. */
+export const coverageOf = (claims, ctx) => Object.fromEntries(Object.entries(claims).map(([assertionId, { parts, limits, nonClaims: ownNonClaims }]) => [assertionId, {
+  parts: parts.map(({ part, state, note, evidence }) => ({ part, state, ...(note ? { note } : {}), evidence: evidence.map((item) => resolveEvidence(item, ctx)) })),
+  limits,
+  ...(ownNonClaims ? { nonClaims: ownNonClaims } : {}),
+}]));
+
+/**
+ * For a later release: what each record cites that differs from the prior release's source revision (so its route still speaks for
+ * the rest), and what came after the release commit (nothing may: the records are judged at the release commit). The keys name the
+ * first release when it is the prior one, as the first later release's records do.
+ */
+export function comparedOf({ coverage, release, rows, sourceRevision, headRevision }) {
+  const { reuse } = release;
+  const since = priorWords(release).first ? 'FirstRelease' : 'PriorRelease';
+  const priorRows = roadmapRows(gitShow(reuse.priorSourceRevision, roadmap));
+  const changedBetween = (from, to, files) => (files.length === 0 ? [] : git('diff', '--name-only', from, to, '--', ...files).split('\n').filter(Boolean));
+  const compared = {
+    [`${since[0].toLowerCase()}${since.slice(1)}`]: { route: reuse.priorRoute, sourceRevision: reuse.priorSourceRevision },
+    headRevision,
+    records: Object.fromEntries(assertionIds.map((assertionId) => {
+      const files = [...new Set(coverage[assertionId].parts.flatMap(({ evidence }) => evidence.flatMap((item) => (item.file ? [item.file] : []))))].sort();
+      return [assertionId, {
+        [`rowChangedSince${since}`]: JSON.stringify(priorRows[assertionId]) !== JSON.stringify(rows[assertionId]),
+        citedFiles: files,
+        [`citedFilesChangedSince${since}`]: changedBetween(reuse.priorSourceRevision, sourceRevision, files),
+        citedFilesChangedAfterRelease: changedBetween(sourceRevision, headRevision, files),
+      }];
+    })),
+  };
+  if (Object.values(compared.records).some(({ citedFilesChangedAfterRelease }) => citedFilesChangedAfterRelease.length > 0)) fail('P2_1_CITED_FILE_CHANGED', 'a file the records cite changed after the release commit');
+  return compared;
+}
+
+const r1ExitRecordIds = ['E-R1-EXIT-01', 'E-R1-EXIT-02', 'E-R1-EXIT-03', 'E-R1-EXIT-04'];
+
+/**
+ * The R1 exit route of the @muxui/react candidate a later release publishes (capture-r1-exit.mjs), read and checked so this route can
+ * say it holds that candidate's E-R1-EXIT records: complete (dry run, publish run, and registry phases; all four records, each at the
+ * digest its index lists), not a rehearsal unless this capture is one, and bound to this release's dry run and publish run, its
+ * release commit, and the React version and integrity of its manifest. `path` is the route directory, by default `routeOf(version)`.
+ */
+export function readSiblingR1Route({ release, path, rehearsal = false }) {
+  const react = release.packages.find(({ name }) => name === reactName);
+  const route = path ?? routeOf(react.version);
+  const directory = resolve(repositoryRoot, route);
+  const command = `node tests/evidence/capture-r1-exit.mjs --version=${react.version} --capture-timestamp=<ISO-8601 UTC> --dry-run-run=${release.dryRun.runId} --publish-run=${release.publish.runId} --registry`;
+  if (!existsSync(join(directory, 'verification.json')) || !existsSync(join(directory, 'index.json'))) fail('P2_1_R1_EXIT_ROUTE_MISSING', `${route} does not hold the R1 exit capture of @muxui/react@${react.version}; capture it first: ${command}`);
+  const indexText = readFileSync(join(directory, 'index.json'), 'utf8');
+  const index = JSON.parse(indexText);
+  const r1 = JSON.parse(readFileSync(join(directory, 'verification.json'), 'utf8'));
+  const { dryRun, publish, registry: observed } = r1.phases ?? {};
+  if (!dryRun || !publish || !observed) fail('P2_1_R1_EXIT_ROUTE_INCOMPLETE', `${route} lacks its ${[['dry-run', dryRun], ['publish', publish], ['registry', observed]].filter(([, phase]) => !phase).map(([name]) => name).join(', ')} phase; complete it: ${command}`);
+  if (r1.rehearsal && !rehearsal) fail('P2_1_R1_EXIT_ROUTE_INVALID', `${route} is a rehearsal capture`);
+  const facts = { dryRunId: dryRun.execution.runId, publishRunId: publish.execution.runId, sourceRevision: r1.sourceRevision, name: dryRun.candidate.name, version: dryRun.candidate.version, integrity: dryRun.candidate.tarball.integrity };
+  const expected = { dryRunId: release.dryRun.runId, publishRunId: release.publish.runId, sourceRevision: release.sourceRevision, name: reactName, version: react.version, integrity: react.integrity };
+  const differs = Object.keys(expected).filter((key) => facts[key] !== expected[key]);
+  if (differs.length > 0) fail('P2_1_R1_EXIT_ROUTE_MISMATCH', `${route} binds ${differs.map((key) => `${key} ${facts[key]}`).join(', ')}; this release has ${differs.map((key) => `${key} ${expected[key]}`).join(', ')}`);
+  const records = r1ExitRecordIds.map((assertionId) => {
+    const listed = index.records?.find((entry) => entry.assertionId === assertionId);
+    if (!listed) fail('P2_1_R1_EXIT_ROUTE_INCOMPLETE', `${route}/index.json lists no ${assertionId}; complete it: ${command}`);
+    const text = readFileSync(join(directory, 'records', posix.basename(listed.path)), 'utf8');
+    if (sha256(text) !== listed.sha256) fail('P2_1_R1_EXIT_ROUTE_CHANGED', `${listed.path} no longer matches its index`);
+    return { assertionId, path: listed.path, sha256: listed.sha256, outcome: JSON.parse(text).outcome };
+  });
+  return { route, index: { path: `${route}/index.json`, sha256: sha256(indexText) }, records, dryRunId: facts.dryRunId, publishRunId: facts.publishRunId, candidate: { name: facts.name, version: facts.version, integrity: facts.integrity } };
 }
 
 export async function capture(options, github = createGitHub(), observe = viewPackage) {
@@ -2091,25 +2321,15 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     }
     const { portfolio } = dryRun;
     chain = reuse ? reuseOf({ bound, options }) : undefined;
-    const release = {
-      version: options.version,
-      route: bound.route,
-      portfolioId: portfolio.id,
-      manifestDigest: portfolio.digest,
-      sourceRevision,
-      packages: chain?.packages ?? portfolio.packages.map(({ name, version, role, integrity, shasum, bytes, files, file }) => ({ name, version, role, file, integrity, shasum, bytes, files })),
-      tokenPublished: publish.portfolio.packages.filter(({ authentication }) => authentication === 'temporary npm token (first publish)').map(({ name }) => name),
-      dryRun: { runId: dryRun.execution.runId, runAttempt: dryRun.execution.runAttempt, jobId: dryRun.execution.jobId, conclusion: dryRun.execution.conclusion, mode: 'dry-run', preparation: dryRun.preparation.mode },
-      publish: { runId: publish.execution.runId, runAttempt: publish.execution.runAttempt, jobId: publish.execution.publish.jobId, conclusion: publish.execution.conclusion, mode: 'publish', environmentApprovals: publish.approvals.length },
-      routeRecords,
-      ...(reuse ? { candidate: options.candidate, reuse: chain.reuse } : {}),
-    };
+    const release = releaseOf({ options, bound, chain });
     // --version binds the first portfolio release, which names no prior release; every later release, whichever packages it
     // publishes, is --release. How each package published (token or OIDC) is read from the publish run either way.
     if (!reuse && JSON.parse(manifestText).preparation?.verification?.versionEffects?.status !== 'first-portfolio-release') {
       fail('P2_1_NOT_FIRST_RELEASE', `${portfolio.id} compares with a prior release; --version binds the first portfolio release only, so capture this release with --release (see the usage)`);
     }
     verification.release = release;
+    // A later release that publishes @muxui/react names the R1 exit route of that candidate, which must already hold its records.
+    if (reuse && release.packages.find(({ name }) => name === reactName).role === 'published') verification.r1ExitRoute = readSiblingR1Route({ release, path: options.r1ExitRoute, rehearsal: options.rehearsal });
     verification.sourceRevision = sourceRevision;
     verification.sourceTree = bound.sourceTree;
     verification.captureProcedure = reuse
@@ -2136,17 +2356,7 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     const aggregate = ciJobs.find((job) => job.name === 'check');
     if (aggregate?.conclusion !== 'success') fail('P2_1_CI_RUN_INVALID', `run ${mainCi.runId} did not pass its aggregate check`);
     const groups = { policy: 'run checks-policy', tooling: 'run checks-tooling' };
-    const cited = (job) => {
-      const titles = new Set();
-      let prefixes = [];
-      for (const { parts } of Object.values(claims)) {
-        for (const item of parts.flatMap(({ evidence }) => evidence)) {
-          if (item.kind === 'test' && item.job === job) titles.add(item.title);
-          if (item.kind === 'corpus' && item.job === job) prefixes = [...prefixes, item.prefix];
-        }
-      }
-      return { titles, prefixes };
-    };
+    const cited = (job) => citedTitles(claims, job);
     const jobs = {};
     for (const [key, name] of Object.entries(groups)) {
       const read = readCiJob({ github, jobs: ciJobs, name, group: `checks-${key}`, cites: cited(key) });
@@ -2179,32 +2389,7 @@ export async function capture(options, github = createGitHub(), observe = viewPa
     verification.retained.publishedOutput = publishedOutput;
     const published = { ...publishedRun.phase, output: publishedOutput };
     // The registry, read now: every package of the set against the manifest and the publish run.
-    const readBack = [];
-    for (const entry of release.packages) {
-      const { view, attestations, placeholders: documents } = await observe(entry);
-      // A reused package was published by an earlier release: its attestation names the run and commit the prior release's read-back
-      // recorded for it, and `latest` stays where that read-back saw it. A package this release publishes was preflighted by its publish run.
-      const record = publish.portfolio.packages.find(({ name }) => name === entry.name);
-      const earlier = chain?.priorReadBack.packages.find(({ name }) => name === entry.name);
-      if (record && earlier && record.preflight.latest !== earlier.latest.observed) fail('P2_1_REGISTRY_TAGS_UNEXPECTED', `${entry.name}: the publish preflight saw latest ${record.preflight.latest}; ${priorWords(release).prior}'s read-back saw ${earlier.latest.observed}`);
-      const earlierRun = /\/actions\/runs\/(\d+)\//u.exec(earlier?.provenance?.invocationId ?? '')?.[1];
-      if (!record && !earlierRun) fail('P2_1_REUSE_RECORD_MISMATCH', `${entry.name}@${entry.version} has no publish run in ${priorWords(release).prior}'s read-back`);
-      readBack.push({
-        ...bindRegistryPackage({
-          entry,
-          view,
-          attestations,
-          placeholders: documents,
-          publishRunId: record ? publish.execution.runId : Number(earlierRun),
-          sourceRevision: entry.sourceCommit ?? sourceRevision,
-          first: record?.preflight.kind === 'first',
-          priorLatest: record ? record.preflight.latest : earlier.latest.observed,
-          reused: !record,
-          prior: priorWords(release).prior,
-        }),
-        attestationDocument: { url: view.attestations.url, sha256: sha256(canonicalJson(attestations)), retained: false },
-      });
-    }
+    const readBack = await bindReadBack({ release, publish, priorReadBack: chain?.priorReadBack, observe });
     // The prior release's tuple, installed and read again (a later release only): the parts that rest on it follow its checks.
     const priorTuple = reuse ? await observePriorTuple({ prior: chain.prior, priorReadBack: chain.priorReadBack, readBack, release, manifestText: chain.priorManifestText, captureTimestamp: options.captureTimestamp }) : undefined;
     // A version beside the candidate that is no part of the tuple (npm's placeholder): what is observed of it, and when it
@@ -2271,114 +2456,14 @@ export async function capture(options, github = createGitHub(), observe = viewPa
 
     // Retained route excerpts, by key, with their lines.
     const logs = { dryRun: excerpts.dryRunExcerpt, publish: excerpts.publishExcerpt, publishPrepare: excerpts.publishPrepareExcerpt };
-    logs.dryRunCollect = logs.dryRun;
-    const sources = { ...jobs, ...(later ? { toolingAfter: { lines: later.excerptLines, group: later.group, excerpt: later.phase.job.excerpt } } : {}) };
-    const resolveItem = (item) => {
-      if (item.kind === 'test') {
-        const { lines, group, excerpt } = sources[item.job];
-        const revision = item.job === 'toolingAfter' ? later.head : sourceRevision;
-        const at = lines.findIndex((line) => testLine.exec(content(line))?.[1] === item.title);
-        if (!hasTitle(gitShow(revision, item.file), item.title)) fail('P2_1_TEST_NOT_IN_FILE', `${item.file} at ${revision} has no test titled "${item.title}"`);
-        return { kind: 'test', job: group, file: item.file, title: item.title, excerpt: excerpt.path, line: at, ...(item.scope ? { scope: item.scope } : {}), ...(item.job === 'toolingAfter' ? { ciRun: later.phase.execution.runId, revision } : {}) };
-      }
-      if (item.kind === 'roadmap-amendment') {
-        const { rows: _rows, ...amended } = verification.amendedRoadmap;
-        return { kind: 'roadmap-amendment', id: item.id, ...amended };
-      }
-      if (item.kind === 'roadmap-rule') return { kind: 'roadmap-rule', id: item.id, ...verification.roadmapRule };
-      if (item.kind === 'prior-tuple') return { kind: 'prior-tuple', ...(item.only === 'bin' ? { tooling: priorTuple.tooling, bin: priorTuple.bin } : { packages: priorTuple.packages, checks: priorTuple.checks, manifest: priorTuple.manifest }) };
-      if (item.kind === 'reuse') return { kind: 'reuse', ...release.reuse, manifest: { path: excerpts.manifest.path, sha256: excerpts.manifest.sha256 } };
-      if (item.kind === 'source-absence') return toolingReaderSurface(sourceRevision);
-      if (item.kind === 'source-line') return { kind: 'source-line', revision: sourceRevision, ...sourceLine(sourceRevision, item.spec) };
-      if (item.kind === 'published') {
-        return { kind: 'published', output: published.output, checks: item.checks.map((id) => {
-          const found = published.checks.find((candidate) => candidate.id === id);
-          return found ?? fail('P2_1_CLAIM_UNKNOWN', `no published-run check ${id}`);
-        }) };
-      }
-      if (item.kind === 'corpus') {
-        // Every fixture of the corpus is a test, and each passes.
-        const names = execFileSync('git', ['ls-tree', '--name-only', sourceRevision, `${item.fixtures}/`], { cwd: repositoryRoot, encoding: 'utf8' }).split('\n')
-          .map((path) => /\/(\d\d-.+)\.json$/u.exec(path)?.[1]).filter(Boolean).sort();
-        const { lines } = jobs[item.job];
-        const lineOf = names.map((name) => lines.findIndex((line) => testLine.exec(content(line))?.[1] === `${item.prefix}${name}`));
-        if (names.length === 0 || lineOf.includes(-1)) fail('P2_1_CI_TEST_MISSING', `the SemVer corpus has ${names.length} fixtures and ${lineOf.filter((at) => at === -1).length} have no passing line`);
-        if (!gitShow(sourceRevision, item.file).includes(item.prefix)) fail('P2_1_TEST_NOT_IN_FILE', `${item.file} at ${sourceRevision} has no "${item.prefix}" tests`);
-        return { kind: 'corpus', job: jobs[item.job].group, file: item.file, fixtures: item.fixtures, cases: names.length, excerpt: jobs[item.job].excerpt.path, firstLine: Math.min(...lineOf), lastLine: Math.max(...lineOf) };
-      }
-      if (item.kind === 'log') {
-        const source = logs[item.source];
-        return { kind: 'log', source: item.source, excerpt: source.path, ...findLine(source.lines, item.pattern, item.source) };
-      }
-      if (item.kind === 'publish-package') {
-        const { lines } = excerpts.publishExcerpt;
-        const entry = release.packages.find(({ name }) => name === item.name);
-        const label = `${entry.name}@${entry.version}`;
-        const { start, end } = publishBlock(lines, label);
-        const block = lines.slice(start, end);
-        const at = (pattern) => {
-          const index = block.findIndex((line) => pattern.test(content(line)));
-          if (index < 0) fail('P2_1_LOG_LINE_MISSING', `${label}: no publish line matches ${pattern}`);
-          return { line: start + index + 1, text: content(block[index]) };
-        };
-        const packageRecord = publish.portfolio.packages.find(({ name }) => name === item.name);
-        if (packageRecord.state !== 'verified') fail('P2_1_PUBLISH_NOT_VERIFIED', `${label} is ${packageRecord.state} in the publish run`);
-        return {
-          kind: 'publish-package',
-          name: entry.name,
-          version: entry.version,
-          excerpt: excerpts.publishExcerpt.path,
-          authentication: { ...at(/^Authentication for /u), value: packageRecord.authentication },
-          readBack: { integrity: at(/^dist\.integrity: /u), provenance: at(/^provenance: /u), distTags: at(/^dist-tags: /u), published: at(/^Published /u), values: packageRecord.readBack },
-        };
-      }
-      if (item.kind === 'read-back') return { kind: 'read-back', artifact: 'the registry read-back of every package (see registryReadBack)' };
-      if (item.kind === 'placeholders') return { kind: 'placeholders', artifact: { path: observation.path, sha256: observation.sha256 }, origin: placeholderOrigin, versions: placeholders };
-      if (item.kind === 'route') {
-        if (item.field === 'portfolio-roles') return { kind: 'route', field: item.field, packages: release.packages.map(({ name, version, role }) => ({ name, version, role })), manifest: { path: excerpts.manifest.path, sha256: excerpts.manifest.sha256, source: JSON.parse(manifestText).source } };
-        if (item.field === 'version-effects') return { kind: 'route', field: item.field, manifest: { path: excerpts.manifest.path, pointer: '/preparation/verification/versionEffects', value: release.reuse.versionEffects } };
-        if (item.field === 'compatibility') return { kind: 'route', field: item.field, manifest: { path: excerpts.manifest.path, pointer: '/compatibility/edges', value: JSON.parse(manifestText).compatibility.edges } };
-        if (item.field === 'prior-manifests') return { kind: 'route', field: item.field, manifests: [{ role: 'the first release (the prior release)', ...priorTuple.manifest }, { role: 'this release', path: excerpts.manifest.path, sha256: excerpts.manifest.sha256, id: release.portfolioId }] };
-        if (item.field === 'react-provenance') {
-          return { kind: 'route', field: item.field, artifact: { path: excerpts.registry.path, sha256: excerpts.registry.sha256 }, provenance: observed.provenance.slsa, predicateTypes: observed.provenance.predicateTypes };
-        }
-        if (item.field === 'rollback') {
-          const manifest = JSON.parse(manifestText);
-          if (reuse) return { kind: 'route', field: item.field, manifest: { path: excerpts.manifest.path, pointer: '/rollback', value: manifest.rollback } };
-          const e04 = JSON.parse(readFileSync(join(repositoryRoot, routeRecords['E-R1-EXIT-04'].path), 'utf8'));
-          return { kind: 'route', field: item.field, manifest: { path: excerpts.manifest.path, pointer: '/rollback', value: manifest.rollback }, record: { path: routeRecords['E-R1-EXIT-04'].path, sha256: routeRecords['E-R1-EXIT-04'].sha256, rollbackStatus: e04.rollback.status, latest: e04.distTags.latest } };
-        }
-      }
-      return fail('P2_1_CLAIM_UNKNOWN', JSON.stringify(item));
-    };
-    verification.coverage = Object.fromEntries(Object.entries(claims).map(([assertionId, { parts, limits, nonClaims: ownNonClaims }]) => [assertionId, {
-      parts: parts.map(({ part, state, note, evidence }) => ({ part, state, ...(note ? { note } : {}), evidence: evidence.map(resolveItem) })),
-      limits,
-      ...(ownNonClaims ? { nonClaims: ownNonClaims } : {}),
-    }]));
+    const sources = { ...jobs, ...(later ? { toolingAfter: { lines: later.excerptLines, group: later.group, excerpt: later.phase.job.excerpt, head: later.head, runId: later.phase.execution.runId } } : {}) };
+    verification.coverage = coverageOf(claims, {
+      release, sourceRevision, sources, logs, excerpts, manifestText, publish, published, priorTuple, observation, placeholders, placeholderOrigin,
+      roadmapRule: verification.roadmapRule, amendedRoadmap: verification.amendedRoadmap, routeRecords, observed,
+    });
     if (reuse) {
       verification.route = root;
-      // What each record cites that differs from the prior release's source revision (so its route still speaks for the rest), and what
-      // came after the release commit (nothing may: the records are judged at the release commit). The keys name the first release
-      // when it is the prior one, as the first later release's records do.
-      const headRevision = git('rev-parse', 'HEAD');
-      const since = priorWords(release).first ? 'FirstRelease' : 'PriorRelease';
-      const priorRows = roadmapRows(gitShow(chain.reuse.priorSourceRevision, roadmap));
-      const changedBetween = (from, to, files) => (files.length === 0 ? [] : git('diff', '--name-only', from, to, '--', ...files).split('\n').filter(Boolean));
-      verification.compared = {
-        [`${since[0].toLowerCase()}${since.slice(1)}`]: { route: options.priorRoute, sourceRevision: chain.reuse.priorSourceRevision },
-        headRevision,
-        records: Object.fromEntries(assertionIds.map((assertionId) => {
-          const files = [...new Set(verification.coverage[assertionId].parts.flatMap(({ evidence }) => evidence.flatMap((item) => (item.file ? [item.file] : []))))].sort();
-          return [assertionId, {
-            [`rowChangedSince${since}`]: JSON.stringify(priorRows[assertionId]) !== JSON.stringify(verification.rows[assertionId]),
-            citedFiles: files,
-            [`citedFilesChangedSince${since}`]: changedBetween(chain.reuse.priorSourceRevision, sourceRevision, files),
-            citedFilesChangedAfterRelease: changedBetween(sourceRevision, headRevision, files),
-          }];
-        })),
-      };
-      if (Object.values(verification.compared.records).some(({ citedFilesChangedAfterRelease }) => citedFilesChangedAfterRelease.length > 0)) fail('P2_1_CITED_FILE_CHANGED', 'a file the records cite changed after the release commit');
+      verification.compared = comparedOf({ coverage: verification.coverage, release, rows: verification.rows, sourceRevision, headRevision: git('rev-parse', 'HEAD') });
     }
     // The blob each executed file had at the revision that ran it: the release commit, or the later head for the later test.
     const executedFiles = (assertionId) => [...new Map(Object.values(verification.coverage[assertionId].parts).flatMap(({ evidence }) => evidence.flatMap((item) => (item.file ? [{ path: item.file, ...(item.revision ? { revision: item.revision } : {}) }] : [])))
