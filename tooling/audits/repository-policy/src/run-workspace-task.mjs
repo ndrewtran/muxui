@@ -7,11 +7,9 @@ import { prerequisitesReadyVariable } from './prepare-prerequisites.mjs';
 import {
   checkStages,
   generationArgs,
-  inheritedFullStorybookSelection,
   loadReactFamilyRecords,
   parseTaskArguments,
   planScopedTask,
-  storybookPackage,
 } from './scoped-verification.mjs';
 
 const repositoryRoot = resolve(
@@ -73,72 +71,38 @@ function environmentFor(plan, options) {
   const environment = { ...process.env };
   // Only this runner's own generation step may mark prerequisites ready.
   delete environment[prerequisitesReadyVariable];
-  const familyKeys = [
-    'MUXUI_COMPONENT_FAMILIES',
+  // An inherited selection never narrows a package check.
+  const selectionKeys = [
+    'MUXUI_STORYBOOK_AUDIT_PROOF',
     'MUXUI_STORYBOOK_FAMILIES',
     'MUXUI_STORYBOOK_FAMILY_FILTER',
     'MUXUI_STORYBOOK_FAMILY',
+    'MUXUI_STORYBOOK_STORY_IDS',
   ];
-  if (!plan.focusedComponent) {
-    for (const key of familyKeys) delete environment[key];
-  }
+  for (const key of selectionKeys) delete environment[key];
   if (plan.full) {
     if (options.task === 'check') {
       environment.MUXUI_STORYBOOK_AUDIT_EVENT = 'check:all';
       environment.MUXUI_STORYBOOK_AUDIT_FORCE = '1';
     }
   } else if (plan.focusedComponent) {
-    environment.MUXUI_COMPONENT_FAMILIES = plan.familySelection.join(',');
-    environment.MUXUI_COMPONENT_INCLUDE_SHARED_SOURCE ??= '1';
     environment.MUXUI_STORYBOOK_FAMILIES = plan.storybookFamilySelection.join(',');
     environment.MUXUI_STORYBOOK_AUDIT_EVENT = 'component';
     environment.MUXUI_STORYBOOK_AUDIT_FORCE = '0';
-    environment.MUXUI_STORYBOOK_AUDIT_PROOF ??= 'component';
+    environment.MUXUI_STORYBOOK_AUDIT_PROOF = 'component';
   }
   return environment;
 }
 
-const notice = (message) => console.log(`[workspace-task] notice: ${message}`);
-
-// Storybook's lane runs the story selection CI plans for the paths this check
-// covers instead of the full audit. Returns the commands to run, or undefined
-// to keep the full audit; the cause is always printed, never silent.
-async function storybookCommandsFor(plan, task) {
-  if (task !== 'check' || plan.full || plan.focusedComponent) return undefined;
-  if (plan.scope !== 'files' && plan.scope !== 'affected') return undefined;
-  if (!plan.checkPackages.some(({ name }) => name === storybookPackage)) return undefined;
-  if (inheritedFullStorybookSelection()) {
-    notice('running the full Storybook audit: a forced-full Storybook event is active');
-    return undefined;
-  }
-  let selection;
-  try {
-    // Loaded on demand: the planner imports its own heavy dependencies and
-    // reads the pullRequestImpact policy, which only Storybook selection needs.
-    const { planStorybookCommands } = await import('./ci-impact.mjs');
-    selection = await planStorybookCommands({ changedPaths: plan.selectionPaths, baseRef });
-  } catch (error) {
-    selection = { full: true, reason: `the CI planner could not load (${error.message})` };
-  }
-  if (selection.full) {
-    notice(`running the full Storybook audit: ${selection.reason}`);
-    return undefined;
-  }
-  if (selection.commands.length === 0) {
-    notice(`CI plans no Storybook proof for these paths against the merge base with ${baseRef} (an unchanged path plans nothing), so the Storybook audit is skipped`);
-  } else {
-    console.log(`[workspace-task] Storybook: CI's selection of ${selection.pages} pages in ${selection.commands.length} command(s)`);
-  }
-  return selection.commands;
-}
-
+// A component check runs React's whole unit check and only the selected
+// families' Storybook pages, the long audit a component change can narrow.
 function focusedCheckCommands(plan) {
   const commands = [];
   if (plan.checkPackages.some(({ name }) => name === '@muxui/react')) {
     commands.push({
       command: 'pnpm',
-      args: ['--filter', '@muxui/react', 'run', 'check:component'],
-      label: '@muxui/react component tests',
+      args: ['--filter', '@muxui/react', 'run', 'check'],
+      label: '@muxui/react check',
     });
   }
   if (plan.checkPackages.some(({ name }) => name === '@muxui/react-storybook')) {
@@ -222,31 +186,19 @@ function runConcurrently(command, args, env) {
   });
 }
 
-// Planned after generation: the selection reads the page index it produces.
-const storybookCommands = await storybookCommandsFor(plan, options.task);
-const stages = checkStages(plan, { task: options.task, workspaceRootName: rootManifest.name, storybookCommands });
+const stages = checkStages(plan, { task: options.task, workspaceRootName: rootManifest.name });
 stages.forEach((lanes, index) => {
-  for (const { args, env } of lanes.flat()) {
-    console.log(`[workspace-task] check stage ${index + 1}: ${commandText('pnpm', args)}`);
-    if (env && Object.keys(env).length > 0) console.log(`[workspace-task] check stage ${index + 1} env: ${JSON.stringify(env)}`);
-  }
+  for (const { args } of lanes.flat()) console.log(`[workspace-task] check stage ${index + 1}: ${commandText('pnpm', args)}`);
 });
 if (options.preview) {
   console.log('[workspace-task] preview complete; no commands executed');
   process.exit(0);
 }
 
-// A step starts from the runner environment, clears what it unsets, then sets its own.
-function stepEnvironment({ env = {}, unsetEnv = [] }) {
-  const stepEnv = { ...environment };
-  for (const key of unsetEnv) delete stepEnv[key];
-  return Object.assign(stepEnv, env);
-}
-
 // Runs a lane's steps in order and reports every step, like --no-bail.
 async function runLane(steps) {
   const laneStatuses = [];
-  for (const step of steps) laneStatuses.push(await runConcurrently('pnpm', step.args, stepEnvironment(step)));
+  for (const step of steps) laneStatuses.push(await runConcurrently('pnpm', step.args, environment));
   return laneStatuses;
 }
 

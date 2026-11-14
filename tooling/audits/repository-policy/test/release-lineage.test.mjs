@@ -8,12 +8,12 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { crc32, deflateRawSync } from 'node:zlib';
 import {
+  CI_JOBS,
   downloadArtifactZip,
   fetchCandidate,
   findMainCiProof,
   loadReuse,
   main,
-  planFullGroups,
   readCandidateZip,
   verifyCandidate,
   verifyDryRun,
@@ -23,12 +23,13 @@ import { PORTFOLIO_MANIFEST_FILE, candidateFileNames, parseReleaseVersions, read
 import { createRegistry } from './registry-fake.mjs';
 import { archiveOf, artifactsOf, committedStore, firstReleaseFixture, otherCommit, publishSet, readCommitted, secondCommit, secondTree, successorFixture, tupleFixture } from './release-tuple-fixture.mjs';
 
-// Decision 0030: the dry run reuses main's green full CI run for the exact commit, and a
+// Decision 0030: the dry run reuses main's green CI run for the exact commit, and a
 // publish run promotes the dry run's candidate. These cases fail closed or fall back.
 const repository = 'ndrewtran/muxui';
 const sha = 'a'.repeat(40);
 const tree = 'b'.repeat(40);
-const groups = ['checks', 'react', 'storybook'];
+// A short expected job list keeps the cases readable; the real list is CI_JOBS.
+const jobNames = ['packages', 'react', 'storybook', 'check'];
 const base = `/repos/${repository}/actions`;
 
 // A scripted read-only GitHub client: the longest route key that prefixes the path answers.
@@ -51,10 +52,10 @@ const ciRun = (id, overrides = {}) => ({
   conclusion: 'success', run_attempt: 1, html_url: `https://github.com/${repository}/actions/runs/${id}`, ...ownRepository, ...overrides,
 });
 const job = (name, conclusion = 'success', extra = {}) => ({ name, status: 'completed', conclusion, ...extra });
-const greenJobs = ['plan', 'check', ...groups.map((id) => `run ${id}`)].map((name) => job(name));
+const greenJobs = jobNames.map((name) => job(name));
 
 // `attempt` overrides what `attempts/<n>` returns; by default it is the listed run read as attempt n.
-async function mainCi({ runs = [ciRun(101)], jobs = greenJobs, attempt = {}, planGroups = () => groups, ...routes } = {}) {
+async function mainCi({ runs = [ciRun(101)], jobs = greenJobs, attempt = {}, expectedJobs = jobNames, ...routes } = {}) {
   const { github, calls } = scriptedGithub({
     [`${base}/workflows/ci.yml/runs`]: { workflow_runs: runs },
     [`${base}/runs/`]: (path) => {
@@ -64,12 +65,12 @@ async function mainCi({ runs = [ciRun(101)], jobs = greenJobs, attempt = {}, pla
     },
     ...routes,
   });
-  return { result: await findMainCiProof({ repository, sha, github, planGroups }), calls };
+  return { result: await findMainCiProof({ repository, sha, github, expectedJobs }), calls };
 }
 
-test('the dry run reuses the newest green full push run of main for the exact commit, read as one attempt', async () => {
+test('the dry run reuses the newest green push run of main for the exact commit, read as one attempt', async () => {
   const { result, calls } = await mainCi({ runs: [ciRun(100, { conclusion: 'success' }), ciRun(101, { run_attempt: 2 })] });
-  assert.deepEqual(result, { reused: true, runId: 101, attempt: 2, url: `https://github.com/${repository}/actions/runs/101`, groups });
+  assert.deepEqual(result, { reused: true, runId: 101, attempt: 2, url: `https://github.com/${repository}/actions/runs/101`, jobs: jobNames });
   assert.match(calls[0], new RegExp(`head_sha=${sha}&event=push&branch=main`, 'u'));
   // The run and its jobs are read as the attempt that is reported, not as the run's latest state.
   assert.deepEqual(calls.slice(1), [`${base}/runs/101/attempts/2`, `${base}/runs/101/attempts/2/jobs?per_page=100&page=1`]);
@@ -93,14 +94,19 @@ test('the dry run falls back to the full release:prepare unless main fully passe
   await fallback({ runs: [ciRun(101, { status: 'in_progress', conclusion: null })] }, /run 101 is in_progress/u);
   await fallback({ runs: [ciRun(101, { conclusion: 'failure' })] }, /run 101 concluded failure/u);
   await fallback({ runs: [ciRun(101, { conclusion: 'cancelled' })] }, /concluded cancelled/u);
-  // The aggregate or any planned group did not pass, whatever the run's label says.
+  // The aggregate or any expected job did not pass, whatever the run's label says: failed,
+  // missing, skipped, cancelled, or unfinished.
   await fallback({ jobs: greenJobs.map((entry) => (entry.name === 'check' ? job('check', 'failure') : entry)) }, /no successful check/u);
-  await fallback({ jobs: greenJobs.filter(({ name }) => name !== 'run storybook') }, /no successful run storybook/u);
-  await fallback({ jobs: greenJobs.map((entry) => (entry.name === 'run react' ? job('run react', 'skipped') : entry)) }, /no successful run react/u);
-  await fallback({ jobs: greenJobs.map((entry) => (entry.name === 'run checks' ? job('run checks', null, { status: 'in_progress' }) : entry)) }, /no successful run checks/u);
-  // A partial plan (a group the full plan has that the run lacks) is not main's full proof.
-  await fallback({ planGroups: () => [...groups, 'browser-webkit'] }, /no successful run browser-webkit/u);
-  await fallback({ planGroups: () => [] }, /lists no groups/u);
+  await fallback({ jobs: greenJobs.filter(({ name }) => name !== 'storybook') }, /no successful storybook/u);
+  await fallback({ jobs: greenJobs.map((entry) => (entry.name === 'react' ? job('react', 'skipped') : entry)) }, /no successful react/u);
+  await fallback({ jobs: greenJobs.map((entry) => (entry.name === 'react' ? job('react', 'cancelled') : entry)) }, /no successful react/u);
+  await fallback({ jobs: greenJobs.map((entry) => (entry.name === 'packages' ? job('packages', null, { status: 'in_progress' }) : entry)) }, /no successful packages/u);
+  // A run missing a job the list expects is not main's proof.
+  await fallback({ expectedJobs: [...jobNames, 'browser webkit 2/2'] }, /no successful browser webkit 2\/2/u);
+  await fallback({ expectedJobs: [] }, /expected CI job list is empty/u);
+  // A run of the old planned workflow (plan, run <group>, check) is not the fixed workflow's proof.
+  const plannedJobs = ['plan', 'check', 'run checks', 'run react'].map((name) => job(name));
+  await fallback({ jobs: plannedJobs, expectedJobs: CI_JOBS }, /no successful packages, apps, tooling, react, browser chromium 1\/2/u);
   // A newer failure is never skipped for an older pass.
   await fallback({ runs: [ciRun(100), ciRun(102, { conclusion: 'failure' })] }, /run 102 concluded failure/u);
   // Attempt identity: the attempt listed must read back as that attempt, and its own state decides.
@@ -111,7 +117,6 @@ test('the dry run falls back to the full release:prepare unless main fully passe
   // Unreadable: the API fails, or the plan cannot be computed.
   await fallback({ [`${base}/workflows/ci.yml/runs`]: new Error('HTTP 403') }, /unreadable \(HTTP 403\)/u);
   await fallback({ [`${base}/runs/`]: new Error('HTTP 500') }, /unreadable \(HTTP 500\)/u);
-  await fallback({ planGroups: () => { throw new Error('planner exited 1'); } }, /unreadable \(planner exited 1\)/u);
 });
 
 test('main CI jobs are read across pages', async () => {
@@ -122,11 +127,15 @@ test('main CI jobs are read across pages', async () => {
   assert.equal(calls.filter((path) => path.includes('/jobs')).length, 2);
 });
 
-test('the planner CLI supplies the full plan group ids that main CI runs', () => {
-  const written = planFullGroups({ run: (_command, _args, { env }) => writeFileSync(env.GITHUB_OUTPUT, 'groups=[{"id":"checks"},{"id":"react"}]\n') });
-  assert.deepEqual(written, ['checks', 'react']);
-  const real = planFullGroups();
-  assert.ok(real.includes('checks') && real.includes('react') && real.includes('storybook'), real.join(','));
+test('the expected CI jobs are exactly the ci.yml run matrix plus the aggregate check, and a green run of them is reused', async () => {
+  const workflow = readFileSync(resolve(import.meta.dirname, '../../../../.github/workflows/ci.yml'), 'utf8');
+  // Matrix entries are `- job: <name>` or `- { job: <name>, ... }`.
+  const matrixJobs = [...workflow.matchAll(/^\s*-\s*(?:\{\s*)?job:\s*([^,}\n]+?)\s*(?:,|\}|$)/gmu)].map(([, name]) => name);
+  assert.ok(matrixJobs.length > 0, 'ci.yml has run matrix entries');
+  assert.deepEqual(CI_JOBS, [...matrixJobs, 'check']);
+  assert.match(workflow, /^ {2}check:\n {4}needs: run\n {4}if: always\(\)$/mu);
+  const { result } = await mainCi({ jobs: CI_JOBS.map((name) => job(name)), expectedJobs: CI_JOBS });
+  assert.deepEqual(result.jobs, CI_JOBS);
 });
 
 // The dry run a publish run promotes.
@@ -510,7 +519,7 @@ test('the lineage CLI reports in the lines the R1 exit capture reads, and writes
     const lines = [];
     const take = () => lines.splice(0);
     const read = (file) => readFileSync(join(root, file), 'utf8');
-    const io = (github, extra = {}) => ({ github, log: (line) => lines.push(line), planGroups: () => groups, ...extra });
+    const io = (github, extra = {}) => ({ github, log: (line) => lines.push(line), expectedJobs: jobNames, ...extra });
     writeFileSync(environment.GITHUB_OUTPUT, '');
     writeFileSync(environment.GITHUB_STEP_SUMMARY, '');
 

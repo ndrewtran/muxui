@@ -35,7 +35,7 @@ name: npm publish
 #   versions on the dispatched commit, rehearses `npm publish --dry-run` for
 #   every tarball in publish order, verifies the set against its portfolio
 #   release manifest, and uploads the tarballs and the manifest. When main's
-#   push CI already passed the full plan for this exact commit, it runs only
+#   push CI already passed every ci.yml job for this exact commit, it runs only
 #   `generate:check` and `release-prepare.mjs`; otherwise it runs the full
 #   `pnpm release:prepare` (Decision 0030). No environment or secret.
 #   tarball-sha512 (the sha512 integrity of each published tarball, comma
@@ -271,9 +271,10 @@ jobs:
         if: inputs.mode == 'dry-run'
         run: pnpm install --frozen-lockfile
 
-      # Main's push CI plans and passes the full graph, so a green run for this
-      # exact commit already proved what release:prepare would rerun (Decision
-      # 0030). Anything else, including an unreadable run, is the full path.
+      # Main's push CI runs every fixed ci.yml job, so a run for this exact
+      # commit in which each one passed already proved what release:prepare would
+      # rerun (Decision 0030). Anything else, including an unreadable run, is the
+      # full path.
       - name: Find main CI proof
         id: mainci
         if: inputs.mode == 'dry-run'

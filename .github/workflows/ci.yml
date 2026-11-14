@@ -10,8 +10,6 @@ on:
 
 permissions:
   contents: read
-  # Pull-request plans read earlier runs' jobs and reuse records.
-  actions: read
 
 # Only pull requests share (and cancel) a group; every main run keeps its own so
 # quick successive merges never drop a pending full run.
@@ -20,19 +18,65 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Pull requests plan owner-scoped groups from the merge-base diff; push,
-  # schedule, and manual runs plan the full workspace graph. Pull requests
-  # also mark groups that passed in an earlier run of the same PR, with no
-  # affecting change since, as reused (never for fork PRs). Set repository variable
-  # MUXUI_CI_REUSE=off to always run every group.
-  plan:
+  # Every event runs the same fixed jobs. Each job is self-contained: it installs,
+  # generates every projection in dependency order, then runs its own checks, so
+  # "re-run failed jobs" repeats only the failed ones. The job names are the
+  # release proof's expected list (CI_JOBS in
+  # tooling/audits/repository-policy/src/release-lineage.mjs); keep them in step.
+  run:
+    name: ${{ matrix.job }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    outputs:
-      groups: ${{ steps.plan.outputs.groups }}
-      # Set only when the metadata artifact was uploaded, so a plan that generated no
-      # metadata (a docs-only pull request) does not make every group try to restore it.
-      metadata: ${{ steps.metadata.outputs.artifact-id }}
+    # Firefox and WebKit jobs add a setup allowance for Playwright's apt install.
+    timeout-minutes: ${{ matrix.timeout || 20 }}
+    env:
+      # Generation below covers every prerequisite, so package scripts skip their
+      # standalone prerequisite generation (prepare-prerequisites.mjs).
+      MUXUI_PREREQUISITES_READY: '1'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job: packages
+            checks: |
+              pnpm --filter @muxui/schema run check
+              pnpm --filter @muxui/tokens run check
+              pnpm --filter @muxui/catalog run check
+              pnpm --filter @muxui/tooling run check
+              pnpm --dir tests/fixtures/tailwind-consumer install --ignore-workspace --frozen-lockfile
+              pnpm --dir tests/fixtures/tailwind-consumer run check
+          - job: apps
+            checks: |
+              pnpm --filter @muxui/docs run check
+              pnpm --filter @muxui/react-playground run check
+              pnpm --filter @muxui/scale run check
+            generate-check: true
+          - job: tooling
+            checks: |
+              pnpm --filter @muxui/repository-policy run check
+              pnpm --filter @muxui/figma run check
+          - job: react
+            checks: pnpm --filter @muxui/react run check
+          # React browser tests: files that call browserEngines() run in every
+          # engine, the rest in Chromium only (src/browser-test-files.mjs).
+          - { job: browser chromium 1/2, tests: cross-engine, engine: chromium, shard: 1/2 }
+          - { job: browser chromium 2/2, tests: cross-engine, engine: chromium, shard: 2/2 }
+          - { job: browser firefox 1/2, tests: cross-engine, engine: firefox, shard: 1/2, timeout: 50 }
+          - { job: browser firefox 2/2, tests: cross-engine, engine: firefox, shard: 2/2, timeout: 50 }
+          - { job: browser webkit 1/2, tests: cross-engine, engine: webkit, shard: 1/2, timeout: 50 }
+          - { job: browser webkit 2/2, tests: cross-engine, engine: webkit, shard: 2/2, timeout: 50 }
+          - { job: browser chromium-only 1/3, tests: chromium-only, shard: 1/3 }
+          - { job: browser chromium-only 2/3, tests: chromium-only, shard: 2/3 }
+          - { job: browser chromium-only 3/3, tests: chromium-only, shard: 3/3 }
+          # Scale's browser checks; the docs one builds the docs site first.
+          - job: browser scale
+            checks: |
+              pnpm --filter @muxui/scale run check:browser
+              pnpm --filter @muxui/scale run check:browser:docs
+          - job: storybook-a11y
+            storybook: a11y
+          - job: storybook
+            checks: pnpm --filter @muxui/react-storybook run generate:check
+            storybook: other
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,9 +93,18 @@ jobs:
           corepack install
           echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
 
-      # Only this job saves the store cache; run jobs restore it read-only.
+      # Only the packages job saves the store cache; the others restore it read-only.
       - name: Cache pnpm store
+        if: matrix.job == 'packages'
         uses: actions/cache@v4
+        with:
+          path: ${{ env.PNPM_STORE }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      - name: Restore pnpm store
+        if: matrix.job != 'packages'
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.PNPM_STORE }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -63,210 +116,112 @@ jobs:
       # Drop packages the current lockfile no longer uses before the cache
       # post-step saves the store, so a restored older store never accumulates.
       - name: Prune pnpm store
+        if: matrix.job == 'packages'
         run: pnpm store prune
 
-      - name: Plan check groups
-        id: plan
-        env:
-          GITHUB_BASE_REF: ${{ github.base_ref }}
-          GH_TOKEN: ${{ github.token }}
-          MUXUI_CI_REUSE: ${{ vars.MUXUI_CI_REUSE }}
-          MUXUI_PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          MUXUI_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
-            node tooling/audits/repository-policy/src/ci-impact.mjs --plan --github-output \
-              --reuse-record "$RUNNER_TEMP/ci-reuse-record.json"
-          else
-            node tooling/audits/repository-policy/src/ci-impact.mjs --plan --github-output --full
-          fi
-
-      # Planning generated the React and Storybook metadata (ignored projections) that every
-      # group of a pull request needs, so the groups can restore it instead of generating it
-      # again, which takes 20 to 40 seconds in each. Generation also rewrites tracked outputs
-      # (the React README, the API and reference files, the catalog source manifest) when the
-      # head is stale, and a group that generated locally would have run on those rewrites.
-      # A restored group cannot, so the metadata is handed over only when generation left the
-      # tracked tree clean; otherwise every group generates for itself, as before. Drift is
-      # not failed here: the plans that prove tracked freshness still do.
-      - name: Check that generation left the tracked tree clean
-        id: clean
-        if: github.event_name == 'pull_request'
-        run: |
-          changed=$(git status --porcelain)
-          if [ -z "$changed" ]; then
-            echo "clean=1" >> "$GITHUB_OUTPUT"
-          else
-            changed=${changed//'%'/'%25'}
-            echo "::notice title=Metadata handoff skipped::Planning changed tracked files, so each group generates its own metadata: ${changed//$'\n'/%0A}"
-          fi
-
-      # The directories are the planner's generatedMetadataDirectories; a missing one is
-      # skipped. The artifact lives for the run only, and a group that cannot restore it
-      # generates the metadata itself. Hidden files are included because Storybook's
-      # directory sits under `.storybook`.
-      - name: Upload plan metadata
-        id: metadata
-        if: github.event_name == 'pull_request' && steps.clean.outputs.clean == '1'
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-plan-metadata
-          path: |
-            apps/react-storybook/.storybook/generated
-            packages/catalog/generated
-            packages/react/generated
-            packages/schema/generated
-            packages/tooling/generated
-          if-no-files-found: ignore
-          include-hidden-files: true
-          retention-days: 1
-          overwrite: true
-
-      # Later runs of this PR read this record to reuse passed groups.
-      - name: Upload reuse record
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-reuse-record
-          path: ${{ runner.temp }}/ci-reuse-record.json
-          if-no-files-found: warn
-          retention-days: 14
-          overwrite: true
-
-  # Each group is self-contained: it repeats its generation prerequisites in a
-  # fresh runner, so "re-run failed jobs" repeats only the failed groups.
-  run:
-    needs: plan
-    if: needs.plan.outputs.groups != '[]'
-    name: run ${{ matrix.group.id }}
-    runs-on: ubuntu-latest
-    # The checks limit plus, for a group that installs browser system libraries,
-    # a setup allowance (see the install step and the planner's groupMatrix).
-    timeout-minutes: ${{ matrix.group.jobTimeoutMinutes }}
-    strategy:
-      fail-fast: false
-      matrix:
-        group: ${{ fromJSON(needs.plan.outputs.groups) }}
-    # A reused group passed in an earlier run of this PR; it only reports that.
-    steps:
-      - name: Reuse earlier pass
-        if: matrix.group.reusedFrom != ''
-        env:
-          GROUP_ID: ${{ matrix.group.id }}
-          REUSED_FROM: ${{ matrix.group.reusedFrom }}
-        run: echo "::notice title=Reused::$GROUP_ID passed in $REUSED_FROM; changes since do not affect it"
-
-      - uses: actions/checkout@v4
-        if: matrix.group.reusedFrom == ''
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        if: matrix.group.reusedFrom == ''
-        with:
-          node-version-file: .node-version
-
-      - name: Activate pinned pnpm
-        if: matrix.group.reusedFrom == ''
-        run: |
-          corepack enable
-          corepack install
-          echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
-
-      - name: Restore pnpm store
-        if: matrix.group.reusedFrom == ''
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.PNPM_STORE }}
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: pnpm-store-${{ runner.os }}-
-
-      - name: Install workspace
-        if: matrix.group.reusedFrom == ''
-        run: pnpm install --frozen-lockfile
-
-      # Proof environment: a group that runs a cross-engine React browser test
-      # (one calling the harness's browserEngines()) installs only the
-      # Playwright engines it names (browser-firefox installs Firefox,
-      # browser-webkit WebKit) with their system libraries. Other groups,
-      # including browser-chromium, use Chrome. The browser builds are cached
-      # per runner OS, architecture, image OS, playwright-core version and engine
-      # set; the system libraries install every time, from the runner image's
-      # apt mirror, which can crawl.
-      # So the install has its own step limit inside the job's setup allowance,
-      # and the checks step keeps the group's own limit.
+      # Chromium uses the runner's preinstalled Chrome. Firefox and WebKit use
+      # Playwright's builds, cached per runner OS, architecture, image OS,
+      # playwright-core version and engine; their system libraries install every
+      # time from the runner image's apt mirror, which can crawl, so the install
+      # has its own limit inside the job's setup allowance.
       - name: Read playwright-core version
         id: playwright
-        if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
-        env:
-          BROWSER_ENGINES: ${{ matrix.group.browserEngines }}
+        if: matrix.engine == 'firefox' || matrix.engine == 'webkit'
         run: |
           : "${ImageOS:?runner image OS identity is required for the browser cache}"
           echo "image-os=$ImageOS" >> "$GITHUB_OUTPUT"
           echo "version=$(node -p "require('./packages/react/package.json').devDependencies['playwright-core']")" >> "$GITHUB_OUTPUT"
-          echo "engines=${BROWSER_ENGINES// /-}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
-        if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
+        if: matrix.engine == 'firefox' || matrix.engine == 'webkit'
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.image-os }}-${{ steps.playwright.outputs.version }}-${{ steps.playwright.outputs.engines }}
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.image-os }}-${{ steps.playwright.outputs.version }}-${{ matrix.engine }}
 
       - name: Install Playwright browsers
-        if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
+        if: matrix.engine == 'firefox' || matrix.engine == 'webkit'
         timeout-minutes: 25
         env:
-          BROWSER_ENGINES: ${{ matrix.group.browserEngines }}
-        run: pnpm --filter @muxui/react exec playwright-core install --with-deps $BROWSER_ENGINES
+          ENGINE: ${{ matrix.engine }}
+        run: pnpm --filter @muxui/react exec playwright-core install --with-deps "$ENGINE"
 
-      # The plan job's metadata (see Upload plan metadata). The planner uses it only when both
-      # files it reads came with it, and otherwise discards it and generates.
-      - name: Restore plan metadata
-        id: metadata
-        if: github.event_name == 'pull_request' && matrix.group.reusedFrom == '' && needs.plan.outputs.metadata != ''
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: ci-plan-metadata
+      - name: Generate
+        id: generate
+        run: pnpm --recursive --sort --workspace-concurrency=1 --if-present run generate
 
-      - name: Run ${{ matrix.group.id }} checks
-        if: matrix.group.reusedFrom == ''
-        timeout-minutes: ${{ matrix.group.timeoutMinutes }}
+      # Each check step still runs when an earlier check step failed, so one run
+      # reports every failing step; none runs when generation failed.
+      - name: Package checks
+        if: ${{ !cancelled() && steps.generate.outcome == 'success' && matrix.checks != '' }}
+        timeout-minutes: 20
+        run: ${{ matrix.checks }}
+
+      # Regenerates from the committed tree and compares; `generate` alone could
+      # repair stale projections instead of failing on them.
+      - name: Generation identity
+        if: ${{ !cancelled() && steps.generate.outcome == 'success' && matrix.generate-check }}
+        timeout-minutes: 20
+        run: pnpm generate:check
+
+      - name: React browser tests
+        if: ${{ !cancelled() && steps.generate.outcome == 'success' && matrix.tests != '' }}
+        timeout-minutes: 20
         env:
-          GITHUB_BASE_REF: ${{ github.base_ref }}
-          MUXUI_CI_GROUP: ${{ matrix.group.id }}
-          MUXUI_CI_METADATA_READY: ${{ steps.metadata.outcome == 'success' && '1' || '' }}
+          TESTS: ${{ matrix.tests }}
+          SHARD: ${{ matrix.shard }}
+          # Empty for the Chromium-only files, which launch Chromium themselves.
+          MUXUI_BROWSER_ENGINES: ${{ matrix.engine }}
         run: |
-          scope=--full
-          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then scope=; fi
-          node tooling/audits/repository-policy/src/ci-impact.mjs --group "$MUXUI_CI_GROUP" $scope
+          files=$(node tooling/audits/repository-policy/src/browser-test-files.mjs "$TESTS")
+          # shellcheck disable=SC2086 # one word per file
+          pnpm --filter @muxui/react exec node --test --test-concurrency=1 --test-shard="$SHARD" $files
+
+      # The full Storybook audit: no family, story, or proof selection.
+      - name: Storybook tests
+        if: ${{ !cancelled() && steps.generate.outcome == 'success' && matrix.storybook != '' }}
+        timeout-minutes: 20
+        env:
+          SUITE: ${{ matrix.storybook }}
+          MUXUI_STORYBOOK_AUDIT_EVENT: check:all
+          MUXUI_STORYBOOK_AUDIT_FORCE: '1'
+          MUXUI_STORYBOOK_A11Y_WORKERS: '2'
+          MUXUI_STORYBOOK_COLORS_WORKERS: '2'
+        run: |
+          unset MUXUI_STORYBOOK_AUDIT_PROOF MUXUI_STORYBOOK_FAMILIES MUXUI_STORYBOOK_STORY_IDS \
+            MUXUI_STORYBOOK_FAMILY_FILTER MUXUI_STORYBOOK_FAMILY
+          a11y=test/storybook-a11y.test.mjs
+          files=()
+          if [ "$SUITE" = a11y ]; then
+            files=("$a11y")
+          else
+            for file in apps/react-storybook/test/*.test.mjs; do
+              file=${file#apps/react-storybook/}
+              [ "$file" = "$a11y" ] || files+=("$file")
+            done
+          fi
+          pnpm --filter @muxui/react-storybook exec node --test --test-concurrency=1 "${files[@]}"
 
       - name: Upload Storybook colour diagnostics
-        if: always() && matrix.group.kind == 'storybook' && matrix.group.reusedFrom == ''
+        if: always() && matrix.storybook != ''
         uses: actions/upload-artifact@v4
         with:
-          name: storybook-colour-diagnostics-${{ matrix.group.id }}
+          name: storybook-colour-diagnostics-${{ matrix.job }}
           path: ${{ runner.temp }}/storybook-colour-audit
           if-no-files-found: ignore
           retention-days: 3
 
-  # The single required status check: passes only when planning succeeded and
-  # every planned group passed (an empty plan passes).
+  # The single aggregate status: passes only when every job above passed. A
+  # failed, cancelled, or skipped job fails it.
   check:
-    needs: [plan, run]
+    needs: run
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Require every planned group to pass
+      - name: Require every job to pass
         env:
-          PLAN_RESULT: ${{ needs.plan.result }}
           RUN_RESULT: ${{ needs.run.result }}
-          GROUPS: ${{ needs.plan.outputs.groups }}
         run: |
-          echo "plan=$PLAN_RESULT run=$RUN_RESULT groups=$GROUPS"
-          if [ "$PLAN_RESULT" != success ]; then exit 1; fi
-          if [ "$GROUPS" = '[]' ] && [ "$RUN_RESULT" = skipped ]; then exit 0; fi
+          echo "run=$RUN_RESULT"
           [ "$RUN_RESULT" = success ]

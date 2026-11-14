@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
-import { changedPatternSlugs, patternParticipants, patternVariantExamples } from '../src/pattern-variants.mjs';
+import { patternVariantExamples } from '../src/pattern-variants.mjs';
 import { assertPatternVariantMarkup, expectedRowVariantIds } from '../src/pattern-variant-markup.mjs';
 import { provePatternVariants } from '../src/pattern-variant-proof.mjs';
 
@@ -100,24 +100,4 @@ test('every variant needs Mux UI server markup, with or without a row expectatio
 test('row expectations name variants the catalog declares', async () => {
   const declared = (await patternVariantExamples(repositoryRoot)).map(({ variantId }) => variantId);
   for (const id of expectedRowVariantIds) assert.ok(declared.includes(id), `${id} is not a declared pattern variant`);
-});
-
-test('pattern participants name the component slugs each pattern record declares', async () => {
-  const patterns = await patternParticipants(repositoryRoot);
-  assert.deepEqual(patterns.find(({ slug }) => slug === 'poster-grid'), {
-    slug: 'poster-grid',
-    components: ['grid-list', 'virtualizer', 'image', 'text', 'link', 'button'],
-  });
-  // A repository without a source manifest declares no pattern.
-  assert.deepEqual(await patternParticipants(tmpdir(), 'no-such-manifest.json'), []);
-});
-
-test('only entries under catalog/patterns change a pattern', () => {
-  const manifest = (...paths) => JSON.stringify({ records: paths.map((path) => ({ family: 'x', path })) });
-  const poster = 'catalog/patterns/poster-grid/artifact.json';
-  assert.deepEqual(changedPatternSlugs(manifest('a.json'), manifest('a.json', poster)), ['poster-grid']);
-  assert.deepEqual(changedPatternSlugs(manifest('a.json', poster), manifest('a.json')), ['poster-grid']);
-  assert.deepEqual(changedPatternSlugs(manifest(poster), manifest(poster)), []);
-  assert.deepEqual(changedPatternSlugs(manifest('a.json'), manifest('a.json', 'b.json')), []);
-  assert.deepEqual(changedPatternSlugs(undefined, manifest('catalog/patterns/hero/artifact.json', poster)), ['hero', 'poster-grid']);
 });

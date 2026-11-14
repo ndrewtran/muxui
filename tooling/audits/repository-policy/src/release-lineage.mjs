@@ -2,7 +2,7 @@
 // release run relies on instead of repeating their work (Decision 0030). Every
 // GitHub call is a read; nothing here writes to GitHub or the registry.
 //
-//   node release-lineage.mjs main-ci          dry run: reuse main's green full CI run for this commit, or fall back
+//   node release-lineage.mjs main-ci          dry run: reuse main's green CI run for this commit, or fall back
 //   node release-lineage.mjs dry-run          publish: verify the dry run whose candidate is promoted
 //   node release-lineage.mjs fetch-candidate  publish: download the verified artifact by id, inspect it, and extract it
 //   node release-lineage.mjs candidate        publish: verify the extracted candidate's bytes and manifest
@@ -16,8 +16,7 @@
 // `pnpm release:prepare`. `dry-run` and `candidate` fail closed.
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { crc32, inflateRawSync } from 'node:zlib';
@@ -28,7 +27,6 @@ import { candidateFileNames, parseReleaseVersions, readPublishSet, readSourceVer
 export const CI_WORKFLOW = '.github/workflows/ci.yml';
 export const PUBLISH_WORKFLOW = '.github/workflows/npm-publish.yml';
 export const CANDIDATE_ARTIFACT = 'npm-candidate';
-const ciImpact = resolve(import.meta.dirname, 'ci-impact.mjs');
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 // The candidate is a tarball and a manifest of a few megabytes.
 const maxArchiveBytes = 256 * 1024 * 1024;
@@ -73,45 +71,50 @@ async function readJobs(github, repository, runId, attempt) {
   }
 }
 
-/** The group ids of the full CI plan at this checkout, from the same planner main's CI runs. */
-export function planFullGroups({ run = execFileSync, environment = process.env } = {}) {
-  const directory = mkdtempSync(join(tmpdir(), 'muxui-release-plan-'));
-  try {
-    const output = join(directory, 'output');
-    writeFileSync(output, '');
-    run(process.execPath, [ciImpact, '--plan', '--full', '--github-output'], {
-      env: { ...environment, GITHUB_OUTPUT: output }, stdio: ['ignore', 'ignore', 'inherit'],
-    });
-    const groups = /^groups=(.*)$/mu.exec(readFileSync(output, 'utf8'))?.[1];
-    return JSON.parse(groups ?? '[]').map(({ id }) => id);
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-}
+// The jobs of every ci.yml run, by name: the fixed `run` matrix entries and the
+// aggregate `check`. A test holds this list to the workflow's matrix.
+export const CI_JOBS = Object.freeze([
+  'packages',
+  'apps',
+  'tooling',
+  'react',
+  'browser chromium 1/2',
+  'browser chromium 2/2',
+  'browser firefox 1/2',
+  'browser firefox 2/2',
+  'browser webkit 1/2',
+  'browser webkit 2/2',
+  'browser chromium-only 1/3',
+  'browser chromium-only 2/3',
+  'browser chromium-only 3/3',
+  'browser scale',
+  'storybook-a11y',
+  'storybook',
+  'check',
+]);
 
 /** Why a main CI run cannot stand in for the check graph, or null when it can. Reads jobs only for a passed run. */
-export async function judgeMainCiRun({ run, readJobs: jobsOf, expectedGroups }) {
+export async function judgeMainCiRun({ run, readJobs: jobsOf, expectedJobs = CI_JOBS }) {
   if (run.status !== 'completed') return `main CI run ${run.id} is ${run.status}`;
   if (run.conclusion !== 'success') return `main CI run ${run.id} concluded ${run.conclusion}`;
   const passed = new Set((await jobsOf()).filter((job) => job.status === 'completed' && job.conclusion === 'success').map((job) => job.name));
-  // A push run plans the full graph; the plan is checked here rather than trusted from the event.
-  const missing = ['plan', 'check', ...expectedGroups.map((id) => `run ${id}`)].filter((name) => !passed.has(name));
+  // Every job must have passed, whatever the run's conclusion says.
+  const missing = expectedJobs.filter((name) => !passed.has(name));
   return missing.length > 0 ? `main CI run ${run.id} has no successful ${missing.join(', ')}` : null;
 }
 
 /**
- * Finds the green full CI run on main for this exact commit. Returns
- * { reused: true, runId, attempt, url, groups }, or { reused: false, reason } when the
+ * Finds the green CI run on main for this exact commit. Returns
+ * { reused: true, runId, attempt, url, jobs }, or { reused: false, reason } when the
  * dry run must run the full release:prepare: no run, a failed, running, or incomplete
  * run, or anything unreadable. Only the newest run is considered, so a newer failure
  * is never skipped for an older pass, and it is judged as its latest attempt, read as
  * that attempt (`attempts/<n>` and its jobs), so the attempt reported is the attempt judged.
  */
-export async function findMainCiProof({ repository, sha, github, planGroups = planFullGroups }) {
+export async function findMainCiProof({ repository, sha, github, expectedJobs = CI_JOBS }) {
   const fallback = (reason) => ({ reused: false, reason });
   try {
-    const expectedGroups = planGroups();
-    if (expectedGroups.length === 0) return fallback('the full CI plan lists no groups');
+    if (expectedJobs.length === 0) return fallback('the expected CI job list is empty');
     const { workflow_runs: runs } = await github(`/repos/${repository}/actions/workflows/ci.yml/runs?head_sha=${sha}&event=push&branch=main&per_page=30`);
     const [listed] = runs.filter((candidate) => isMainPush(candidate, repository, sha)).sort((left, right) => right.id - left.id);
     if (!listed) return fallback(`no ci.yml push run on main for ${sha}`);
@@ -121,8 +124,8 @@ export async function findMainCiProof({ repository, sha, github, planGroups = pl
     if (run.id !== listed.id || run.run_attempt !== attempt || !isMainPush(run, repository, sha)) {
       return fallback(`main CI run ${listed.id} attempt ${attempt} reads back as run ${run.id} attempt ${run.run_attempt}`);
     }
-    const reason = await judgeMainCiRun({ run, readJobs: () => readJobs(github, repository, run.id, attempt), expectedGroups });
-    return reason ? fallback(reason) : { reused: true, runId: run.id, attempt, url: run.html_url, groups: expectedGroups };
+    const reason = await judgeMainCiRun({ run, readJobs: () => readJobs(github, repository, run.id, attempt), expectedJobs });
+    return reason ? fallback(reason) : { reused: true, runId: run.id, attempt, url: run.html_url, jobs: expectedJobs };
   } catch (error) {
     return fallback(`the CI proof is unreadable (${error.message})`);
   }
@@ -447,7 +450,7 @@ export async function main(command, environment = process.env, io = {}) {
       let proof;
       try {
         requireEnvironment(environment, ['GITHUB_REPOSITORY', 'GITHUB_SHA']);
-        proof = await findMainCiProof({ repository, sha, github, planGroups: io.planGroups });
+        proof = await findMainCiProof({ repository, sha, github, expectedJobs: io.expectedJobs });
       } catch (error) {
         proof = { reused: false, reason: error.message };
       }
@@ -457,7 +460,7 @@ export async function main(command, environment = process.env, io = {}) {
         writeSummary(environment, [
           '### Main CI proof',
           '',
-          `- reused: [run ${proof.runId}](${proof.url}) attempt ${proof.attempt}, a green full plan of ${proof.groups.length} groups at \`${sha}\``,
+          `- reused: [run ${proof.runId}](${proof.url}) attempt ${proof.attempt}, a green run of all ${proof.jobs.length} CI jobs at \`${sha}\``,
           '- this dry run ran generation, `generate:check`, and `release-prepare.mjs`, not the check graph',
         ].join('\n'));
       } else {

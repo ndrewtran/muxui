@@ -149,9 +149,8 @@ test('storybook scoped check runner includes only suites for the selected proof'
   assert.match(theme.args.join(' '), /page workers keep paint collection, axe, and the dedicated check independent/u);
   assert.doesNotMatch(theme.args.join(' '), /Browser Proof/u);
 
-  const chrome = scopedStorybookCheckPlan(resolveStorybookPageSelection(env('chrome')));
-  assert.doesNotMatch(chrome.args.join(' '), /storybook-a11y\.test\.mjs/u);
-  assert.match(chrome.args.join(' '), /manager and docs paint only canonical Mux colours/u);
+  // The manager and docs colour proof is gone, so the scoped runner has no chrome suite to run.
+  assert.throws(() => scopedStorybookCheckPlan(resolveStorybookPageSelection(env('chrome'))), /MUXUI_STORYBOOK_AUDIT_PROOF_UNKNOWN: chrome/u);
 
   const full = scopedStorybookCheckPlan(resolveStorybookPageSelection({}));
   assert.deepEqual(full, { command: 'pnpm', args: ['check'], label: 'full package audit' });

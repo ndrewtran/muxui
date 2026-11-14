@@ -1,184 +1,73 @@
 # Repository policy audit
 
-This package owns Mux UI's deterministic repository-policy checks. For delivery
-work, begin with the repository [route map](../../../AGENTS.md), then read the
-canonical Architecture, Roadmap, and Product Scope.
-The repository entrypoint audits the toolchain pins, generated output, and
-artifact naming.
+This package owns Mux UI's deterministic repository-policy checks: the toolchain
+pins, generated output, and artifact naming (`src/cli.mjs`), the root task
+runner, and release preparation and publication.
 
-This package implements the root `pnpm check`, `pnpm check:all`, and
-`pnpm release:prepare` commands. Their scopes and proof rules are in the root
-route map's Verification section. The runner rejects a mix of component,
-package, and file selectors, and scoped work needs no task-local operation
-descriptor.
+## Root tasks
 
-## Pull request CI routing
+`src/run-workspace-task.mjs` implements the root `pnpm check`, `pnpm check:all`,
+and `pnpm generate` (`src/scoped-verification.mjs` plans them):
 
-GitHub pull requests use `src/ci-impact.mjs` to plan checks from the merge-base
-to head diff. The plan is printed as JSON before checks run. PR text and labels
-do not establish ownership or narrow proof. Canonical React records, generated
-Storybook page IDs, changed importer paths, and explicit owner routes determine
-the checks. A route the planner cannot resolve widens the plan and prints a
-notice saying what widened and why; only a lockfile change whose consumers
-cannot be identified fails.
+- `pnpm check` checks the packages that own the changed paths (committed since
+  `MUXUI_BASE_REF`, default `origin/main`, plus uncommitted and untracked files)
+  and every package that depends on them. A path outside every package maps
+  through `affectedPathOwners` in `repository-policy.json`, and
+  `affectedPathConsumers` adds packages that read another package's source
+  without a workspace dependency. A change to a `globalTaskInputs` path runs the
+  full graph; an unmapped path fails with `MUXUI_AFFECTED_PATH_UNMAPPED`.
+- `--package <name|path>` and `--files <path[,path]>` replace the changed paths
+  with an explicit scope, again with dependents. Selectors are repeatable, and
+  one command takes one kind.
+- `--component <family>` runs the whole `@muxui/react` check and the
+  `@muxui/react-storybook` component audit of only those families' pages
+  (`check:scoped` with `MUXUI_STORYBOOK_AUDIT_PROOF=component`). Families resolve
+  by family, slug, or export name from the generated React contract.
+- `pnpm check:all` checks every package; `pnpm generate` generates every package.
+- `--preview` (or `--dry-run`) prints the plan and runs nothing.
 
-Component runtime and CSS changes select the affected React families, their
-verified named test cases and browser proofs, and every Storybook page in those
-families. A family's tests are found by name: `test/<slug>.test.mjs` and
-`test/browser/<slug>.test.mjs` in the React package. Only a test that does not
-follow that name needs an entry in `FAMILY_EXTRA_TESTS` in
-`src/component-test-selection.mjs`, and a family that no test names runs its
-source group whole. A changed authored example or Storybook story export
-selects only its canonical page ID. Theme/token changes run their compiler and projection checks
-with theme color and contrast proofs, without component keyboard suites.
-Documentation-only changes run the documentation owner. Catalog guide changes
-run the catalog, documentation, and `@muxui/tooling` checks, because guides
-compile into the catalog that the tooling queries and dense goldens render. Scale-only changes
-run the theme-authoring checks, and Scale source also runs the documentation
-owner that embeds it. Either route runs the Scale docs browser test, which
-builds the docs site first. Repository-policy, workflow, policy-run fixture, and
-release ledger changes run the policy checks. The declared publish set,
-`publish-set.json` (`pullRequestImpact.publishSetInputs`), also runs the `@muxui/tooling`
-check, whose packed-entry test takes its allowed edges from it. Mixed changes combine and
-deduplicate those scopes.
+Before checking, the runner generates the checked packages and their dependency
+closure (plus `generationPrerequisites`) serially in dependency order and sets
+`MUXUI_PREREQUISITES_READY=1`, so package scripts skip their standalone
+prerequisite generation. React's check runs first and alone, because its pack
+tests rewrite shared generated output; a full check then runs Storybook's
+browser audits alone, and the remaining checks run two at a time. Every check
+runs even after a failure, and the runner exits with the first failure. An
+inherited Storybook family, story, or proof selection never narrows a package
+check; a full check runs the forced full Storybook audit.
 
-React browser tests run in per-engine groups, in pull requests and in the full
-plan. A test that calls the harness's `browserEngines()` runs once in each of
-`browser-chromium`, `browser-firefox`, and `browser-webkit`; every other browser
-test runs once, in `browser-chromium-only`; unit tests stay in `react`. The full
-React package check runs every top-level test file once, so a plan that has it
-adds a separate command only for a selected unit test below `test/` or one that
-runs in every engine. A group installs only its own engine. A component check leaves its browser tests to
-these groups (`MUXUI_COMPONENT_SKIP_BROWSER_TESTS=1`) and keeps their case
-filters. A long list splits into numbered shards, such as `browser-firefox-2`:
-more than six cross-engine files, or more than 18 Chromium-only files. Each list
-is packed into its shards by measured cost, described below, and a file lands in
-the same-numbered shard in every engine. A pull request that selects test files shards a cross-engine list at
-most two ways and the Chromium-only list at most three. A plan that runs the
-whole browser suite (main, the weekly run, and a pull request that needs the
-full React proof) shards each list two ways, so a shard runs about eight
-minutes. Scale's browser checks, including the docs build, run in the
-`browser-scale` group in every plan, main included, whatever the React browser
-layout is, so reuse routes a docs or Scale change to the same group whichever
-plan ran the earlier pass. Reuse treats a React browser group and its shards as
-one family: a change routed to any shard reruns its siblings, and a shard is
-reused only when its id and file list match.
+## CI
 
-Shards are packed by cost so that none is the long pole. `browser-test-costs.json`
-lists seconds for each `test/browser/<file>.test.mjs`, measured in one engine. The
-planner sorts a list by cost, largest first (ties by path), and puts each file in the
-shard with the least total so far (ties to the lowest index), so two shards differ by at
-most the cost of the largest file. Adding or removing a file, or changing a cost, can
-move other files between shards, and a shard whose file list changed reruns once
-instead of being reused.
+`.github/workflows/ci.yml` runs the same fixed jobs on every pull request, push
+to `main`, manual dispatch, and weekly schedule. Each job installs, generates
+every package in dependency order, then runs its own commands:
 
-The table is a contract, not advice: every React browser test file is listed and every
-entry is a real file. Every plan, in every mode, checks that before it plans anything,
-and fails with `MUXUI_CI_IMPACT_BROWSER_TEST_COST_DRIFT`, naming the files with no
-entry and the entries with no file, so a slow new test cannot be packed as if it were
-short. Add each new file with whole seconds measured in one engine, or remove the
-entry of a file that is gone. To measure, take a recent run of `main` and read the logs
-(`gh api repos/<owner>/<repo>/actions/jobs/<jobId>/logs --allow-escape-sequences`)
-of its `run browser-chromium-1` and `run browser-chromium-2` jobs for the
-cross-engine files and its `run browser-chromium-only-1` and
-`run browser-chromium-only-2` jobs for the rest. Sum each top-level test's
-`(NNNms)` duration into the file that declares it (a subtest is already inside its
-parent's time) and round to whole seconds, at least 1. Every cost must be a positive
-whole number: the planner fails with `MUXUI_CI_IMPACT_BROWSER_TEST_COST_INVALID`,
-naming the entry, instead of packing with a value it cannot add.
+| Job | Commands |
+|---|---|
+| `packages` | schema, tokens, catalog, and tooling `check`, then the Tailwind consumer fixture's isolated install and `check` |
+| `apps` | docs, react-playground, and scale `check`, then root `pnpm generate:check` as its own step |
+| `tooling` | repository-policy and figma `check` |
+| `react` | the `@muxui/react` check: unit tests and `tsc` |
+| `browser <engine> <n>/2` | the cross-engine React browser tests in Chromium, Firefox, or WebKit |
+| `browser chromium-only <n>/3` | every other React browser test |
+| `browser scale` | Scale's `check:browser` and `check:browser:docs` |
+| `storybook-a11y` | `test/storybook-a11y.test.mjs`, the full audit |
+| `storybook` | Storybook `generate:check`, then every other top-level Storybook test |
 
-Browser tests open pages on `load` and then wait for the suite's own readiness
-signal, never `networkidle`, which adds a fixed 500 ms quiet window to every open and
-waits for nothing a test asserts on. React tests use `awaitFontsAndFrames` from
-`test/browser/harness.mjs`; Scale's docs tests use `previewsRendered` or `measured`
-from `test/browser/docs-site.mjs`. Every plan, in every mode, reads the `.mjs` files
-under `packages/react/test/browser`, `apps/scale/test/browser`, and
-`apps/react-storybook/test`, so a pull request that changes only a test file is
-checked too. It parses each file and fails with
-`MUXUI_CI_IMPACT_BROWSER_TEST_NETWORKIDLE`, naming each file whose code has a
-`networkidle` string literal or a template literal with no substitutions; a
-mention in a comment is ignored, and a file that does not parse is matched as text
-for a quoted `networkidle` instead. A file that needs it for its own purpose goes in
-`networkidleAllowlist` in `src/ci-impact.mjs` with the reason; a test fails when an
-allowlisted file is gone or no longer uses it.
+`src/browser-test-files.mjs` lists the React browser tests: a file that calls
+the harness's `browserEngines()` is cross-engine, every other file is
+Chromium-only. Each job passes its list to `node --test --test-concurrency=1
+--test-shard=<n>/<total>`, which sorts the files and keeps every n-th, so the
+shards of a list never overlap and together run all of it. Chromium uses the
+runner's Chrome; Firefox and WebKit install Playwright's builds, with a 25-minute
+install step inside a 50-minute job. The Storybook jobs run with
+`MUXUI_STORYBOOK_AUDIT_EVENT=check:all`, `MUXUI_STORYBOOK_AUDIT_FORCE=1`, and no
+family or story selection. Check steps are limited to 20 minutes.
 
-GitHub's Free plan runs 20 jobs at once, and a job over that queues instead of
-failing. Main plans 15 groups. A full-proof React pull request plans 19 run jobs,
-and 21 when a theme change adds the two Storybook theme groups; the Storybook
-groups come last in the matrix and are the shortest browser-driven jobs, so they
-are the ones that wait for a free slot.
-
-Each group's `timeoutMinutes` limits its checks step: 20 minutes, or 15 for
-Tailwind. The longest clean step is the React suite at about 11 minutes, so
-duration creep fails the job instead of passing silently. A group that installs
-Firefox or WebKit (`browserEngines` is set) also gets a 30 minute setup
-allowance in `jobTimeoutMinutes`, the job limit, because Playwright's apt
-install of system libraries can crawl on a slow runner-image mirror. The
-workflow bounds that install step to 25 minutes, inside the allowance, so a
-stalled install fails by itself and never spends the checks limit.
-
-The PR planner prepares ignored React or Storybook metadata only when those
-owners are needed to resolve canonical families or page IDs. A full workspace
-plan is reserved for identified workspace-wide inputs such as the Node/pnpm
-toolchain, workspace layout, or shared root dependency/engine fields. Lockfile
-changes route through verified workspace importers; changes whose consumers
-cannot be resolved fail with an actionable ownership error. Manual and
-scheduled CI keep the explicit full graph and broad browser checks.
-
-In a pull request run the plan job uploads the metadata it prepared
-(`generatedMetadataDirectories`) as a one-day artifact, but only when
-generation left the tracked tree clean: a head whose tracked generator outputs
-are stale prints a notice naming the changed files and skips the handoff, so
-each group regenerates them locally as it always did and no proof changes. Each
-group that runs restores the artifact and sets `MUXUI_CI_METADATA_READY=1` only
-when the restore succeeded. The group then skips the generation of
-`@muxui/react-storybook` and its dependencies, as if it had run it, only when
-the React contract and the Storybook manifest are both there. A restore missing
-either is discarded whole and the group generates the metadata itself, as it
-does when the artifact is missing. Main, scheduled, and manual runs do not use
-the artifact.
-
-Local `pnpm check --files <paths>` and the default changed-owner `pnpm check`
-run the Storybook lane CI would plan for the same paths: the story-index
-generation check, any focused Storybook unit tests, and the scoped page audits,
-each with CI's `MUXUI_STORYBOOK_*` environment, one after another in the lane.
-`--files` plans exactly the given files against the merge base with
-`MUXUI_BASE_REF` (default `origin/main`); the default scope plans the changed
-paths it collects, uncommitted, new, and deleted files included. The runner
-loads `planStorybookCommands` from `src/ci-impact.mjs` after generation, so the
-page index is current; `--preview` plans from the existing index. Other
-dependents of the selected paths keep their full package checks. If CI plans no
-Storybook proof for the paths, the lane is skipped with a printed notice. The
-lane keeps the full Storybook audit, with a printed notice naming the cause,
-when the selection is more than one CI shard (120 pages in total), when the
-planner widens to the full workspace, needs a page index that is missing, or
-throws, or, in the default scope, when a forced-full Storybook event is active
-(`--files` rejects that event with `MUXUI_TASK_SCOPE_CONFLICT`). `pnpm check:all`,
-`--package`, `--component`, and generation commands keep their existing
-semantics.
-
-Storybook's own-interface colour proofs (manager and docs paint, onboarding,
-create-story, and the docs ArgsTable) prove the private host, not the library
-(Decision 0030). The full plan skips them on a push to `main` through
-`MUXUI_STORYBOOK_UI_PROOF=skip` and keeps them on the weekly schedule and
-manual runs; a pull request that changes Storybook configuration or theme plans
-the manager and docs proof. `pnpm release:prepare` sets the same switch.
-
-### Check groups
-
-The package checks run in independent CI groups so the two long suites overlap
-instead of queueing behind the rest: `checks-policy` (this package),
-`checks-tooling` (`@muxui/tooling`), and `checks` (every other package check,
-the root `generate:check`, and the Storybook generation and unit checks). Each
-group repeats the plan's generation prerequisites in its own runner, keeps the
-`checks` kind (the 20-minute timeout and per-group reuse of an earlier pass),
-and exists only when it has work. Main and scheduled runs plan the same groups
-from the workspace packages: one `pnpm --filter <package> run check` per package
-with a `check` script except React and Storybook, which have their own groups,
-checked in dependency order within `checks`. The Tailwind consumer fixture's
-install and check take about a minute, so they run last in `checks-tooling`
-whenever the plan has it; a plan without the tooling check keeps a `tailwind`
-group.
+The aggregate `check` job passes only when every job passed; a failed,
+cancelled, or skipped job fails it. The job names are `CI_JOBS` in
+`src/release-lineage.mjs`, which the release dry run requires (see below), and a
+test holds that list to the workflow.
 
 ## Release preparation and lineage
 
@@ -241,7 +130,7 @@ run and does not derive it again.
 `src/release-lineage.mjs` is the part of that workflow that reads GitHub runs and
 checks the candidate set. A dry run asks `main-ci` for the push run of `ci.yml` on
 `main` at its exact commit. It reuses that run only when the run succeeded and every
-group of the full plan, recomputed from the commit, has a successful job; otherwise
+job in `CI_JOBS` has a successful job in it; otherwise
 it runs the full `pnpm release:prepare`. It then verifies its own candidate with
 `prepared` and uploads the published tarballs and the manifest. Publish mode promotes
 that dry run without building: `dry-run` verifies the dry run named by `dry-run-id`,

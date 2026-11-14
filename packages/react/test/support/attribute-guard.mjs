@@ -358,7 +358,6 @@ export const renamedPropAttributes = Object.freeze({
  */
 export const historicalPaths = Object.freeze({
   'decisions/': 'decision records state what the attributes were when they were decided',
-  'tests/evidence/': 'review evidence records what was reviewed',
   'packages/react/advisory/': 'advisory mockups are self-contained pages with their own styles',
 });
 
@@ -381,7 +380,6 @@ export const foreignAttributes = Object.freeze([
   { path: 'packages/react/README.md', names: ['data-placeholder', 'data-disabled'], reason: 'the README names the two attributes React Aria keeps, the date segments\' data-placeholder and the hidden picker input\'s data-disabled' },
   { path: 'packages/react/src/generate.mjs', names: ['data-placeholder', 'data-disabled'], reason: 'the README text it generates names them' },
   { path: 'packages/react/src/text-editor/text-editor.css', names: ['data-placeholder'], reason: "Tiptap's Placeholder extension writes it and the stylesheet reads it with attr()" },
-  { path: 'tooling/audits/repository-policy/test/component-source-impact.test.mjs', names: ['data-hovered', 'data-disabled', 'data-selected', 'data-indeterminate', 'data-focused'], reason: 'selector text handed to the planner as an example' },
 ]);
 
 /** Files that define or probe the old names on purpose. */
