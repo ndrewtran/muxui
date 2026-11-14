@@ -215,6 +215,13 @@ test('the packed style check counts only classes in the subject of a nonempty ru
     /Button: no rule selects \.muxui-button$/u,
   );
   button('@scope (.muxui-card) { .muxui-button { color: red } } .muxui-button__label { color: red }')();
+  // A rule on a pseudo-element styles the pseudo-element, not the element it hangs from.
+  const pending = '.muxui-button[data-muxui-state-pending]::after { content: "" } .muxui-button__label { color: red }';
+  assert.throws(button(pending), /Button: no rule selects \.muxui-button$/u);
+  for (const pseudo of [':before', ':first-letter', '::placeholder', '::-webkit-scrollbar', '::marker']) {
+    assert.throws(button(`.muxui-button${pseudo} { color: red } .muxui-button__label { color: red }`), /Button: no rule selects \.muxui-button$/u, pseudo);
+  }
+  button(`${pending} .muxui-button { color: red }`)();
 
   // TextField's root and its shared field hooks: a root named only as an ancestor of the field input styles nothing.
   const fields = '.muxui-field-label, .muxui-field-input { color: red } .muxui-field-description, .muxui-field-error { color: red }';

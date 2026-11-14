@@ -104,14 +104,22 @@ export function assertStylesheetAssetUrls({ stylesheet, stylesheetEntry, entries
   }
 }
 
+// The single-colon spellings CSS keeps for the CSS 2 pseudo-elements.
+const legacyPseudoElements = new Set(['before', 'after', 'first-line', 'first-letter']);
+
 /**
  * Adds the whole class names a selector's subject compound requires, the elements its rule styles: class selectors and
  * `[class~=x]` (not `[class*=]` or `[class^=]`), with escapes decoded, and the subjects of `:is()` and `:where()` arguments.
- * Ancestor and sibling compounds and `:not()`, `:has()` and other pseudo-class arguments never count.
+ * Ancestor and sibling compounds and `:not()`, `:has()` and other pseudo-class arguments never count, and neither does a compound
+ * with a pseudo-element (`::after`, `::placeholder`, legacy `:before`): the rule styles that pseudo-element, not the element.
+ * Nesting is not supported: a nested rule is left unparsed, so `&` never counts its parent.
  */
 function addSubjectClasses(selector, styled) {
   const nodes = [...selector.children];
-  for (const node of nodes.slice(nodes.findLastIndex(({ type }) => type === 'Combinator') + 1)) {
+  const subject = nodes.slice(nodes.findLastIndex(({ type }) => type === 'Combinator') + 1);
+  if (subject.some(({ type, name }) => type === 'PseudoElementSelector'
+    || (type === 'PseudoClassSelector' && legacyPseudoElements.has(name.toLowerCase())))) return;
+  for (const node of subject) {
     if (node.type === 'ClassSelector') styled.add(cssTree.ident.decode(node.name));
     if (node.type === 'AttributeSelector' && node.matcher === '~=' && cssTree.ident.decode(node.name.name).toLowerCase() === 'class') {
       styled.add(node.value.type === 'String' ? node.value.value : cssTree.ident.decode(node.value.name));
