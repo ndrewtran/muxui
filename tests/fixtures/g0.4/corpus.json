@@ -22,9 +22,9 @@
       "version": "1.0.0",
       "catalogVersion": "1.0.0",
       "catalogDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "queryApiVersion": "2.1.0",
-      "supportedQueryApiVersions": ["1.1.0", "1.2.0", "2.1.0"],
-      "schemaRange": "^3.0.0",
+      "queryApiVersion": "3.0.0",
+      "supportedQueryApiVersions": ["1.1.0", "1.2.0", "3.0.0"],
+      "schemaRange": "^4.0.0",
       "sourceRevision": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
       "provenance": {
         "kind": "source-revision",
@@ -49,9 +49,9 @@
       "version": "1.1.0",
       "catalogVersion": "1.1.0",
       "catalogDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      "queryApiVersion": "2.1.0",
-      "supportedQueryApiVersions": ["2.1.0"],
-      "schemaRange": "^4.0.0",
+      "queryApiVersion": "3.0.0",
+      "supportedQueryApiVersions": ["3.0.0"],
+      "schemaRange": "^5.0.0",
       "sourceRevision": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
       "provenance": {
         "kind": "source-revision",
@@ -72,7 +72,7 @@
       "descriptorVersion": "1.0.0",
       "package": "@core-ui/react-native",
       "version": "1.0.0",
-      "bindingSchemaRange": "^3.0.0",
+      "bindingSchemaRange": "^4.0.0",
       "tokenContractRange": "^1.1.0",
       "bindings": {
         "core:component:button#native.react-native": {
@@ -97,7 +97,7 @@
       "descriptorVersion": "1.0.0",
       "package": "@core-ui/react",
       "version": "1.0.0",
-      "bindingSchemaRange": "^3.0.0",
+      "bindingSchemaRange": "^4.0.0",
       "tokenContractRange": "^1.1.0",
       "bindings": {
         "core:component:button#web.react": {
@@ -119,7 +119,7 @@
       "descriptorVersion": "1.0.0",
       "package": "@core-ui/react",
       "version": "1.1.0",
-      "bindingSchemaRange": "^4.0.0",
+      "bindingSchemaRange": "^5.0.0",
       "tokenContractRange": "^2.0.0",
       "bindings": {
         "core:component:button#web.react": {
@@ -141,8 +141,8 @@
     {
       "id": "release-compatible",
       "releaseVersion": "1.0.0",
-      "schemaVersion": "3.0.0",
-      "queryApiVersion": "2.1.0",
+      "schemaVersion": "4.0.0",
+      "queryApiVersion": "3.0.0",
       "tokenContractVersion": "1.1.0",
       "sourceRevision": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
       "catalog": {
@@ -187,8 +187,8 @@
     {
       "id": "release-newer",
       "releaseVersion": "1.1.0",
-      "schemaVersion": "3.0.0",
-      "queryApiVersion": "2.1.0",
+      "schemaVersion": "4.0.0",
+      "queryApiVersion": "3.0.0",
       "tokenContractVersion": "2.0.0",
       "sourceRevision": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
       "catalog": {

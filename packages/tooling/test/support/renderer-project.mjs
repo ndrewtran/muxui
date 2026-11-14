@@ -24,7 +24,7 @@ function rendererDocuments(bundle, bindings, installed) {
     descriptorVersion: '1.0.0',
     package: '@muxui/react',
     version: '1.0.1',
-    bindingSchemaRange: '^3.0.0',
+    bindingSchemaRange: '^4.0.0',
     tokenContractRange: '^2.0.0',
     bindings: Object.fromEntries(installed.map((binding) => {
       const [id] = binding.split('#');
@@ -41,12 +41,12 @@ function rendererDocuments(bundle, bindings, installed) {
   const identity = {
     schema: 'muxui-catalog-package-v2',
     name: '@muxui/catalog',
-    version: '2.1.0',
-    catalogVersion: '2.1.0',
+    version: '3.0.0',
+    catalogVersion: '3.0.0',
     catalogDigest: bundle.catalogDigest,
     queryApiVersion: bundle.apiVersion,
-    supportedQueryApiVersions: ['2.1.0'],
-    schemaRange: '^3.0.0',
+    supportedQueryApiVersions: ['3.0.0'],
+    schemaRange: '^4.0.0',
     sourceRevision: bundle.sourceRevision,
     provenance: { kind: 'source-revision', value: bundle.sourceRevision },
     tokenRequirementSets: Object.fromEntries(bindings.map((binding) => [`${binding}:web.react`, tokenDigest])),
@@ -58,13 +58,13 @@ function rendererDocuments(bundle, bindings, installed) {
     releaseManifest: {
       id: `muxui-release:1.0.1:${bundle.sourceRevision}`,
       releaseVersion: '1.0.1',
-      schemaVersion: '3.0.0',
-      queryApiVersion: '2.1.0',
+      schemaVersion: '4.0.0',
+      queryApiVersion: '3.0.0',
       tokenContractVersion: '2.0.0',
       sourceRevision: bundle.sourceRevision,
       catalog: {
-        id: `@muxui/catalog@2.1.0:${bundle.catalogDigest}`,
-        version: '2.1.0',
+        id: `@muxui/catalog@3.0.0:${bundle.catalogDigest}`,
+        version: '3.0.0',
         digest: bundle.catalogDigest,
       },
       bindings: bindings.map((binding) => ({
@@ -110,7 +110,7 @@ export async function createRendererProject(fixtureRoot, { bundle, writeBundle, 
   await writeFile(join(fixtureRoot, 'pnpm-workspace.yaml'), "packages:\n  - catalog\n  - renderer\n");
   await writeJson(join(catalogRoot, 'package.json'), {
     name: '@muxui/catalog',
-    version: '2.1.0',
+    version: '3.0.0',
     private: true,
     muxUi: { catalogPackage: './generated/catalog-package.json' },
   });

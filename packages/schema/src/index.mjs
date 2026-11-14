@@ -20,15 +20,15 @@ export const QUERY_SELECTORS = Object.freeze(
       .map(([key, values]) => [key, Object.freeze([...values])]),
   ),
 );
-export const SCHEMA_VERSION = '3.0.0';
+export const SCHEMA_VERSION = '4.0.0';
 const [schemaMajor, schemaMinor] = SCHEMA_VERSION.split('.');
 /**
  * The schema versions this build reads: its own major up to its own minor. A later minor may add optional fields that
  * this build's closed schemas reject, so it is out of range until a build that implements it reads it.
  */
 export const SCHEMA_READ_RANGE = `>=${schemaMajor}.0.0 <${schemaMajor}.${Number(schemaMinor) + 1}.0`;
-export const API_VERSION = '2.1.0';
-export const QUERY_SCHEMA_VERSION = '2.1.0';
+export const API_VERSION = '3.0.0';
+export const QUERY_SCHEMA_VERSION = '3.0.0';
 /** The query API versions this build reads. */
 export const QUERY_API_VERSIONS = Object.freeze([API_VERSION]);
 

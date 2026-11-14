@@ -19,7 +19,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
-import { parseJsonStrict } from '../../../packages/schema/src/index.mjs';
+import { API_VERSION, QUERY_API_VERSIONS, parseJsonStrict } from '../../../packages/schema/src/index.mjs';
 import { canonicalJson } from '../../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { compileBundle, repositoryRoot } from './regression.mjs';
 
@@ -255,6 +255,93 @@ export async function normalizeLegacyScaleMetadata(directory) {
   if (changed) await writeFile(path, `${JSON.stringify(source, null, 2)}\n`);
 }
 
+// Query API 3.0.0 replaced 2.1.0, and the compiler reads only the current query API, with the page budget profile that names it and the CLI choices that
+// list it. A tree from before declares 2.1.0 in each of those places. Every BL1 tree does: the blocks arrived with the pattern kind (#224), after query API
+// 2.1.0 (#223), so 2.1.0 is the only earlier value they carry. Each rewrite below keys on one of those exact legacy values and changes only the field that
+// holds it, so a tree from before compiles on both sides with the current declarations and every other field stays as authored. A value the legacy trees
+// never carried (an unknown version, a changed budget, a malformed file) is not recognised, is left as it is, and the compiler reports it.
+const legacyQueryApiVersion = '2.1.0';
+const legacyBudgetProfileId = 'muxui-token-section-page-budget-2-1-0';
+const legacyWorstCaseEnvelope = 'sha256:ebb291d53b0adc83e9192b5e83e29c725d720cf9e555cac14c907b5a98c42f15';
+const isExactly = (value, expected) => Array.isArray(value) && value.length === expected.length && value.every((item, index) => item === expected[index]);
+
+/** The rewrites of a source manifest that a tree from before needs, each taking the manifest and returning whether it changed it. */
+const legacyManifestRewrites = [
+  function queryApiVersion(manifest) {
+    if (manifest.queryApiVersion !== legacyQueryApiVersion) return false;
+    manifest.queryApiVersion = API_VERSION;
+    return true;
+  },
+  // Only the list the legacy trees carried is replaced; a list with any other entry is not the legacy declaration.
+  function supportedQueryApiVersions(manifest) {
+    if (!isExactly(manifest.supportedQueryApiVersions, [legacyQueryApiVersion])) return false;
+    manifest.supportedQueryApiVersions = [...QUERY_API_VERSIONS];
+    return true;
+  },
+];
+
+/** The rewrites of the command registry: the CLI's `--query-api-version` choices were exactly the legacy version. */
+const legacyRegistryRewrites = [
+  function queryApiChoices(registry) {
+    const option = Array.isArray(registry.selectors) ? registry.selectors.find((selector) => selector?.requestKey === 'queryApiVersion') : undefined;
+    if (!isExactly(option?.choices, [legacyQueryApiVersion])) return false;
+    option.choices = [...QUERY_API_VERSIONS];
+    return true;
+  },
+];
+
+/**
+ * The rewrites of the page budget profile, taking this checkout's profile for the current values. A legacy profile carries the legacy id, query API
+ * version, and worst-case envelope digest (which names the version in its preimage); those fields take the current values, and the budget values and
+ * everything else keep what the tree authored.
+ */
+const legacyProfileRewrites = (current) => [
+  function profileId(profile) {
+    if (profile.id !== legacyBudgetProfileId) return false;
+    profile.id = current.id;
+    return true;
+  },
+  function profileQueryApiVersion(profile) {
+    if (profile.queryApiVersion !== legacyQueryApiVersion) return false;
+    profile.queryApiVersion = current.queryApiVersion;
+    return true;
+  },
+  function worstCaseEnvelope(profile) {
+    if (profile.normalizedWorstCaseEnvelopeSha256 !== legacyWorstCaseEnvelope) return false;
+    profile.normalizedWorstCaseEnvelopeSha256 = current.normalizedWorstCaseEnvelopeSha256;
+    return true;
+  },
+];
+
+/**
+ * Applies `rewrites` to the JSON file at `path`, writing it back only when one changed it, and returns the document. A file the strict parser refuses
+ * (malformed JSON, a repeated key) or that is not an object is left as it is for the compiler to report, and returns undefined.
+ */
+async function rewriteLegacyJson(path, rewrites) {
+  const document = await readFile(path, 'utf8').then(parseJsonStrict).catch(() => undefined);
+  if (document === null || typeof document !== 'object' || Array.isArray(document)) return undefined;
+  let changed = false;
+  for (const rewrite of rewrites) changed = rewrite(document) || changed;
+  if (changed) await writeFile(path, `${JSON.stringify(document, null, 2)}\n`);
+  return document;
+}
+
+/**
+ * A tree from before query API 3.0.0 declares the legacy query API in its manifest, its page budget profile, and its command registry's CLI choices, and
+ * the current compiler refuses them. The recognised legacy declarations in those three files take the current ones, on both sides of a comparison
+ * (`legacyManifestRewrites`, `legacyProfileRewrites`, and `legacyRegistryRewrites`). A tree that already declares the current query API is not written.
+ */
+export async function normalizeLegacyQueryApi(directory) {
+  const manifest = await rewriteLegacyJson(join(directory, manifestPath), legacyManifestRewrites);
+  if (manifest === undefined) return;
+  if (typeof manifest.commandRegistryPath === 'string') await rewriteLegacyJson(join(directory, manifest.commandRegistryPath), legacyRegistryRewrites);
+  if (typeof manifest.pageBudgetProfilePath === 'string') {
+    const checkout = parseJsonStrict(await readFile(join(repositoryRoot, manifestPath), 'utf8'));
+    const current = parseJsonStrict(await readFile(join(repositoryRoot, checkout.pageBudgetProfilePath), 'utf8'));
+    await rewriteLegacyJson(join(directory, manifest.pageBudgetProfilePath), legacyProfileRewrites(current));
+  }
+}
+
 /** Makes the extracted tree's source manifest compile: drops the removed `authorityDecisionPath`; any other unknown key still fails the compiler. */
 async function normalizeLegacyManifest(directory) {
   const path = join(directory, manifestPath);
@@ -380,15 +467,16 @@ export async function normalizeLegacyPlatformSafety(directory) {
 /**
  * The catalog digest of the tree at `revision`, compiled by this checkout's compiler without the sources under
  * `excludedDirectories`. A tree from before Decision 0028, before block categories became catalog data, before they carried labels,
- * before a spring transition named no easing, before the Scale block took its current shape and palette algorithm id, or before platform safety resolved from registry
- * defaults is normalized first (`normalizeLegacyManifest`, `normalizeCategoryRegistry`, `normalizeLegacySpringTransitions`,
- * `normalizeLegacyScaleMetadata`, and `normalizeLegacyPlatformSafety`).
+ * before a spring transition named no easing, before the Scale block took its current shape and palette algorithm id, before the current query API, or before platform
+ * safety resolved from registry defaults is normalized first (`normalizeLegacyManifest`, `normalizeCategoryRegistry`, `normalizeLegacySpringTransitions`,
+ * `normalizeLegacyScaleMetadata`, `normalizeLegacyQueryApi`, and `normalizeLegacyPlatformSafety`).
  */
 export const catalogDigestAt = ({ cwd = repositoryRoot, revision, excludedDirectories }) => withTree(cwd, revision, async (directory) => {
   await normalizeLegacyManifest(directory);
   await normalizeCategoryRegistry(directory);
   await normalizeLegacySpringTransitions(directory);
   await normalizeLegacyScaleMetadata(directory);
+  await normalizeLegacyQueryApi(directory);
   await normalizeLegacyPlatformSafety(directory);
   const excluded = ({ path }) => excludedDirectories.some((excludedDirectory) => path.startsWith(excludedDirectory));
   return (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest;

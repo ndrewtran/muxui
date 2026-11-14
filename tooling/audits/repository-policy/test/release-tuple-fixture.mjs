@@ -61,9 +61,9 @@ export function catalogFiles({ version, reactRange = '^0.1.0-0', sourceRevision 
   const token = { id: 'muxui:token:default-theme', kind: 'token', record: { tokenContractVersion: '2.0.0' } };
   const preimage = {
     formatVersion: '1.0.0',
-    apiVersion: '2.1.0',
-    supportedQueryApiVersions: ['2.1.0'],
-    schemaVersion: '3.0.0',
+    apiVersion: '3.0.0',
+    supportedQueryApiVersions: ['3.0.0'],
+    schemaVersion: '4.0.0',
     catalogVersion: version,
     sourceRevision,
     platformSafetyContract: { contractVersion: '1.0.0' },
@@ -79,9 +79,9 @@ export function catalogFiles({ version, reactRange = '^0.1.0-0', sourceRevision 
     version,
     catalogVersion: version,
     catalogDigest,
-    queryApiVersion: '2.1.0',
-    supportedQueryApiVersions: ['2.1.0'],
-    schemaRange: '^3.0.0',
+    queryApiVersion: '3.0.0',
+    supportedQueryApiVersions: ['3.0.0'],
+    schemaRange: '^4.0.0',
     sourceRevision,
     tokenRequirementSets: { [`${component.id}#web.react:web.react`]: tokenDigest },
     platformSafetyContract: { version: '1.0.0', digest: digest('7') },
@@ -90,8 +90,8 @@ export function catalogFiles({ version, reactRange = '^0.1.0-0', sourceRevision 
     releaseManifest: {
       id: `muxui-release:${version}:${sourceRevision}`,
       releaseVersion: version,
-      schemaVersion: '3.0.0',
-      queryApiVersion: '2.1.0',
+      schemaVersion: '4.0.0',
+      queryApiVersion: '3.0.0',
       tokenContractVersion: '2.0.0',
       sourceRevision,
       catalog: { id: `@muxui/catalog@${version}:${catalogDigest}`, version, digest: catalogDigest },
@@ -120,13 +120,13 @@ export function catalogFiles({ version, reactRange = '^0.1.0-0', sourceRevision 
  * `reactRange` the ranges it declares, `descriptorDigest` and `catalogTokenDigest` the token requirement digests the
  * descriptor and the catalog carry, and `exceptions` the React package's active exceptions.
  */
-export function tupleFixture({ versions = {}, commits = {}, descriptorDigest = tokenDigests, catalogTokenDigest, catalogRange = '^2.1.0-rc.1', reactRange = '^0.1.0-0', exceptions = [], extra = {} } = {}) {
-  const at = { '@muxui/schema': '0.6.0-rc.1', '@muxui/catalog': '2.1.0-rc.1', '@muxui/tooling': '1.1.0-rc.1', '@muxui/react': '0.1.0-rc.5', ...versions };
+export function tupleFixture({ versions = {}, commits = {}, descriptorDigest = tokenDigests, catalogTokenDigest, catalogRange = '^3.0.0-rc.1', reactRange = '^0.1.0-0', exceptions = [], extra = {} } = {}) {
+  const at = { '@muxui/schema': '0.6.0-rc.1', '@muxui/catalog': '3.0.0-rc.1', '@muxui/tooling': '1.1.0-rc.1', '@muxui/react': '0.1.0-rc.5', ...versions };
   const gitHead = (name) => commits[name] ?? commit;
   const files = {
     '@muxui/schema': {
       'package.json': { name: '@muxui/schema', version: at['@muxui/schema'], gitHead: gitHead('@muxui/schema') },
-      'src/index.mjs': "export const SCHEMA_VERSION = '3.0.0';\nexport const API_VERSION = '2.1.0';\n",
+      'src/index.mjs': "export const SCHEMA_VERSION = '4.0.0';\nexport const API_VERSION = '3.0.0';\n",
     },
     '@muxui/catalog': {
       'package.json': { name: '@muxui/catalog', version: at['@muxui/catalog'], gitHead: gitHead('@muxui/catalog'), dependencies: { '@muxui/schema': `^${at['@muxui/schema']}` } },
@@ -155,7 +155,7 @@ export function tupleFixture({ versions = {}, commits = {}, descriptorDigest = t
         id: 'renderer:@muxui/react',
         package: '@muxui/react',
         version: at['@muxui/react'],
-        bindingSchemaRange: '^3.0.0',
+        bindingSchemaRange: '^4.0.0',
         tokenContractRange: '^2.0.0',
         provenance: { releaseId: 'set later', sourceCommit: gitHead('@muxui/react') },
         bindings: { [binding]: { export: '@muxui/react#Button', specRevision: digest('3'), tokenRequirementSetDigests: descriptorDigest, platformSafetyRequirementSetDigests: safetyDigests } },

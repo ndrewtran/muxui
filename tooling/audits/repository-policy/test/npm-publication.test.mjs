@@ -22,7 +22,7 @@ after(() => rmSync(scratch, { recursive: true, force: true }));
 const names = publishSet.packages.map(({ name }) => name);
 const [schema, catalog, tooling, react] = names;
 // The first portfolio release: the three new packages' rc.1 and @muxui/react's next number.
-const first = { schema: '0.6.0-rc.1', catalog: '2.1.0-rc.1', tooling: '1.1.0-rc.1', react: '0.1.0-rc.5' };
+const first = { schema: '0.6.0-rc.1', catalog: '3.0.0-rc.1', tooling: '1.1.0-rc.1', react: '0.1.0-rc.5' };
 const versionOf = { [schema]: first.schema, [catalog]: first.catalog, [tooling]: first.tooling, [react]: first.react };
 // What the recovery plan says of an attempted package the registry does not show.
 const unverifiedPlan = 'the publish may have landed and is not visible yet; stop for a decision, re-check the registry later, do not republish this version, and deprecate nothing until it is known';
@@ -97,14 +97,14 @@ const dryRunGithub = (overrides = {}, at = commit) => async (path) => {
 };
 
 test('every package has its own rc rule: a first publish is its rc.1, a later one the next number over next', () => {
-  assert.deepEqual(npm.parseCandidate(catalog, '2.1.0-rc.3'), { base: '2.1.0', rc: 3 });
-  for (const invalid of ['2.1.0', '2.1.0-rc.0', '2.1.0-rc.01', '2.1.0-beta.1', ' 2.1.0-rc.2', '2.1.0-rc.2\n', '', undefined]) {
+  assert.deepEqual(npm.parseCandidate(catalog, '3.0.0-rc.3'), { base: '3.0.0', rc: 3 });
+  for (const invalid of ['3.0.0', '3.0.0-rc.0', '3.0.0-rc.01', '3.0.0-beta.1', ' 3.0.0-rc.2', '3.0.0-rc.2\n', '', undefined]) {
     assert.throws(() => npm.parseCandidate(catalog, invalid), /not an admitted candidate version for @muxui\/catalog/u, String(invalid));
   }
   // @muxui/react stays pinned to 0.1.0-rc.N (Roadmap R1 exit).
   assert.equal(npm.parseCandidate(react, '0.1.0-rc.5').rc, 5);
-  assert.throws(() => npm.parseCandidate(react, '2.1.0-rc.1'), /not an admitted candidate version for @muxui\/react \(0\.1\.0-rc\.N/u);
-  assert.equal(npm.fixForwardVersion('2.1.0-rc.1', catalog), '2.1.0-rc.2');
+  assert.throws(() => npm.parseCandidate(react, '3.0.0-rc.1'), /not an admitted candidate version for @muxui\/react \(0\.1\.0-rc\.N/u);
+  assert.equal(npm.fixForwardVersion('3.0.0-rc.1', catalog), '3.0.0-rc.2');
   assert.equal(npm.fixForwardVersion('0.1.0-rc.4'), '0.1.0-rc.5');
 
   const classify = (name, version, versionStatus, packument) => npm.classifyPreflight({ name, version, versionStatus, packument });
@@ -112,15 +112,29 @@ test('every package has its own rc rule: a first publish is its rc.1, a later on
   assert.deepEqual(classify(schema, '0.6.0-rc.1', 404, null), { kind: 'first', latest: '', next: '' });
   assert.throws(() => classify(schema, '0.6.0-rc.2', 404, null), /@muxui\/schema is absent, so only 0\.6\.0-rc\.1 can be a first publish/u);
 
-  const published = document({ latest: '2.1.0-rc.1', next: '2.1.0-rc.2' }, '2.1.0-rc.1', '2.1.0-rc.2');
-  assert.deepEqual(classify(catalog, '2.1.0-rc.3', 404, published), { kind: 'later', latest: '2.1.0-rc.1', next: '2.1.0-rc.2' });
-  assert.throws(() => classify(catalog, '2.1.0-rc.4', 404, published), /must be the next release candidate after next \(rc\.N\+1\); next points at 2\.1\.0-rc\.2/u);
-  // A new base version is its own decision, never an automatic continuation.
+  const published = document({ latest: '3.0.0-rc.1', next: '3.0.0-rc.2' }, '3.0.0-rc.1', '3.0.0-rc.2');
+  assert.deepEqual(classify(catalog, '3.0.0-rc.3', 404, published), { kind: 'later', latest: '3.0.0-rc.1', next: '3.0.0-rc.2' });
+  assert.throws(() => classify(catalog, '3.0.0-rc.4', 404, published), /must be the next release candidate after next \(rc\.N\+1\); next points at 3\.0\.0-rc\.2/u);
+  // A strictly higher base version starts at its rc.1 (Decision 0035); the other candidates over the same history stop for a decision.
+  assert.deepEqual(classify(catalog, '3.1.0-rc.1', 404, published), { kind: 'later', latest: '3.0.0-rc.1', next: '3.0.0-rc.2' });
+  assert.deepEqual(classify(catalog, '4.0.0-rc.1', 404, published), { kind: 'later', latest: '3.0.0-rc.1', next: '3.0.0-rc.2' });
+  assert.throws(() => classify(catalog, '3.1.0-rc.2', 404, published), /must be the next release candidate after next \(rc\.N\+1\); next points at 3\.0\.0-rc\.2/u);
   assert.throws(() => classify(catalog, '2.2.0-rc.1', 404, published), /must be the next release candidate/u);
-  assert.throws(() => classify(catalog, '2.1.0-rc.2', 200, published), /@muxui\/catalog@2\.1\.0-rc\.2 is already on the registry/u);
-  assert.throws(() => classify(catalog, '2.1.0-rc.2', 404, published), /is listed in the packument/u);
-  assert.throws(() => classify(catalog, '2.1.0-rc.3', 404, document({ latest: '2.1.0-rc.1', next: '2.1.0-rc.2', beta: '2.1.0-rc.1' }, '2.1.0-rc.1', '2.1.0-rc.2')), /Expected exactly latest and next/u);
-  assert.throws(() => classify(catalog, '2.1.0-rc.3', 500, null), /Unexpected HTTP 500/u);
+  assert.throws(() => classify(catalog, '2.2.0-rc.2', 404, published), /must be the next release candidate/u);
+  // The base compares numerically per part, not as text.
+  const tens = document({ latest: '3.9.0-rc.1', next: '3.9.0-rc.1' }, '3.9.0-rc.1');
+  assert.deepEqual(classify(catalog, '3.10.0-rc.1', 404, tens), { kind: 'later', latest: '3.9.0-rc.1', next: '3.9.0-rc.1' });
+  assert.throws(() => classify(catalog, '3.8.0-rc.1', 404, tens), /must be the next release candidate/u);
+  // A higher base is no way round the other checks: a version already on the registry, and any extra dist-tag, still stop.
+  assert.throws(() => classify(catalog, '3.1.0-rc.1', 200, published), /@muxui\/catalog@3\.1\.0-rc\.1 is already on the registry/u);
+  assert.throws(() => classify(catalog, '3.1.0-rc.1', 404, document({ latest: '3.0.0-rc.1', next: '3.0.0-rc.2', beta: '3.0.0-rc.1' }, '3.0.0-rc.1', '3.0.0-rc.2', '3.1.0-rc.1')), /is listed in the packument/u);
+  assert.throws(() => classify(catalog, '3.1.0-rc.1', 404, document({ latest: '3.0.0-rc.1', next: '3.0.0-rc.2', beta: '3.0.0-rc.1' }, '3.0.0-rc.1', '3.0.0-rc.2')), /Expected exactly latest and next/u);
+  // React keeps its pinned base, so no higher base is a candidate for it.
+  assert.throws(() => classify(react, '0.2.0-rc.1', 404, document({ latest: '0.1.0-rc.1', next: '0.1.0-rc.5' }, '0.1.0-rc.1', '0.1.0-rc.5')), /not an admitted candidate version for @muxui\/react \(0\.1\.0-rc\.N/u);
+  assert.throws(() => classify(catalog, '3.0.0-rc.2', 200, published), /@muxui\/catalog@3\.0\.0-rc\.2 is already on the registry/u);
+  assert.throws(() => classify(catalog, '3.0.0-rc.2', 404, published), /is listed in the packument/u);
+  assert.throws(() => classify(catalog, '3.0.0-rc.3', 404, document({ latest: '3.0.0-rc.1', next: '3.0.0-rc.2', beta: '3.0.0-rc.1' }, '3.0.0-rc.1', '3.0.0-rc.2')), /Expected exactly latest and next/u);
+  assert.throws(() => classify(catalog, '3.0.0-rc.3', 500, null), /Unexpected HTTP 500/u);
 });
 
 test('a release names one admitted version for every member of the publish set', () => {
@@ -166,7 +180,7 @@ test('the publish job reads the candidate as the manifest records it and publish
   assert.throws(() => read({ expectedIntegrity: `${candidate.integrity},${draftIntegrity('x')}` }), /the tarball-sha512 input authorizes .*x+==/u);
   assert.throws(() => read({ expectedIntegrity: 'sha512-short' }), /lists \["sha512-short"\], which is not a sha512 integrity/u);
   assert.deepEqual(read({ expectedIntegrity: [...candidate.integrity.split(',')].reverse().join(', ') }).packages.map(({ name }) => name), names, 'any order');
-  assert.throws(() => read({ versions: new Map([...candidate.versions, [catalog, '2.1.0-rc.2']]) }), /Expected exactly the tarball of each published package/u);
+  assert.throws(() => read({ versions: new Map([...candidate.versions, [catalog, '3.0.0-rc.2']]) }), /Expected exactly the tarball of each published package/u);
 });
 
 test('the set publishes in publish order, each package preflighted, rechecked, published, and read back before the next', async () => {
@@ -203,7 +217,7 @@ test('E-P2.1-06 refusals: a version collision stops the whole set before the fir
   await collide({ [react]: { versions: { ...reactHistory()[react].versions, [first.react]: draftIntegrity('5') }, tags: { latest: '0.1.0-rc.1', next: first.react } } }, /@muxui\/react@0\.1\.0-rc\.5 is already on the registry/u);
   // The first-publish and next-lineage rules, per package.
   await collide({}, /@muxui\/schema is absent, so only 0\.6\.0-rc\.1 can be a first publish/u, candidateOf({ versions: { [schema]: '0.6.0-rc.2' } }));
-  await collide({ [catalog]: { versions: { '2.1.0-rc.3': draftIntegrity('c'), '2.1.0-rc.4': draftIntegrity('d') }, tags: { latest: '2.1.0-rc.3', next: '2.1.0-rc.4' } } }, /must be the next release candidate after next/u);
+  await collide({ [catalog]: { versions: { '3.0.0-rc.3': draftIntegrity('c'), '3.0.0-rc.4': draftIntegrity('d') }, tags: { latest: '3.0.0-rc.3', next: '3.0.0-rc.4' } } }, /must be the next release candidate after next/u);
 });
 
 test('E-P2.1-06 refusals: an artifact-integrity mismatch stops the release before any publish', async () => {
@@ -228,7 +242,7 @@ test('E-P2.1-06 refusals: an artifact-integrity mismatch stops the release befor
   // A manifest edited after preparation to match another artifact.
   await refuse({
     edit: ({ directory, manifest }) => writeFileSync(join(directory, PORTFOLIO_MANIFEST_FILE), JSON.stringify({ ...manifest, packages: manifest.packages.map((record) => (record.name === catalog ? { ...record, integrity: draftIntegrity('m') } : record)) })),
-    message: /@muxui\/catalog@2\.1\.0-rc\.1 tarball is sha512-.*; the release manifest records sha512-m+==/u,
+    message: /@muxui\/catalog@3\.0\.0-rc\.1 tarball is sha512-.*; the release manifest records sha512-m+==/u,
   });
 });
 
@@ -299,13 +313,13 @@ test('E-P2.1-06 rehearsal: a refused publish after earlier packages published st
   // Fix forward in a new dispatch, once a later look at the registry settled tooling as never published: it and react keep
   // their versions; the packages that did publish move to their next rc. The tuple is verified again against a new manifest, and the first release's record is untouched.
   const before = readFileSync(join(candidate.directory, PORTFOLIO_MANIFEST_FILE), 'utf8');
-  const fixed = candidateOf({ versions: { [schema]: '0.6.0-rc.2', [catalog]: '2.1.0-rc.2' } });
+  const fixed = candidateOf({ versions: { [schema]: '0.6.0-rc.2', [catalog]: '3.0.0-rc.2' } });
   const verified = verifyCandidate({ directory: fixed.directory, publishSet, versions: fixed.versions, expectedSha512: fixed.integrity, sha: commit, tree, readCommitted });
   assert.notEqual(verified.digest, candidate.manifest.digest, 'a new release manifest');
   registry.faults.refuse = [];
   await publishRun({ registry, candidate: fixed }).run();
   assert.deepEqual(registry.writes.map(({ name, version }) => `${name}@${version}`), [
-    `${schema}@${first.schema}`, `${catalog}@${first.catalog}`, `${schema}@0.6.0-rc.2`, `${catalog}@2.1.0-rc.2`, `${tooling}@${first.tooling}`, `${react}@${first.react}`,
+    `${schema}@${first.schema}`, `${catalog}@${first.catalog}`, `${schema}@0.6.0-rc.2`, `${catalog}@3.0.0-rc.2`, `${tooling}@${first.tooling}`, `${react}@${first.react}`,
   ]);
   assert.equal(readFileSync(join(candidate.directory, PORTFOLIO_MANIFEST_FILE), 'utf8'), before, 'no record is rewritten');
   assert.ok(registry.writes.every(({ op }) => op === 'publish'));
@@ -320,11 +334,11 @@ test('E-P2.1-06 rehearsal: a failed read-back deprecates only the version that p
   const plan = lines.filter((line) => /^- |^\d+\. |^Recovery plan/u.test(line));
   assert.deepEqual(plan.slice(1, 5), [
     `- ${schema}@${first.schema}: healthy; published and verified; stays published and is not deprecated`,
-    `- ${catalog}@${first.catalog}: bad-bytes; published bad bytes; deprecate ${first.catalog} (separate explicit authorization) and fix forward to 2.1.0-rc.2`,
+    `- ${catalog}@${first.catalog}: bad-bytes; published bad bytes; deprecate ${first.catalog} (separate explicit authorization) and fix forward to 3.0.0-rc.2`,
     `- ${tooling}@${first.tooling}: not-attempted; never attempted; nothing to do`,
     `- ${react}@${first.react}: not-attempted; never attempted; nothing to do`,
   ]);
-  assert.ok(plan.some((line) => /@muxui\/catalog: published bad bytes; deprecate 2\.1\.0-rc\.1/u.test(line)), 'the steps name the one deprecation');
+  assert.ok(plan.some((line) => /@muxui\/catalog: published bad bytes; deprecate 3\.0\.0-rc\.1/u.test(line)), 'the steps name the one deprecation');
   assert.equal(plan.filter((line) => /: published bad bytes; deprecate/u.test(line)).length, 1);
   assert.ok(registry.writes.every(({ op }) => op === 'publish'));
 });
@@ -356,7 +370,7 @@ test('E-P2.1-06 rehearsal: a publish that errored after npm accepted it is unver
   registry.reveal(catalog);
   const later = await npm.assessAttempted(error.progress.attempted, registry.io());
   assert.deepEqual(later.map(({ name, state }) => [name, state]), [[schema, 'healthy'], [catalog, 'healthy']]);
-  await assert.rejects(npm.preflight(first.catalog, registry.io(), catalog), /@muxui\/catalog@2\.1\.0-rc\.1 is already on the registry/u);
+  await assert.rejects(npm.preflight(first.catalog, registry.io(), catalog), /@muxui\/catalog@3\.0\.0-rc\.1 is already on the registry/u);
 });
 
 test('a recovery plan deprecates a version only when the registry holds other bytes for it', () => {
@@ -364,7 +378,7 @@ test('a recovery plan deprecates a version only when the registry holds other by
   const plan = (assessed) => npm.planRecovery({ set, assessed }).packages.map(({ state, deprecate, fixForward }) => ({ state, deprecate, fixForward }));
   assert.deepEqual(plan([]), [{ state: 'not-attempted', deprecate: false, fixForward: undefined }, { state: 'not-attempted', deprecate: false, fixForward: undefined }]);
   assert.deepEqual(plan([{ name: schema, state: 'healthy' }, { name: catalog, state: 'bad-bytes' }]), [
-    { state: 'healthy', deprecate: false, fixForward: undefined }, { state: 'bad-bytes', deprecate: true, fixForward: '2.1.0-rc.2' },
+    { state: 'healthy', deprecate: false, fixForward: undefined }, { state: 'bad-bytes', deprecate: true, fixForward: '3.0.0-rc.2' },
   ]);
   for (const state of ['healthy', 'unattested', 'unverified']) {
     assert.ok(plan([{ name: schema, state }, { name: catalog, state }]).every(({ deprecate }) => deprecate === false), state);
@@ -390,7 +404,7 @@ test('the publication CLI preflights the whole set read-only, and verifies a can
   assert.deepEqual(registry.writes, []);
 
   await npm.main('verify-candidate', candidate.environment, io);
-  assert.match(lines.splice(0)[0], /^Candidate verified: @muxui\/schema@0\.6\.0-rc\.1 sha512-.*, @muxui\/catalog@2\.1\.0-rc\.1 sha512-/u);
+  assert.match(lines.splice(0)[0], /^Candidate verified: @muxui\/schema@0\.6\.0-rc\.1 sha512-.*, @muxui\/catalog@3\.0\.0-rc\.1 sha512-/u);
   assert.deepEqual(registry.writes, [], 'verification publishes nothing');
   await assert.rejects(npm.main('preflight-set', { MUXUI_RELEASE_VERSIONS: '' }, io), /missing @muxui\/schema/u);
   await assert.rejects(npm.main('unknown', {}, io), /Expected validate-version, check-npm, preflight, preflight-set, recheck, read-back, verify-candidate, or publish-set/u);
@@ -437,8 +451,8 @@ test('a first publish without the token refuses before any write and never falls
     assert.ok(!lines.includes('Preflight passed for 4 packages; publishing in order.'));
   }
   // One new package is named alone, and a token that is not one line is refused before the registry is read.
-  const registry = createRegistry({ seed: { ...reactHistory(), ...existingPackage(schema, '0.6.0-rc.1'), ...existingPackage(catalog, '2.1.0-rc.1') } });
-  const candidate = candidateOf({ versions: { [schema]: '0.6.0-rc.2', [catalog]: '2.1.0-rc.2' } });
+  const registry = createRegistry({ seed: { ...reactHistory(), ...existingPackage(schema, '0.6.0-rc.1'), ...existingPackage(catalog, '3.0.0-rc.1') } });
+  const candidate = candidateOf({ versions: { [schema]: '0.6.0-rc.2', [catalog]: '3.0.0-rc.2' } });
   await assert.rejects(npm.main('publish-set', { ...candidate.environment, NPM_TOKEN: '' }, { ...registry.io(), publish: registry.publish }), /@muxui\/tooling does not exist on npm yet/u);
   const requests = registry.requests.length;
   await assert.rejects(npm.main('publish-set', { ...candidate.environment, NPM_TOKEN: 'two words' }, { ...registry.io(), publish: registry.publish }), /NPM_TOKEN is not a single-line token/u);
@@ -448,14 +462,14 @@ test('a first publish without the token refuses before any write and never falls
 
 test('a token that is present is not used for a package that already exists', async () => {
   // schema and catalog exist (rc.2 follows their rc.1); tooling is new; the token is set.
-  const registry = createRegistry({ seed: { ...reactHistory(), ...existingPackage(schema, '0.6.0-rc.1'), ...existingPackage(catalog, '2.1.0-rc.1') } });
-  const candidate = candidateOf({ versions: { [schema]: '0.6.0-rc.2', [catalog]: '2.1.0-rc.2' } });
+  const registry = createRegistry({ seed: { ...reactHistory(), ...existingPackage(schema, '0.6.0-rc.1'), ...existingPackage(catalog, '3.0.0-rc.1') } });
+  const candidate = candidateOf({ versions: { [schema]: '0.6.0-rc.2', [catalog]: '3.0.0-rc.2' } });
   await publishRun({ registry, candidate }).run();
   assert.deepEqual(registry.writes.map(({ name, auth }) => [name, auth]), [[schema, 'oidc'], [catalog, 'oidc'], [tooling, 'token'], [react, 'oidc']]);
 
   // With every package existing, no token is used at all, and none is needed.
-  const existing = createRegistry({ seed: { ...reactHistory(), ...existingPackage(schema, '0.6.0-rc.1'), ...existingPackage(catalog, '2.1.0-rc.1'), ...existingPackage(tooling, '1.1.0-rc.1') } });
-  const later = candidateOf({ versions: { [schema]: '0.6.0-rc.2', [catalog]: '2.1.0-rc.2', [tooling]: '1.1.0-rc.2' } });
+  const existing = createRegistry({ seed: { ...reactHistory(), ...existingPackage(schema, '0.6.0-rc.1'), ...existingPackage(catalog, '3.0.0-rc.1'), ...existingPackage(tooling, '1.1.0-rc.1') } });
+  const later = candidateOf({ versions: { [schema]: '0.6.0-rc.2', [catalog]: '3.0.0-rc.2', [tooling]: '1.1.0-rc.2' } });
   await publishRun({ registry: existing, candidate: later, environment: { NPM_TOKEN: '' } }).run();
   assert.deepEqual(existing.writes.map(({ auth }) => auth), ['oidc', 'oidc', 'oidc', 'oidc']);
 });
@@ -553,7 +567,7 @@ test('E-P2.1-03 a later release plans its reuse, fetches the reused bytes from t
   assert.throws(() => planReuse({ publishSet, published, priorRelease: { first: true }, revision: secondCommit, cwd: repositoryRoot }), /P2_1_REUSE_NEEDS_PRIOR_RELEASE: @muxui\/schema, @muxui\/catalog, @muxui\/react are reused/u);
   assert.throws(() => planReuse({ publishSet, published, priorRelease: { first: false, priorManifest: { ...prior.manifest, packages: prior.manifest.packages.slice(1) } }, revision: secondCommit, cwd: repositoryRoot }), /P2_1_PRIOR_RELEASE_INVALID/u);
   const chained = structuredClone(successor.manifest);
-  assert.throws(() => planReuse({ publishSet, published: new Map([[schema, '0.6.0-rc.2']]), priorRelease: { first: false, priorManifest: chained }, revision: secondCommit, cwd: repositoryRoot, readRetained: () => new Map() }), /P2_1_REUSE_ORIGIN_UNAVAILABLE: @muxui\/catalog@2\.1\.0-rc\.1 was published by .*, whose manifest is not retained/u);
+  assert.throws(() => planReuse({ publishSet, published: new Map([[schema, '0.6.0-rc.2']]), priorRelease: { first: false, priorManifest: chained }, revision: secondCommit, cwd: repositoryRoot, readRetained: () => new Map() }), /P2_1_REUSE_ORIGIN_UNAVAILABLE: @muxui\/catalog@3\.0\.0-rc\.1 was published by .*, whose manifest is not retained/u);
   // Nothing reused needs no prior release.
   assert.equal(planReuse({ publishSet, published: new Map(prior.manifest.packages.map(({ name, version }) => [name, version])), priorRelease: { first: true }, revision: commit, cwd: repositoryRoot }).reused.size, 0);
 });
@@ -690,7 +704,7 @@ test('E-P2.1-06 a reused package keeps next at its recorded version: the dry run
   ];
   for (const [what, name, change, title, message] of drifts) {
     const registry = createRegistry({ seed: afterFirstRelease() });
-    const candidate = successorOf({ published: [catalog, tooling], versions: { [catalog]: '2.1.0-rc.2', [tooling]: '1.1.0-rc.2' } });
+    const candidate = successorOf({ published: [catalog, tooling], versions: { [catalog]: '3.0.0-rc.2', [tooling]: '1.1.0-rc.2' } });
     const publish = async (pkg, auth) => {
       await registry.publish(pkg, auth);
       change(registry.packument(name));
@@ -755,11 +769,11 @@ test('E-P2.1-03 and E-P2.1-06 a tooling-only release goes from its candidate thr
 });
 
 test('E-P2.1-03 a release that reuses React publishes catalog and tooling in order and leaves schema and React alone', async () => {
-  const candidate = successorOf({ published: [catalog, tooling], versions: { [catalog]: '2.1.0-rc.2', [tooling]: '1.1.0-rc.2' } });
+  const candidate = successorOf({ published: [catalog, tooling], versions: { [catalog]: '3.0.0-rc.2', [tooling]: '1.1.0-rc.2' } });
   const registry = createRegistry({ seed: afterFirstRelease() });
   const { run, lines } = publishRun({ registry, candidate });
   await run();
-  assert.deepEqual(registry.writes.map(({ name, version, auth }) => [name, version, auth]), [[catalog, '2.1.0-rc.2', 'oidc'], [tooling, '1.1.0-rc.2', 'oidc']]);
+  assert.deepEqual(registry.writes.map(({ name, version, auth }) => [name, version, auth]), [[catalog, '3.0.0-rc.2', 'oidc'], [tooling, '1.1.0-rc.2', 'oidc']]);
   assert.ok(lines.includes(`Preflight passed for 2 packages; publishing in order.`));
   assert.ok(lines.includes(`${react}@${first.react}: reused, on the registry with ${recordOf(candidate.manifest, react).integrity}`));
   assert.deepEqual(candidate.manifest.publication.order, [catalog, tooling]);
@@ -776,7 +790,7 @@ test('E-P2.1-06 refusals: a reused package the registry does not hold as recorde
     assert.deepEqual(registry.writes, [], 'nothing was published');
   };
   // Promotion fetches the reused bytes, so each of these ends the prepare job; the publish job checks the same version document.
-  await refuse({ ...history, [catalog]: { ...history[catalog], versions: { '0.0.0-stage': draftIntegrity('s') }, tarballs: {} } }, /@muxui\/catalog@2\.1\.0-rc\.1, which this release reuses, is not on the registry/u);
+  await refuse({ ...history, [catalog]: { ...history[catalog], versions: { '0.0.0-stage': draftIntegrity('s') }, tarballs: {} } }, /@muxui\/catalog@3\.0\.0-rc\.1, which this release reuses, is not on the registry/u);
   await refuse({ ...history, [react]: { ...history[react], tarballs: { [first.react]: Buffer.from('repacked') }, versions: { ...history[react].versions, [first.react]: recordOf(prior.manifest, react).integrity } } }, /The tarball of @muxui\/react@0\.1\.0-rc\.5 is sha512-.*; its earlier release recorded sha512-/u);
   // The publish job alone: its candidate is verified and its reused package was changed on the registry since (same version, other integrity).
   const candidate = successorOf();

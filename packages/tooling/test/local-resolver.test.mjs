@@ -427,7 +427,7 @@ test('E-G0.4 CLI requires exact bindings and filters project-wide discovery', ()
   assert.equal(discovery.exitCode, 0);
   const response = JSON.parse(discovery.stdout);
   assert.equal(response.meta.authority, 'installed-local');
-  assert.deepEqual(response.meta.resolution.targetPackages, { '@muxui/catalog': '2.1.0' });
+  assert.deepEqual(response.meta.resolution.targetPackages, { '@muxui/catalog': '3.0.0' });
   assert.equal(response.data.items.some(({ id }) => id === 'muxui:component:button'), false);
   assert.equal(response.data.items.some(({ id }) => id === 'muxui:example:button-basic-react'), false);
 });

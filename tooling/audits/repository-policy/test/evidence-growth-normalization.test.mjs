@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
-import { rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import test from 'node:test';
-import { catalogAcrossCommit, gitIn, growthRepository, jsonEdit } from './evidence-growth-repository.mjs';
+import { normalizeLegacyQueryApi } from '../../../../tests/evidence/bl1/growth-scope.mjs';
+import { catalogAcrossCommit, gitIn, growthRepository, jsonEdit, repositoryRoot } from './evidence-growth-repository.mjs';
 
 // BL1 growth, E-BL1-08: a tree from before Decision 0028, before block categories were catalog data, before they carried labels, before a spring
 // transition named no easing, or before the Scale block took its current shape or palette algorithm is normalized the same way on both sides of the comparison. Like
@@ -102,6 +104,115 @@ test('trees from before the manifest key was removed or before category labels c
     await assert.rejects(catalogAcrossCommit({ cwd, commit: duplicatedKey, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), (error) => error.code === 'JSON_DUPLICATE_KEY', 'a manifest with the removed key twice is rejected, not normalized');
     const unknownKey = await repo.modify((edit) => edit('packages/catalog/catalog-sources.json', manifestEdit({ unexpectedKey: true })));
     await assert.rejects(catalogAcrossCommit({ cwd, commit: unknownKey, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), /MUXUI_CATALOG_SOURCE_INVALID/u, 'any other unknown manifest key still fails');
+  } finally {
+    await repo.dispose();
+  }
+});
+
+// Query API 3.0.0 replaced 2.1.0, which every tree from before declares in its source manifest, its page budget profile, and the command registry's CLI
+// choices. The normalizer rewrites those recognised declarations and nothing else: a malformed file, an unknown version, or a budget the tree changed
+// is left as authored, so the compiler still rejects it and the digest comparison still sees it.
+const manifestPath = 'packages/catalog/catalog-sources.json';
+const profilePath = 'packages/catalog/token-section-page-budget-profile.json';
+const registryPath = 'packages/tooling/command-registry.json';
+const legacyQueryApi = '2.1.0';
+const legacyProfile = (profile) => ({
+  ...profile,
+  id: 'muxui-token-section-page-budget-2-1-0',
+  queryApiVersion: legacyQueryApi,
+  normalizedWorstCaseEnvelopeSha256: 'sha256:ebb291d53b0adc83e9192b5e83e29c725d720cf9e555cac14c907b5a98c42f15',
+});
+const withChoices = (choices) => (registry) => {
+  registry.selectors.find(({ requestKey }) => requestKey === 'queryApiVersion').choices = choices;
+  return registry;
+};
+const legacyDeclarations = (current) => ({
+  [manifestPath]: jsonEdit((manifest) => ({ ...manifest, queryApiVersion: legacyQueryApi, supportedQueryApiVersions: [legacyQueryApi] }))(current[manifestPath]),
+  [profilePath]: jsonEdit(legacyProfile)(current[profilePath]),
+  [registryPath]: jsonEdit(withChoices([legacyQueryApi]))(current[registryPath]),
+});
+
+test('the query API normalizer rewrites only the legacy declarations it recognises, and leaves everything else as authored', async () => {
+  const current = Object.fromEntries(await Promise.all([manifestPath, profilePath, registryPath].map(async (path) => [path, await readFile(join(repositoryRoot, path), 'utf8')])));
+  const legacy = legacyDeclarations(current);
+  const parsed = (files) => Object.fromEntries(Object.entries(files).map(([path, text]) => [path, JSON.parse(text)]));
+  /** The three files written to a new directory, normalized, and read back as text; the directory created here is the one removed. */
+  const normalized = async (files) => {
+    const directory = await mkdtemp(join(tmpdir(), 'muxui-bl1-query-api-tree-'));
+    try {
+      for (const [path, text] of Object.entries(files)) {
+        await mkdir(join(directory, dirname(path)), { recursive: true });
+        await writeFile(join(directory, path), text);
+      }
+      await normalizeLegacyQueryApi(directory);
+      return Object.fromEntries(await Promise.all(Object.keys(files).map(async (path) => [path, await readFile(join(directory, path), 'utf8')])));
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  };
+
+  assert.deepEqual(await normalized(current), current, 'a tree that declares the current query API is left byte-identical');
+  assert.deepEqual(parsed(await normalized(legacy)), parsed(current), 'the legacy manifest, profile, and CLI choices become the current declarations');
+
+  // The budget a tree authored stays: only the id, the query API version, and the digest that names it are legacy values.
+  const limited = { ...legacy, [profilePath]: jsonEdit((profile) => ({ ...profile, defaultItemLimit: 17 }))(legacy[profilePath]) };
+  assert.deepEqual(parsed(await normalized(limited)), { ...parsed(current), [profilePath]: { ...JSON.parse(current[profilePath]), defaultItemLimit: 17 } }, 'a custom default item limit stays as authored');
+
+  // A file the strict parser refuses is not normalized into valid JSON; the other files are still rewritten on their own.
+  const text = legacy[profilePath];
+  for (const [name, malformed] of [
+    ['malformed JSON', text.slice(0, -12)],
+    ['a repeated key', text.replace(/^\{\n/u, '{\n  "id": "decoy",\n')],
+  ]) {
+    const result = await normalized({ ...legacy, [profilePath]: malformed });
+    assert.equal(result[profilePath], malformed, `${name} in the profile is left as it is`);
+    assert.deepEqual(JSON.parse(result[manifestPath]), JSON.parse(current[manifestPath]), `${name} in the profile does not stop the manifest from being rewritten`);
+  }
+  const malformedManifest = legacy[manifestPath].slice(0, -3);
+  assert.deepEqual(await normalized({ ...legacy, [manifestPath]: malformedManifest }), { ...legacy, [manifestPath]: malformedManifest }, 'a malformed manifest leaves every file as it is');
+
+  // A version the legacy trees never carried is not recognised, field by field.
+  const manifestWith = (change) => ({ ...legacy, [manifestPath]: jsonEdit((manifest) => ({ ...manifest, ...change }))(legacy[manifestPath]) });
+  for (const [name, change] of [
+    ['an unknown query API version', { queryApiVersion: '2.2.0' }],
+    ['an unknown supported version', { supportedQueryApiVersions: ['not-a-version'] }],
+    ['an unknown version beside the legacy one', { supportedQueryApiVersions: [legacyQueryApi, 'not-a-version'] }],
+  ]) {
+    const files = manifestWith(change);
+    const result = JSON.parse((await normalized(files))[manifestPath]);
+    const authored = JSON.parse(files[manifestPath]);
+    for (const key of Object.keys(change)) assert.deepEqual(result[key], authored[key], `${name} stays as authored`);
+  }
+  const unknownChoices = jsonEdit(withChoices([legacyQueryApi, '2.2.0']))(current[registryPath]);
+  assert.equal((await normalized({ ...legacy, [registryPath]: unknownChoices }))[registryPath], unknownChoices, 'CLI choices that list another version are left as they are');
+  const unknownProfile = jsonEdit((profile) => ({ ...legacyProfile(profile), queryApiVersion: '9.9.9', normalizedWorstCaseEnvelopeSha256: `sha256:${'0'.repeat(64)}` }))(current[profilePath]);
+  const profile = JSON.parse((await normalized({ ...legacy, [profilePath]: unknownProfile }))[profilePath]);
+  assert.deepEqual([profile.queryApiVersion, profile.normalizedWorstCaseEnvelopeSha256], ['9.9.9', `sha256:${'0'.repeat(64)}`], 'an unknown profile version and digest stay as authored');
+});
+
+test('a tree with the legacy query API compiles, and an unrecognised declaration still fails or still shows in the digest', async () => {
+  const repo = await growthRepository();
+  const { cwd, second } = repo;
+  try {
+    const legacyTree = (change = {}) => repo.modify(async (edit) => {
+      await edit(manifestPath, jsonEdit((manifest) => ({ ...manifest, queryApiVersion: legacyQueryApi, supportedQueryApiVersions: [legacyQueryApi], ...change.manifest })));
+      await edit(profilePath, jsonEdit((profile) => ({ ...legacyProfile(profile), ...change.profile })));
+      await edit(registryPath, jsonEdit(withChoices([legacyQueryApi])));
+      if (change.profileText) await edit(profilePath, change.profileText);
+    });
+    const across = (commit, parent) => catalogAcrossCommit({ cwd, commit, parent, excludedDirectories: [], digestAffectingPathsChanged: [] });
+    const legacy = await legacyTree();
+    await repo.edit('README.md', (text) => `${text}\nLegacy query API.\n`);
+    gitIn(cwd, 'add', '-A', '-f');
+    gitIn(cwd, 'commit', '-q', '-m', 'a later change to a tree with the legacy query API (#107)');
+    const legacyChild = gitIn(cwd, 'rev-parse', 'HEAD');
+    const acrossLegacy = await across(legacyChild, legacy);
+    assert.deepEqual([acrossLegacy.identical, acrossLegacy.holds], [true, true], 'trees that declare the legacy query API compile on both sides');
+    // An authored budget is part of the catalog digest, so a legacy tree that changes it differs from the one that does not, instead of being replaced by the current profile.
+    const limited = await legacyTree({ profile: { defaultItemLimit: 17 } });
+    assert.equal((await across(limited, legacy)).identical, false, 'a custom default item limit is not erased by the normalization');
+    await assert.rejects(across(await legacyTree({ manifest: { supportedQueryApiVersions: ['not-a-version'] } }), second), /MUXUI_CATALOG_SOURCE_INVALID/u, 'an unknown supported version still fails the compiler');
+    await assert.rejects(across(await legacyTree({ profileText: (text) => text.slice(0, -12) }), second), (error) => error.code === 'JSON_PARSE_INVALID', 'a malformed profile still fails the compiler');
   } finally {
     await repo.dispose();
   }

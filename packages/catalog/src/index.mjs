@@ -1144,7 +1144,7 @@ export function createCatalogApi(inputBundle, options = {}) {
       data = {
         artifact: {
           ...summary(artifact),
-          ...(normalized.queryApiVersion === '2.1.0' && artifact.kind === 'token'
+          ...(normalized.queryApiVersion === '3.0.0' && artifact.kind === 'token'
             ? tokenSectionSummary(artifact)
             : {}),
           ...(artifact.kind === 'pattern' ? {
