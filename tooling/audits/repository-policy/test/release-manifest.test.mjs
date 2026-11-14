@@ -7,7 +7,11 @@ import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { canonicalJson } from '../src/canonical-json.mjs';
 import { readArchive } from '../src/release-archive.mjs';
-import { caretAllows, readEvidenceRecord, readRetainedManifests, releaseIdFor, sha256, sha512Integrity, verifyPortfolioRelease } from '../src/release-manifest.mjs';
+import { FIRST_RELEASE_VARIABLE, PRIOR_RELEASE_VARIABLE, findPriorManifestProblems, planReuse, resolvePriorRelease } from '../src/release-effects.mjs';
+import {
+  caretAllows, readLedgerManifest, readRetainedManifests, releaseIdFor, releaseLedgerPath, sha256, sha512Integrity, verifyPortfolioRelease,
+} from '../src/release-manifest.mjs';
+import { readPublishSet } from '../src/release-set.mjs';
 import {
   archiveOf, artifactsOf, catalogFiles, catalogModuleFor, commit, digest, committedStore, jsonBytes, manifestOf, otherCommit, publishSet, readCommitted, sidecarFor, tree, tupleFixture,
 } from './release-tuple-fixture.mjs';
@@ -42,10 +46,10 @@ const catalogOf = (change) => {
   return fixture;
 };
 
-test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts, descriptors, profile, evidence, rollback', () => {
+test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts, descriptors, profile, rollback', () => {
   const { artifacts, manifest } = honest();
   assert.equal(manifest.schema, 'muxui-portfolio-release-v1');
-  assert.deepEqual(Object.keys(manifest).sort(), ['catalog', 'compatibility', 'contracts', 'descriptors', 'digest', 'evidence', 'id', 'packages', 'preparation', 'publication', 'react', 'reactCompatibility', 'rollback', 'schema', 'source']);
+  assert.deepEqual(Object.keys(manifest).sort(), ['catalog', 'compatibility', 'contracts', 'descriptors', 'digest', 'id', 'packages', 'preparation', 'publication', 'react', 'reactCompatibility', 'rollback', 'schema', 'source']);
   assert.deepEqual(manifest.source, { revision: commit, tree });
   assert.deepEqual(manifest.packages.map(({ name, version, role }) => [name, version, role]), [
     ['@muxui/schema', '0.6.0-rc.1', 'published'], ['@muxui/catalog', '3.0.0-rc.1', 'published'],
@@ -65,9 +69,6 @@ test('E-P2.1-03 one manifest correlates the tuple: packages, catalog, contracts,
     '@muxui/catalog>@muxui/schema@^0.6.0-rc.1', '@muxui/tooling>@muxui/catalog@^3.0.0-rc.1', '@muxui/tooling>@muxui/schema@^0.6.0-rc.1',
   ]);
   assert.equal(manifest.reactCompatibility.schema, 'muxui-react-compatibility-v1');
-  assert.deepEqual(manifest.evidence.capturedCiEvidence.map(({ milestone }) => milestone), ['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']);
-  assert.deepEqual(manifest.evidence.retainedReviewEvidence[0].milestones, ['R1.2', 'R1.3', 'R1.4']);
-  assert.deepEqual(manifest.evidence.activeExceptions, []);
   assert.deepEqual(manifest.rollback.packages.map(({ name, fixForward }) => [name, fixForward]), [
     ['@muxui/schema', '0.6.0-rc.2'], ['@muxui/catalog', '3.0.0-rc.2'], ['@muxui/tooling', '1.1.0-rc.2'], ['@muxui/react', '0.1.0-rc.6'],
   ]);
@@ -180,30 +181,21 @@ test('E-P2.1-03 the catalog bundle is recomputed: an emptied bundle under the ol
   }, /the package record's token requirement sets differ from the bundle's/u);
 });
 
-// ---- contracts, evidence, exceptions, rollback are recomputed ----
+// ---- contracts, publication, and rollback are recomputed ----
 
-test('E-P2.1-03 contracts, evidence, exceptions, publication, and rollback are recomputed, not trusted', () => {
+test('E-P2.1-03 contracts, publication, and rollback are recomputed, not trusted', () => {
   const { artifacts, manifest } = honest();
   const forged = (key, value) => redigest({ ...manifest, [key]: value });
   const rejects = (key, value) => assert.throws(() => verify(forged(key, value), artifacts), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded .* is not what the tarballs and the committed sources hold/u, key);
   rejects('contracts', { ...manifest.contracts, schemaVersion: '9.9.9' });
   rejects('contracts', { ...manifest.contracts, tokenContractVersion: '1.0.0' });
-  rejects('evidence', { ...manifest.evidence, activeExceptions: [digest('e')] });
-  rejects('evidence', { ...manifest.evidence, capturedCiEvidence: [] });
-  rejects('evidence', { ...manifest.evidence, retainedReviewEvidence: [] });
-  rejects('evidence', { capturedCiEvidence: [], retainedReviewEvidence: [], activeExceptions: [] });
   rejects('rollback', {});
   rejects('rollback', { ...manifest.rollback, forbidden: [] });
   rejects('publication', { ...manifest.publication, mutationPerformed: true });
   rejects('publication', undefined);
 
-  // An exception the React package declares is bound by digest; one it does not declare cannot be recorded.
-  const exception = { id: 'EX-1', reason: 'documented' };
-  const excepted = artifactsOf(tupleFixture({ exceptions: [exception] }));
-  const exceptedManifest = manifestOf(excepted);
-  assert.deepEqual(exceptedManifest.evidence.activeExceptions, [sha256(canonicalJson(exception))]);
-  verify(exceptedManifest, excepted);
-  assert.throws(() => verify(redigest({ ...exceptedManifest, evidence: { ...exceptedManifest.evidence, activeExceptions: [] } }), excepted), /the recorded evidence is not what/u);
+  // A manifest written while releases recorded evidence digests keeps that block under its own digest; nothing recomputes it.
+  verify(redigest({ ...manifest, evidence: { capturedCiEvidence: [], retainedReviewEvidence: [], activeExceptions: [] } }), artifacts);
 
   // The schema package must declare the contract versions the catalog bundle implements.
   const schema = tupleFixture();
@@ -211,21 +203,12 @@ test('E-P2.1-03 contracts, evidence, exceptions, publication, and rollback are r
   assert.throws(() => manifestOf(artifactsOf(schema)), /P2_1_MANIFEST_CONTRACT_MISMATCH: @muxui\/schema declares schema 4\.1\.0 and query API 3\.0\.0/u);
 });
 
-test('E-P2.1-03 the retained evidence is bound to the committed bytes, and must be committed', () => {
+test('E-P2.1-03 the committed sources a release reads must be committed and readable', () => {
   const { artifacts, manifest } = honest();
-  // A retained index edited after the manifest was written.
-  const edited = committedStore();
-  edited.set('tests/evidence/r1.3/index.json', Buffer.from('{"milestone":"R1.3","edited":true}\n'));
-  assert.throws(() => verify(manifest, artifacts, { readCommitted: edited.read }), /the recorded evidence is not what/u);
-  const review = committedStore();
-  review.set('tests/evidence/r1-retro-review/index.json', Buffer.from('{"milestones":["R1.2"],"records":[]}\n'));
-  assert.throws(() => verify(manifest, artifacts, { readCommitted: review.read }), /the recorded evidence is not what/u);
-  // An index that is not committed, or no way to read them, is not a verified release.
   const missing = committedStore();
-  missing.delete('tests/evidence/r1.5/index.json');
-  assert.throws(() => verify(manifest, artifacts, { readCommitted: missing.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: tests\/evidence\/r1\.5\/index\.json is not committed/u);
-  assert.throws(() => verify(manifest, artifacts, { readCommitted: undefined }), /P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE/u);
-  assert.throws(() => readEvidenceRecord(undefined), /P2_1_MANIFEST_EVIDENCE_UNVERIFIABLE/u);
+  missing.delete('pnpm-lock.yaml');
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: missing.read }), /P2_1_MANIFEST_SOURCE_MISSING: pnpm-lock\.yaml is not committed/u);
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: undefined }), /P2_1_MANIFEST_SOURCE_UNVERIFIABLE/u);
 });
 
 // ---- the React correlation is recomputed ----
@@ -284,10 +267,10 @@ test('E-P2.1-03 the react correlation block is recomputed from the tarballs and 
   assert.throws(() => verify(manifest, artifacts, { readCommitted: retokened.read }), recordMismatch);
   const unlocked = committedStore();
   unlocked.delete('pnpm-lock.yaml');
-  assert.throws(() => verify(manifest, artifacts, { readCommitted: unlocked.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: pnpm-lock\.yaml is not committed/u);
+  assert.throws(() => verify(manifest, artifacts, { readCommitted: unlocked.read }), /P2_1_MANIFEST_SOURCE_MISSING: pnpm-lock\.yaml is not committed/u);
   const untokened = committedStore();
   untokened.delete('catalog/tokens/default-theme.json');
-  assert.throws(() => manifestOf(artifacts, { readCommitted: untokened.read }), /P2_1_MANIFEST_EVIDENCE_MISSING: catalog\/tokens\/default-theme\.json is not committed/u);
+  assert.throws(() => manifestOf(artifacts, { readCommitted: untokened.read }), /P2_1_MANIFEST_SOURCE_MISSING: catalog\/tokens\/default-theme\.json is not committed/u);
 
   // A lockfile that does not lock the renderer's Lucide version gives the visual contract nothing to bind.
   const unlockedLucide = committedStore();
@@ -399,67 +382,121 @@ test('E-P2.1-03 a reused package must still be compatible with the new tuple', (
   verify(manifestOf(compatible.artifacts, { reused: compatible.reused }), compatible.artifacts, { priorManifests: compatible.priorManifests });
 });
 
-// The manifests that vouch for a reused package are the ones the repository retains as tests/evidence/**/release-manifest.json,
-// and each is vouched for by the index.json of its evidence route: a tracked file that agrees with its own digest is not enough.
-test('E-P2.1-03 the manifest of the release that published a reused package is read from the retained evidence at the release commit', () => {
-  const scratch = mkdtempSync(join(tmpdir(), 'muxui-retained-manifests-'));
+// The manifests that vouch for a reused package are the ones the release ledger holds at the release commit, one file per
+// release id, named by that id.
+test('E-P2.1-03 the manifest of the release that published a reused package is read from the release ledger at the release commit', () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'muxui-release-ledger-'));
   try {
     const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { cwd: scratch, encoding: 'utf8' }).trim();
     const write = (path, value) => {
       mkdirSync(dirname(join(scratch, path)), { recursive: true });
       writeFileSync(join(scratch, path), `${JSON.stringify(value)}\n`);
     };
-    // A route holding `value` as its release manifest, with the index that lists it (`listed`: the digest the index records, by default the file's).
-    const retain = (route, value, listed = sha256(Buffer.from(`${JSON.stringify(value)}\n`))) => {
-      const path = `tests/evidence/${route}/artifacts/release-manifest.json`;
-      write(path, value);
-      write(`tests/evidence/${route}/index.json`, { artifacts: [{ path, sha256: listed }], schema: 'muxui-evidence-index-v1' });
-    };
     const commitAll = (message) => {
       git('add', '-A');
-      git('commit', '-q', '-m', message);
+      git('commit', '-q', '--allow-empty', '-m', message);
       return git('rev-parse', 'HEAD');
     };
     const read = (id, revision) => readRetainedManifests({ ids: [id], revision, cwd: scratch });
     const { manifest } = honest();
+    const path = releaseLedgerPath(manifest.id);
+    assert.equal(path, `releases/${manifest.id.slice('muxui-portfolio:'.length)}.json`);
+    assert.equal(releaseLedgerPath('muxui-portfolio:other'), undefined);
     git('init', '-q');
-    retain('r1-exit-0.1.0-rc.5', manifest);
-    write('tests/evidence/r1-exit-0.1.0-rc.4/artifacts/release-manifest.json', { schema: 'muxui-release-manifest-v1', id: manifest.id });
-    write('tests/evidence/p2.1/notes.json', manifest);
-    write('docs/release-manifest.json', manifest);
-    const revision = commitAll('retain');
-    // Only a portfolio manifest of a release asked for, wherever its file is named release-manifest.json under tests/evidence.
+    write(path, manifest);
+    const revision = commitAll('ledger');
     assert.deepEqual([...read(manifest.id, revision)], [[manifest.id, JSON.parse(JSON.stringify(manifest))]]);
-    assert.deepEqual([...read('muxui-portfolio:other', revision)], []);
+    assert.deepEqual([...read(`muxui-portfolio:${'a'.repeat(32)}`, revision)], []);
+    assert.deepEqual([...read('muxui-portfolio:other', revision)], [], 'not a release id');
     assert.deepEqual([...readRetainedManifests({ ids: [], revision: 'not-read', cwd: scratch })], [], 'a release that reuses nothing reads nothing');
-    // The commit decides: a manifest added after it is not retained at it.
-    retain('later', { ...manifest, id: 'muxui-portfolio:later' });
+    assert.deepEqual(readLedgerManifest({ path, revision, cwd: scratch }), JSON.parse(JSON.stringify(manifest)));
+    // The commit decides: a manifest added after it is not in the ledger at it, and an uncommitted edit is never read.
+    const laterManifest = redigest({ ...manifest, id: `muxui-portfolio:${'b'.repeat(32)}` });
+    write(releaseLedgerPath(laterManifest.id), laterManifest);
     const later = commitAll('later');
-    assert.deepEqual([...read('muxui-portfolio:later', revision)], []);
-    assert.deepEqual([...read('muxui-portfolio:later', later).keys()], ['muxui-portfolio:later']);
+    assert.deepEqual([...read(laterManifest.id, revision)], []);
+    assert.deepEqual([...read(laterManifest.id, later).keys()], [laterManifest.id]);
+    write(path, { ...manifest, packages: [] });
+    assert.deepEqual(read(manifest.id, later).get(manifest.id), JSON.parse(JSON.stringify(manifest)));
 
-    // A forged manifest of the same release (a repacked package, the retained integrity and sha256 updated, its own digest
-    // recomputed) is self-consistent. It is retained evidence only if its route's index lists these bytes.
-    const [schemaRecord, ...otherRecords] = manifest.packages;
-    const forged = redigest({ ...manifest, packages: [{ ...schemaRecord, integrity: `sha512-${'f'.repeat(86)}==`, sha256: digest('f') }, ...otherRecords] });
-    assert.notEqual(forged.digest, manifest.digest);
-    const refuses = (pattern, message) => assert.throws(() => read(manifest.id, git('rev-parse', 'HEAD')), pattern, message);
-    const original = 'tests/evidence/r1-exit-0.1.0-rc.5/artifacts/release-manifest.json';
-    write(original, forged);
-    commitAll('the retained manifest replaced, its index left alone');
-    refuses(/P2_1_MANIFEST_EVIDENCE_UNINDEXED: tests\/evidence\/r1-exit-0\.1\.0-rc\.5\/artifacts\/release-manifest\.json is not listed with its sha256/u, 'an index that lists the original bytes');
-    write(original, manifest);
-    rmSync(join(scratch, 'tests/evidence/later'), { recursive: true });
-    write('tests/evidence/forged-without-index/artifacts/release-manifest.json', forged);
-    commitAll('a forged copy in a route without an index');
-    refuses(/P2_1_MANIFEST_EVIDENCE_UNINDEXED: tests\/evidence\/forged-without-index\//u, 'no index at all');
-    rmSync(join(scratch, 'tests/evidence/forged-without-index'), { recursive: true });
-    retain('forged-and-listed', forged);
-    commitAll('a forged copy whose own index lists it');
-    refuses(/P2_1_MANIFEST_EVIDENCE_AMBIGUOUS: tests\/evidence\/r1-exit-0\.1\.0-rc\.5\/artifacts\/release-manifest\.json is a second, different manifest of /u, 'two different manifests of one release');
+    // A file whose content is not the manifest its name gives stops the release, as does another path or a missing file.
+    const refuses = (pattern, options) => assert.throws(() => readLedgerManifest({ path, revision: git('rev-parse', 'HEAD'), cwd: scratch, ...options }), pattern);
+    write(path, laterManifest);
+    commitAll('the wrong manifest under this id');
+    refuses(/P2_1_RELEASE_LEDGER_MISMATCH: releases\/[0-9a-f]{32}\.json is not the muxui-portfolio-release-v1 manifest of /u);
+    assert.throws(() => read(manifest.id, git('rev-parse', 'HEAD')), /P2_1_RELEASE_LEDGER_MISMATCH/u);
+    write(path, { ...manifest, schema: 'muxui-release-manifest-v1' });
+    commitAll('another schema');
+    refuses(/P2_1_RELEASE_LEDGER_MISMATCH/u);
+    refuses(/P2_1_RELEASE_LEDGER_PATH_INVALID/u, { path: 'tests/evidence/r1-exit-0.1.0-rc.5/artifacts/release-manifest.json' });
+    refuses(/P2_1_RELEASE_LEDGER_MISSING/u, { path: `releases/${'c'.repeat(32)}.json` });
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
+});
+
+// The real ledger. The next release names its latest manifest as `prior-release`, the first-release flag is refused
+// while any is tracked, and a reuse finds the manifest of the release that published each package it keeps.
+const ledger = {
+  rc5: 'releases/40dcc0032b7db3a47e19797d4e73bc9d.json',
+  toolingRc2: 'releases/1adadbb095d9ebc1b63a0aae35c6a10c.json',
+  rc6: 'releases/901c8c6dbc6a22e970b37a726594b286.json',
+};
+const repositoryRoot = resolve(import.meta.dirname, '../../../..');
+const releasePublishSet = readPublishSet(repositoryRoot);
+
+test('every release ledger manifest is a usable prior release for the publish set', () => {
+  const paths = execFileSync('git', ['ls-tree', '--name-only', 'HEAD', 'releases/'], { cwd: repositoryRoot, encoding: 'utf8' }).split('\n').filter((path) => path.endsWith('.json'));
+  assert.deepEqual(paths.sort(), Object.values(ledger).sort());
+  for (const path of paths) {
+    const manifest = readLedgerManifest({ path, revision: 'HEAD', cwd: repositoryRoot });
+    assert.deepEqual(findPriorManifestProblems(manifest, releasePublishSet), [], `${path}: its digest and release id recompute and it inventories the whole publish set`);
+  }
+});
+
+test('the tooling 1.1.0-rc.2 release reused the rest from rc.5, and either reuse chain finds every manifest it needs', () => {
+  const cwd = repositoryRoot;
+  const revision = 'HEAD';
+  const origin = readLedgerManifest({ path: ledger.rc5, revision, cwd });
+  const prior = resolvePriorRelease({ environment: { [PRIOR_RELEASE_VARIABLE]: ledger.toolingRc2 }, revision, cwd });
+  assert.equal(prior.first, false);
+  const manifest = prior.priorManifest;
+  assert.deepEqual(manifest.packages.map(({ role, provenance }) => [role, provenance.releaseId]), [
+    ['reused', origin.id], ['reused', origin.id], ['published', manifest.id], ['reused', origin.id],
+  ]);
+  // A release that publishes tooling alone reuses the other three, whose origin is rc.5; one that publishes React reuses tooling from this one.
+  const [schemaName, catalogName, toolingName, reactName] = releasePublishSet.packages.map(({ name }) => name);
+  const alone = planReuse({ publishSet: releasePublishSet, published: new Map([[toolingName, '1.1.0-rc.3']]), priorRelease: prior, revision, cwd });
+  assert.deepEqual([...alone.reused.keys()], [schemaName, catalogName, reactName]);
+  assert.deepEqual([...alone.priorManifests.keys()].sort(), [manifest.id, origin.id].sort());
+  const react = planReuse({ publishSet: releasePublishSet, published: new Map([[reactName, '0.1.0-rc.6']]), priorRelease: prior, revision, cwd });
+  assert.deepEqual([...react.reused.keys()], [schemaName, catalogName, toolingName]);
+  assert.equal(react.reused.get(toolingName).provenance.releaseId, manifest.id);
+  assert.deepEqual([...react.priorManifests.keys()].sort(), [manifest.id, origin.id].sort());
+});
+
+// rc.6 published all four packages from one commit, so it is the next release's prior release and every package's origin.
+test('the rc.6 release is the baseline for the next release', () => {
+  const cwd = repositoryRoot;
+  const revision = 'HEAD';
+  const prior = resolvePriorRelease({ environment: { [PRIOR_RELEASE_VARIABLE]: ledger.rc6 }, revision, cwd });
+  const manifest = prior.priorManifest;
+  assert.equal(manifest.id, 'muxui-portfolio:901c8c6dbc6a22e970b37a726594b286');
+  assert.equal(manifest.source.revision, 'aedb4238c8ffaf2fd25262eefd6d9b82eae0b8d7');
+  assert.deepEqual(manifest.packages.map(({ name, version, role, provenance }) => [name, version, role, provenance.releaseId, provenance.sourceCommit]), [
+    ['@muxui/schema', '0.6.0-rc.2'], ['@muxui/catalog', '3.0.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.3'], ['@muxui/react', '0.1.0-rc.6'],
+  ].map(([name, version]) => [name, version, 'published', manifest.id, manifest.source.revision]));
+  assert.deepEqual(manifest.packages.map(({ integrity }) => integrity), [
+    'sha512-XPyrhYeE12Yidou21KBKz4EW+ZX5WZQHnRmR18DLvVs0kU9fr8hW1eJHNF/Y82FAvOe7yAAFimETBYvBnWFSZA==',
+    'sha512-HMwYvyRbfJxENcoTNpNF5Hsd2FlkOW4BZ3xpX3yjRluV0QR9ieB93JfHo1ACnpOumEyZl3kg4sMAB1N3yzc8Rw==',
+    'sha512-DplBg0L3Y5VJyJRJljXVMgbixfU1AgQdiqYj5eCaLKB6AEve6pLu0iHK2GapfWXmUYGUo9hr/aHI5cNibCe0Kg==',
+    'sha512-MJzCOYP8UDQ49A6DwdD/7x4Qo6vfAFVcH67/1UHMHJnQW7c1zMLCC0kZ2bS9RAkkHjvHP+vDmJkSFQJvWZZ6VA==',
+  ], 'the integrities npm serves for these versions');
+  // A release that publishes React alone reuses the rest from rc.6 and needs no other manifest.
+  const next = planReuse({ publishSet: releasePublishSet, published: new Map([['@muxui/react', '0.1.0-rc.7']]), priorRelease: prior, revision, cwd });
+  assert.deepEqual([...next.versions], [['@muxui/schema', '0.6.0-rc.2'], ['@muxui/catalog', '3.0.0-rc.1'], ['@muxui/tooling', '1.1.0-rc.3'], ['@muxui/react', '0.1.0-rc.7']]);
+  assert.deepEqual([...next.priorManifests.keys()], [manifest.id]);
+  assert.throws(() => resolvePriorRelease({ environment: { [FIRST_RELEASE_VARIABLE]: 'true' }, revision, cwd }), /P2_1_FIRST_RELEASE_CONTRADICTED: .*releases\/901c8c6dbc6a22e970b37a726594b286\.json/u);
 });
 
 test('the deterministic archive reads back the files it was built from, in name order', () => {

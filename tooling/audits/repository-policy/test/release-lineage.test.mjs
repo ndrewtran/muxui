@@ -467,10 +467,10 @@ test('a promoted candidate set must match the authorized digest, the versions, t
     assert.throws(() => verified({ versions: new Map([...versions, ['@muxui/react', '0.1.0-rc.6']]) }), /Expected exactly the tarball of each published package and one release manifest/u);
     assert.throws(() => verified({ sha: 'c'.repeat(40) }), /P2_1_MANIFEST_SOURCE_MISMATCH: the manifest source revision is a+, not c+/u);
     assert.throws(() => verified({ tree: 'd'.repeat(40) }), /the manifest source tree is b+, not d+/u);
-    // The retained evidence is read as committed at the commit: an index changed since the dry run fails the promotion.
+    // The lockfile is read as committed at the commit: one changed since the dry run fails the promotion.
     const edited = committedStore();
-    edited.set('tests/evidence/r1.1/index.json', Buffer.from('{"milestone":"R1.1","edited":true}\n'));
-    assert.throws(() => verified({ readCommitted: edited.read }), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded evidence is not what/u);
+    edited.set('pnpm-lock.yaml', Buffer.concat([edited.get('pnpm-lock.yaml'), Buffer.from('\n')]));
+    assert.throws(() => verified({ readCommitted: edited.read }), /P2_1_MANIFEST_RECORD_MISMATCH: the recorded react is not what/u);
     // One tarball repacked under its recorded version.
     const other = tupleFixture();
     other.files['@muxui/tooling']['src/extra.mjs'] = 'export {};\n';
@@ -741,14 +741,14 @@ test('npm-publish.yml names the prior release in a dry run, validates it before 
   // The version validation reads only the first-release flag, so a first release that reuses a package fails in seconds.
   assert.equal(workflow.match(/MUXUI_FIRST_PORTFOLIO_RELEASE:/gu)?.length, 2);
   assert.match(step('Validate release versions'), /env:\n          MUXUI_FIRST_PORTFOLIO_RELEASE: \$\{\{ inputs\.first-portfolio-release && 'true' \|\| '' \}\}\n        run: node [^\n]*release-set\.mjs validate-versions/u);
-  assert.doesNotMatch(job('registry-preflight') + job('publish'), /prior-release|first-portfolio-release|MUXUI_PRIOR|MUXUI_FIRST|versionEffects/u);
+  assert.doesNotMatch(job('registry-preflight') + job('publish'), /prior-release|first-portfolio-release|MUXUI_PRIOR|MUXUI_FIRST|versionCheck/u);
   // The input check sits with the version checks, ahead of the install, the checks, and the pack.
   const titles = [...prepare.matchAll(/^      - name: (.+)$/gmu)].map(([, title]) => title);
   assert.ok(titles.indexOf('Validate prior release inputs') > titles.indexOf('Validate release versions'));
   assert.ok(titles.indexOf('Validate prior release inputs') < titles.indexOf('Install workspace'));
   const validating = step('Validate prior release inputs');
   assert.match(validating, /env:\n          MODE: \$\{\{ inputs\.mode \}\}\n          PRIOR_RELEASE: \$\{\{ inputs\.prior-release \}\}\n          FIRST_RELEASE: \$\{\{ inputs\.first-portfolio-release \}\}\n        run: \|/u);
-  // Run the step's script: a dry run needs exactly one of the two, and the path is a tracked-evidence JSON path.
+  // Run the step's script: a dry run needs exactly one of the two, and the path is a release ledger path.
   const script = validating.split('        run: |\n')[1].replace(/^ {10}/gmu, '');
   const outcome = (mode, prior, first) => {
     try {
@@ -758,16 +758,17 @@ test('npm-publish.yml names the prior release in a dry run, validates it before 
       return /title=([^:]+)::/u.exec(error.stdout)?.[1] ?? error.message;
     }
   };
-  const evidence = 'tests/evidence/p2-1/release-manifest.json';
-  assert.equal(outcome('dry-run', evidence, 'false'), 'accepted');
+  const ledger = 'releases/901c8c6dbc6a22e970b37a726594b286.json';
+  assert.equal(outcome('dry-run', ledger, 'false'), 'accepted');
   assert.equal(outcome('dry-run', '', 'true'), 'accepted');
   assert.equal(outcome('dry-run', '', 'false'), 'Prior release required');
-  assert.equal(outcome('dry-run', evidence, 'true'), 'Prior release ambiguous');
-  for (const bad of ['/etc/release.json', 'release.json', 'docs/release.json', 'tests/evidence/release.txt', 'tests/evidence/../../release.json', 'tests/evidence/a..b.json', 'tests/evidence/a b.json', 'tests/evidence/$(id).json']) {
+  assert.equal(outcome('dry-run', ledger, 'true'), 'Prior release ambiguous');
+  for (const bad of ['/etc/release.json', 'release.json', 'docs/release.json', 'releases/README.md', 'releases/../release.json', 'releases/901C8C6DBC6A22E970B37A726594B286.json',
+    'releases/901c8c6d.json', 'releases/a/901c8c6dbc6a22e970b37a726594b286.json', 'tests/evidence/p2-1/release-manifest.json', 'releases/$(id).json']) {
     assert.equal(outcome('dry-run', bad, 'false'), 'Prior release path', bad);
     assert.equal(outcome('publish', bad, 'false'), 'Prior release path', bad);
   }
   // Publish promotes the dry run's candidate: it neither needs the setting nor reads it.
   assert.equal(outcome('publish', '', 'false'), 'accepted');
-  assert.equal(outcome('publish', evidence, 'false'), 'accepted');
+  assert.equal(outcome('publish', ledger, 'false'), 'accepted');
 });

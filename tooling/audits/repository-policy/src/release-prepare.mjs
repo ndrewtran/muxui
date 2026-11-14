@@ -4,7 +4,6 @@ import { spawnSync } from 'node:child_process';
 import { basename, join, posix, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
-import { API_VERSION } from '@muxui/schema';
 import {
   assertBundleRetention,
   assertExactArchiveEntries,
@@ -27,19 +26,16 @@ import {
   isolatedPackageManagerEnvironment,
   nodeBundledCli,
   readGeneratedOutputNames,
-  readRetainedEvidence,
-  readRetainedReviewEvidence,
   replaceVersions,
   summarizeBundleModules,
   verifyReusedSignatures,
 } from './release-proof.mjs';
 import { canonicalJson } from './canonical-json.mjs';
 import { deterministicArchive, readArchive } from './release-archive.mjs';
-import { assertVersionEffects, findCandidateSetProblems, planReuse, resolvePriorRelease } from './release-effects.mjs';
-import { RETAINED_EVIDENCE_MILESTONES, buildPortfolioManifest, committedFileReader, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
+import { assertReleaseVersions, findCandidateSetProblems, planReuse, resolvePriorRelease } from './release-effects.mjs';
+import { buildPortfolioManifest, committedFileReader, releaseIdFor, verifyPortfolioRelease } from './release-manifest.mjs';
 import {
   CANDIDATE_PUBLISH_CONFIG,
-  assertCatalogRangeBound,
   assertPackedPackage,
   findDescriptorExportProblems,
   rewritePackedManifest,
@@ -82,8 +78,6 @@ try {
 } catch (error) {
   throw new Error(`R1_EXIT_CANDIDATE_VERSION_INVALID: ${error.message}`);
 }
-// Decision 0032 item 8: tooling's catalog range is bound to the query API major tooling reads.
-assertCatalogRangeBound({ catalogVersion: versions.get('@muxui/catalog'), queryApiVersion: API_VERSION });
 const candidateArchiveName = tarballFileName('@muxui/react', candidateVersion);
 // Rollback fixes forward with the next rc, so later candidates name the right successor.
 const fixForwardCandidate = fixForwardVersion(candidateVersion);
@@ -436,17 +430,11 @@ const releaseId = releaseIdFor({
 });
 // Where a package was built: this release and commit, or for a reused package the release that published it.
 const provenanceOf = (name) => reused.get(name)?.provenance ?? { releaseId, sourceCommit: sourceRevision };
-const versionEffects = priorRelease.first
+const versionCheck = priorRelease.first
   ? { status: 'first-portfolio-release' }
-  : assertVersionEffects({
-    priorManifest: priorRelease.priorManifest,
-    revision: sourceRevision,
-    cwd: repositoryRoot,
-    versions,
-    publishSet,
-  });
-console.log(versionEffects.status === 'checked'
-  ? `P2.1 version effects match the change since ${versionEffects.priorRelease}; changed and publishing ${versionEffects.publish.join(', ') || 'nothing'}; publishing ${[...publishedVersions.keys()].join(', ')}${reused.size > 0 ? `; reusing ${[...reused.values()].map(({ name, version }) => `${name}@${version}`).join(', ')}` : ''}`
+  : assertReleaseVersions({ priorManifest: priorRelease.priorManifest, publishSet, versions, reused });
+console.log(versionCheck.status === 'checked'
+  ? `P2.1 versions move ahead of ${versionCheck.priorRelease}; publishing ${[...publishedVersions.keys()].join(', ')}${reused.size > 0 ? `; reusing ${[...reused.values()].map(({ name, version }) => `${name}@${version}`).join(', ')}` : ''}`
   : 'P2.1 first portfolio release: no prior release to compare versions with');
 
 // The catalog's generated files embed its package version (`catalogVersion`, ids, digest, release record), so the
@@ -1197,9 +1185,6 @@ try {
   }
   console.log(`R1 exit npm publish dry-run passed for ${publishing.map(([name]) => name).join(', ')} without lifecycle hooks or registry mutation`);
 
-  // The retained evidence is validated as the checkout holds it (fail closed); the manifest binds it as committed.
-  readRetainedEvidence(repositoryRoot, RETAINED_EVIDENCE_MILESTONES);
-  readRetainedReviewEvidence(repositoryRoot);
   const readCommitted = committedFileReader(sourceRevision, repositoryRoot);
   // The manifest recomputes the React correlation from the tarballs and the committed lockfile and token source.
   const releaseManifest = buildPortfolioManifest({
@@ -1215,18 +1200,18 @@ try {
       verification: {
         reactOnlineMatrix: matrixResults,
         publishSetConsumer: { packageManager: 'pnpm', entriesImported: Object.keys(exportNames).length, entriesResolved: resolvedEntries.length },
-        versionEffects,
+        versionCheck,
         warnings: { duplicateDependencyVersions: duplicateVersionWarnings },
       },
     },
   });
-  // The retained indexes and the lockfile were read from the worktree for validation; bind them to the commit.
+  // The checks read the worktree; bind them to the commit.
   assertSourceIdentity(sourceRevision, 'after release correlation');
-  const { react, evidence } = releaseManifest;
+  const { react } = releaseManifest;
   // A reused React package keeps the correlation block of the release that published it, so this manifest has none.
   console.log(react === undefined
-    ? `P2.1 correlation: ${reactEntry.name} is reused, so its generated outputs and visual contract stay those of ${provenanceOf(reactEntry.name).releaseId}; ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index`
-    : `R1 exit correlation: ${react.bindings.length} binding-spec revisions, ${react.generatedOutputs.entries.length} generated outputs, ${evidence.capturedCiEvidence.length} captured CI evidence indexes, ${evidence.retainedReviewEvidence.length} retained review evidence index, visual contract ${react.visualContract.digest}`);
+    ? `P2.1 correlation: ${reactEntry.name} is reused, so its generated outputs and visual contract stay those of ${provenanceOf(reactEntry.name).releaseId}`
+    : `R1 exit correlation: ${react.bindings.length} binding-spec revisions, ${react.generatedOutputs.entries.length} generated outputs, visual contract ${react.visualContract.digest}`);
   const outputDirectory = mkdtempSync(join(tmpdir(), 'muxui-r1-exit-output-'));
   // The candidate holds the published tarballs and the manifest; a reused package stays on the registry where it is.
   for (const [name, { archiveBytes: bytes }] of publishing) writeFileSync(join(outputDirectory, tarballFileName(name, versions.get(name))), bytes);

@@ -172,11 +172,6 @@ test('component resolution fails clearly for unknown IDs', () => {
 
 // A step is a pnpm argument list; lanes run their steps in order.
 const step = (...args) => ({ args });
-// Policy's `check` leaves out the retained-evidence tests, so a workspace run that includes policy runs them in a lane of their own.
-const evidenceLane = [step(
-  '--stream', '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail',
-  '--filter', '@muxui/repository-policy', 'run', 'check:evidence',
-)];
 
 test('affected check args exclude the workspace root that dependent filters would select', () => {
   const plan = planWithoutInheritedStorybookSelection({
@@ -194,7 +189,6 @@ test('affected check args exclude the workspace root that dependent filters woul
         '--filter', '...@muxui/schema', '--filter', '!@muxui/react', '--filter', '!@muxui/react-storybook',
         '--filter', '!@muxui/workspace', 'run', 'check',
       )],
-      evidenceLane,
     ],
   ]);
 });
@@ -213,7 +207,6 @@ test('scoped check stages isolate React and run Storybook beside the remaining c
         '--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail',
         '--filter', '@muxui/schema', '--filter', '@muxui/docs', '--filter', '@muxui/repository-policy', 'run', 'check',
       )],
-      evidenceLane,
     ],
   ]);
   const only = (name) => ({ ...plan, checkPackages: packages.filter((item) => item.name === name) });
@@ -234,9 +227,9 @@ test('full checks separate Storybook after React without changing the command mu
     '--filter', '!@muxui/react', '--filter', '!@muxui/react-storybook', '--filter', '!@muxui/workspace', 'run', 'check',
   )];
   const stages = checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace' });
-  assert.deepEqual(stages, [[react], [storybook], [remaining, evidenceLane]]);
-  // The old plan ran these same commands with the last three lanes together.
-  const previousStages = [[react], [storybook, remaining, evidenceLane]];
+  assert.deepEqual(stages, [[react], [storybook], [remaining]]);
+  // The old plan ran these same commands with the last two lanes together.
+  const previousStages = [[react], [storybook, remaining]];
   const commands = (value) => value.flat(2).map((command) => JSON.stringify(command)).sort();
   assert.deepEqual(commands(stages), commands(previousStages));
   assert.deepEqual(plan.generationPackages, packages);
@@ -316,26 +309,6 @@ test('file and affected scopes expose the exact paths whose Storybook selection 
   }
 });
 
-test('workspace check runs add the evidence lane only for runs that include policy and only for the check task', () => {
-  const stagesFor = (names, extra = {}, task = 'check') => checkStages(
-    { scope: 'package', full: false, directPackages: [], checkPackages: packages.filter(({ name }) => names.includes(name)), ...extra },
-    { task, workspaceRootName: '@muxui/workspace' },
-  );
-  // Policy alone: its own check, plus the evidence tests beside it.
-  assert.deepEqual(stagesFor(['@muxui/repository-policy']), [[
-    [step('--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail', '--filter', '@muxui/repository-policy', 'run', 'check')],
-    evidenceLane,
-  ]]);
-  // Without policy, or for another task, there is nothing to add.
-  assert.equal(JSON.stringify(stagesFor(['@muxui/docs'])).includes('check:evidence'), false);
-  assert.equal(JSON.stringify(stagesFor(['@muxui/repository-policy'], {}, 'generate')).includes('check:evidence'), false);
-  // The full graph (check:all, and so release:prepare) runs them beside the remaining checks, after Storybook.
-  const fullPlan = planWithoutInheritedStorybookSelection({ options: parseTaskArguments(['check', '--full']), packages, policy });
-  const lanes = checkStages(fullPlan, { task: 'check', workspaceRootName: '@muxui/workspace' }).at(-1);
-  assert.equal(lanes.length, 2);
-  assert.deepEqual(lanes.at(-1), evidenceLane);
-});
-
 test('dependencyOrder puts each package after the workspace packages it depends on and keeps the input order otherwise', () => {
   const item = (name, dependencies = {}, devDependencies = {}) => ({ name, manifest: { dependencies, devDependencies } });
   const input = [
@@ -363,7 +336,7 @@ test('repository policy routes navigation and CI paths to the policy check with 
   const policyPaths = [
     'README.md', 'LICENSE', '.gitignore', 'docs/agents/domain.md', 'apps/AGENTS.md',
     'AGENTS.md', '.github/workflows/ci.yml', '.agents/skills/example/SKILL.md', '.claude/skills',
-    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/entry-contract.test.mjs', 'tests/evidence/g0.4/index.json',
+    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/fixed-slice-needs.json',
   ];
   for (const path of policyPaths) {
     const plan = planWithoutInheritedStorybookSelection({

@@ -7,9 +7,8 @@ import test from 'node:test';
 import {
   PolicyError,
   auditAliases,
-  auditCurrentIdentity,
   auditRepository,
-  auditRootContract,
+  auditToolchain,
   classifyPath,
   generatedText,
   loadPolicy,
@@ -24,83 +23,27 @@ import { GenerationProofError, verifyGenerationState } from '../src/generation-p
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const policy = await loadPolicy(repositoryRoot);
 
-test('E-G0.0-01: a cold root navigation audit reaches every major owner', async () => {
+test('the repository audit passes on this checkout', async () => {
   const result = await auditRepository(repositoryRoot);
-  assert.equal(result.owners, 7);
+  assert.ok(result.generatedFiles > 0 && result.artifacts > 0);
 });
 
-test('the root script surface must include the core commands and may add others', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'muxui-root-contract-'));
-  const writeRoot = async (scripts) => {
-    await writeFile(join(root, 'package.json'), JSON.stringify({
-      scripts,
-      packageManager: `pnpm@${policy.toolchain.pnpm}`,
-      engines: { node: policy.toolchain.nodeRange },
-    }));
-    await writeFile(join(root, '.node-version'), `${policy.toolchain.node}\n`);
+test('the root toolchain pins must match the policy', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-root-toolchain-'));
+  const writeRoot = async ({ pnpm = policy.toolchain.pnpm, nodeRange = policy.toolchain.nodeRange, node = policy.toolchain.node } = {}) => {
+    await writeFile(join(root, 'package.json'), JSON.stringify({ packageManager: `pnpm@${pnpm}`, engines: { node: nodeRange } }));
+    await writeFile(join(root, '.node-version'), `${node}\n`);
   };
-  const core = Object.fromEntries(policy.requiredRootCommands.map((name) => [name, 'true']));
-  await writeRoot(core);
-  await auditRootContract(root, policy);
-  await writeRoot({ ...core, lint: 'true' });
-  await auditRootContract(root, policy);
-  const { check: _check, ...withoutCheck } = core;
-  await writeRoot({ ...withoutCheck, lint: 'true' });
-  await assert.rejects(
-    auditRootContract(root, policy),
-    (error) => error.code === 'ROOT_COMMAND_SURFACE_DRIFT' && /missing: check$/u.test(error.message),
-  );
-  await auditRootContract(repositoryRoot, policy);
+  await writeRoot();
+  await auditToolchain(root, policy);
+  for (const [drift, code] of [[{ pnpm: '9.0.0' }, 'PNPM_PIN_DRIFT'], [{ nodeRange: '>=22' }, 'NODE_POLICY_DRIFT'], [{ node: '22.0.0' }, 'NODE_PIN_DRIFT']]) {
+    await writeRoot(drift);
+    await assert.rejects(auditToolchain(root, policy), (error) => error instanceof PolicyError && error.code === code, code);
+  }
+  await auditToolchain(repositoryRoot, policy);
 });
 
-test('identity reset audit rejects stale current names but permits explicit history', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'muxui-identity-'));
-  await mkdir(join(root, 'src'), { recursive: true });
-  await mkdir(join(root, 'history'), { recursive: true });
-  await writeFile(
-    join(root, 'src/current.txt'),
-    [
-      "cli: 'core'",
-      '_core_complete() {}',
-      'core.experimental.g01-proof',
-      'coreFixtureSourceSha256',
-      'const record = { coreSource: "historical" };',
-      'use @core-ui/react',
-    ].join('\n'),
-  );
-  await writeFile(
-    join(root, 'history/retained.txt'),
-    'retired-react-r1-0-crosswalk-v1 coreFixtureSourceSha256 coreSource\n',
-  );
-  const identityPolicy = {
-    identityReset: {
-      current: {
-        display: 'Mux UI',
-        machine: 'muxui',
-        repository: 'ndrewtran/muxui',
-        packageScope: '@muxui/',
-        artifactPrefix: 'muxui:',
-        cli: 'muxui',
-        publicRoots: ['.muxui-', '--muxui-', 'data-muxui-'],
-        diagnosticsPrefix: 'MUXUI_',
-        environmentPrefix: 'MUXUI_',
-      },
-      allowlistedPaths: ['history/'],
-    },
-  };
-
-  await assert.rejects(
-    auditCurrentIdentity(root, identityPolicy, ['src/current.txt', 'history/retained.txt']),
-    (error) => error instanceof PolicyError
-      && error.code === 'STALE_CURRENT_IDENTITY'
-      && error.message.includes('src/current.txt:1'),
-  );
-  await writeFile(join(root, 'src/current.txt'), 'use @muxui/react\nconst record = { muxuiSource: "current" };\n');
-  const result = await auditCurrentIdentity(root, identityPolicy, ['src/current.txt', 'history/retained.txt']);
-  assert.deepEqual(result, { scanned: 1, allowlisted: 1 });
-});
-
-test('identity scan skips ignored local files but keeps untracked repository files', async () => {
+test('the repository walk skips ignored local files but keeps untracked repository files', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-identity-ignored-'));
   await mkdir(join(root, 'evidence'), { recursive: true });
   await writeFile(join(root, '.gitignore'), 'evidence/\n');

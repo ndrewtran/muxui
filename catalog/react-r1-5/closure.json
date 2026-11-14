@@ -38,7 +38,7 @@
     "collection": "default-off",
     "allowed": ["sanitized repository-relative paths", "canonical IDs"],
     "prohibited": ["credentials", "consumer data"],
-    "retention": "tests/evidence/r1.5 retained check evidence"
+    "retention": "tests/evidence/r1.5 retained check evidence, at git tag pre-simplification"
   },
   "exceptions": [],
   "advisories": [],

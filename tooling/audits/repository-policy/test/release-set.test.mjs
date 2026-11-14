@@ -3,11 +3,9 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { API_VERSION } from '@muxui/schema';
 import { canonicalJson } from '../src/canonical-json.mjs';
 import {
   CANDIDATE_PUBLISH_CONFIG,
-  assertCatalogRangeBound,
   descriptorExports,
   findDescriptorExportProblems,
   findPackedPackageProblems,
@@ -118,9 +116,7 @@ test('a candidate holds one tarball per published package in publish order and t
   assert.equal(tarballFileName('@muxui/react', '0.1.0-rc.5'), 'muxui-react-0.1.0-rc.5.tgz');
 });
 
-test('tooling\'s catalog range is bound to the query API major, and the candidate set satisfies its own ranges', () => {
-  assertCatalogRangeBound({ catalogVersion: '3.0.0-rc.1', queryApiVersion: API_VERSION });
-  assert.throws(() => assertCatalogRangeBound({ catalogVersion: '2.1.0-rc.1', queryApiVersion: API_VERSION }), /P2_1_CATALOG_RANGE_UNBOUND: catalog 2\.1\.0-rc\.1 is not a release of the query API major 3/u);
+test('the candidate set satisfies its own sibling ranges', () => {
   const versions = parseReleaseVersions(firstRelease, publishSet, sourceVersions);
   assert.equal(siblingRange(versions.get('@muxui/catalog')), '^3.0.0-rc.1');
   // `^3.0.0-rc.1` admits later builds of the line and not the prerelease line of the next minor.

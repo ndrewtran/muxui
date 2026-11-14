@@ -567,7 +567,7 @@ test('E-P2.1-03 a later release plans its reuse, fetches the reused bytes from t
   assert.throws(() => planReuse({ publishSet, published, priorRelease: { first: true }, revision: secondCommit, cwd: repositoryRoot }), /P2_1_REUSE_NEEDS_PRIOR_RELEASE: @muxui\/schema, @muxui\/catalog, @muxui\/react are reused/u);
   assert.throws(() => planReuse({ publishSet, published, priorRelease: { first: false, priorManifest: { ...prior.manifest, packages: prior.manifest.packages.slice(1) } }, revision: secondCommit, cwd: repositoryRoot }), /P2_1_PRIOR_RELEASE_INVALID/u);
   const chained = structuredClone(successor.manifest);
-  assert.throws(() => planReuse({ publishSet, published: new Map([[schema, '0.6.0-rc.2']]), priorRelease: { first: false, priorManifest: chained }, revision: secondCommit, cwd: repositoryRoot, readRetained: () => new Map() }), /P2_1_REUSE_ORIGIN_UNAVAILABLE: @muxui\/catalog@3\.0\.0-rc\.1 was published by .*, whose manifest is not retained/u);
+  assert.throws(() => planReuse({ publishSet, published: new Map([[schema, '0.6.0-rc.2']]), priorRelease: { first: false, priorManifest: chained }, revision: secondCommit, cwd: repositoryRoot, readRetained: () => new Map() }), /P2_1_REUSE_ORIGIN_UNAVAILABLE: @muxui\/catalog@3\.0\.0-rc\.1 was published by .*, whose manifest is not in releases\/ at /u);
   // Nothing reused needs no prior release.
   assert.equal(planReuse({ publishSet, published: new Map(prior.manifest.packages.map(({ name, version }) => [name, version])), priorRelease: { first: true }, revision: commit, cwd: repositoryRoot }).reused.size, 0);
 });

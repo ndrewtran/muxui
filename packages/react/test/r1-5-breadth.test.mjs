@@ -78,7 +78,7 @@ test('compatibility and publication boundaries remain explicit', async () => {
   // Decision 0022 amendment 01: checks retained, review author-reported only.
   assert.equal(release.historical.evidence.status, 'checks-retained-review-author-reported');
   assert.equal(release.historical.evidence.basis, 'muxui:decision:0022:amendment:01');
-  assert.equal(release.historical.evidence.retention, 'tests/evidence/r1.5 retained check evidence');
+  assert.equal(release.historical.evidence.retention, 'tests/evidence/r1.5 retained check evidence, at git tag pre-simplification');
   assert.deepEqual(release.historical.evidence.deferred, r15Deferred);
   const closure = await generatedJson('r1-5-closure.json');
   assert.equal(closure.evidence.status, 'checks-retained-review-author-reported');

@@ -20,15 +20,16 @@ name: npm publish
 # runs `npm audit signatures` on them in a project outside the checkout, which
 # verifies the attestation's Sigstore signature and the registry's signature.
 # The prior release manifest, and the manifest of any release it reused from,
-# must be retained evidence, listed with its digest by the index.json of its
-# tests/evidence route.
-# The dry run never repacks a reused package and checks the whole tuple with it;
-# an unchanged package given a version, or a changed one left empty, is refused
-# by the version check. At least one package is published. The candidate
-# artifact holds the published tarballs, in publish order, and the manifest. The
-# publish job publishes only those, and before the first publish and again
-# before each one checks every reused package's version document, attestation
-# statement, and `next` against the registry; the signatures are the dry run's.
+# must be committed in the release ledger as releases/<hex>.json, for the
+# release id muxui-portfolio:<hex> (releases/README.md).
+# The dry run never repacks a reused package and checks the whole tuple with it.
+# Which packages publish is the release's choice: nothing classifies the change,
+# so a changed package left empty is reused as it was. At least one package is
+# published. The candidate artifact holds the published tarballs, in publish
+# order, and the manifest. The publish job publishes only those, and before the
+# first publish and again before each one checks every reused package's version
+# document, attestation statement, and `next` against the registry; the
+# signatures are the dry run's.
 #
 # - mode=dry-run (default): `prepare` builds the candidate set for the input
 #   versions on the dispatched commit, rehearses `npm publish --dry-run` for
@@ -41,12 +42,12 @@ name: npm publish
 #   separated; the dry run's summary lists them) may be empty here; when given
 #   it must be exactly those.
 #   The dry run also says which release it compares with: `prior-release` names
-#   the prior portfolio release manifest (a tracked tests/evidence path), or
+#   the prior portfolio release manifest (a tracked releases/<hex>.json), or
 #   `first-portfolio-release` declares the first one (E-P2.1-04). Exactly one of
-#   them; the preparation rejects versions too small for the change, behind the
-#   prior release, releasing an unchanged unit, or reusing a changed one, and
-#   records the outcome in the manifest as
-#   preparation.verification.versionEffects.
+#   them; the preparation rejects a published version that is not ahead of the
+#   prior release, or a reused package whose recorded range does not admit a
+#   sibling's new version, and records the outcome in the manifest as
+#   preparation.verification.versionCheck.
 # - mode=publish (main only): `prepare` promotes the dry run named by dry-run-id
 #   (verifies it, downloads its artifact by id, and checks the candidate set
 #   against the commit and the inputs) without building anything, so the prior
@@ -117,7 +118,7 @@ on:
         type: string
         default: ''
       prior-release:
-        description: "Prior portfolio release manifest, a tracked path under tests/evidence/ ending .json; dry-run needs this or first-portfolio-release, and a release that reuses a package needs this"
+        description: "Prior portfolio release manifest, a tracked releases/<hex>.json (releases/README.md lists them); dry-run needs this or first-portfolio-release, and a release that reuses a package needs this"
         required: false
         type: string
         default: ''
@@ -231,8 +232,8 @@ jobs:
           FIRST_RELEASE: ${{ inputs.first-portfolio-release }}
         run: |
           set -euo pipefail
-          if [ -n "$PRIOR_RELEASE" ] && { [[ ! "$PRIOR_RELEASE" =~ ^tests/evidence/[A-Za-z0-9._/-]+\.json$ ]] || [[ "$PRIOR_RELEASE" == *..* ]]; }; then
-            echo "::error title=Prior release path::prior-release must be empty or a repository-relative path under tests/evidence/ ending .json, without '..'."
+          if [ -n "$PRIOR_RELEASE" ] && [[ ! "$PRIOR_RELEASE" =~ ^releases/[0-9a-f]{32}\.json$ ]]; then
+            echo "::error title=Prior release path::prior-release must be empty or a release ledger path, releases/<32 hex digits>.json."
             exit 1
           fi
           if [ "$MODE" = dry-run ]; then
@@ -402,7 +403,7 @@ jobs:
           name: npm-candidate
           path: ${{ runner.temp }}/npm-candidate
           if-no-files-found: error
-          # Long enough for a publish run to promote it and for evidence capture.
+          # Long enough for a publish run to promote it.
           retention-days: 30
 
   publish:

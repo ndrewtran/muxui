@@ -716,9 +716,6 @@ function addEveryStoryPage(plan, records, pageIndex) {
 function applyPackageImpact(plan, packageName, records, pageIndex) {
   if (packageName === '@muxui/repository-policy') {
     plan.policy = true;
-    // Reached through a dependency (tooling, catalog, schema, tokens) or its own
-    // lockfile importer: the evidence tests load those, so they run too.
-    plan.evidence = true;
     return 'repository-policy machinery';
   }
   if (packageName === '@muxui/catalog') {
@@ -973,7 +970,7 @@ function addStoryUnitTest(plan, route) {
 
 function selectedCheckOwners(plan, packages) {
   const names = new Set(plan.packageChecks);
-  if (plan.policy || plan.evidence) {
+  if (plan.policy) {
     names.add('@muxui/repository-policy');
     // The policy release-preparation proof consumes ignored React projections
     // without declaring React as a package dependency.
@@ -1065,37 +1062,6 @@ function refreshStoryRuns(plan, pageIndex) {
 // React package, when the checkout has it: adding the file is the whole declaration.
 const blockBrowserTest = (slug) => patternBrowserTest(resolve(repositoryRoot, 'packages/react'), slug);
 
-// The retained-evidence tests (`check:evidence`, about a minute) run when a
-// change reaches something they load or read, not for every policy-routed path.
-// `pullRequestImpact` names those inputs three ways:
-// - `evidenceInputs`: path prefixes (a directory ends in a slash);
-// - `evidenceInputPatterns`: regular expressions for path classes a prefix
-//   cannot name, such as every package manifest;
-// - `evidencePresenceInputs`: files the tests only look up by name, where adding
-//   or removing one counts and editing it does not.
-// Changes to the packages policy depends on reach the tests through the
-// dependent routes instead.
-const startsWithAny = (path, prefixes) => prefixes.some((prefix) => path.startsWith(prefix));
-
-export function isEvidenceInput(path, config) {
-  return startsWithAny(path, config.evidenceInputs) || config.evidenceInputPatterns.some((source) => new RegExp(source, 'u').test(path));
-}
-
-function assertEvidenceInputs(config) {
-  for (const key of ['evidenceInputs', 'evidenceInputPatterns', 'evidencePresenceInputs']) {
-    if (!Array.isArray(config[key]) || config[key].some((entry) => typeof entry !== 'string' || entry === '')) {
-      throw new Error(`MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact.${key} must list the retained-evidence test inputs as non-empty strings`);
-    }
-  }
-  for (const source of config.evidenceInputPatterns) {
-    try {
-      new RegExp(source, 'u');
-    } catch (error) {
-      throw new Error(`MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact.evidenceInputPatterns entry ${JSON.stringify(source)} is not a regular expression (${error.message})`);
-    }
-  }
-}
-
 // Plans every generated Block page whose variants live in the pattern's directory.
 function addPatternPages(plan, slug, pageIndex) {
   for (const page of pageIndex) {
@@ -1130,14 +1096,12 @@ export async function buildPullRequestImpact({
 }) {
   const changed = normalizeTaskPaths(changedPaths);
   if (changed.length === 0) throw new Error('MUXUI_CI_IMPACT_EMPTY: the pull request diff contains no changed paths');
-  assertEvidenceInputs(config);
   const plan = {
     schemaVersion: 1,
     changedPaths: changed,
     full: false,
     fullReasons: [],
     policy: false,
-    evidence: false,
     docs: false,
     scale: false,
     catalog: false,
@@ -1669,7 +1633,6 @@ export async function buildPullRequestImpact({
   if (changed.includes('pnpm-lock.yaml') && lockfileBefore !== undefined && lockfileAfter !== undefined) {
     if (isPolicyOnlyLockfileChange(lockfileBefore, lockfileAfter)) {
       plan.policy = true;
-      plan.evidence = true;
       plan.reasons.push('pnpm-lock.yaml changes only the repository-policy importer and adds its parser resolutions');
     } else if (plan.fullReasons.length === 0) {
       for (const importer of changedLockfileImporters(lockfileBefore, lockfileAfter)) {
@@ -1685,16 +1648,7 @@ export async function buildPullRequestImpact({
 
   if (missing.length > 0) {
     plan.policy = true;
-    plan.evidence = true;
     widen(`${missing.join(', ')} ${missing.length === 1 ? 'has' : 'have'} no owner route; running the repository policy check (add an owner route to pullRequestImpact to narrow this)`);
-  }
-  for (const path of changed) {
-    const input = isEvidenceInput(path, config);
-    const lookup = !input && startsWithAny(path, config.evidencePresenceInputs)
-      && (await readHeadText(path) === null || await readBaseText(path) === null);
-    if (!input && !lookup) continue;
-    plan.evidence = true;
-    plan.reasons.push(`${path} ${input ? 'is an input of' : 'is added or removed, and is looked up by'} the retained-evidence tests; run check:evidence`);
   }
   if (plan.fullReasons.length > 0) {
     plan.full = true;
@@ -2453,8 +2407,6 @@ function fullPlannedCommands(environment, testSources, packages) {
   const longSuites = [policyPackage, toolingPackage].filter((name) => checked.includes(name));
   for (const name of [...longSuites, ...checked.filter((name) => !longSuites.includes(name))]) {
     add(checksGroupFor(name), ['--filter', name, 'run', 'check']);
-    // The pull-request plan runs this only when the change reaches its inputs.
-    if (name === policyPackage) add(policyChecksGroup, ['--filter', name, 'run', 'check:evidence']);
   }
   add(checksGroup, ['generate:check']);
   add('react', ['--filter', '@muxui/react', 'run', 'check']);
@@ -2526,7 +2478,6 @@ function plannedCommands(plan, {
   }
 
   if (plan.policy) add(policyChecksGroup, ['--filter', policyPackage, 'run', 'check']);
-  if (plan.evidence) add(policyChecksGroup, ['--filter', policyPackage, 'run', 'check:evidence']);
   // Tooling is the other long package check, so its group is planned beside policy's.
   const packageChecks = plan.packageChecks.filter((name) => name !== toolingPackage);
   if (plan.packageChecks.includes(toolingPackage)) add(toolingChecksGroup, ['--filter', toolingPackage, 'run', 'check']);
@@ -2795,7 +2746,6 @@ function planReport(plan, { baseRef, mergeBase, metadataPrepared, groups }) {
     generationPackages: plan.generationPackages,
     checks: {
       policy: plan.policy,
-      evidence: plan.evidence,
       catalog: plan.catalog,
       tokens: plan.tokens,
       docs: plan.docs,

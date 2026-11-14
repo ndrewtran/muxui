@@ -409,7 +409,7 @@ async function runFilesCheck(root, extraEnv = {}, scope = ['--files', 'packages/
   return { result, invocations };
 }
 
-test('full checks finish React and Storybook before remaining and evidence lanes, including after failures', async (t) => {
+test('full checks finish React and Storybook before the remaining lane, including after failures', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-task-full-stages-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   await writeStorybookWorkspace(root);
@@ -421,9 +421,8 @@ test('full checks finish React and Storybook before remaining and evidence lanes
     '#!/usr/bin/env node',
     "import { appendFileSync } from 'node:fs';",
     'const args = process.argv.slice(2);',
-    "const lane = args.at(-1) === 'check:evidence' ? 'evidence'",
-    "  : args.includes('@muxui/react') ? 'react'",
-    "    : args.includes('@muxui/react-storybook') ? 'storybook' : 'remaining';",
+    "const lane = args.includes('@muxui/react') ? 'react'",
+    "  : args.includes('@muxui/react-storybook') ? 'storybook' : 'remaining';",
     "const record = (event) => appendFileSync(process.env.MUXUI_TASK_LOG, JSON.stringify({ lane, event, args }) + '\\n');",
     "record('start');",
     'await new Promise((resolve) => setTimeout(resolve, 100));',
@@ -450,16 +449,15 @@ test('full checks finish React and Storybook before remaining and evidence lanes
       assert.equal(result.status, failures.react ?? failures.storybook ?? 0, result.stdout + result.stderr);
       const events = (await readFile(logPath, 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
       const index = (lane, event) => events.findIndex((entry) => entry.lane === lane && entry.event === event);
-      assert.equal(events.length, 8);
-      for (const lane of ['react', 'storybook', 'remaining', 'evidence']) {
+      assert.equal(events.length, 6);
+      for (const lane of ['react', 'storybook', 'remaining']) {
         assert.ok(index(lane, 'start') >= 0, `${lane} ran`);
         assert.ok(index(lane, 'end') > index(lane, 'start'), `${lane} finished`);
         assert.ok(events[index(lane, 'start')].args.includes('--no-bail'));
       }
       assert.ok(index('react', 'end') < index('storybook', 'start'));
       assert.ok(index('storybook', 'end') < index('remaining', 'start'));
-      assert.ok(index('storybook', 'end') < index('evidence', 'start'));
-      assert.match(result.stdout, /check stage 3: pnpm .*run check:evidence/u);
+      assert.match(result.stdout, /check stage 3: pnpm .*run check/u);
     });
   }
 });

@@ -1,13 +1,13 @@
 // A small publish-set tuple for the release manifest and lineage tests: four tarballs with the files the manifest
 // reads (a consistent catalog bundle, its records and sidecars, the schema declarations, the renderer descriptor), built
-// with the same deterministic archive writer a release uses, and the retained evidence the manifest binds.
+// with the same deterministic archive writer a release uses, and the committed sources the manifest binds.
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { after } from 'node:test';
 import { canonicalJson } from '../src/canonical-json.mjs';
 import { deterministicArchive } from '../src/release-archive.mjs';
-import { RETAINED_EVIDENCE_MILESTONES, RETAINED_REVIEW_INDEX, buildPortfolioManifest, releaseIdFor, sha256 } from '../src/release-manifest.mjs';
+import { buildPortfolioManifest, releaseIdFor, sha256 } from '../src/release-manifest.mjs';
 import { readPublishSet } from '../src/release-set.mjs';
 
 export const publishSet = readPublishSet(resolve(import.meta.dirname, '../../../..'));
@@ -190,10 +190,9 @@ export function artifactsOf(fixture, { reused = new Map(), revision = commit } =
   return new Map(publishSet.packages.map(({ name }) => [name, archiveOf(fixture.files[name])]));
 }
 
-/** The sources a release is bound to as committed: the retained evidence indexes, the lockfile, the token source, and a reader. */
+/** The sources a release is bound to as committed: the lockfile, the token source, and a reader. */
 export function committedStore() {
-  const store = new Map(RETAINED_EVIDENCE_MILESTONES.map((milestone) => [`tests/evidence/${milestone.toLowerCase()}/index.json`, Buffer.from(`{"milestone":"${milestone}"}\n`)]));
-  store.set(RETAINED_REVIEW_INDEX, Buffer.from('{"milestones":["R1.2","R1.3","R1.4"],"records":[]}\n'));
+  const store = new Map();
   store.set('pnpm-lock.yaml', Buffer.from(`lockfileVersion: '9.0'\n\npackages:\n\n  lucide-react@${lucideVersion}:\n    resolution: {integrity: ${lucideIntegrity}}\n`));
   store.set('catalog/tokens/default-theme.json', Buffer.from('{"id":"muxui:token:default-theme"}\n'));
   return Object.assign(store, { read: (path) => store.get(path) });
