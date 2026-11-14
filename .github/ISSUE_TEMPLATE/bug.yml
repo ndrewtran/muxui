@@ -1,43 +1,22 @@
-name: Invariant or implementation bug
-description: Report reproducible behavior that violates a declared contract.
-title: "[Bug] "
-labels:
-  - type:bug
+name: Bug
+description: Report reproducible behaviour that looks wrong.
+labels: [type:bug]
 body:
   - type: textarea
-    id: contract
-    attributes:
-      label: Violated contract or invariant
-      description: Cite the schema, API, component record, architecture heading, or public package contract.
-    validations:
-      required: true
-  - type: textarea
-    id: reproduce
-    attributes:
-      label: Minimal reproduction
-      description: Include exact versions, revisions, platform/runtime profile, inputs, and commands.
-    validations:
-      required: true
+    id: reproduction
+    attributes: { label: Reproduction, description: Steps, code or a link. }
+    validations: { required: true }
   - type: textarea
     id: expected
-    attributes:
-      label: Expected behavior
-    validations:
-      required: true
+    attributes: { label: Expected }
+    validations: { required: true }
   - type: textarea
     id: actual
-    attributes:
-      label: Actual behavior and diagnostics
-    validations:
-      required: true
-  - type: textarea
-    id: references
-    attributes:
-      label: References
-      description: Where they apply, the Scope ID(s), Roadmap milestone, and Evidence ID(s).
-      placeholder: |
-        Scope ID(s):
-        Roadmap milestone:
-        Evidence ID(s):
-    validations:
-      required: false
+    attributes: { label: Actual, description: Include any errors or console output. }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Version or commit, placeholder: "@muxui/react 0.x.y-rc.n or a commit" }
+  - type: input
+    id: browser
+    attributes: { label: Browser and engine, placeholder: "Safari 26, WebKit" }
