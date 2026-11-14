@@ -11,7 +11,6 @@ site and Storybook. Product facts are in `ARCHITECTURE.md`.
 - `apps/`: docs site, Storybook, Scale theme editor, playground. Projections only.
 - `tooling/`: repository policy, release scripts, the Figma generator.
 - `tests/fixtures/`: shared test fixtures and the Tailwind consumer.
-- `releases/`: manifests of published releases. See `docs/releasing.md`.
 
 Read the nearest local `AGENTS.md` when one exists.
 

@@ -20,7 +20,7 @@ pnpm add @muxui/react@next react react-dom
 pnpm add -D @muxui/catalog@next @muxui/tooling@next
 ```
 
-`releases/README.md` lists the published releases.
+npm provenance names each release's source commit; see `docs/releasing.md`.
 
 ## Private
 
