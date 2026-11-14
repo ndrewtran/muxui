@@ -115,8 +115,9 @@ and its [transition-duration implementation](https://github.com/tailwindlabs/tai
 
 ## Export to Figma
 
-Decision 0020 admits an export-only Figma projection. Figma content is never
-canonical; rerun the export after token changes instead of editing Figma.
+The export writes Figma variables, text styles and effect styles and never
+imports. Figma content is never canonical; rerun the export after token changes
+instead of editing Figma.
 
 ```sh
 pnpm --filter @muxui/tokens figma:export report     # lossy/unsupported report (JSON)

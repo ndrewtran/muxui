@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://muxui.dev/schema/derived-api.schema.json",
   "title": "Mux UI derived binding API",
-  "description": "A binding's API block derived from its renderer's source (Decision 0031): machine-written by the renderer's generator beside that source, never authored, and merged into the binding by the catalog compiler.",
+  "description": "A binding's API block derived from its renderer's source: machine-written by the renderer's generator beside that source, never authored, and merged into the binding by the catalog compiler.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "generatedFrom", "component", "binding", "export", "api"],

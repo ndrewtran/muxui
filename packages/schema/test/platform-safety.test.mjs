@@ -15,7 +15,7 @@ import {
 import { component, tokenSource } from './fixtures.mjs';
 
 const contract = parseJsonStrict(await readFile(
-  new URL('../../../strategy/platform-safety-contract.json', import.meta.url),
+  new URL('../platform-safety-contract.json', import.meta.url),
   'utf8',
 ));
 

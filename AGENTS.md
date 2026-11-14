@@ -1,72 +1,66 @@
-# Mux UI route map
+# Mux UI
+
+Mux UI is a React design system and component library published as prereleases
+under `@muxui/*`. Its catalog records feed the package, the `muxui` CLI, the docs
+site and Storybook. Product facts are in `ARCHITECTURE.md`.
 
 ## Routes
 
-- `strategy/`: architecture, milestone roadmap, and Product Scope authority.
-- `decisions/`: accepted repository and product decisions.
-- `catalog/`: canonical public knowledge sources.
-- `packages/`: package-owned schemas, renderers, catalog, and tooling products.
-- `apps/`: documentation and explorer projections over enabled products.
-- `tooling/`: compilers, generators, audits, and evaluations.
-- `tests/`: cross-package, consumer, platform, conformance, and agent fixtures.
+- `catalog/`: canonical records (components, patterns, guides, tokens).
+- `packages/`: `react`, `schema`, `catalog`, `tooling` (published) and `tokens`.
+- `apps/`: docs site, Storybook, Scale theme editor, playground. Projections only.
+- `tooling/`: repository policy, release scripts, the Figma generator.
+- `tests/fixtures/`: shared test fixtures and the Tailwind consumer.
+- `releases/`: manifests of published releases. See `docs/releasing.md`.
 
-Read the nearest local `AGENTS.md` after entering a major directory.
+Read the nearest local `AGENTS.md` when one exists.
 
-## Discovery loop
+## Source rules
 
-1. Identify the requested artifact, package, or capability.
-2. Read its nearest `AGENTS.md` and owning canonical source.
-3. Follow declared references; do not infer an inventory from filenames.
-4. Change the earliest owner, then regenerate and verify its projections.
-
-## Source ownership
-
-Canonical facts are authored once. Renderer source owns runtime behavior;
-tests prove expectations; generated output is never repaired directly. The
-executable path, slug, alias, and generated-marker contract is owned by
-`tooling/audits/repository-policy/repository-policy.json`.
+- Author a fact once in its owner, then run `pnpm generate`. Never hand-edit
+  generated output; fix the source the drift message names.
+- Path, generated-marker, slug and alias rules live in
+  `tooling/audits/repository-policy/repository-policy.json`.
+- Prerelease compatibility is current-only: remove superseded names and formats
+  outright and update every caller. No aliases, coercions or migrators.
+- Shipped dependencies are pinned exactly; name a dependency by purpose, never
+  its version, in prose.
 
 ## Verification
 
-- `pnpm check`: changed owners plus required dependents, with scoped
-  generation. For task-local work, use one explicit scope: repeatable
-  `--component <family-or-slug>` selectors, repeatable `--package <name|path>`
-  selectors, or `--files <path[,path]>` for the exact task files. The
-  `--dry-run` and `--preview` aliases print the plan without executing it.
-  Explicit scopes ignore unrelated concurrent dirty files. With `--files` and
-  the default scope, the Storybook lane runs the story selection CI plans for
-  those paths, or the full Storybook audit with a printed notice when that
-  selection spans more than one CI shard or cannot be planned.
-- `pnpm generate`: full workspace generation by default; explicit package or
-  file scopes bind generation to the required prerequisites.
-- `pnpm check:all`: the complete deterministic workspace graph and accepts no
-  narrowing flags.
-- `pnpm release:prepare`: release preparation, which never publishes. It runs
-  the check graph without Storybook's own-interface colour proofs (Decision
-  0030), then the generation identity, the candidate packing, and the consumer
-  matrix. The publish workflow's dry run may reuse main's green full CI run for
-  the same commit instead of rerunning the graph.
-- `pnpm generate:check`: repeated no-op generation identity.
-- `pnpm test:agent`: enabled opt-in or scheduled agent evaluations.
+- `pnpm check`: changed packages plus dependents, with scoped generation. Narrow
+  it with `--package <name|path>`, `--component <family-or-slug>` or
+  `--files <path[,path]>`; `--dry-run` prints the plan.
+- `pnpm --filter <package> check`: one package's complete check.
+- `pnpm generate` and `pnpm generate:check` (repeated generation is a no-op).
+- `pnpm check:all`: the full graph. Use it for workspace configuration,
+  dependency or release changes.
+- `pnpm release:prepare`: release preparation; never publishes.
 
-Use the smallest sufficient proof. Style-only component changes use scoped
-component or family checks plus relevant visual evidence. Shared styles, tokens,
-runtime, or API changes broaden proof to the actual affected owners and
-dependents. Reuse unchanged evidence and expand only for relevant failures.
-Focused reports are partial proof, never full release proof; use the full graph
-for shared workspace configuration or dependency changes, release work, or an
-explicit all request.
+## CI habits
 
-## Agent skills
+- Before a push, run one scoped check for what changed. CI runs every job on
+  every browser engine, so do not repeat that locally by habit.
+- Widen local proof only to reproduce a CI failure.
+- Compare a failing job with the latest `main` run. A failure `main` already has
+  is baseline: report it and keep its fix out of the change.
+- Browser tests wait on page state, never `networkidle`.
 
-### Issue tracker
+## Needs Andrew's yes
 
-GitHub Issues on `ndrewtran/muxui` via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+- Publishing, a dist-tag change, deprecation or unpublishing.
+- Production, daily-driver channels, or changes in a consumer project.
+- Outside-service writes beyond the task's scope: Figma, the npm registry,
+  GitHub settings, the tracker, credentials, billing.
+- Destructive or privileged actions: deleting unrelated work, rewriting shared
+  history, broadening access, exposing private material, a new trust boundary.
+- New support claims (stable, platform, assistive technology), or deliberately
+  disabling an accessibility, licence, security or release-integrity check.
 
-### Triage labels
+A task's go-ahead covers its ordinary implementation: dependencies, components,
+props, internal packages, refactors and tests.
 
-Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+## Issues
 
-### Domain docs
-
-Single-context: accepted decisions in `decisions/`, plus a root `CONTEXT.md` glossary once one is created. See `docs/agents/domain.md`.
+GitHub Issues on `ndrewtran/muxui` through `gh`. Triage labels: `needs-triage`,
+`needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`.

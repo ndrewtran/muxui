@@ -168,11 +168,11 @@
     }
   ],
   "unavailableCommands": [
-    { "name": "validate", "earliestMilestone": "G2.2" },
-    { "name": "plan", "earliestMilestone": "G2.4" },
-    { "name": "doctor", "earliestMilestone": "G2.5" },
-    { "name": "init", "earliestMilestone": "G2.5" },
-    { "name": "migrate", "earliestMilestone": "G3.2" }
+    { "name": "validate" },
+    { "name": "plan" },
+    { "name": "doctor" },
+    { "name": "init" },
+    { "name": "migrate" }
   ],
   "surfacePolicy": {
     "cli": { "effect": "read-only", "requiresConfirmation": false },

@@ -10,7 +10,7 @@ import { canonicalJson } from '@muxui/schema';
 const run = promisify(execFile);
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 
-/** The publish set, in install order (Decision 0032 item 3). */
+/** The publish set, in install order. */
 export const PACKED_SLUGS = ['schema', 'catalog', 'tooling', 'react'];
 
 /** `pnpm pack` of one workspace package into `destination`, without lifecycle scripts; returns the tarball path. */

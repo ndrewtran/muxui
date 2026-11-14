@@ -61,7 +61,7 @@
       "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content"] }
     },
     "api": {
-      "description": "An implemented binding's API. Authored here, or omitted when the catalog source manifest names a derived API source for the binding (Decision 0031); the compiler then merges the derived block, which alone carries propDetails, eventDetails, and types.",
+      "description": "An implemented binding's API. Authored here, or omitted when the catalog source manifest names a derived API source for the binding; the compiler then merges the derived block, which alone carries propDetails, eventDetails, and types.",
       "type": "object",
       "additionalProperties": false,
       "required": ["props", "events", "parts", "defaults"],
@@ -174,7 +174,7 @@
       }
     },
     "platformSafety": {
-      "description": "Overrides of the platform-safety registry default, one declaration per profile. Omit it to take the defaults; a declaration names only a requirement whose disposition differs from the default, with a reason (Decision 0031).",
+      "description": "Overrides of the platform-safety registry default, one declaration per profile. Omit it to take the defaults; a declaration names only a requirement whose disposition differs from the default, with a reason.",
       "type": "array",
       "minItems": 1,
       "x-muxui-authoring": {

@@ -13,8 +13,8 @@ requires an accessible name.
 
 React exports are experimental, and Mux UI makes no assistive-technology
 support claim for the React prerelease. The manual and assistive-technology
-evidence that Decision 0022 requires before any such claim, and before stable
-React promotion (`S1.0`), is deferred, not complete.
+testing that any such claim, or a stable React release, would need has not been
+done.
 
 ### Automated proof
 

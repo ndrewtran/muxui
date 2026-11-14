@@ -5,7 +5,7 @@ import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { installPackedTuple, writeProjection } from './support/packed-tuple.mjs';
 
-// E-P2.1-02: the `muxui` bin installed from the packed schema, catalog, tooling and React tarballs, never the source
+// The `muxui` bin installed from the packed schema, catalog, tooling and React tarballs, never the source
 // tree. The tuple is packed and installed once for the file.
 let tuple;
 before(async () => {
@@ -133,7 +133,7 @@ async function checkGoldens(renderings) {
   }
 }
 
-test('E-P2.1-02 the muxui bin and every package it reads are the installed tarballs', async () => {
+test('the muxui bin and every package it reads are the installed tarballs', async () => {
   const modules = await realpath(join(tuple.root, 'node_modules'));
   const inside = (path) => path.startsWith(`${modules}${sep}`);
   const installed = async (name) => realpath(join(modules, name));
@@ -186,12 +186,12 @@ const reportedAs = (version) => ({
   help: `muxui ${version}`,
 });
 
-test('E-P2.1-02 responses, the manifest, and help report the installed tooling version', async () => {
+test('responses, the manifest, and help report the installed tooling version', async () => {
   const version = tuple.versions['@muxui/tooling'];
   assert.deepEqual(await reportedVersions(muxui), reportedAs(version));
 });
 
-test('E-P2.1-02 list, search, and get discover and retrieve the installed React tuple', async () => {
+test('list, search, and get discover and retrieve the installed React tuple', async () => {
   const react = await realpath(join(tuple.root, 'node_modules/@muxui/react'));
   const { bindings } = JSON.parse(await readFile(join(react, 'generated/renderer-descriptor.json'), 'utf8'));
   const ids = Object.keys(bindings).map((binding) => binding.split('#')[0]).sort();
@@ -209,7 +209,7 @@ test('E-P2.1-02 list, search, and get discover and retrieve the installed React 
   assert.match(cases['get-compact'].meta.revisions.bindingSpec, /^sha256:[0-9a-f]{64}$/u);
 });
 
-test('E-P2.1-02 discovery output matches the packed goldens in human, JSON, and dense modes', async () => {
+test('discovery output matches the packed goldens in human, JSON, and dense modes', async () => {
   const renderings = {};
   for (const { name, outputs } of await discover()) {
     for (const [mode, { stdout }] of Object.entries(outputs)) {
@@ -219,7 +219,7 @@ test('E-P2.1-02 discovery output matches the packed goldens in human, JSON, and 
   await checkGoldens(renderings);
 });
 
-test('E-P2.1-02 human, JSON, and dense output normalize to the catalog API response', async () => {
+test('human, JSON, and dense output normalize to the catalog API response', async () => {
   const discovered = await discover();
   const references = await tuple.inConsumer(REFERENCE, discovered);
   const { responses } = await normalize(discovered.flatMap(({ command, detail, outputs }) => (
@@ -236,7 +236,7 @@ test('E-P2.1-02 human, JSON, and dense output normalize to the catalog API respo
   });
 });
 
-test('E-P2.1-02 dense output stays inside every locked token budget', async () => {
+test('dense output stays inside every locked token budget', async () => {
   // These arguments are the registry's budget fixtures, checked below against the installed registry.
   const fixtures = { manifest: [], list: ['--limit', '1'], search: ['button', '--limit', '1'], get: [BUTTON] };
   const cases = ['brief', 'compact', 'full'].flatMap((detail) => Object.entries(fixtures)
@@ -264,7 +264,7 @@ test('E-P2.1-02 dense output stays inside every locked token budget', async () =
   });
 });
 
-test('E-P2.1-02 the manifest reports the commands P2.1 does not enable as unavailable', async () => {
+test('the manifest reports the commands not yet enabled as unavailable', async () => {
   const { status, stdout } = await muxui(['manifest', '--json']);
   assert.equal(status, 0);
   const { cli, capabilities } = JSON.parse(stdout).data;
@@ -285,7 +285,7 @@ test('E-P2.1-02 the manifest reports the commands P2.1 does not enable as unavai
   }
 });
 
-test('E-P2.1-02 invalid requests return structured errors with stable codes and a read-only nextCommand', async () => {
+test('invalid requests return structured errors with stable codes and a read-only nextCommand', async () => {
   const invalid = [
     { args: ['unknown'], code: 'MUXUI_QUERY_INVALID', exitCode: 2, ruleId: 'cli.command.unknown', next: 'muxui --json' },
     { args: ['list', '--bogus'], code: 'MUXUI_QUERY_INVALID', exitCode: 2, ruleId: 'cli.option.unknown', next: 'muxui list --help' },
@@ -328,7 +328,7 @@ test('E-P2.1-02 invalid requests return structured errors with stable codes and 
 });
 
 // Last, because it edits the installed package.
-test('E-P2.1-02 an installed descriptor the resolver rejects makes get fail with MUXUI_CATALOG_INCOMPATIBLE', async () => {
+test('an installed descriptor the resolver rejects makes get fail with MUXUI_CATALOG_INCOMPATIBLE', async () => {
   const descriptorPath = join(await realpath(join(tuple.root, 'node_modules/@muxui/react')), 'generated/renderer-descriptor.json');
   const files = [descriptorPath, `${descriptorPath}.provenance`];
   const originals = await Promise.all(files.map(async (path) => [path, await readFile(path, 'utf8')]));
@@ -358,7 +358,7 @@ test('E-P2.1-02 an installed descriptor the resolver rejects makes get fail with
 });
 
 // Also edits the installed package, so it restores the file before the next test and leaves the install as it found it.
-test('E-P2.1-02 an installed catalog whose bytes differ from its provenance sidecar makes get fail with MUXUI_CATALOG_INTEGRITY_MISMATCH', async () => {
+test('an installed catalog whose bytes differ from its provenance sidecar makes get fail with MUXUI_CATALOG_INTEGRITY_MISMATCH', async () => {
   const catalogPath = join(await realpath(join(tuple.root, 'node_modules/@muxui/catalog')), 'generated/catalog.json');
   const original = await readFile(catalogPath, 'utf8');
   const get = () => tuple.muxui(['get', BUTTON, '--platform', 'web.react', '--json']);
@@ -380,7 +380,7 @@ test('E-P2.1-02 an installed catalog whose bytes differ from its provenance side
 
 // Also edits the installed package, so it restores the file. Release preparation rewrites the packed version to an rc,
 // and the CLI must report that one, not the version it was packed with.
-test('E-P2.1-02 a version rewritten in the installed package.json is the version the CLI reports', async () => {
+test('a version rewritten in the installed package.json is the version the CLI reports', async () => {
   const manifestPath = join(await realpath(join(tuple.root, 'node_modules/@muxui/tooling')), 'package.json');
   const original = await readFile(manifestPath, 'utf8');
   const rewritten = '1.1.0-rc.2';

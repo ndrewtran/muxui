@@ -1,40 +1,21 @@
-# Catalog navigation
+# Catalog records
 
-This directory owns canonical public knowledge. Keep artifact identity,
-binding specifications, examples, and relations under their declared source
-owners. Never place compiled catalogs, search indices, site pages, or other
-projections beside canonical records.
-
-Use the root verification commands until a narrower catalog-owned command is
-declared here by its implementing package.
-
-`patterns/categories.json` declares the block categories, their groups, and each
-category's display label as `{ "<group>": { "<category>": "<Label>", ... } }`, in display
-order. Every category has an explicit label (`faq` is "FAQ"), and docs show it as
-written. A block's `category` must be listed there; the compiler rejects any other and
-derives the block's group from it. Adding, renaming, relabelling, or regrouping a
-category edits that file (and the blocks that name it), not the schema.
-
-A component record's optional `category` is its navigation group in docs and
-Storybook: `"ai-agent"` places it in AI Agent, and no `category` leaves it in
-Components. Adding a component to the group edits its record only: docs and
-Storybook read the category from the generated catalog bundle, and
-`apps/component-navigation.mjs` owns just the group labels.
-
-`patterns/<slug>/` holds one Block (a pattern): `artifact.json`, and per
-variant an `examples/react/<variant>.example.json` record with its `.tsx`
-source. Create them with `scaffoldPattern`. `pnpm generate` lists every
-canonical record in `packages/catalog/catalog-sources.json`, so add or remove
-the files and regenerate instead of editing that list. The compiler checks variant sources against the import and
-content rules (`packages/catalog/src/pattern-imports.mjs` and
-`pattern-content.mjs`): imports only in the leading header, from `react`,
-`react/jsx-runtime`, `@muxui/react`, `@muxui/react/markdown`, and
-`@muxui/react/themes` (the last three as static named imports, and
-`pattern.participants` must declare each component they name; the themes
-subpath exports preset data, not components; no other subpath), no remote reference, no literal colour, an `<asset>.license.json` beside any asset
-(dotfiles but `.DS_Store` included), and a local `src`, `href`, `url()`, or
-`srcSet` path only to a licensed asset inside the pattern directory (`#fragment`
-and `data:` references are fine; `action` and `formAction` count only as
-attributes, so a data field named `action` is fine, and `poster` counts as a
-property only when its value looks like a path). `scaffoldPattern` runs the
-remote and colour rules with the same rule IDs.
+- Canonical records only. Compiled bundles, indexes and pages live in packages.
+- `pnpm generate` keeps `packages/catalog/catalog-sources.json` in sync with the
+  files here: add or remove records on disk, never edit that list.
+- A component's optional `category` is its docs and Storybook group
+  (`"ai-agent"` is AI Agent; none is Components).
+- `patterns/categories.json` declares block categories, groups and labels in
+  display order. A block's `category` must be listed there; the compiler
+  derives its group.
+- `patterns/<slug>/` is one Block: `artifact.json` plus, per variant,
+  `examples/react/<variant>.example.json` and its `.tsx`. Create one with
+  `scaffoldPattern`.
+- Variant sources (`packages/catalog/src/pattern-imports.mjs`,
+  `pattern-content.mjs`): imports only in the leading header, from `react`,
+  `react/jsx-runtime`, `@muxui/react`, `@muxui/react/markdown` or
+  `@muxui/react/themes` (static named imports; declare each named component in
+  `pattern.participants`). No remote reference, no literal colour. Local asset
+  paths point only inside the pattern, with an `<asset>.license.json` beside
+  each asset.
+- An unsupported binding states a plain reason and claims nothing.

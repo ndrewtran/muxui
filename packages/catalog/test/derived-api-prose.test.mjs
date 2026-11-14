@@ -52,7 +52,7 @@ function memberNames(value, names = new Set()) {
   return names;
 }
 
-// Decision 0031: Button's variant values live in its React source. The usage guide
+// Button's variant values live in its React source. The usage guide
 // no longer lists them; its variant guidance names each one, in source order.
 test('the Button guide covers exactly the variants its derived API declares', async () => {
   const [guide, derived] = await Promise.all([read('catalog/guides/button-usage.md'), derivedApi('button')]);
@@ -442,7 +442,7 @@ test('a format a guide states is checked against the derived type that describes
   assert.equal(attributes.has('YYYY-MM-DD'), false);
 });
 
-// A compound's parts own their props (Decision 0031 D2), and a guide may state them. Each part's names are
+// A compound's parts own their props, and a guide may state them. Each part's names are
 // checked like the root's, and a part's element is held to its own part's, not the root's.
 test('a part\'s props, finite values, and element attributes are checked against that part\'s derived block', () => {
   const quiet = { type: { kind: 'union', members: [{ kind: 'literal', value: 'quiet' }, { kind: 'literal', value: 'loud' }] }, required: false, enum: ['quiet', 'loud'] };

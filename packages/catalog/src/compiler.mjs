@@ -253,7 +253,7 @@ function bindingProfiles(bindingId, binding) {
 }
 
 /**
- * The derived API documents for a component (Decision 0031): for each binding
+ * The derived API documents for a component: for each binding
  * the manifest's `derivedApiSources` names, the `<slug>.json` in that
  * directory, when it exists. A missing file means the binding authors its api.
  */

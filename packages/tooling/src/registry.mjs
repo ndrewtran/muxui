@@ -266,14 +266,8 @@ function validateCommandRegistry(registry) {
   for (const unavailable of registry.unavailableCommands) {
     assertKeys(
       unavailable,
-      ['name', 'earliestMilestone'],
+      ['name'],
       `registry.unavailableCommands.${unavailable.name ?? 'unknown'}`,
-    );
-    assert(
-      typeof unavailable.earliestMilestone === 'string'
-        && /^G\d+\.\d+$/u.test(unavailable.earliestMilestone),
-      'CLI_COMMAND_SURFACE_DRIFT',
-      `${unavailable.name} must declare an earliest milestone`,
     );
   }
   assert(

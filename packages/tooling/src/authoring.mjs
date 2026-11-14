@@ -458,7 +458,7 @@ function fieldOwner(family, path, authoring) {
 
 /**
  * The schema leaves an implemented binding's `api` optional because a derived
- * block may supply it (Decision 0031). The compiled catalog records which
+ * block may supply it. The compiled catalog records which
  * bindings of this source took one, and the compiler's own authored-api
  * restrictions apply against that set.
  */
@@ -808,7 +808,7 @@ function sideContext(revisionContext, side) {
   return { ...revisionContext, ...revisionContext[side] };
 }
 
-/** A component with one side's `derivedApis` (binding id to derived API document) merged in (Decision 0031). */
+/** A component with one side's `derivedApis` (binding id to derived API document) merged in. */
 function mergedRecord(family, record, revisionContext, side) {
   return family === 'component'
     ? mergeDerivedApis(record, sideContext(revisionContext, side).derivedApis ?? {})
@@ -860,7 +860,7 @@ const obligates = (part) => isObject(part)
     || [...Object.values(part.propDetails ?? {}), ...Object.values(part.eventDetails ?? {})].some((detail) => detail?.required === true));
 
 /**
- * Decision 0031 refinements a derived block needs beyond its schema annotations: an
+ * The refinements a derived block needs beyond its schema annotations: an
  * entry of propDetails, eventDetails, or types that differs only in descriptions is
  * editorial (the spec revision still moves with the block). Adding a required prop or
  * event, or a required or absent (`name?: never`) member to an object type inside one

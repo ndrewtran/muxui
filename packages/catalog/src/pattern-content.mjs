@@ -1,5 +1,5 @@
 /**
- * Content rules for pattern variant sources and assets (Decision 0026, E-BL1-10).
+ * Content rules for pattern variant sources and assets.
  *
  * A variant is copy-and-paste demonstration material, so its source must be
  * self-contained and token-driven. The compiler fails on:
