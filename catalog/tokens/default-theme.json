@@ -2607,12 +2607,7 @@
       "unit": "hex",
       "meaning": "Label color of unselected tabs.",
       "overridePolicy": "theme",
-      "alias": "semantic.content.muted",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "semantic.color.neutral-default-40"
-        }
-      }
+      "alias": "semantic.content.muted"
     },
     "component.tabs.panel-foreground": {
       "layer": "component",

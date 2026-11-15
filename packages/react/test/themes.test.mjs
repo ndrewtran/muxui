@@ -267,13 +267,30 @@ function resolveColor(value, lookup, seen = []) {
 const over = (foreground, background) => [0, 1, 2].map((channel) => foreground[channel] * foreground[3] + background[channel] * (1 - foreground[3])).concat(1);
 const toHex = (color) => `#${color.slice(0, 3).map((channel) => Math.round(channel * 255).toString(16).padStart(2, '0')).join('')}`;
 
-// Readable text roles. content-faint and content-secondary are left out: they colour placeholders, separators,
-// disabled controls and non-text marks, which APCA does not hold to the body-text mark.
-const READABLE_TEXT_ROLES = ['content-default', 'content-muted', 'field-label', 'content-link'];
-const TEXT_SURFACES = ['surface-background', 'surface-canvas', 'surface-raised', 'surface-subtle', 'surface-hover'];
+// Readable text roles and the grounds they sit on, each ground listed bottom layer first and composited over the page.
+// content-faint and content-secondary are left out: they colour placeholders, separators, disabled controls and
+// non-text marks, which APCA does not hold to the body-text mark.
+const TEXT_CHECKS = [
+  {
+    text: ['semantic-content-default', 'semantic-content-muted', 'semantic-field-label', 'semantic-content-link'],
+    grounds: ['surface-background', 'surface-canvas', 'surface-raised', 'surface-subtle', 'surface-hover'].map((role) => [`semantic-${role}`]),
+  },
+  {
+    // Unselected tab labels (collections.css). The tab list is transparent, so a label sits on the page surface;
+    // underline tabs hover on a surface-hover layer, and pill, segment and overflow tabs sit in a neutral action fill.
+    text: ['component-tabs-tab-foreground'],
+    grounds: [
+      ['semantic-surface-background'],
+      ['semantic-surface-canvas'],
+      ['semantic-surface-raised'],
+      ['semantic-surface-canvas', 'semantic-surface-hover'],
+      ['semantic-surface-canvas', 'semantic-action-neutral-background'],
+    ],
+  },
+];
 const MIN_TEXT_LC = 60;
 
-test('readable text roles score at least APCA Lc 60 on every surface in both sheets, both schemes, standard contrast', () => {
+test('readable text roles score at least APCA Lc 60 on their grounds in both sheets, both schemes, standard contrast', () => {
   const failures = [];
   let scored = 0;
   for (const [name, blocks] of [['themes.css', wcagBlocks], ['themes-apca.css', apcaBlocks]]) {
@@ -282,18 +299,22 @@ test('readable text roles score at least APCA Lc 60 on every surface in both she
       const block = blocks.get(selector);
       const scope = baseScopes.get(`[data-muxui-color-scheme='${colorScheme}']`);
       const lookup = (property) => block.get(property) ?? scope.get(property) ?? baseScopes.get(':root').get(property);
-      const color = (role) => resolveColor(`var(--muxui-semantic-${role})`, lookup);
+      const color = (name) => resolveColor(`var(--muxui-${name})`, lookup);
       const page = colorScheme === 'dark' ? [0, 0, 0, 1] : [1, 1, 1, 1];
-      for (const surfaceRole of TEXT_SURFACES) {
-        const surface = over(color(surfaceRole), page);
-        for (const textRole of READABLE_TEXT_ROLES) {
-          const lc = Math.abs(getScaleApcaContrast(toHex(over(color(textRole), surface)), toHex(surface)));
-          scored += 1;
-          if (lc < MIN_TEXT_LC) failures.push(`${name} ${selector}: ${textRole} on ${surfaceRole} is Lc ${lc.toFixed(1)}`);
+      for (const { text, grounds } of TEXT_CHECKS) {
+        for (const layers of grounds) {
+          const ground = layers.reduce((below, layer) => over(color(layer), below), page);
+          for (const role of text) {
+            const lc = Math.abs(getScaleApcaContrast(toHex(over(color(role), ground)), toHex(ground)));
+            scored += 1;
+            if (lc < MIN_TEXT_LC) failures.push(`${name} ${selector}: ${role} on ${layers.join(' + ')} is Lc ${lc.toFixed(1)}`);
+          }
         }
       }
     }
   }
-  assert.equal(scored, 2 * expectedPresetCount * 2 * TEXT_SURFACES.length * READABLE_TEXT_ROLES.length);
+  const pairs = TEXT_CHECKS.reduce((count, { text, grounds }) => count + text.length * grounds.length, 0);
+  assert.equal(pairs, 4 * 5 + 5);
+  assert.equal(scored, 2 * expectedPresetCount * 2 * pairs);
   assert.deepEqual(failures, []);
 });
