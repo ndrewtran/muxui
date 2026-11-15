@@ -519,11 +519,11 @@ test('the contrast guard has teeth: the colors the recipe once assigned are reje
     const darkRows = (await contrasts(page, { html: basicHtml('data-diff'), rules: lightening, steps: rows, scheme: 'dark' })).flatMap((one) => ratiosOf(one.readings));
     assert.ok(missed(darkRows).some(({ label }) => label.startsWith('span.muxui-data-diff__change')), 'dark: the marks are lowered');
 
-    // DisclosureGroup's tint: every item is read, and only the fourth, whose panel is open, misses (16px text with 5.7:1 on the light page
-    // to start with). A guard that read the first item only would pass it.
+    // DisclosureGroup's tint: every item is read, and only the fourth, whose panel is open, misses (16px muted text with 5.7:1 on the
+    // light page and 8.4:1 on the dark to start with). A guard that read the first item only would pass it.
     const item = { target: '.muxui-disclosure-group > .muxui-disclosure', property: 'background-color' };
-    for (const [scheme, shown] of [['light', [4.52, 5.72]], ['dark', [5.89, 7.21]]]) {
-      const entries = await entriesOf('disclosure-group', '.my-scope { --muxui-component-disclosuregroup-background: #7e62c940; }', item, scheme);
+    for (const [scheme, shown] of [['light', [3.82, 5.72]], ['dark', [5.75, 8.36]]]) {
+      const entries = await entriesOf('disclosure-group', '.my-scope { --muxui-component-disclosuregroup-background: #7e62c960; }', item, scheme);
       assert.deepEqual([...new Set(entries.map(({ match }) => match))], [0, 1, 2, 3, 4, 5], 'all six items are read');
       assert.deepEqual(missed(entries).map(({ match }) => match), [3], `${scheme}: only the open item misses`);
       assert.deepEqual(missed(entries).map(({ ratio, was }) => [Number(ratio.toFixed(2)), Number(was.toFixed(2))]), [shown]);
