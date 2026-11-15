@@ -1312,10 +1312,20 @@
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Label content for editable fields.",
+      "meaning": "Label content for editable fields; the dark scheme mixes neutral steps 70 and 80 evenly to keep APCA Lc 60 on every surface.",
       "overridePolicy": "theme",
       "alias": "semantic.color.neutral-70",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "semantic-equivalence",
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "semantic.color.neutral-70",
+            "color": "semantic.color.neutral-80",
+            "weight": 0.5
+          }
+        }
+      }
     },
     "semantic.field.description": {
       "layer": "semantic",
@@ -1462,10 +1472,20 @@
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Muted content for descriptions, placeholders, and secondary values.",
+      "meaning": "Muted content for descriptions, placeholders, and secondary values; the dark scheme mixes neutral steps 70 and 80 evenly to keep APCA Lc 60 on every surface.",
       "overridePolicy": "theme",
       "alias": "semantic.color.neutral-70",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "semantic-equivalence",
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "semantic.color.neutral-70",
+            "color": "semantic.color.neutral-80",
+            "weight": 0.5
+          }
+        }
+      }
     },
     "semantic.content.secondary": {
       "layer": "semantic",
@@ -1507,10 +1527,20 @@
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Default content color for links and text-only selected controls.",
+      "meaning": "Default content color for links and text-only selected controls; the dark scheme mixes color steps 70 and 80 evenly to keep APCA Lc 60 on every surface.",
       "overridePolicy": "theme",
       "alias": "semantic.color.color-70",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "semantic-equivalence",
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "semantic.color.color-70",
+            "color": "semantic.color.color-80",
+            "weight": 0.5
+          }
+        }
+      }
     },
     "semantic.content.link-hover": {
       "layer": "semantic",
@@ -2567,14 +2597,9 @@
       "layer": "component",
       "type": "color",
       "unit": "hex",
-      "meaning": "Label color of a disabled, invalid SelectNative field; the dark scheme uses the disabled label tone.",
+      "meaning": "Label color of a disabled, invalid SelectNative field; the invalid feedback role in both schemes, dimmed by the disabled opacity.",
       "overridePolicy": "theme",
-      "alias": "semantic.feedback.invalid",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "semantic.color.neutral-default-40"
-        }
-      }
+      "alias": "semantic.feedback.invalid"
     },
     "component.tabs.tab-foreground": {
       "layer": "component",

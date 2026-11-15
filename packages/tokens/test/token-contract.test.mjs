@@ -274,6 +274,10 @@ test('E-G1.0-01 rejects cycles, reverse layers, incompatible units, and override
   incompatible.tokens['semantic.action.background'].unit = 'px';
   expectCode('MUXUI_TOKEN_TYPE_MISMATCH', () => compileTokenGraph(incompatible));
 
+  const missingMixColor = structuredClone(source);
+  missingMixColor.tokens['semantic.content.link'].modes['colorScheme.dark'].mix.color = 'semantic.color.color-75';
+  expectCode('MUXUI_TOKEN_MIX_MISSING', () => compileTokenGraph(missingMixColor, { modes: { colorScheme: 'dark' } }));
+
   expectCode('MUXUI_TOKEN_OVERRIDE_UNAUTHORIZED', () => compileTokenGraph(source, {
     overrides: {
       'reference.color.neutral-90': { type: 'color', unit: 'hex', value: '#000000' },
@@ -326,12 +330,17 @@ test('default theme link and invalid semantic colors meet contrast in both color
   const link = source.tokens['semantic.content.link'];
   const invalid = source.tokens['semantic.feedback.invalid'];
   assert.equal(link.alias, 'semantic.color.color-70');
-  assert.equal(link.modes, undefined);
+  assert.deepEqual({ ...link.modes['colorScheme.dark'].mix }, {
+    space: 'srgb', token: 'semantic.color.color-70', color: 'semantic.color.color-80', weight: 0.5,
+  });
   assert.equal(invalid.alias, 'reference.color.error-60');
   assert.equal(invalid.modes['colorScheme.dark'].alias, 'reference.color.error-30');
 
   const light = compileTokenGraph(source);
   const dark = compileTokenGraph(source, { modes: { colorScheme: 'dark' } });
+  // A mix of two tokens depends on both and keeps both var()s in CSS.
+  assert.deepEqual(dark.dependencies['semantic.content.link'], ['semantic.color.color-70', 'semantic.color.color-80']);
+  assert.equal(cssValue(dark.tokens['semantic.content.link']), 'color-mix(in srgb, var(--muxui-semantic-color-color-70) 50%, var(--muxui-semantic-color-color-80))');
 
   for (const [foreground, background] of [
     [light.tokens['semantic.content.link'].value, light.tokens['semantic.surface.canvas'].value],
