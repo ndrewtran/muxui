@@ -332,7 +332,7 @@
       "properties": {
         "space": { "const": "srgb" },
         "token": { "$ref": "#/$defs/tokenReference" },
-        "color": { "type": "string", "pattern": "^#[a-fA-F0-9]{6}(?:[a-fA-F0-9]{2})?$" },
+        "color": { "anyOf": [{ "type": "string", "pattern": "^#[a-fA-F0-9]{6}(?:[a-fA-F0-9]{2})?$" }, { "$ref": "#/$defs/tokenReference" }] },
         "weight": { "type": "number", "minimum": 0, "maximum": 1 }
       }
     },

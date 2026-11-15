@@ -45,10 +45,15 @@ window.mountControls();`;
   for(const scheme of ['light','dark']) {
    await page.evaluate(value=>document.documentElement.dataset.muxuiColorScheme=value,scheme);await page.waitForTimeout(250);
    const source=page.getByRole('link',{name:'Source link'});const reference=page.getByRole('link',{name:'Reference link'});
-   await source.hover();await page.waitForTimeout(250);const hover=await source.evaluate(node=>getComputedStyle(node).color);
-   await reference.hover();await page.waitForTimeout(250);assert.equal(hover,await reference.evaluate(node=>getComputedStyle(node).color));
-   await source.hover();await page.mouse.down();await page.waitForTimeout(250);const pressed=await source.evaluate(node=>getComputedStyle(node).color);await page.mouse.up();
-   await reference.hover();await page.mouse.down();await page.waitForTimeout(250);assert.equal(pressed,await reference.evaluate(node=>getComputedStyle(node).color));await page.mouse.up();
+   // The colour once the link's transitions have finished, so each reading is the state's end colour, not a point mid-transition.
+   const settled=locator=>locator.evaluate(async node=>{await Promise.all(node.getAnimations().map(animation=>animation.finished));return getComputedStyle(node).color;});
+   await page.mouse.move(0,0);const rest=await settled(source);
+   await source.hover();const hover=await settled(source);
+   await reference.hover();assert.equal(hover,await settled(reference));
+   await source.hover();await page.mouse.down();const pressed=await settled(source);await page.mouse.up();
+   await reference.hover();await page.mouse.down();assert.equal(pressed,await settled(reference));await page.mouse.up();
+   // Each state reads its own colour, so the matches above are not both links at rest.
+   assert.equal(new Set([rest,hover,pressed]).size,3,`${scheme}: rest, hover and pressed differ (${rest}, ${hover}, ${pressed})`);
    await page.keyboard.press('Tab');await source.focus();assert.notEqual(await source.evaluate(node=>getComputedStyle(node).boxShadow),'none');
   }
   const disabled=page.locator('button:disabled');assert.equal(await disabled.count(),9);

@@ -63,7 +63,11 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     const source = tokensById.get(token.mix.token);
     if (!source) throw new Error(`Missing token colour mix source: ${token.mix.token}`);
     const next = new Set(seen).add(token.id);
-    return `color-mix(in ${token.mix.space}, ${tokenColorExpression(source, tokensById, next)} ${token.mix.weight * 100}%, ${token.mix.color})`;
+    // The second colour is a hex literal or another token's id.
+    const other = token.mix.color.startsWith('#') ? token.mix.color : tokensById.get(token.mix.color);
+    if (!other) throw new Error(`Missing token colour mix source: ${token.mix.color}`);
+    const otherExpression = typeof other === 'string' ? other : tokenColorExpression(other, tokensById, next);
+    return `color-mix(in ${token.mix.space}, ${tokenColorExpression(source, tokensById, next)} ${token.mix.weight * 100}%, ${otherExpression})`;
   }
 
   function applyAlpha(key, alpha) {

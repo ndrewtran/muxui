@@ -116,7 +116,7 @@ export function cssValue(token) {
     return `clamp(${formatNumber(min)}${lengthUnit}, calc(${formatNumber(coefficient)}${viewportUnit} + ${formatNumber(offset)}${lengthUnit}), ${formatNumber(max)}${lengthUnit})`;
   }
   if (token.formula?.kind === 'multiply') return `calc(var(${cssName(token.formula.token)}) * ${formatNumber(token.formula.factor)})`;
-  if (token.mix) return `color-mix(in ${token.mix.space}, var(${cssName(token.mix.token)}) ${formatNumber(token.mix.weight * 100)}%, ${token.mix.color})`;
+  if (token.mix) return `color-mix(in ${token.mix.space}, var(${cssName(token.mix.token)}) ${formatNumber(token.mix.weight * 100)}%, ${TOKEN_ID.test(token.mix.color) ? `var(${cssName(token.mix.color)})` : token.mix.color})`;
   if (token.relative) return `${formatNumber(token.relative.value)}${token.relative.unit}`;
   if (token.unit === 'px') return `${token.value}px`;
   if (token.unit === 'ms') return `${token.value}ms`;
@@ -269,7 +269,7 @@ function validateDecoration(definition, type, path, fail) {
   }
   if (definition.mix !== undefined) {
     const value = definition.mix;
-    if (type !== 'color' || !isRecord(value) || Object.keys(value).some((key) => !['space', 'token', 'color', 'weight'].includes(key)) || value.space !== 'srgb' || !TOKEN_ID.test(value.token) || !/^#[a-fA-F0-9]{6}(?:[a-fA-F0-9]{2})?$/.test(value.color) || !Number.isFinite(value.weight) || value.weight < 0 || value.weight > 1) fail('MUXUI_TOKEN_DECORATION_INVALID', `${path}.mix is not a supported srgb color mix`, { path });
+    if (type !== 'color' || !isRecord(value) || Object.keys(value).some((key) => !['space', 'token', 'color', 'weight'].includes(key)) || value.space !== 'srgb' || !TOKEN_ID.test(value.token) || !(/^#[a-fA-F0-9]{6}(?:[a-fA-F0-9]{2})?$/.test(value.color) || TOKEN_ID.test(value.color)) || !Number.isFinite(value.weight) || value.weight < 0 || value.weight > 1) fail('MUXUI_TOKEN_DECORATION_INVALID', `${path}.mix is not a supported srgb color mix`, { path });
   }
   if (definition.effect !== undefined) {
     if (type !== 'effect') fail('MUXUI_TOKEN_DECORATION_INVALID', `${path}.effect only applies to effects`, { path });
@@ -409,13 +409,17 @@ export function compilePureTokenGraph(source, { modes, responsive = false, overr
         dependencies.set(tokenId, [branch.formula.token]);
         sourceKind = override ? 'authoring-override' : 'formula';
       } else if (branch.mix) {
-        const target = source.tokens[branch.mix.token];
-        if (!target) fail('MUXUI_TOKEN_MIX_MISSING', `${tokenId} mix references missing ${branch.mix.token}`, { tokenId, targetId: branch.mix.token });
-        if (LAYER_RANK[target.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} mix cannot reference forward to ${branch.mix.token}`, { tokenId, targetId: branch.mix.token });
-        if (target.type !== 'color' || target.unit !== 'hex') fail('MUXUI_TOKEN_TYPE_MISMATCH', `${tokenId} mix target has incompatible type or unit`, { tokenId, targetId: branch.mix.token });
-        const resolvedTarget = resolveToken(branch.mix.token);
-        value = mixColor(resolvedTarget.value, branch.mix.color, branch.mix.weight);
-        dependencies.set(tokenId, [branch.mix.token]);
+        // `token` is always a reference; `color` is a hex literal or a second reference.
+        const targetIds = [branch.mix.token, ...(TOKEN_ID.test(branch.mix.color) ? [branch.mix.color] : [])];
+        const [left, right = branch.mix.color] = targetIds.map((targetId) => {
+          const target = source.tokens[targetId];
+          if (!target) fail('MUXUI_TOKEN_MIX_MISSING', `${tokenId} mix references missing ${targetId}`, { tokenId, targetId });
+          if (LAYER_RANK[target.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} mix cannot reference forward to ${targetId}`, { tokenId, targetId });
+          if (target.type !== 'color' || target.unit !== 'hex') fail('MUXUI_TOKEN_TYPE_MISMATCH', `${tokenId} mix target has incompatible type or unit`, { tokenId, targetId });
+          return resolveToken(targetId).value;
+        });
+        value = mixColor(left, right, branch.mix.weight);
+        dependencies.set(tokenId, targetIds);
         sourceKind = override ? 'authoring-override' : 'mix';
       } else if (definition.type === 'transition') {
         validateTransitionValue(branch.value, `tokens/${tokenId}`, fail);

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { compileTokenGraph } from '@muxui/tokens';
-import { compileScalePresetTheme, scaleForegrounds } from '@muxui/tokens/authoring';
+import { compileScalePresetTheme, getScaleApcaContrast, scaleForegrounds } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import source from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import {
@@ -221,4 +221,100 @@ test('roles that alias a text token follow it in themes-apca.css', () => {
     }
     assert.equal(block.get('--muxui-component-checkbox-selected-foreground-hover'), text(colorScheme === 'dark' ? 50 : 60), `${selector}: checkbox glyph`);
   }
+});
+
+// Base-sheet declarations a theme block's var() may fall back to: :root, then the block's colour scheme.
+const baseScopes = new Map([...baseCss.matchAll(/^(:root|\[data-muxui-color-scheme='(?:light|dark)'\]) \{\n([\s\S]*?)\n\}$/gmu)].map(([, selector, body]) => [
+  selector, new Map([...body.matchAll(/^  (--[^:]+): (.+);$/gmu)].map(([, property, value]) => [property, value])),
+]));
+
+/** Splits a function's arguments on top-level commas. */
+function topLevelArguments(text) {
+  const parts = ['']; let depth = 0;
+  for (const character of text) {
+    if (character === ',' && depth === 0) { parts.push(''); continue; }
+    if (character === '(') depth += 1;
+    if (character === ')') depth -= 1;
+    parts[parts.length - 1] += character;
+  }
+  return parts.map((part) => part.trim());
+}
+
+/** Resolves a generated colour value to straight-alpha sRGB channels in 0..1, following var() and srgb color-mix(). */
+function resolveColor(value, lookup, seen = []) {
+  const hex = /^#([0-9a-f]{6})([0-9a-f]{2})?$/iu.exec(value);
+  if (hex) return [...[0, 2, 4].map((offset) => Number.parseInt(hex[1].slice(offset, offset + 2), 16) / 255), hex[2] ? Number.parseInt(hex[2], 16) / 255 : 1];
+  const reference = /^var\((--[a-z0-9-]+)\)$/u.exec(value);
+  if (reference) {
+    assert.ok(!seen.includes(reference[1]), `var() cycle through ${reference[1]}`);
+    const target = lookup(reference[1]);
+    assert.ok(target !== undefined, `${reference[1]} is declared`);
+    return resolveColor(target, lookup, [...seen, reference[1]]);
+  }
+  const mix = /^color-mix\(in srgb, (.+)\)$/u.exec(value);
+  assert.ok(mix, `supported colour: ${value}`);
+  const [first, second] = topLevelArguments(mix[1]);
+  const weighted = /^(.+) (\d+(?:\.\d+)?)%$/u.exec(first);
+  assert.ok(weighted && !/%$/u.test(second), `color-mix weights only its first colour: ${value}`);
+  const weight = Number(weighted[2]) / 100;
+  const left = resolveColor(weighted[1], lookup, seen);
+  const right = resolveColor(second, lookup, seen);
+  // CSS mixes premultiplied channels, then divides by the mixed alpha.
+  const alpha = left[3] * weight + right[3] * (1 - weight);
+  return [0, 1, 2].map((channel) => alpha === 0 ? 0 : (left[channel] * left[3] * weight + right[channel] * right[3] * (1 - weight)) / alpha).concat(alpha);
+}
+
+const over = (foreground, background) => [0, 1, 2].map((channel) => foreground[channel] * foreground[3] + background[channel] * (1 - foreground[3])).concat(1);
+const toHex = (color) => `#${color.slice(0, 3).map((channel) => Math.round(channel * 255).toString(16).padStart(2, '0')).join('')}`;
+
+// Readable text roles and the grounds they sit on, each ground listed bottom layer first and composited over the page.
+// content-faint and content-secondary are left out: they colour placeholders, separators, disabled controls and
+// non-text marks, which APCA does not hold to the body-text mark.
+const TEXT_CHECKS = [
+  {
+    text: ['semantic-content-default', 'semantic-content-muted', 'semantic-field-label', 'semantic-content-link'],
+    grounds: ['surface-background', 'surface-canvas', 'surface-raised', 'surface-subtle', 'surface-hover'].map((role) => [`semantic-${role}`]),
+  },
+  {
+    // Unselected tab labels (collections.css). The tab list is transparent, so a label sits on the page surface;
+    // underline tabs hover on a surface-hover layer, and pill, segment and overflow tabs sit in a neutral action fill.
+    text: ['component-tabs-tab-foreground'],
+    grounds: [
+      ['semantic-surface-background'],
+      ['semantic-surface-canvas'],
+      ['semantic-surface-raised'],
+      ['semantic-surface-canvas', 'semantic-surface-hover'],
+      ['semantic-surface-canvas', 'semantic-action-neutral-background'],
+    ],
+  },
+];
+const MIN_TEXT_LC = 60;
+
+test('readable text roles score at least APCA Lc 60 on their grounds in both sheets, both schemes, standard contrast', () => {
+  const failures = [];
+  let scored = 0;
+  for (const [name, blocks] of [['themes.css', wcagBlocks], ['themes-apca.css', apcaBlocks]]) {
+    for (const { selector, colorScheme, contrast } of blockOrder) {
+      if (contrast !== 'standard') continue;
+      const block = blocks.get(selector);
+      const scope = baseScopes.get(`[data-muxui-color-scheme='${colorScheme}']`);
+      const lookup = (property) => block.get(property) ?? scope.get(property) ?? baseScopes.get(':root').get(property);
+      const color = (name) => resolveColor(`var(--muxui-${name})`, lookup);
+      const page = colorScheme === 'dark' ? [0, 0, 0, 1] : [1, 1, 1, 1];
+      for (const { text, grounds } of TEXT_CHECKS) {
+        for (const layers of grounds) {
+          const ground = layers.reduce((below, layer) => over(color(layer), below), page);
+          for (const role of text) {
+            const lc = Math.abs(getScaleApcaContrast(toHex(over(color(role), ground)), toHex(ground)));
+            scored += 1;
+            if (lc < MIN_TEXT_LC) failures.push(`${name} ${selector}: ${role} on ${layers.join(' + ')} is Lc ${lc.toFixed(1)}`);
+          }
+        }
+      }
+    }
+  }
+  const pairs = TEXT_CHECKS.reduce((count, { text, grounds }) => count + text.length * grounds.length, 0);
+  assert.equal(pairs, 4 * 5 + 5);
+  assert.equal(scored, 2 * expectedPresetCount * 2 * pairs);
+  assert.deepEqual(failures, []);
 });
