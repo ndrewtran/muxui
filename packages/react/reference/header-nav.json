@@ -12,7 +12,16 @@
         {
           "member": "Root",
           "form": "forwardRef",
-          "members": [],
+          "members": [
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "HeaderNavVariant",
+              "values": ["inverse", "background"],
+              "refs": ["header-nav#HeaderNavVariant"],
+              "doc": "The bar's surface: inverse, a strong fill set apart from the page, or background, the page's own surface with no edge and controls in the surrounding colour scheme. The mobile drawer takes the same surface."
+            }
+          ],
           "ref": { "type": "HTMLElement" },
           "natives": [
             { "type": "React.HTMLAttributes<HTMLElement>" }
@@ -114,7 +123,18 @@
       "id": "header-nav#HeaderNavOwnProps",
       "name": "HeaderNavOwnProps",
       "module": "header-nav",
-      "text": "type HeaderNavOwnProps = {};"
+      "text": "type HeaderNavOwnProps = {\n  variant?: HeaderNavVariant;\n};",
+      "members": [
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "HeaderNavVariant",
+          "values": ["inverse", "background"],
+          "refs": ["header-nav#HeaderNavVariant"],
+          "doc": "The bar's surface: inverse, a strong fill set apart from the page, or background, the page's own surface with no edge and controls in the surrounding colour scheme. The mobile drawer takes the same surface."
+        }
+      ],
+      "refs": ["header-nav#HeaderNavVariant"]
     },
     {
       "id": "header-nav#HeaderNavRootProps",
@@ -126,6 +146,17 @@
       "owner": "header-nav",
       "text": "type HeaderNavRootProps = React.HTMLAttributes<HTMLElement> & HeaderNavOwnProps;",
       "refs": ["header-nav#HeaderNavOwnProps"]
+    },
+    {
+      "id": "header-nav#HeaderNavVariant",
+      "name": "HeaderNavVariant",
+      "module": "header-nav",
+      "public": [
+        { "entry": ".", "name": "HeaderNavVariant" }
+      ],
+      "owner": "header-nav",
+      "text": "type HeaderNavVariant = 'inverse' | 'background';",
+      "values": ["inverse", "background"]
     }
   ]
 }

@@ -5,12 +5,45 @@
   "binding": "web.react",
   "export": "HeaderNav",
   "api": {
-    "props": [],
+    "props": [
+      "variant"
+    ],
     "events": [],
-    "defaults": {},
-    "propDetails": {},
+    "defaults": {
+      "variant": "inverse"
+    },
+    "propDetails": {
+      "variant": {
+        "type": {
+          "kind": "reference",
+          "name": "HeaderNavVariant"
+        },
+        "required": false,
+        "enum": [
+          "inverse",
+          "background"
+        ],
+        "description": "The bar's surface: inverse, a strong fill set apart from the page, or background, the page's own surface with no edge and controls in the surrounding colour scheme. The mobile drawer takes the same surface."
+      }
+    },
     "eventDetails": {},
-    "types": {},
+    "types": {
+      "HeaderNavVariant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "inverse"
+            },
+            {
+              "kind": "literal",
+              "value": "background"
+            }
+          ]
+        }
+      }
+    },
     "partApis": {
       "logo": {
         "member": "Logo",

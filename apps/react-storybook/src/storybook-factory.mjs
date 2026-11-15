@@ -675,6 +675,9 @@ function stateIsSupported(binding, state, family) {
     case 'elevated':
     case 'outlined':
       return family === 'Card' && props.has('variant');
+    case 'inverse':
+    case 'background':
+      return family === 'HeaderNav' && props.has('variant');
     case 'inline':
     case 'below':
       return props.has('tagPlacement');
@@ -843,6 +846,10 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
     case 'elevated':
     case 'outlined':
       if (family === 'Card') args.variant = normalizedState;
+      break;
+    case 'inverse':
+    case 'background':
+      if (family === 'HeaderNav') args.variant = normalizedState;
       break;
     case 'inline':
     case 'below':

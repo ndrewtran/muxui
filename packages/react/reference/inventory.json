@@ -570,6 +570,12 @@
           "owner": "header-nav",
           "module": "header-nav"
         },
+        {
+          "name": "HeaderNavVariant",
+          "kind": "type",
+          "owner": "header-nav",
+          "module": "header-nav"
+        },
         { "name": "IconButton", "kind": "value", "owner": "icon-button", "module": "icon-button" },
         {
           "name": "IconButtonProps",

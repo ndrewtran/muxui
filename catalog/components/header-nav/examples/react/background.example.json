@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:header-nav-background-react",
+  "kind": "example",
+  "name": "Background HeaderNav",
+  "summary": "Place the header on the page's own surface with no edge, its links and drawer trigger in the page's colour scheme.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:header-nav#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/header-nav/examples/react/background.tsx"
+}
