@@ -1431,7 +1431,7 @@ test('Sidebar routes each prop to its part and the mobile drawer carries the sam
 // for Card, HeaderNav, AlertDialog and Sidebar: a control a part newly owns has no sample until the adapter routes it and says so here.
 const STORY_CONTROL_SAMPLES = {
   Card: { variant: 'filled', padding: 'lg', selected: true, pending: true, disabled: true, onActivate: () => {} },
-  HeaderNav: { href: '/start', current: true },
+  HeaderNav: { href: '/start', current: true, variant: 'background' },
   AlertDialog: { open: true, defaultOpen: true, disabled: true, onActivate: () => {}, onOpenChange: () => {} },
   Sidebar: {
     collapsed: false, defaultCollapsed: false, shortcut: 'b', hideBorder: true, density: 'compact',
@@ -1465,6 +1465,10 @@ test('every control of a moved compound reaches the part that owns it and none l
     const attributes = rendered.querySelector(selector).getAttributeNames();
     for (const control of Object.keys(samples)) assert.equal(attributes.includes(control.toLowerCase()), false, `${family}: ${control} is not an attribute of the root`);
   }
+
+  // HeaderNav's variant reaches its root as the class modifier.
+  const header = new JSDOM(renderToStaticMarkup(renderFamily('HeaderNav', STORY_CONTROL_SAMPLES.HeaderNav))).window.document;
+  assert.ok(header.querySelector('.muxui-header-nav').classList.contains('muxui-header-nav--background'), 'variant styles the header');
 
   // The five controls deriving added to Sidebar's parts each reach their part's element.
   const full = new JSDOM(renderToStaticMarkup(renderFamily('Sidebar', STORY_CONTROL_SAMPLES.Sidebar))).window.document;
