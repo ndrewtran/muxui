@@ -5,7 +5,6 @@ import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { canonicalRepositoryRoot, componentSummaries, getComponentPage, getDeclarationReference, getReactPackageFacts, getStylingFacts } from '../../lib/catalog.ts';
 import { componentReference } from '../../../../component-reference.mjs';
 import { buildApiReference, collapsePartsAbove } from '../../lib/api-reference.ts';
-import legacyPartAnchors from '../../lib/legacy-part-anchors.json';
 import { resolveUsedIn } from '../../lib/blocks.ts';
 import { variantPath } from '../../lib/block-paths.ts';
 import { assertExampleSource } from '../../lib/example-modules.tsx';
@@ -70,14 +69,12 @@ const sources = [
 	{ label: 'Declarations', paths: [declarations.source, ...Object.values(declarations.sources)] },
 	{ label: 'Styling', paths: stylingSources },
 ];
-const legacyAnchorsByPage: Readonly<Record<string, Readonly<Record<string, string>>>> = legacyPartAnchors.anchors;
 const api = buildApiReference({
 	packageName: packageFacts.packageName,
 	exportName: imports.component,
 	anatomy: artifact.anatomy,
 	catalog: reactBinding.api,
 	declarations,
-	legacyAnchors: legacyAnchorsByPage[componentSlug] ?? {},
 });
 // A family with many parts opens only its first table; every part stays listed and reachable.
 const collapsed = api.parts.length > collapsePartsAbove;
