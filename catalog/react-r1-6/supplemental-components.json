@@ -162,7 +162,8 @@
       "slug": "header-nav",
       "examples": [
         "catalog/components/header-nav/examples/react/basic.tsx",
-        "catalog/components/header-nav/examples/react/responsive.tsx"
+        "catalog/components/header-nav/examples/react/responsive.tsx",
+        "catalog/components/header-nav/examples/react/background.tsx"
       ],
       "export": {
         "module": ".",

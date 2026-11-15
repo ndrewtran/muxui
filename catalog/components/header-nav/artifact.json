@@ -23,6 +23,8 @@
     "mobile-trigger"
   ],
   "states": [
+    "inverse",
+    "background",
     "desktop",
     "mobile",
     "current",
@@ -41,6 +43,8 @@
       "lifecycle": "experimental",
       "strategy": "direct",
       "behavior": [
+        "variant sets the bar's surface: inverse (the default) is a strong fill set apart from the page; background is the page's own surface with no edge, its links and drawer trigger in the surrounding colour scheme",
+        "The MobileTrigger's drawer takes the Root's variant",
         "Current links expose aria-current=page.",
         "Mobile navigation traps focus and returns it to the trigger on close.",
         "HeaderNav has no breakpoint of its own: Secondary, Actions, and the MobileTrigger button all show at every width",
@@ -75,6 +79,10 @@
           },
           {
             "token": "semantic.content.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.surface.background",
             "requirement": "required"
           },
           {

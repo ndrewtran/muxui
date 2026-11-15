@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:7c3685df530a350bb3f19c64eb4987f2459e7f0d4a59c3355e8793b68dc71642 -->
+<!-- @generated-content-sha256: sha256:ae238623167994dc8732a451dce2a911b851bd5a7a10357d96551c75894d0d1e -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -178,7 +178,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Form | experimental | . | .muxui-form | validationBehavior, validationErrors |
 | GridList | experimental | . | .muxui-grid-list | items, selectedIds, defaultSelectedIds, disabled, selectionMode, layout, orientation; item: id, textValue, disabled |
 | Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role |
-| HeaderNav | experimental | . | .muxui-header-nav | none; logo: href; nav-button: current |
+| HeaderNav | experimental | . | .muxui-header-nav | variant; logo: href; nav-button: current |
 | IconButton | experimental | . | .muxui-icon-button | disabled, pending, variant, size |
 | Image | experimental | . | .muxui-image | alt, fallbackSrc, fallbackSrcSet, radius, fit |
 | Input | experimental | . | .muxui-input | value, defaultValue, disabled, invalid, required, readOnly, size |

@@ -245,6 +245,11 @@ const cardLook = (container, values) => {
   const card = container.matches?.('.muxui-card') ? container : container.querySelector('.muxui-card');
   return card === null ? undefined : values.find((value) => card.classList.contains(`muxui-card--${value}`));
 };
+// HeaderNav names its variant in a class modifier of its root, as Card does.
+const headerNavLook = (container) => {
+  const root = container.querySelector('.muxui-header-nav');
+  return root === null ? undefined : ['inverse', 'background'].find((value) => root.classList.contains(`muxui-header-nav--${value}`));
+};
 // Text names its variant and size in one class modifier of its element, its colour in another unless it is the default, and a third marks
 // it truncated; the element it renders is its tag.
 const textLook = (container) => {
@@ -274,7 +279,7 @@ const markupValues = {
   value: (doc) => ariaNumber(doc, 'aria-valuenow'),
   minValue: (doc) => ariaNumber(doc, 'aria-valuemin'),
   maxValue: (doc) => ariaNumber(doc, 'aria-valuemax'),
-  variant: (doc) => textLook(doc)?.variant ?? cardLook(doc, ['elevated', 'outlined', 'filled']) ?? searchFieldVariant(doc) ?? doc.querySelector('[data-muxui-variant]')?.getAttribute('data-muxui-variant'),
+  variant: (doc) => textLook(doc)?.variant ?? cardLook(doc, ['elevated', 'outlined', 'filled']) ?? headerNavLook(doc) ?? searchFieldVariant(doc) ?? doc.querySelector('[data-muxui-variant]')?.getAttribute('data-muxui-variant'),
   padding: (doc) => cardLook(doc, ['sm', 'md', 'lg']),
   orientation: (doc) => doc.querySelector('[data-muxui-state-orientation]')?.getAttribute('data-muxui-state-orientation'),
   // InputTags lists its tags as rows, so its starting tags are the labels in them.
@@ -342,7 +347,7 @@ const minimalRenders = {
   AlertDialog: () => alertDialog(),
   // Sidebar.Root's block is the column's own; the provider, search and nav parts are observed under 'Sidebar.<part>'.
   Sidebar: () => sidebarRoot(),
-  // HeaderNav.Root owns no props, so the composition only has to render; the link's own default is observed under 'HeaderNav.nav-button'.
+  // HeaderNav.Root's variant shows in its class; the link's own default is observed under 'HeaderNav.nav-button'.
   HeaderNav: () => h(generated.HeaderNav.Root, null, h(generated.HeaderNav.Logo, { href: '/' }, 'Mux'), h(generated.HeaderNav.Secondary, null, h(generated.HeaderNav.NavButton, { href: '/docs' }, 'Docs'))),
   ProgressCircle: () => h(generated.ProgressCircle.Root, { 'aria-label': 'Progress' }),
   InputTags: () => h(generated.InputTags.Root, { 'aria-label': 'Tags' }),

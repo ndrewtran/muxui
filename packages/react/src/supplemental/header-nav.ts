@@ -10,11 +10,16 @@ import { h, cx, nativePart } from './part-utils.ts';
 import type { PartProps } from './part-utils.ts';
 import { sidebarUnreachable, sidebarHandoff, SidebarDrawerExit } from './navigation-drawer.ts';
 
+export type HeaderNavVariant = 'inverse' | 'background';
+
 /**
- * The props Mux UI defines for HeaderNav.Root, the compound's root, which defines none: it passes the
- * header element's native attributes on. The catalog's web.react API is derived from this type (Decision 0031).
+ * The props Mux UI defines for HeaderNav.Root, the compound's root; it passes the header element's native
+ * attributes on. The catalog's web.react API is derived from this type (Decision 0031).
  */
-type HeaderNavOwnProps = {};
+type HeaderNavOwnProps = {
+  /** The bar's surface: inverse, a strong fill set apart from the page, or background, the page's own surface with no edge and controls in the surrounding colour scheme. The mobile drawer takes the same surface. */
+  variant?: HeaderNavVariant;
+};
 
 /** The props Mux UI defines for HeaderNav.Logo; its API is the logo entry in the catalog's partApis. */
 type HeaderNavLogoOwnProps = {
@@ -33,10 +38,14 @@ export type HeaderNavNavButtonProps = AnchorHTMLAttributes<HTMLAnchorElement> & 
 type HeaderNavLogoProps = PartProps<HTMLDivElement> & HeaderNavLogoOwnProps;
 
 /* Header navigation */
-const HeaderNavRoot = /*#__PURE__*/ React.forwardRef<HTMLElement, HeaderNavRootProps>(
-  // Root defines no props; the object pattern is what the catalog's extraction reads.
-  function HeaderNavRoot({ ...props }, ref) { return nativePart('header', 'muxui-header-nav', props, ref); },
-);
+// The Root's variant, for the MobileTrigger's drawer, which React Aria renders outside the header.
+const HeaderNavVariantContext = /*#__PURE__*/ React.createContext<HeaderNavVariant>('inverse');
+
+const HeaderNavRoot = /*#__PURE__*/ React.forwardRef<HTMLElement, HeaderNavRootProps>(function HeaderNavRoot({ variant = 'inverse', className, ...props }, ref) {
+  // A value outside the set falls back to the default look, whatever the types say.
+  const safeVariant = ['inverse', 'background'].includes(variant) ? variant : 'inverse';
+  return h(HeaderNavVariantContext.Provider, { value: safeVariant }, nativePart('header', 'muxui-header-nav', { ...props, className: cx(`muxui-header-nav--${safeVariant}`, className) }, ref));
+});
 const HeaderNavLogo = /*#__PURE__*/ React.forwardRef<HTMLDivElement, HeaderNavLogoProps>(function HeaderNavLogo({ href, children, className, ...props }, ref) { return nativePart('div', 'muxui-header-nav__logo', { ...props, className }, ref, href ? h('a', { href, className: 'muxui-header-nav__logo-link' }, children) : children); });
 const HeaderNavButton = /*#__PURE__*/ React.forwardRef<HTMLAnchorElement, HeaderNavNavButtonProps>(function HeaderNavButton({ href, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, className: cx('muxui-header-nav__nav-button', current && 'muxui-header-nav__nav-button--current', className), 'aria-current': current ? 'page' : undefined }); });
 const HeaderNavActions = /*#__PURE__*/ React.forwardRef<HTMLDivElement, PartProps<HTMLDivElement>>(function HeaderNavActions(props, ref) { return nativePart('div', 'muxui-header-nav__actions', props, ref); });
@@ -46,6 +55,7 @@ const HeaderNavSecondary = /*#__PURE__*/ React.forwardRef<HTMLElement, PartProps
 type DrawerHandoff = { dialog: Element | null; href: string | null; root: HTMLElement | null };
 
 function HeaderNavMobileTrigger({ children }: { children?: ReactNode }) {
+  const variant = React.useContext(HeaderNavVariantContext);
   const [open, setOpen] = React.useState(false);
   const latest = React.useRef(open);
   latest.current = open;
@@ -81,7 +91,7 @@ function HeaderNavMobileTrigger({ children }: { children?: ReactNode }) {
     }, new Set([root]), (active) => dialog?.contains(active));
   };
   // React Aria's DialogTrigger types its children as a prop, and takes the trigger and the overlay as two children.
-  return h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen } as AriaDialogTriggerProps, h(IconButton, { ref: button, className: 'muxui-header-nav__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { className: 'muxui-header-nav__mobile-trigger-icon', 'aria-hidden': true, focusable: 'false' })), h(AriaModalOverlay, { className: 'muxui-header-nav__mobile-overlay' }, h(AriaModal, { className: 'muxui-header-nav__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-header-nav__mobile-dialog', children: ({ close }) => h(React.Fragment, null, h(SidebarDrawerExit, { exit }), h('div', { className: 'muxui-header-nav__mobile-close-row' }, h(IconButton, { size: 'sm', onActivate: close, className: 'muxui-header-nav__mobile-close-btn', 'aria-label': 'Close navigation' }, h(XIcon, { className: 'muxui-header-nav__mobile-close-icon', 'aria-hidden': true, focusable: 'false' }))), children) }))));
+  return h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen } as AriaDialogTriggerProps, h(IconButton, { ref: button, className: 'muxui-header-nav__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { className: 'muxui-header-nav__mobile-trigger-icon', 'aria-hidden': true, focusable: 'false' })), h(AriaModalOverlay, { className: cx('muxui-header-nav__mobile-overlay', `muxui-header-nav__mobile-overlay--${variant}`) }, h(AriaModal, { className: 'muxui-header-nav__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-header-nav__mobile-dialog', children: ({ close }) => h(React.Fragment, null, h(SidebarDrawerExit, { exit }), h('div', { className: 'muxui-header-nav__mobile-close-row' }, h(IconButton, { size: 'sm', onActivate: close, className: 'muxui-header-nav__mobile-close-btn', 'aria-label': 'Close navigation' }, h(XIcon, { className: 'muxui-header-nav__mobile-close-icon', 'aria-hidden': true, focusable: 'false' }))), children) }))));
 }
 
 export const HeaderNav: {
