@@ -375,6 +375,206 @@
       "new": "\"type\" | ... 278 more ... | \"referrerPolicy\"",
       "reason": "The added optional keys (onClick, download, hrefLang, ping, referrerPolicy, type) accept an explicit undefined literal like every other optional prop, so the literal-key list gains them; each compiler prints the list its own way.",
       "tranche": "Link passes its native attributes and onClick through"
+    },
+    {
+      "subject": ".:part:HeaderNav.Root",
+      "assertion": "keyof",
+      "compiler": "TypeScript 7",
+      "mode": "loose",
+      "old": "keyof HeaderNavRootProps | keyof RefAttributes<HTMLElement>",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement> | keyof RefAttributes<...>",
+      "reason": "HeaderNav.Root gains the optional variant prop, so its key set is the header's native attributes plus variant; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:part:HeaderNav.Root",
+      "assertion": "optional",
+      "compiler": "TypeScript 7",
+      "mode": "loose",
+      "old": "keyof HeaderNavRootProps | keyof RefAttributes<HTMLElement>",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement> | keyof RefAttributes<...>",
+      "reason": "The added variant prop is optional, so the list of optional keys gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:part:HeaderNav.Root",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 7",
+      "mode": "loose",
+      "old": "keyof HeaderNavRootProps | keyof RefAttributes<HTMLElement>",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement> | keyof RefAttributes<...>",
+      "reason": "The added optional variant prop accepts an explicit undefined literal like every other optional prop, so the literal-key list gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:type:HeaderNavRootProps",
+      "assertion": "keyof",
+      "compiler": "TypeScript 7",
+      "mode": "loose",
+      "old": "keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement>",
+      "reason": "HeaderNav.Root gains the optional variant prop, so its key set is the header's native attributes plus variant; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:type:HeaderNavRootProps",
+      "assertion": "optional",
+      "compiler": "TypeScript 7",
+      "mode": "loose",
+      "old": "keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement>",
+      "reason": "The added variant prop is optional, so the list of optional keys gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:type:HeaderNavRootProps",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 7",
+      "mode": "loose",
+      "old": "keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement>",
+      "reason": "The added optional variant prop accepts an explicit undefined literal like every other optional prop, so the literal-key list gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:part:HeaderNav.Root",
+      "assertion": "keyof",
+      "compiler": "TypeScript 7",
+      "mode": "exact",
+      "old": "keyof HeaderNavRootProps | keyof RefAttributes<HTMLElement>",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement> | keyof RefAttributes<...>",
+      "reason": "HeaderNav.Root gains the optional variant prop, so its key set is the header's native attributes plus variant; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:part:HeaderNav.Root",
+      "assertion": "optional",
+      "compiler": "TypeScript 7",
+      "mode": "exact",
+      "old": "keyof HeaderNavRootProps | keyof RefAttributes<HTMLElement>",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement> | keyof RefAttributes<...>",
+      "reason": "The added variant prop is optional, so the list of optional keys gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:type:HeaderNavRootProps",
+      "assertion": "keyof",
+      "compiler": "TypeScript 7",
+      "mode": "exact",
+      "old": "keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement>",
+      "reason": "HeaderNav.Root gains the optional variant prop, so its key set is the header's native attributes plus variant; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:type:HeaderNavRootProps",
+      "assertion": "optional",
+      "compiler": "TypeScript 7",
+      "mode": "exact",
+      "old": "keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement>",
+      "reason": "The added variant prop is optional, so the list of optional keys gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:part:HeaderNav.Root",
+      "assertion": "keyof",
+      "compiler": "TypeScript 6",
+      "mode": "loose",
+      "old": "keyof RefAttributes<HTMLElement> | keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement> | keyof RefAttributes<...>",
+      "reason": "HeaderNav.Root gains the optional variant prop, so its key set is the header's native attributes plus variant; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:part:HeaderNav.Root",
+      "assertion": "optional",
+      "compiler": "TypeScript 6",
+      "mode": "loose",
+      "old": "keyof RefAttributes<HTMLElement> | keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement> | keyof RefAttributes<...>",
+      "reason": "The added variant prop is optional, so the list of optional keys gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:part:HeaderNav.Root",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 6",
+      "mode": "loose",
+      "old": "keyof RefAttributes<HTMLElement> | keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement> | keyof RefAttributes<...>",
+      "reason": "The added optional variant prop accepts an explicit undefined literal like every other optional prop, so the literal-key list gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:type:HeaderNavRootProps",
+      "assertion": "keyof",
+      "compiler": "TypeScript 6",
+      "mode": "loose",
+      "old": "keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement>",
+      "reason": "HeaderNav.Root gains the optional variant prop, so its key set is the header's native attributes plus variant; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:type:HeaderNavRootProps",
+      "assertion": "optional",
+      "compiler": "TypeScript 6",
+      "mode": "loose",
+      "old": "keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement>",
+      "reason": "The added variant prop is optional, so the list of optional keys gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:type:HeaderNavRootProps",
+      "assertion": "explicitUndefinedLiteral",
+      "compiler": "TypeScript 6",
+      "mode": "loose",
+      "old": "keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement>",
+      "reason": "The added optional variant prop accepts an explicit undefined literal like every other optional prop, so the literal-key list gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:part:HeaderNav.Root",
+      "assertion": "keyof",
+      "compiler": "TypeScript 6",
+      "mode": "exact",
+      "old": "keyof RefAttributes<HTMLElement> | keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement> | keyof RefAttributes<...>",
+      "reason": "HeaderNav.Root gains the optional variant prop, so its key set is the header's native attributes plus variant; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:part:HeaderNav.Root",
+      "assertion": "optional",
+      "compiler": "TypeScript 6",
+      "mode": "exact",
+      "old": "keyof RefAttributes<HTMLElement> | keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement> | keyof RefAttributes<...>",
+      "reason": "The added variant prop is optional, so the list of optional keys gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:type:HeaderNavRootProps",
+      "assertion": "keyof",
+      "compiler": "TypeScript 6",
+      "mode": "exact",
+      "old": "keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement>",
+      "reason": "HeaderNav.Root gains the optional variant prop, so its key set is the header's native attributes plus variant; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
+    },
+    {
+      "subject": ".:type:HeaderNavRootProps",
+      "assertion": "optional",
+      "compiler": "TypeScript 6",
+      "mode": "exact",
+      "old": "keyof HeaderNavRootProps",
+      "new": "\"variant\" | keyof HTMLAttributes<HTMLElement>",
+      "reason": "The added variant prop is optional, so the list of optional keys gains it; each compiler prints the list its own way.",
+      "tranche": "HeaderNav gains a background variant"
     }
   ]
 }
