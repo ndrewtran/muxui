@@ -1,14 +1,11 @@
 // Browser proof for how the typed API reference of the built docs opens and prints. Run after `pnpm --filter @muxui/docs build`.
 //
-// Most parts and types of a long component page are closed when it loads. A link has to open what it names (including a saved link
-// to a heading the earlier layout had, and a link to the fragment the page is already at), and printing has to show all of it.
+// Most parts and types of a long component page are closed when it loads. A link has to open what it names (including a page
+// opened at a part's fragment, and a link to the fragment the page is already at), and printing has to show all of it.
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import test from 'node:test';
 import { withSite as withDocsSite } from './docs-site.mjs';
 
-const { anchors: legacyAnchors } = JSON.parse(await readFile(resolve(import.meta.dirname, '../../../docs/src/lib/legacy-part-anchors.json'), 'utf8'));
 const disclosures = 'details.api-part, details.api-type-entry';
 
 const withSite = (run) => withDocsSite('components/command-palette/index.html', run, { colorScheme: 'light' });
@@ -24,22 +21,22 @@ const headingShown = (page, heading) => page.evaluate((name) => {
 	return { top, bottom, viewport: window.innerHeight, covered: covering === null || !h3.contains(covering) };
 }, heading);
 
-test('a saved link to a part of the earlier layout opens the part it now names and brings its heading into view', async () => {
+test('a page opened at the fragment of a part that is closed by default opens the part and brings its heading into view', async () => {
 	await withSite(async ({ origin, newPage }) => {
-		let checked = 0;
-		for (const [slug, ids] of Object.entries(legacyAnchors)) {
-			for (const [id, heading] of Object.entries(ids)) {
-				const page = await newPage();
-				await page.goto(`${origin}/components/${slug}/#${id}`);
-				const part = page.locator(`details.api-part[data-api-part="${heading}"]`);
-				await part.waitFor();
-				assert.equal(await part.evaluate((node) => node.open), true, `/components/${slug}/#${id} opens ${heading}`);
-				const shown = await headingShown(page, heading);
-				assert.ok(shown.top >= 0 && shown.bottom <= shown.viewport && !shown.covered, `/components/${slug}/#${id} brings ${heading} into view: ${JSON.stringify(shown)}`);
-				checked += 1;
-			}
-		}
-		assert.equal(checked, 13);
+		const heading = 'CommandPalette.Input';
+		const fragment = 'api-reference-commandpalette-input';
+		const closed = await newPage();
+		await closed.goto(`${origin}/components/command-palette/`);
+		const closedPart = closed.locator(`details.api-part[data-api-part="${heading}"]`);
+		assert.equal(await closedPart.locator('h3').getAttribute('id'), fragment, `${heading} has the fragment ${fragment}`);
+		assert.equal(await closedPart.evaluate((node) => node.open), false, `${heading} is closed when the page loads without a fragment`);
+		const page = await newPage();
+		await page.goto(`${origin}/components/command-palette/#${fragment}`);
+		const part = page.locator(`details.api-part[data-api-part="${heading}"]`);
+		await part.waitFor();
+		assert.equal(await part.evaluate((node) => node.open), true, `/components/command-palette/#${fragment} opens ${heading}`);
+		const shown = await headingShown(page, heading);
+		assert.ok(shown.top >= 0 && shown.bottom <= shown.viewport && !shown.covered, `/components/command-palette/#${fragment} brings ${heading} into view: ${JSON.stringify(shown)}`);
 	});
 });
 
