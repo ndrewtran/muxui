@@ -397,7 +397,8 @@ async function measureCommandPaletteInput(page, size) {
   }, size);
 }
 
-function collectCommandPaletteFailures(measurements, expectedHeight, size, failures) {
+// The palette's rows are one dense height at every size (the lg control size); the size drives the input.
+function collectCommandPaletteFailures(measurements, expectedHeight, itemHeight, size, failures) {
   if (measurements.count !== 1) {
     failures.push(`command-palette/${size}/input locator count ${measurements.count}, expected 1`);
     return;
@@ -421,8 +422,8 @@ function collectCommandPaletteFailures(measurements, expectedHeight, size, failu
   } else {
     const [item] = measurements.items;
     if (!(item.height > 0 && item.width > 0)) failures.push(`command-palette/${size}/item has zero geometry`);
-    if (Math.abs(item.height - expectedHeight) >= 0.01) failures.push(
-      `command-palette/${size}/item rendered ${item.height}px, expected ${expectedHeight}px; min-block-size ${item.minBlockSize}, `
+    if (Math.abs(item.height - itemHeight) >= 0.01) failures.push(
+      `command-palette/${size}/item rendered ${item.height}px, expected ${itemHeight}px; min-block-size ${item.minBlockSize}, `
       + `padding-block ${item.paddingBlock}, font-size ${item.fontSize}`,
     );
     if (item.scrollHeight > item.height + 1) failures.push(`command-palette/${size}/item text is vertically clipped`);
@@ -765,6 +766,7 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
         collectCommandPaletteFailures(
           await measureCommandPaletteInput(popupPage, size),
           sizes[size],
+          sizes.lg,
           size,
           geometryFailures,
         );

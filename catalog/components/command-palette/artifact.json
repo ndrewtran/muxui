@@ -37,6 +37,7 @@
     "item-title",
     "item-description",
     "item-meta",
+    "item-action",
     "shortcut",
     "load-more-item",
     "empty",
@@ -81,6 +82,11 @@
         "Collection takes items and a render function that returns an Item or Section element for each, and adds no element or class of its own.",
         "Shortcut displays key text, with each key in a kbd element, and registers no keyboard shortcut.",
         "Shortcut is aria-hidden by default.",
+        "ItemAction shows its label and an Enter key cap only while its Item is focused, and hides that Item's ItemMeta meanwhile.",
+        "The ItemAction label joins the focused option's accessible name; the key cap is hidden from assistive technology.",
+        "Backdrop is transparent by default and still covers the window, so an outside press dismisses; scrim paints the modal scrim.",
+        "Popup translucent makes the popup a translucent, blurred surface.",
+        "Content autoFocusFirst focuses the first enabled item while the search input has focus: when the list mounts, each time the query changes, and as items arrive, leave or are disabled, until the arrow, Home, End, Page Up or Page Down keys move the focus to another item. The palette does not move the focus on hover; an application that does ends it the same way. Enter always activates the focused item.",
         "LoadMoreItem is a presentational div that loads nothing and tracks no scrolling, so the application owns pagination.",
         "Chips, Chip, and ChipRemove are structural: they change neither the query nor the results.",
         "The application keeps the chip data and handles removal.",
@@ -158,6 +164,26 @@
           },
           {
             "token": "semantic.motion.modal-dismiss-transition",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.overlay-radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-l-font-size",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.label-xs-font-size",
             "requirement": "required"
           }
         ]

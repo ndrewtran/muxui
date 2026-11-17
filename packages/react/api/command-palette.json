@@ -58,7 +58,7 @@
           "md",
           "lg"
         ],
-        "description": "The control size, which the trigger, the search input and the results follow."
+        "description": "The control size, which the trigger, the search input, the popup width and the result text follow. Result rows keep one height at every size."
       },
       "closeOnSelect": {
         "type": {
@@ -183,11 +183,13 @@
       "backdrop": {
         "member": "Backdrop",
         "props": [
-          "dismissable"
+          "dismissable",
+          "scrim"
         ],
         "events": [],
         "defaults": {
-          "dismissable": true
+          "dismissable": true,
+          "scrim": false
         },
         "propDetails": {
           "dismissable": {
@@ -196,6 +198,34 @@
             },
             "required": false,
             "description": "Whether pressing outside the popup closes the palette."
+          },
+          "scrim": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether the backdrop paints the modal scrim. Without it the backdrop is transparent but still covers the window, so an outside press still dismisses."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "popup": {
+        "member": "Popup",
+        "props": [
+          "translucent"
+        ],
+        "events": [],
+        "defaults": {
+          "translucent": false
+        },
+        "propDetails": {
+          "translucent": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether the popup is a translucent, blurred surface that shows the page behind it."
           }
         },
         "eventDetails": {},
@@ -288,6 +318,27 @@
             "description": "The activation a press reports: the pointer and target of the event that caused it."
           }
         }
+      },
+      "content": {
+        "member": "Content",
+        "props": [
+          "autoFocusFirst"
+        ],
+        "events": [],
+        "defaults": {
+          "autoFocusFirst": false
+        },
+        "propDetails": {
+          "autoFocusFirst": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether the first enabled item is focused while the search input has focus: when the list mounts, each time the\nquery changes, and as items arrive, leave or are disabled, until the arrow, Home, End, Page Up or Page Down keys move\nthe focus to another item. An application that moves the focus on hover ends it the same way. A caret move or a\npress in the input keeps the focused item. The focused item is always the one Enter activates."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
       },
       "search-field": {
         "member": "SearchField",
@@ -383,7 +434,7 @@
               "kind": "string"
             },
             "required": false,
-            "description": "Supporting text shown under the title."
+            "description": "Supporting text shown after the title on the same line."
           },
           "textValue": {
             "type": {

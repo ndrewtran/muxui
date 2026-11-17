@@ -297,8 +297,8 @@ const annotatedFamilies = [
   ['multi-select', 'MultiSelect', 3],
   // The same two parts and the popover motion wrapper, and the unmarked constructor of the IconButton its tags remove with.
   ['tag-select', 'TagSelect', 3, ['icon-button']],
-  // Twenty-eight parts, and the two modal-parts wrappers its Backdrop and Popup use, which are marked and so are kept only with them. Collection is React Aria's own and builds nothing.
-  ['command-palette', 'CommandPalette', 30, ['button', 'icon-button']],
+  // Twenty-nine parts, and the two modal-parts wrappers its Backdrop and Popup use, which are marked and so are kept only with them. Collection is React Aria's own and builds nothing.
+  ['command-palette', 'CommandPalette', 31, ['button', 'icon-button']],
   ['payment-input', 'PaymentInput', 7],
   ['checkbox-field', 'CheckboxField', 5],
   ['switch-field', 'SwitchField', 5],

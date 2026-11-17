@@ -368,8 +368,6 @@ test('supplemental CSS does not leak external API names or selectors', async () 
   assert.doesNotMatch(styles, /--muxui-reference-effect-shadow-/u);
   assert.doesNotMatch(styles, /var\(--(?:text-line-height|mono-font-family|mono-xs-font-size|text-font-weight|transparent)\b/u);
   assert.match(styles, /--muxui-semantic-typography-body-line-height/u);
-  assert.match(styles, /--muxui-semantic-typography-mono-font-family/u);
-  assert.match(styles, /--muxui-semantic-typography-mono-xs-font-size/u);
   assert.match(styles, /--muxui-semantic-typography-text-font-weight/u);
   assert.match(styles, /\.muxui-multi-select__value--placeholder\s*\{\s*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
   assert.match(styles, /\btransparent\b/u);
@@ -379,7 +377,7 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   const styles = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8');
   const references = new Set([...styles.matchAll(/var\(--([A-Za-z0-9_-]+)/gu)].map((match) => match[1]));
   const foundations = [...references].filter((name) => /^(?:muxui-semantic|muxui-reference)-/u.test(name));
-  const localHooks = [...references].filter((name) => /^muxui-(?:component|focus-ring|field|item|popup|group-label|switch-field)-/u.test(name));
+  const localHooks = [...references].filter((name) => /^muxui-(?:component|focus-ring|field|item|popup|group-label|switch-field|command-palette)-/u.test(name));
   const runtimeLocals = [...references].filter((name) => /^(?:size|ray-size|offset-diagonal|offset-orthogonal|trigger-width|muxui-control-size-(?:sm|md|lg)|muxui-control-target-size|muxui-modal-(?:y|scale)|muxui-image-ratio)$/u.test(name));
   const unknown = [...references].filter((name) => !foundations.includes(name) && !localHooks.includes(name) && !runtimeLocals.includes(name));
   assert.ok(foundations.some((name) => name.startsWith('muxui-semantic-')));
