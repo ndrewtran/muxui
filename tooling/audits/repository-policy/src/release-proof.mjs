@@ -232,8 +232,6 @@ export function deriveExpectedPackageEntries({ generatedOutputs, fixedEntries, t
   ].sort();
 }
 
-export { requiredReleaseRoots };
-
 // Node's node_modules lookup: every ancestor that is not itself a node_modules directory.
 function findInstalledPackage(fromDirectory, name) {
   for (let directory = fromDirectory; ; directory = dirname(directory)) {

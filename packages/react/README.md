@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:ae238623167994dc8732a451dce2a911b851bd5a7a10357d96551c75894d0d1e -->
+<!-- @generated-content-sha256: sha256:e193dcd817c813c5c19bfd4bfd96355374e039df3c5c56d229075443b1b91309 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -165,7 +165,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | items, value, defaultValue, disabled, readOnly |
 | ColorWheel | experimental | . | .muxui-color-wheel | value, defaultValue, outerRadius, innerRadius, disabled, readOnly |
 | ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
-| CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, size, closeOnSelect; trigger: disabled; backdrop: dismissable; close: disabled; search-field: variant; clear-button: disabled; item: id, title, description, textValue, href, target, disabled, closeOnSelect; shortcut: keys |
+| CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, size, closeOnSelect; trigger: disabled; backdrop: dismissable, scrim; popup: translucent; close: disabled; content: autoFocusFirst; search-field: variant; clear-button: disabled; item: id, title, description, textValue, href, target, disabled, closeOnSelect; shortcut: keys |
 | DataDiff | experimental | . | .muxui-data-diff | label, description, columns, rows, selectedIds, defaultSelectedIds, pending, disabled, applyLabel, emptyMessage |
 | DateField | experimental | . | .muxui-date-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
 | DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
@@ -383,6 +383,11 @@ Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 - Collection takes items and a render function that returns an Item or Section element for each, and adds no element or class of its own.
 - Shortcut displays key text, with each key in a kbd element, and registers no keyboard shortcut.
 - Shortcut is aria-hidden by default.
+- ItemAction shows its label and an Enter key cap only while its Item is focused, and hides that Item's ItemMeta meanwhile.
+- The ItemAction label joins the focused option's accessible name; the key cap is hidden from assistive technology.
+- Backdrop is transparent by default and still covers the window, so an outside press dismisses; scrim paints the modal scrim.
+- Popup translucent makes the popup a translucent, blurred surface.
+- Content autoFocusFirst focuses the first enabled item while the search input has focus: when the list mounts, each time the query changes, and as items arrive, leave or are disabled, until the arrow, Home, End, Page Up or Page Down keys move the focus to another item. The palette does not move the focus on hover; an application that does ends it the same way. Enter always activates the focused item.
 - LoadMoreItem is a presentational div that loads nothing and tracks no scrolling, so the application owns pagination.
 - Chips, Chip, and ChipRemove are structural: they change neither the query nor the results.
 - The application keeps the chip data and handles removal.
@@ -411,7 +416,7 @@ Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 - Failures keep the palette open.
 - Direct runCommand callers handle its rejected promise themselves.
 
-Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `close`, `content`, `search-field`, `input`, `clear-button`, `listbox`, `section`, `section-header`, `item`, `separator`, `collection`, `item-icon`, `item-content`, `item-title`, `item-description`, `item-meta`, `shortcut`, `load-more-item`, `empty`, `footer`, `chips`, `chip`, `chip-remove`.
+Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `close`, `content`, `search-field`, `input`, `clear-button`, `listbox`, `section`, `section-header`, `item`, `separator`, `collection`, `item-icon`, `item-content`, `item-title`, `item-description`, `item-meta`, `item-action`, `shortcut`, `load-more-item`, `empty`, `footer`, `chips`, `chip`, `chip-remove`.
 
 ### Popover
 

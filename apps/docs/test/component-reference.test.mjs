@@ -226,7 +226,7 @@ test('a component\'s share keeps "not declared" apart from a declared never, and
   const commented = commandPalette.flatMap((part) => part.members.filter((member) => 'doc' in member).map((member) => `${part.member}.${member.name}`));
   assert.deepEqual(commented, [
     'Root.open', 'Root.defaultOpen', 'Root.onOpenChange', 'Root.size', 'Root.closeOnSelect', 'Trigger.disabled', 'Trigger.onActivate', 'Backdrop.dismissable',
-    'Close.disabled', 'Close.onActivate', 'SearchField.variant', 'ClearButton.disabled', 'Item.id', 'Item.title', 'Item.description', 'Item.textValue', 'Item.href',
+    'Backdrop.scrim', 'Popup.translucent', 'Close.disabled', 'Close.onActivate', 'Content.autoFocusFirst', 'SearchField.variant', 'ClearButton.disabled', 'Item.id', 'Item.title', 'Item.description', 'Item.textValue', 'Item.href',
     'Item.target', 'Item.disabled', 'Item.closeOnSelect', 'Item.onActivate', 'Shortcut.keys',
   ]);
   assert.deepEqual(Object.fromEntries(commandPalette.filter(({ member }) => ['Root', 'Trigger', 'Popup', 'Input'].includes(member)).map(({ member, ref }) => [member, ref.type])), { Root: 'HTMLDivElement', Trigger: 'HTMLButtonElement', Popup: 'HTMLElement', Input: 'HTMLInputElement' });

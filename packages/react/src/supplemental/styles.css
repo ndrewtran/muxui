@@ -599,10 +599,18 @@
   --muxui-field-focus-border: var(--muxui-focus-ring-color);
   --muxui-field-focus-glow: 0 0 0 0px var(--muxui-focus-ring-glow);
   --muxui-field-placeholder-color: var(--muxui-semantic-field-placeholder);
-  --muxui-item-color: var(--muxui-semantic-color-neutral-80);
-  --muxui-item-focus-bg: var(--muxui-semantic-color-neutral-14);
-  --muxui-item-focus-color: var(--muxui-semantic-color-neutral-90);
+  --muxui-item-color: var(--muxui-semantic-content-strong);
+  /* Focus is a neutral fill and keeps the text colour. */
+  --muxui-item-focus-bg: var(--muxui-semantic-color-neutral-16);
+  --muxui-item-focus-color: var(--muxui-item-color);
+  --muxui-item-gap: var(--muxui-semantic-layout-group-gap);
+  --muxui-item-padding-inline: var(--muxui-semantic-layout-inset-small);
   --muxui-group-label-color: var(--muxui-semantic-content-muted);
+  /* Palette geometry a consumer may override on the popup: the row height at every size, the icon box and glyph, and the key cap. */
+  --muxui-command-palette-item-size: var(--muxui-semantic-control-size-lg);
+  --muxui-command-palette-icon-box: calc(var(--muxui-semantic-control-size-lg) / 2);
+  --muxui-command-palette-icon-size: calc(var(--muxui-command-palette-icon-box) * 0.8);
+  --muxui-command-palette-key-size: var(--muxui-command-palette-icon-box);
 
   position: fixed;
   top: 12vh;
@@ -614,7 +622,7 @@
   max-height: min(84vh, 45rem);
   overflow: hidden;
   border: 1px solid var(--muxui-semantic-color-neutral-20);
-  border-radius: var(--muxui-semantic-shape-container-radius);
+  border-radius: var(--muxui-semantic-shape-overlay-radius);
   background-color: var(--muxui-semantic-color-neutral-10);
   box-shadow: var(--muxui-semantic-elevation-modal);
   outline: none;
@@ -681,7 +689,7 @@
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
   padding: var(--muxui-semantic-layout-inset-large) var(--muxui-semantic-layout-inset-large) var(--muxui-semantic-layout-inset-medium);
-  border-bottom: 1px solid var(--muxui-semantic-color-neutral-18);
+  border-bottom: 1px solid var(--muxui-semantic-color-neutral-20);
   background-color: var(--muxui-semantic-color-neutral-10);
 }
 
@@ -691,26 +699,16 @@
 }
 
 .muxui-command-palette__search-field--inline {
-  padding-block: var(--muxui-semantic-layout-inset-tiny);
-  padding-inline: var(--muxui-semantic-layout-inset-tiny);
+  padding-block: var(--muxui-semantic-layout-inset-small);
+  padding-inline: var(--muxui-semantic-layout-inset-medium);
 }
 
-.muxui-command-palette__search-field--inline .muxui-command-palette__input {
-  border-color: transparent;
+/* The inline input draws no field box at rest, on hover or on focus: the hairline under the search row separates it. */
+.muxui-command-palette__search-field--inline .muxui-command-palette__input,
+.muxui-command-palette__search-field--inline .muxui-command-palette__input:is(:hover, :focus, [data-muxui-state-focused]) {
+  outline-color: transparent;
   background-color: transparent;
   box-shadow: none;
-}
-
-.muxui-command-palette__search-field--inline
-  .muxui-command-palette__input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
-  border-color: transparent;
-  background-color: var(--muxui-semantic-color-neutral-12);
-}
-
-.muxui-command-palette__popup--translucent
-  .muxui-command-palette__search-field--inline
-  .muxui-command-palette__input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-12) 34%, transparent);
 }
 
 .muxui-command-palette__input {
@@ -719,6 +717,7 @@
   min-width: 0;
   width: 100%;
   padding-inline-start: var(--muxui-semantic-layout-inset-tight);
+  font-size: var(--muxui-semantic-typography-text-l-font-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
   transition:
     border-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
@@ -799,9 +798,12 @@
   color: var(--muxui-semantic-color-neutral-90);
 }
 
-.muxui-command-palette__popup--translucent .muxui-command-palette__chip,
-.muxui-command-palette__popup--translucent .muxui-command-palette__shortcut-key {
+.muxui-command-palette__popup--translucent .muxui-command-palette__chip {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-12) 42%, transparent);
+}
+
+.muxui-command-palette__popup--translucent .muxui-command-palette__shortcut-key {
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-20) 56%, transparent);
 }
 
 
@@ -811,7 +813,7 @@
   min-height: 0;
   max-height: 30rem;
   flex-direction: column;
-  padding: var(--muxui-semantic-layout-inset-tight);
+  padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-small);
   outline: none;
   overflow-y: auto;
 }
@@ -844,22 +846,30 @@
   flex-direction: column;
 }
 
+/* Group labels are sentence case, unlike the shared uppercase list header. */
 .muxui-command-palette__section-header {
+  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-tight);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
+  font-weight: var(--muxui-semantic-typography-label-weight);
   line-height: var(--muxui-semantic-typography-text-line-height);
+  text-transform: none;
+  letter-spacing: normal;
 }
 
+/* One dense row at every size: the size scales the trigger, the search input, the popup width and the text. */
 .muxui-command-palette__item {
-  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  min-block-size: var(--muxui-command-palette-item-size);
+  border-radius: var(--muxui-semantic-control-radius);
   text-decoration: none;
-  margin-block-end: var(--muxui-semantic-layout-tight-gap);
 }
 
-.muxui-command-palette__item[data-muxui-state-hovered] {
-  color: var(--muxui-semantic-color-neutral-90);
-}
-
-.muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-muxui-state-hovered]:not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
+/* A faint layer under an unfocused pointer; focus is the neutral --muxui-item-focus-bg fill; a press deepens it. No state changes the text colour. */
+.muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-muxui-state-hovered]:not([data-muxui-state-focused], [data-muxui-state-disabled]) {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
+}
+
+.muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
+  background-color: var(--muxui-semantic-color-neutral-20);
 }
 
 .muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-hovered] {
@@ -870,50 +880,12 @@
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-20) 50%, transparent);
 }
 
-.muxui-command-palette__item[data-muxui-state-pressed] {
-  color: var(--muxui-semantic-color-neutral-100);
-}
-
-.muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-muxui-state-pressed]:not([data-muxui-state-selected], [aria-selected='true'], [data-muxui-state-disabled], [aria-disabled='true']) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
-}
-
 .muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-pressed] {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-22) 56%, transparent);
 }
 
 .muxui-command-palette__item[data-muxui-state-focus-visible] {
   box-shadow: inset 0 0 0 1px var(--muxui-focus-ring-color);
-}
-
-.muxui-command-palette__item[data-muxui-state-selected] {
-  background-color: var(--muxui-semantic-color-color-10);
-  color: var(--muxui-semantic-color-color-60);
-}
-
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-selected] {
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-color-10) 48%, transparent);
-}
-
-.muxui-command-palette__item[data-muxui-state-hovered][data-muxui-state-selected],
-.muxui-command-palette__item[data-muxui-state-focused][data-muxui-state-selected] {
-  background-color: var(--muxui-semantic-color-color-20);
-}
-
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-hovered][data-muxui-state-selected] {
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-color-20) 56%, transparent);
-}
-
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-focused][data-muxui-state-selected] {
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-color-30) 60%, transparent);
-}
-
-.muxui-command-palette__item[data-muxui-state-pressed][data-muxui-state-selected] {
-  background-color: var(--muxui-semantic-color-color-30);
-}
-
-.muxui-command-palette__popup--translucent .muxui-command-palette__item[data-muxui-state-pressed][data-muxui-state-selected] {
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-color-30) 64%, transparent);
 }
 
 .muxui-command-palette__item[data-muxui-state-disabled] {
@@ -924,68 +896,58 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: var(--muxui-command-palette-icon-box);
+  height: var(--muxui-command-palette-icon-box);
   flex: 0 0 auto;
-  color: var(--muxui-semantic-color-neutral-60);
+  color: var(--muxui-semantic-content-secondary);
 }
 
-.muxui-command-palette__item[data-muxui-state-hovered] .muxui-command-palette__item-icon {
-  color: var(--muxui-semantic-color-neutral-70);
+.muxui-command-palette__item-icon > :is(svg, img) {
+  width: var(--muxui-command-palette-icon-size);
+  height: var(--muxui-command-palette-icon-size);
 }
 
-.muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__item-icon {
-  color: currentcolor;
-}
-
+/* Title and description share one baseline; the description gives way first and ends in an ellipsis. */
 .muxui-command-palette__item-content {
   display: flex;
   min-width: 0;
   flex: 1 1 auto;
-  flex-direction: column;
-  gap: var(--muxui-semantic-layout-micro-gap);
-}
-
-.muxui-command-palette__item-title {
-  min-width: 0;
+  align-items: baseline;
+  gap: var(--muxui-semantic-layout-group-gap);
   overflow: hidden;
-  color: inherit;
-  font-family: var(--muxui-semantic-typography-text-font-family);
-  font-size: var(--muxui-semantic-typography-small-size);
-  font-weight: var(--muxui-semantic-typography-control-weight);
-  line-height: 1.35;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.muxui-command-palette__item-title,
 .muxui-command-palette__item-description {
   min-width: 0;
   overflow: hidden;
-  color: var(--muxui-semantic-content-muted);
   font-family: var(--muxui-semantic-typography-text-font-family);
-  font-size: var(--muxui-semantic-typography-tiny-size);
-  line-height: var(--muxui-semantic-typography-supporting-line-height);
+  font-size: var(--muxui-item-font-size);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__item-description {
-  color: var(--muxui-semantic-color-neutral-70);
+.muxui-command-palette__item-title {
+  flex: 0 1 auto;
+  color: inherit;
+  font-weight: var(--muxui-semantic-typography-label-weight);
 }
 
-.muxui-command-palette__item[data-muxui-state-hovered] .muxui-command-palette__item-description {
-  color: var(--muxui-semantic-color-neutral-70);
-}
-
-.muxui-command-palette__item[data-muxui-state-selected] .muxui-command-palette__item-description {
-  color: var(--muxui-semantic-color-color-70);
+.muxui-command-palette__item-description {
+  flex: 0 10 auto;
+  color: var(--muxui-semantic-content-muted);
 }
 
 .muxui-command-palette__item-meta {
-  margin-left: auto;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-tight-gap);
+  margin-inline-start: auto;
   color: var(--muxui-semantic-content-muted);
-  font-family: var(--muxui-semantic-typography-mono-font-family);
-  font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-xs-font-size);
   white-space: nowrap;
 }
 
@@ -993,52 +955,74 @@
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-shortcut-gap);
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--muxui-semantic-content-muted);
-  font-family: var(--muxui-semantic-typography-mono-font-family);
-  font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
+  font-weight: var(--muxui-semantic-typography-label-weight);
 }
 
+.muxui-command-palette__item-meta .muxui-command-palette__shortcut,
+.muxui-command-palette__footer .muxui-command-palette__shortcut {
+  margin-inline-start: 0;
+}
+
+/* Keys are small neutral caps. */
 .muxui-command-palette__shortcut-key {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.25rem;
-  height: 1.25rem;
+  min-width: var(--muxui-command-palette-key-size);
+  height: var(--muxui-command-palette-key-size);
   padding: 0 var(--muxui-semantic-layout-inset-tight);
-  border: 1px solid var(--muxui-semantic-color-neutral-22);
   border-radius: var(--muxui-semantic-shape-indicator-radius);
-  background-color: var(--muxui-semantic-color-neutral-12);
-  color: var(--muxui-semantic-color-neutral-70);
+  background-color: var(--muxui-semantic-color-neutral-16);
+  color: var(--muxui-semantic-content-default);
   font: inherit;
   line-height: 1;
 }
 
-.muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__shortcut,
-.muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__item-meta {
-  color: var(--muxui-semantic-color-neutral-70);
-}
-
-.muxui-command-palette__item[data-muxui-state-hovered] .muxui-command-palette__shortcut,
-.muxui-command-palette__item[data-muxui-state-hovered] .muxui-command-palette__item-meta {
-  color: var(--muxui-semantic-color-neutral-70);
-}
-
-.muxui-command-palette__item[data-muxui-state-selected] .muxui-command-palette__shortcut,
-.muxui-command-palette__item[data-muxui-state-selected] .muxui-command-palette__item-meta {
-  color: var(--muxui-semantic-color-color-70);
-}
-
-.muxui-command-palette__item[data-muxui-state-hovered] .muxui-command-palette__shortcut-key,
 .muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__shortcut-key {
-  border-color: var(--muxui-semantic-color-neutral-28);
-  background-color: var(--muxui-semantic-color-neutral-18);
+  background-color: var(--muxui-semantic-color-neutral-20);
 }
 
-.muxui-command-palette__item[data-muxui-state-selected] .muxui-command-palette__shortcut-key {
-  border-color: var(--muxui-semantic-color-color-20);
-  background-color: var(--muxui-semantic-color-color-20);
-  color: var(--muxui-semantic-color-color-70);
+/* ItemAction shows only on the focused Item, where it takes the place of ItemMeta. */
+.muxui-command-palette__item-action {
+  display: none;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-group-gap);
+  margin-inline-start: auto;
+  color: var(--muxui-semantic-content-strong);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
+  font-weight: var(--muxui-semantic-typography-label-weight);
+  white-space: nowrap;
+}
+
+.muxui-command-palette__item[data-muxui-state-focused] .muxui-command-palette__item-action {
+  display: inline-flex;
+}
+
+.muxui-command-palette__item[data-muxui-state-focused]:has(.muxui-command-palette__item-action) .muxui-command-palette__item-meta {
+  display: none;
+}
+
+.muxui-command-palette__item-action-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--muxui-command-palette-key-size);
+  height: var(--muxui-command-palette-key-size);
+  border-radius: var(--muxui-semantic-shape-indicator-radius);
+  background-color: var(--muxui-semantic-action-background);
+  color: var(--muxui-semantic-action-foreground);
+}
+
+.muxui-command-palette__item-action-icon {
+  width: calc(var(--muxui-command-palette-key-size) * 0.6);
+  height: calc(var(--muxui-command-palette-key-size) * 0.6);
 }
 
 .muxui-command-palette__item[data-muxui-state-disabled] .muxui-command-palette__item-icon,
@@ -1059,16 +1043,24 @@
   text-align: center;
 }
 
+/* A row of hints, each a label beside its Shortcut. */
 .muxui-command-palette__footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--muxui-semantic-layout-action-gap);
-  padding: var(--muxui-semantic-layout-inset-medium) var(--muxui-semantic-layout-inset-large);
-  border-top: 1px solid var(--muxui-semantic-color-neutral-18);
-  color: var(--muxui-semantic-color-neutral-60);
+  gap: var(--muxui-semantic-layout-tight-gap) var(--muxui-semantic-layout-section-gap);
+  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-large);
+  border-top: 1px solid var(--muxui-semantic-color-neutral-20);
+  color: var(--muxui-semantic-content-muted);
   font-family: var(--muxui-semantic-typography-text-font-family);
-  font-size: var(--muxui-semantic-typography-tiny-size);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+}
+
+.muxui-command-palette__footer > * {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-tight-gap);
 }
 
 /* header-nav */
@@ -3445,19 +3437,6 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     :scope .muxui-sidebar__nav-link--current .muxui-sidebar__nav-icon {
       color: var(--muxui-semantic-color-neutral-100);
     }
-  }
-}
-
-@media (forced-colors: none) {
-  .muxui-command-palette__search-field--inline
-    .muxui-command-palette__input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
-    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
-  }
-
-  .muxui-command-palette__popup--translucent
-    .muxui-command-palette__search-field--inline
-    .muxui-command-palette__input:hover:not(:focus, [data-muxui-state-disabled], [data-muxui-state-invalid]) {
-    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
   }
 }
 

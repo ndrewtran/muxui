@@ -39,7 +39,7 @@
               "optional": true,
               "type": "'sm' | 'md' | 'lg'",
               "values": ["sm", "md", "lg"],
-              "doc": "The control size, which the trigger, the search input and the results follow."
+              "doc": "The control size, which the trigger, the search input, the popup width and the result text follow. Result rows keep one height at every size."
             },
             {
               "name": "closeOnSelect",
@@ -87,6 +87,12 @@
               "optional": true,
               "type": "boolean",
               "doc": "Whether pressing outside the popup closes the palette."
+            },
+            {
+              "name": "scrim",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the backdrop paints the modal scrim. Without it the backdrop is transparent but still covers the window, so an outside press still dismisses."
             }
           ],
           "ref": { "type": "HTMLDivElement" },
@@ -98,7 +104,13 @@
           "member": "Popup",
           "form": "forwardRef",
           "members": [
-            { "name": "className", "optional": true, "type": "string" }
+            { "name": "className", "optional": true, "type": "string" },
+            {
+              "name": "translucent",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the popup is a translucent, blurred surface that shows the page behind it."
+            }
           ],
           "ref": { "type": "HTMLElement" },
           "natives": [
@@ -155,7 +167,13 @@
           "member": "Content",
           "form": "forwardRef",
           "members": [
-            { "name": "className", "optional": true, "type": "string" }
+            { "name": "className", "optional": true, "type": "string" },
+            {
+              "name": "autoFocusFirst",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Keeps the first enabled item focused, and so the one Enter activates, until a navigation key moves the focus."
+            }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -328,7 +346,7 @@
               "name": "description",
               "optional": true,
               "type": "string",
-              "doc": "Supporting text shown under the title."
+              "doc": "Supporting text shown after the title on the same line."
             },
             {
               "name": "textValue",
@@ -474,6 +492,17 @@
           ]
         },
         {
+          "member": "ItemAction",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
+        },
+        {
           "member": "Shortcut",
           "form": "forwardRef",
           "members": [
@@ -587,13 +616,19 @@
       "id": "command-palette#CommandPaletteBackdropOwnProps",
       "name": "CommandPaletteBackdropOwnProps",
       "module": "command-palette",
-      "text": "type CommandPaletteBackdropOwnProps = {\n  dismissable?: boolean;\n};",
+      "text": "type CommandPaletteBackdropOwnProps = {\n  dismissable?: boolean;\n  scrim?: boolean;\n};",
       "members": [
         {
           "name": "dismissable",
           "optional": true,
           "type": "boolean",
           "doc": "Whether pressing outside the popup closes the palette."
+        },
+        {
+          "name": "scrim",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the backdrop paints the modal scrim. Without it the backdrop is transparent but still covers the window, so an outside press still dismisses."
         }
       ]
     },
@@ -748,6 +783,20 @@
       ]
     },
     {
+      "id": "command-palette#CommandPaletteContentOwnProps",
+      "name": "CommandPaletteContentOwnProps",
+      "module": "command-palette",
+      "text": "type CommandPaletteContentOwnProps = {\n  autoFocusFirst?: boolean;\n};",
+      "members": [
+        {
+          "name": "autoFocusFirst",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Keeps the first enabled item focused, and so the one Enter activates, until a navigation key moves the focus."
+        }
+      ]
+    },
+    {
       "id": "command-palette#CommandPaletteContentProps",
       "name": "CommandPaletteContentProps",
       "module": "command-palette",
@@ -755,8 +804,8 @@
         { "entry": ".", "name": "CommandPaletteContentProps" }
       ],
       "owner": "command-palette",
-      "text": "type CommandPaletteContentProps = PartProps<HTMLDivElement>;",
-      "refs": ["part-utils#PartProps"]
+      "text": "type CommandPaletteContentProps = PartProps<HTMLDivElement> & CommandPaletteContentOwnProps;",
+      "refs": ["part-utils#PartProps", "command-palette#CommandPaletteContentOwnProps"]
     },
     {
       "id": "command-palette#CommandPaletteDescriptionProps",
@@ -826,6 +875,17 @@
       "text": "type CommandPaletteInputProps = React.InputHTMLAttributes<HTMLInputElement>;"
     },
     {
+      "id": "command-palette#CommandPaletteItemActionProps",
+      "name": "CommandPaletteItemActionProps",
+      "module": "command-palette",
+      "public": [
+        { "entry": ".", "name": "CommandPaletteItemActionProps" }
+      ],
+      "owner": "command-palette",
+      "text": "type CommandPaletteItemActionProps = PartProps<HTMLSpanElement>;",
+      "refs": ["part-utils#PartProps"]
+    },
+    {
       "id": "command-palette#CommandPaletteItemContentProps",
       "name": "CommandPaletteItemContentProps",
       "module": "command-palette",
@@ -891,7 +951,7 @@
           "name": "description",
           "optional": true,
           "type": "string",
-          "doc": "Supporting text shown under the title."
+          "doc": "Supporting text shown after the title on the same line."
         },
         {
           "name": "textValue",
@@ -1031,13 +1091,27 @@
           "optional": true,
           "type": "'sm' | 'md' | 'lg'",
           "values": ["sm", "md", "lg"],
-          "doc": "The control size, which the trigger, the search input and the results follow."
+          "doc": "The control size, which the trigger, the search input, the popup width and the result text follow. Result rows keep one height at every size."
         },
         {
           "name": "closeOnSelect",
           "optional": true,
           "type": "boolean",
           "doc": "Whether activating an item closes the palette. An item can set its own."
+        }
+      ]
+    },
+    {
+      "id": "command-palette#CommandPalettePopupOwnProps",
+      "name": "CommandPalettePopupOwnProps",
+      "module": "command-palette",
+      "text": "type CommandPalettePopupOwnProps = {\n  translucent?: boolean;\n};",
+      "members": [
+        {
+          "name": "translucent",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the popup is a translucent, blurred surface that shows the page behind it."
         }
       ]
     },
@@ -1049,8 +1123,8 @@
         { "entry": ".", "name": "CommandPalettePopupProps" }
       ],
       "owner": "command-palette",
-      "text": "type CommandPalettePopupProps = PartProps<HTMLElement>;",
-      "refs": ["part-utils#PartProps"]
+      "text": "type CommandPalettePopupProps = PartProps<HTMLElement> & CommandPalettePopupOwnProps;",
+      "refs": ["part-utils#PartProps", "command-palette#CommandPalettePopupOwnProps"]
     },
     {
       "id": "command-palette#CommandPaletteRootProps",

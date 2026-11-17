@@ -71,6 +71,8 @@ export function CommandPalettePartsExample() {
                       <CommandPalette.ItemDescription>{command.description}</CommandPalette.ItemDescription>
                     </CommandPalette.ItemContent>
                     <CommandPalette.ItemMeta>{command.tag}</CommandPalette.ItemMeta>
+                    {/* The action label replaces the meta while the item is focused. */}
+                    <CommandPalette.ItemAction>Open</CommandPalette.ItemAction>
                   </CommandPalette.Item>
                 )}
               </CommandPalette.Collection>
@@ -81,7 +83,12 @@ export function CommandPalettePartsExample() {
               </CommandPalette.LoadMoreItem>
             )}
           </CommandPalette.Content>
-          <CommandPalette.Footer>Use the arrow keys to choose a command and Enter to select it.</CommandPalette.Footer>
+          {/* Each hint is a label beside the keys it names; Shortcut is hidden from assistive technology. */}
+          <CommandPalette.Footer>
+            <span>Choose <CommandPalette.Shortcut keys={['↑', '↓']} /></span>
+            <span>Open <CommandPalette.Shortcut keys={['Enter']} /></span>
+            <span>Close <CommandPalette.Shortcut keys={['Esc']} /></span>
+          </CommandPalette.Footer>
         </CommandPalette.Popup>
       </CommandPalette.Backdrop>
     </CommandPalette.Root>

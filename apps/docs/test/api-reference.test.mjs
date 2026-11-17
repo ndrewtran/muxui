@@ -15,7 +15,7 @@ const required = (name, extra = {}) => ({ name, type: 'string', ...extra });
 const never = (name) => ({ name, type: 'never', optional: true, never: true });
 
 /** A component's page data, from the real reference and catalog. */
-function page(slug, legacyAnchors) {
+function page(slug) {
 	const id = `muxui:component:${slug}`;
 	const artifact = catalog.getArtifact({ id, platform: 'web.react', detail: 'full' }).data.artifact;
 	const binding = artifact.bindings['web.react'];
@@ -26,7 +26,6 @@ function page(slug, legacyAnchors) {
 		anatomy: artifact.anatomy,
 		catalog: { derived: binding.api.propDetails !== undefined, ...binding.api },
 		declarations,
-		legacyAnchors,
 	});
 }
 const partNamed = (api, heading) => api.parts.find((part) => part.heading === heading);
@@ -197,8 +196,12 @@ test('a derived family gives each part the defaults and events of its own partAp
 	// onActivate names the activate event on the parts whose entries list it, and on ClearButton, which takes it in its type and defines none, it names nothing.
 	for (const part of ['Trigger', 'Close', 'Item']) assert.equal(rowNamed(partNamed(palette, `CommandPalette.${part}`), 'onActivate').event, 'activate', part);
 	assert.equal(rowNamed(partNamed(palette, 'CommandPalette.ClearButton'), 'onActivate').event, undefined);
+	// scrim, translucent and autoFocusFirst are Backdrop's, Popup's and Content's own, each with its own default.
+	assert.deepEqual(rowNamed(partNamed(palette, 'CommandPalette.Backdrop'), 'scrim').default, { text: 'false', authored: false });
+	assert.deepEqual(rowNamed(partNamed(palette, 'CommandPalette.Popup'), 'translucent').default, { text: 'false', authored: false });
+	assert.deepEqual(rowNamed(partNamed(palette, 'CommandPalette.Content'), 'autoFocusFirst').default, { text: 'false', authored: false });
 	// A part that owns no props has no default at all.
-	assert.ok(rowsOf(partNamed(palette, 'CommandPalette.Popup')).every((row) => !('default' in row)));
+	assert.ok(rowsOf(partNamed(palette, 'CommandPalette.Footer')).every((row) => !('default' in row)));
 	const select = page('select');
 	assert.ok(rowsOf(partNamed(select, 'Select.Root')).some((row) => row.default !== undefined && !row.default.authored));
 });
@@ -237,7 +240,7 @@ test('parts and related exports list every export of the family with its exact i
 	// Every part of a compound is listed under its export and reachable by an anchor that is the part's heading.
 	const palette = page('command-palette');
 	const compound = palette.exports.find(({ name }) => name === 'CommandPalette');
-	assert.equal(compound.parts.length, 29);
+	assert.equal(compound.parts.length, 30);
 	assert.ok(compound.parts.every(({ heading, anchor }) => anchor === partAnchor(heading) && palette.parts.some((part) => part.heading === heading && part.anchor === anchor)));
 	// Each part shows the import of the export that holds it, a flat part its own.
 	assert.equal(partNamed(palette, 'CommandPalette.Item').import, "import { CommandPalette } from '@muxui/react';");
@@ -247,15 +250,6 @@ test('parts and related exports list every export of the family with its exact i
 	const editor = page('text-editor');
 	assert.deepEqual(editor.parts.map(({ heading, sameAs }) => [heading, sameAs?.heading]), [['TextEditor', undefined], ['TextEditor.Root', 'TextEditor']]);
 	assert.deepEqual(partNamed(editor, 'TextEditor.Root').groups, []);
-});
-
-test('the ids a part used to answer to stay on its heading, and an id for a part the page lost stops the build', () => {
-	const select = page('select', { 'api-reference-option': 'Select.Item', 'api-reference-trigger': 'Select.Trigger' });
-	assert.deepEqual(partNamed(select, 'Select.Item').legacyAnchors, ['api-reference-option']);
-	assert.deepEqual(partNamed(select, 'Select.Trigger').legacyAnchors, ['api-reference-trigger']);
-	assert.deepEqual(select.parts.filter(({ legacyAnchors }) => legacyAnchors.length > 0).map(({ heading }) => heading), ['Select.Trigger', 'Select.Item']);
-	assert.deepEqual(partNamed(page('select'), 'Select.Item').legacyAnchors, []);
-	assert.throws(() => page('select', { 'api-reference-option': 'Select.Option' }), /Select\.Option, which Select's page no longer has/u);
 });
 
 test('the anchors of a page are unique, and every family page shows its owner\'s exported types under import lines', () => {

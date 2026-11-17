@@ -350,6 +350,12 @@
           "module": "command-palette"
         },
         {
+          "name": "CommandPaletteItemActionProps",
+          "kind": "type",
+          "owner": "command-palette",
+          "module": "command-palette"
+        },
+        {
           "name": "CommandPaletteItemContentProps",
           "kind": "type",
           "owner": "command-palette",

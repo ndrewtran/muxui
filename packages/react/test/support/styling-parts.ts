@@ -211,6 +211,7 @@ export const partRows: readonly PartRow[] = [
   { family: 'command-palette', part: 'item-title', disposition: 'class', hook: 'muxui-command-palette__item-title' },
   { family: 'command-palette', part: 'item-description', disposition: 'class', hook: 'muxui-command-palette__item-description' },
   { family: 'command-palette', part: 'item-meta', disposition: 'class', hook: 'muxui-command-palette__item-meta' },
+  { family: 'command-palette', part: 'item-action', disposition: 'class', hook: 'muxui-command-palette__item-action' },
   { family: 'command-palette', part: 'shortcut', disposition: 'class', hook: 'muxui-command-palette__shortcut' },
   { family: 'command-palette', part: 'load-more-item', disposition: 'class', hook: 'muxui-command-palette__load-more-item' },
   { family: 'command-palette', part: 'empty', disposition: 'class', hook: 'muxui-command-palette__empty' },

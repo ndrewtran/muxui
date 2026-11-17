@@ -2340,7 +2340,7 @@ test('anatomy proof resolves every canonical part to a live DOM or executable ro
 // its class on the right element. The lists are exact: a part that starts to resolve here, or a new part that does not, fails.
 const reactEmissionOnly = Object.freeze({
   Activity: ['actions'],
-  CommandPalette: ['clear-button', 'separator', 'item-icon', 'load-more-item', 'empty', 'footer', 'chips', 'chip', 'chip-remove'],
+  CommandPalette: ['clear-button', 'separator', 'item-icon', 'item-action', 'load-more-item', 'empty', 'footer', 'chips', 'chip', 'chip-remove'],
   InputTags: ['description'],
   Markdown: ['link', 'code'],
   MultiSelect: ['popup', 'dialog', 'search', 'search-input', 'listbox', 'item', 'empty', 'footer'],
