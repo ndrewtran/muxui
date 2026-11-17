@@ -396,6 +396,10 @@ const partRenders = {
   'CommandPalette.item': { scope: '[role="option"]', render: () => h(generated.CommandPalette.Root, null, h(generated.CommandPalette.ListBox, { 'aria-label': 'Commands' }, h(generated.CommandPalette.Item, { id: 'one', title: 'One' }))) },
   // The backdrop renders no markup until the palette opens; its default is observed on the mounted modal.
   'CommandPalette.backdrop': { render: () => commandPalette() },
+  // So does the popup, whose translucent default is observed on the mounted popup element.
+  'CommandPalette.popup': { render: () => commandPalette() },
+  // And the content, whose autoFocusFirst default is observed on the mounted list.
+  'CommandPalette.content': { render: () => commandPalette() },
 };
 const treeItems = [{ id: 'parent', label: 'Parent', children: [{ id: 'child', label: 'Child' }] }];
 const treeOf = (props) => h(generated.Tree, { 'aria-label': 'Files', items: treeItems, ...props });
@@ -456,14 +460,14 @@ function selectField(props = null) {
  * CommandPalette.Root with a trigger and a modal holding a close control, a search field with its clear button, and one item. The modal
  * renders in a portal, so the palette is closed unless `rootProps` opens it. Each part's own props go to that part.
  */
-function commandPalette(rootProps = null, { trigger, backdrop, close, searchField, clearButton, item } = {}) {
+function commandPalette(rootProps = null, { trigger, backdrop, popup, close, content, searchField, clearButton, item } = {}) {
   const { CommandPalette } = generated;
   return h(CommandPalette.Root, rootProps,
     h(CommandPalette.Trigger, trigger, 'Commands'),
     h(CommandPalette.Backdrop, backdrop,
-      h(CommandPalette.Popup, { 'aria-label': 'Commands' },
+      h(CommandPalette.Popup, { 'aria-label': 'Commands', ...popup },
         h(CommandPalette.Close, close, 'Done'),
-        h(CommandPalette.Content, null,
+        h(CommandPalette.Content, content,
           h(CommandPalette.SearchField, searchField, h(CommandPalette.Input, { 'aria-label': 'Search commands' }), h(CommandPalette.ClearButton, clearButton)),
           h(CommandPalette.ListBox, { 'aria-label': 'Commands' }, h(CommandPalette.Item, { id: 'one', title: 'One', ...item }))))));
 }
@@ -666,6 +670,16 @@ const behaviourObservers = {
   // props the mounted modal was handed. The node must exist, so an unrendered backdrop cannot pass.
   'CommandPalette.backdrop': {
     dismissable: (props) => withMounted(commandPalette({ defaultOpen: true }, { backdrop: props }), () => fiberProp(document.querySelector('.muxui-command-palette__backdrop'), 'isDismissable')),
+    // Without a scrim the backdrop carries the transparent modifier.
+    scrim: (props) => withMounted(commandPalette({ defaultOpen: true }, { backdrop: props }), () => !document.querySelector('.muxui-command-palette__backdrop').classList.contains('muxui-command-palette__backdrop--transparent')),
+  },
+  // The translucent modifier belongs on the popup element, not on the dialog inside it that className reaches.
+  'CommandPalette.popup': {
+    translucent: (props) => withMounted(commandPalette({ defaultOpen: true }, { popup: props }), () => document.querySelector('.muxui-command-palette__popup').classList.contains('muxui-command-palette__popup--translucent')),
+  },
+  // With autoFocusFirst the item is focused at rest, while the search input has focus; without it no item is.
+  'CommandPalette.content': {
+    autoFocusFirst: (props) => withMounted(commandPalette({ defaultOpen: true }, { content: props }), () => document.querySelector('.muxui-command-palette__item').hasAttribute('data-muxui-state-focused')),
   },
   // The textarea's accessible name, when inputProps gives none, and whether the attach picker admits several files, which the hidden file input shows.
   PromptComposer: {
@@ -988,7 +1002,7 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
     height: [240, 300], itemHeight: [40, 32], overscan: [0, 2, 3],
     placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
     inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'], storageKey: ['muxui-color-mode', 'theme'], allowDuplicates: [false, true],
-    defaultOpen: [false, true], closeOnSelect: [true, false], dismissable: [true, false],
+    defaultOpen: [false, true], closeOnSelect: [true, false], dismissable: [true, false], scrim: [false, true], translucent: [false, true], autoFocusFirst: [false, true],
     showSearch: [true, false], showFooter: [true, false], required: [false, true],
     emptyStateTitle: ['No results found', 'Nothing here'], emptyStateDescription: ['Please try a different search term.', 'Try again.'],
   };
@@ -1045,13 +1059,16 @@ test('every default CommandPalette and its parts state is compared with what the
   const api = await catalogApi('command-palette');
   assert.deepEqual(Object.keys(api.defaults), ['defaultOpen', 'size', 'closeOnSelect']);
   assert.deepEqual(Object.fromEntries(Object.entries(api.partApis).map(([part, block]) => [part, Object.keys(block.defaults)])), {
-    trigger: ['disabled'], backdrop: ['dismissable'], close: ['disabled'], 'search-field': ['variant'], 'clear-button': ['disabled'], item: ['disabled'], shortcut: [],
+    trigger: ['disabled'], backdrop: ['dismissable', 'scrim'], popup: ['translucent'], close: ['disabled'], content: ['autoFocusFirst'], 'search-field': ['variant'], 'clear-button': ['disabled'], item: ['disabled'], shortcut: [],
   });
   for (const [part, block] of Object.entries(api.partApis)) assert.deepEqual(await partProblems(types, 'CommandPalette', part, block), [], `CommandPalette.${part}`);
   const changed = (part, defaults) => partProblems(types, 'CommandPalette', part, { ...api.partApis[part], defaults: { ...api.partApis[part].defaults, ...defaults } });
   for (const part of ['trigger', 'close', 'clear-button', 'item']) assert.deepEqual(await changed(part, { disabled: true }), ['disabled: catalog true, rendered false'], `CommandPalette.${part}`);
   assert.deepEqual(await changed('search-field', { variant: 'default' }), ['variant: catalog "default", rendered "inline"']);
   assert.deepEqual(await changed('backdrop', { dismissable: false }), ['dismissable: catalog false, behaves true']);
+  assert.deepEqual(await changed('backdrop', { scrim: true }), ['scrim: catalog true, behaves false']);
+  assert.deepEqual(await changed('popup', { translucent: true }), ['translucent: catalog true, behaves false']);
+  assert.deepEqual(await changed('content', { autoFocusFirst: true }), ['autoFocusFirst: catalog true, behaves false']);
   assert.deepEqual(await changed('trigger', { tone: 'quiet' }), ['tone: no observer']);
   assert.deepEqual(await behaviourMismatches('CommandPalette', { ...api.defaults, closeOnSelect: false }), ['closeOnSelect: catalog false, behaves true']);
   assert.deepEqual(await behaviourMismatches('CommandPalette', { ...api.defaults, defaultOpen: true }), ['defaultOpen: catalog true, behaves false']);

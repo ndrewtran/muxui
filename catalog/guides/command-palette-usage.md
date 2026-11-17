@@ -31,6 +31,15 @@ The CommandPalette commands that take time example shows both outcomes.
 
 Letting an asynchronous command fail with nothing on screen. Without `onError`, a failure goes to the global error reporter or the console, and the palette stays open with no sign of what happened. Record the failure and show it on the command's row.
 
+## Look
+
+The palette is a dense, scrimless bar: the Backdrop covers the window without dimming it, so the page stays readable behind the results. Pass `scrim` to the Backdrop when the palette should dim the page, and `translucent` to the Popup for a blurred surface.
+
+- Keep each row to one line: a title and a short description, such as a domain or a path, which gives way first.
+- Name what Enter does on the focused row with ItemAction, such as Switch to tab. It replaces the row's ItemMeta while the row is focused.
+- Pass `autoFocusFirst` to Content when Enter should always run a row: the first row is focused at rest and after each query change, so the focused row, its ItemAction and Enter always agree.
+- Use the Footer for a few hints, each a short label beside its Shortcut.
+
 ## Parts the application drives
 
 Several parts only draw what the application gives them. Shortcut shows key text and registers no key, so the application listens for the key itself. LoadMoreItem and the chips (Chips, Chip, and ChipRemove) are structural too: the application holds the pagination and chip data and handles loading and removal. Description is a visible paragraph that is not linked to the Popup, so the application gives it an id and passes that id to the Popup to connect them. The CommandPalette parts the application drives example puts each of these in a working palette. The [Behavior](#behavior) section lists the details, and the [API reference](#api-reference) lists the props Mux UI defines.

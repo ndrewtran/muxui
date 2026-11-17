@@ -209,7 +209,7 @@ export const clientFixtures = [
             h(CP.Chips, null, h(CP.Chip, null, 'Help', h(CP.ChipRemove, { 'aria-label': 'Remove Help' }))),
             h(CP.ListBox, { 'aria-label': 'Commands' },
               h(CP.Section, null, h(CP.SectionHeader, null, 'Workspace'),
-                h(CP.Item, { id: 'a', textValue: 'A' }, h(CP.ItemIcon, null, '*'), h(CP.ItemContent, null, h(CP.ItemTitle, null, 'A'), h(CP.ItemDescription, null, 'The first')), h(CP.ItemMeta, null, 'Meta'))),
+                h(CP.Item, { id: 'a', textValue: 'A' }, h(CP.ItemIcon, null, '*'), h(CP.ItemContent, null, h(CP.ItemTitle, null, 'A'), h(CP.ItemDescription, null, 'The first')), h(CP.ItemMeta, null, 'Meta'), h(CP.ItemAction, null, 'Run'))),
               h(CP.Item, { id: 'b', textValue: 'B' }, 'B')),
             h(CP.Separator, null),
             h(CP.LoadMoreItem, null, h(M.Button, null, 'Load more')),

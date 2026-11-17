@@ -91,8 +91,8 @@ export function substrateWrappers(text) {
  * elements that carry no state of their own. Anything else is either wrapped in the substrate or a finding.
  */
 export const reviewedRacImports = Object.freeze([
-  'Autocomplete', 'Breadcrumbs', 'ButtonContext', 'CalendarGrid', 'CalendarGridBody', 'CalendarGridHeader', 'CalendarHeaderCell',
-  'CalendarHeading', 'CalendarStateContext', 'Collection', 'ColorAreaContext', 'ColorFieldStateContext', 'ColorPicker',
+  'Autocomplete', 'AutocompleteStateContext', 'Breadcrumbs', 'ButtonContext', 'CalendarGrid', 'CalendarGridBody', 'CalendarGridHeader',
+  'CalendarHeaderCell', 'CalendarHeading', 'CalendarStateContext', 'Collection', 'ColorAreaContext', 'ColorFieldStateContext', 'ColorPicker',
   'ColorPickerStateContext', 'ColorSliderStateContext', 'ColorSwatch', 'DEFAULT_SLOT', 'DateFieldContext', 'DatePickerContext',
   'DateRangePickerContext', 'Dialog', 'DialogContext', 'DialogTrigger',
   'DisclosurePanel', 'FieldError', 'FieldErrorContext', 'FieldInputContext', 'FileTrigger', 'Focusable', 'Form', 'GridLayout', 'Header', 'Heading',
