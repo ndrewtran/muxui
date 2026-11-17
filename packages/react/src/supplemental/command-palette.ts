@@ -72,12 +72,7 @@ type CommandPaletteCloseOwnProps = {
 
 /** The props Mux UI defines for CommandPalette.Content; its API is the content entry in the catalog's partApis. */
 type CommandPaletteContentOwnProps = {
-  /**
-   * Whether the first enabled item is focused while the search input has focus: when the list mounts, each time the
-   * query changes, and as items arrive, leave or are disabled, until the arrow, Home, End, Page Up or Page Down keys move
-   * the focus to another item. An application that moves the focus on hover ends it the same way. A caret move or a
-   * press in the input keeps the focused item. The focused item is always the one Enter activates.
-   */
+  /** Keeps the first enabled item focused, and so the one Enter activates, until a navigation key moves the focus. */
   autoFocusFirst?: boolean;
 };
 

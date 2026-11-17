@@ -334,7 +334,7 @@
               "kind": "boolean"
             },
             "required": false,
-            "description": "Whether the first enabled item is focused while the search input has focus: when the list mounts, each time the\nquery changes, and as items arrive, leave or are disabled, until the arrow, Home, End, Page Up or Page Down keys move\nthe focus to another item. An application that moves the focus on hover ends it the same way. A caret move or a\npress in the input keeps the focused item. The focused item is always the one Enter activates."
+            "description": "Keeps the first enabled item focused, and so the one Enter activates, until a navigation key moves the focus."
           }
         },
         "eventDetails": {},
