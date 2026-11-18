@@ -1275,6 +1275,58 @@
   }
 }
 
+/* The background variant: the page's own surface with no edge, its controls in the surrounding
+   scheme with Sidebar's link colours, in the bar and in its drawer. Each selector carries two
+   classes (the root an element too), so it outranks the inverse bar's scheme-scoped rules, which
+   carry :scope and one class. The fills set background-color only, so the current link's hover
+   tint (background-image) still applies. */
+header.muxui-header-nav.muxui-header-nav--background {
+  background-color: var(--muxui-semantic-surface-background);
+  color: var(--muxui-semantic-content-default);
+  border-bottom: none;
+}
+
+.muxui-header-nav__mobile-overlay.muxui-header-nav__mobile-overlay--background .muxui-header-nav__mobile-drawer {
+  background-color: var(--muxui-semantic-surface-background);
+}
+
+.muxui-header-nav__mobile-overlay.muxui-header-nav__mobile-overlay--background .muxui-header-nav__mobile-dialog {
+  color: var(--muxui-semantic-content-default);
+}
+
+:is(.muxui-header-nav.muxui-header-nav--background, .muxui-header-nav__mobile-overlay.muxui-header-nav__mobile-overlay--background) :is(
+  .muxui-header-nav__nav-button,
+  .muxui-header-nav__mobile-trigger,
+  .muxui-header-nav__mobile-close-btn
+) {
+  color: var(--muxui-semantic-color-neutral-90);
+}
+
+:is(.muxui-header-nav.muxui-header-nav--background, .muxui-header-nav__mobile-overlay.muxui-header-nav__mobile-overlay--background) :is(
+  .muxui-header-nav__nav-button:not(.muxui-header-nav__nav-button--current):hover,
+  .muxui-header-nav__mobile-trigger:hover,
+  .muxui-header-nav__mobile-close-btn:hover
+) {
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
+}
+
+:is(.muxui-header-nav.muxui-header-nav--background, .muxui-header-nav__mobile-overlay.muxui-header-nav__mobile-overlay--background) :is(
+  .muxui-header-nav__nav-button:hover,
+  .muxui-header-nav__nav-button--current
+) {
+  color: var(--muxui-semantic-color-neutral-100);
+}
+
+:is(.muxui-header-nav.muxui-header-nav--background, .muxui-header-nav__mobile-overlay.muxui-header-nav__mobile-overlay--background) .muxui-header-nav__nav-button--current {
+  background-color: var(--muxui-semantic-color-neutral-16);
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :is(.muxui-header-nav.muxui-header-nav--background, .muxui-header-nav__mobile-overlay.muxui-header-nav__mobile-overlay--background) .muxui-header-nav__nav-button--current {
+    background-color: var(--muxui-semantic-color-neutral-22);
+  }
+}
+
 /* input-tags */
 .muxui-input-tags {
   display: flex;

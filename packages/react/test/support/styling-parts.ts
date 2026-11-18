@@ -615,7 +615,7 @@ export const catalogStateKinds: Readonly<Record<string, StateClassification>> = 
   ...kinds('prop', [
     'sm', 'md', 'lg', 'radius-full', 'radius-lg', 'radius-md', 'radius-sm', 'elevated', 'outlined', 'attached',
     'below', 'inline', 'wrap', 'diff', 'truncated', 'external', 'collapsed', 'streaming', 'running', 'failed',
-    'timed', 'visa', 'mastercard', 'amex', 'discover', 'unknown',
+    'timed', 'visa', 'mastercard', 'amex', 'discover', 'unknown', 'inverse', 'background',
   ]),
   ...kinds('environment', ['dark', 'light', 'desktop', 'mobile']),
   ...kinds('derived', [

@@ -1058,6 +1058,27 @@ test('HeaderNav and Sidebar mobile triggers open their accessible navigation dia
   }
 });
 
+test('HeaderNav variant marks the header and its drawer, and an unknown value keeps the inverse look', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    root = createRoot(document.querySelector('#root'));
+    await act(async () => root.render(React.createElement(HeaderNav.Root, { variant: 'background', className: 'app-header' },
+      React.createElement(HeaderNav.MobileTrigger, null, React.createElement(HeaderNav.NavButton, { href: '/docs' }, 'Docs')))));
+    const header = document.querySelector('.muxui-header-nav');
+    assert.deepEqual([...header.classList], ['muxui-header-nav', 'muxui-header-nav--background', 'app-header']);
+    await act(async () => document.querySelector('.muxui-header-nav__mobile-trigger').click());
+    assert.ok(document.querySelector('.muxui-header-nav__mobile-overlay.muxui-header-nav__mobile-overlay--background'));
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+  assert.match(renderToStaticMarkup(React.createElement(HeaderNav.Root, null)), /class="muxui-header-nav muxui-header-nav--inverse"/u);
+  assert.match(renderToStaticMarkup(React.createElement(HeaderNav.Root, { variant: 'loud' })), /class="muxui-header-nav muxui-header-nav--inverse"/u);
+});
+
 test('payment formatting and field errors remain accessible in the rendered Mux anatomy', () => {
   const html = renderToStaticMarkup(React.createElement(React.Fragment, null,
     React.createElement(PaymentInput.Root, { defaultValue: '4111111111111111', 'aria-label': 'Visa number' }, React.createElement(PaymentInput.Group, null, React.createElement(PaymentInput.Input), React.createElement(PaymentInput.CardIcon))),
