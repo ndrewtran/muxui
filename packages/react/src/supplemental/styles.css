@@ -139,8 +139,11 @@
 .muxui-image--radius-full { border-radius: var(--muxui-semantic-shape-pill-radius); }
 
 /* avatar */
+/* Isolated so the image's z-index stacks it over the fallback only, never over
+   the content around the avatar. */
 .muxui-avatar {
   position: relative;
+  isolation: isolate;
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;

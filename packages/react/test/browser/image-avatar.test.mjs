@@ -180,6 +180,13 @@ test('Image and Avatar load, recover, preserve native callbacks, and hydrate in 
     assert.equal(await page.locator('#cached-avatar').getAttribute('data-muxui-image-state'), 'loaded');
     // Loaded: the image is drawn and the hidden fallback is not painted over it.
     assert.deepEqual(await avatarPaint(page, '#cached-avatar', black), { image: 'block', fallback: 'none', drawn: 'image' });
+    // The image's stacking stays inside the avatar: a later positioned layer with no z-index covers the loaded picture.
+    await page.waitForFunction(() => document.querySelector('#covered-avatar')?.getAttribute('data-muxui-image-state') === 'loaded');
+    const covered = await page.locator('#covered-avatar').evaluate((node) => {
+      const box = node.getBoundingClientRect();
+      return { x: Math.round(box.left + box.width / 2), y: Math.round(box.top + box.height / 2) };
+    });
+    assert.equal(await pixelAt(page, covered.x, covered.y), 'rgb(255, 255, 255)', 'the covering layer paints over the avatar image');
 
     await page.evaluate(() => window.__muxuiImageAvatarSwitch());
     await page.waitForFunction(() => document.querySelector('#image-case .muxui-image')?.getAttribute('data-muxui-fallback') === null);
