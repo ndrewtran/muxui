@@ -64,6 +64,35 @@ test('Markdown preserves indented code as paragraph content while fencing create
   assert.match(html, /<p class="muxui-markdown__paragraph">indented code<\/p>/u);
   assert.match(html, /<pre class="muxui-markdown__code-block" data-muxui-language="js"><code class="muxui-markdown__code-block-content">fenced code<\/code><\/pre>/u);
 });
+test('Markdown shows apostrophes, quotes, ampersands and angle brackets as written, as text', () => {
+  const render = (source) => JSDOM.fragment(renderToStaticMarkup(React.createElement(Markdown, { source })));
+  const text = (source, selector) => render(source).querySelector(selector).textContent;
+  const written = `It's "quoted" & a < b > c`;
+  // Text, headings, list items and table-like lines; a written &amp; is one ampersand.
+  assert.equal(text(written, 'p'), written);
+  assert.equal(text(`# ${written}`, 'h1'), written);
+  assert.equal(text(`- ${written}`, 'li'), written);
+  assert.equal(text(`| it's | a & b |`, 'p'), `| it's | a & b |`);
+  assert.equal(text('Fish &amp; chips, &amp;lt;tag&amp;gt;', 'p'), 'Fish & chips, &lt;tag&gt;');
+  assert.equal(text(String.raw`\& \<b\> \&amp;`, 'p'), '& <b> &amp;');
+  // Code keeps every character, including a written &amp;.
+  assert.equal(text('`Arc<Mutex<State>>` `it\'s "q" &amp;`', 'code'), 'Arc<Mutex<State>>');
+  assert.equal(render('`Arc<Mutex<State>>` `it\'s "q" &amp;`').querySelectorAll('code')[1].textContent, `it's "q" &amp;`);
+  assert.equal(text('```\nif (a < b && c > \'d\') return "&amp;";\n```', 'pre'), `if (a < b && c > 'd') return "&amp;";`);
+  // Link text, link URLs, autolinks and image alt text.
+  const link = render(`[Q & A's "notes"](https://example.com/?a=1&b=2) [x](https://example.com/?a=1&amp;b=2) <https://example.com/?c=3&d=4>`).querySelectorAll('a');
+  assert.deepEqual([...link].map((anchor) => [anchor.textContent, anchor.getAttribute('href')]), [
+    [`Q & A's "notes"`, 'https://example.com/?a=1&b=2'],
+    ['x', 'https://example.com/?a=1&b=2'],
+    ['https://example.com/?c=3&d=4', 'https://example.com/?c=3&d=4'],
+  ]);
+  assert.equal(render(`![Q & A's "notes" <1>](https://example.com/x.png)`).querySelector('img').getAttribute('alt'), `Q & A's "notes" <1>`);
+  assert.equal(text(`![Q & A's "notes"](javascript:x)`, 'p'), `Q & A's "notes"`);
+  // Escaped markup stays text and never becomes an element.
+  const html = renderToStaticMarkup(React.createElement(Markdown, { source: '&lt;script&gt;alert(1)&lt;/script&gt; &lt;img src=x onerror=alert(1)&gt; `<b>`' }));
+  assert.doesNotMatch(html, /<script|<img|<b>/u);
+  assert.equal(JSDOM.fragment(html).querySelector('p').textContent, '<script>alert(1)</script> <img src=x onerror=alert(1)> <b>');
+});
 test('TextEditor only accepts the finite owned document grammar', () => {
   const input = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hi', marks: [{ type: 'link', attrs: { href: 'javascript:bad' } }] }] }, { type: 'script', content: [] }] };
   const nestedList = { type: 'doc', content: [{ type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Parent' }] }, { type: 'orderedList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Child' }] }] }] }] }] }] };
