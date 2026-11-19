@@ -413,6 +413,14 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     assert.equal(disabledChild.indicatorOpacity, '0');
     assert.notEqual(disabledChild.selectedBackground, 'rgba(0, 0, 0, 0)');
     assert.ok(Number.parseFloat(disabledChild.selectedOpacity) < 1);
+
+    // The group border and dividers are the only edges: grouped buttons stay square and draw no outline, even at sm.
+    const small = await page.locator('#small-toggle > .muxui-toggle-button').evaluateAll((buttons) => buttons.map((button) => ({
+      sm: button.classList.contains('muxui-toggle-button--sm'),
+      radius: getComputedStyle(button).borderRadius,
+      outline: getComputedStyle(button).outlineStyle,
+    })));
+    assert.deepEqual(small, Array(3).fill({ sm: true, radius: '0px', outline: 'none' }));
   } finally {
     await browser?.close();
     await close();

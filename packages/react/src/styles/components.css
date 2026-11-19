@@ -791,6 +791,14 @@
   border-right: none;
 }
 
+/* The group border and dividers are the only edges, so grouped buttons drop their own
+   outline. Forced colors keep it, along with the Highlight focus outline. */
+@media (forced-colors: none) {
+  .muxui-toggle-button-group .muxui-toggle-button {
+    outline: none;
+  }
+}
+
 .muxui-toggle-button-group[data-muxui-state-orientation='vertical'] {
   flex-direction: column;
   align-items: stretch;
@@ -890,7 +898,7 @@
 /* A moving hover layer paints the hover fill of unselected buttons in every group, single or
    multiple. Layers, low to high: the hover layer (0), the buttons (1), the single-select fill (2),
    its label copies (3). Selected buttons keep their own hover and paint over the layer, which
-   crosses them out of sight. Hover text and outline stay on the button; only its fill moves. */
+   crosses them out of sight. Hover text stays on the button; only its fill moves. */
 .muxui-toggle-button-group[data-muxui-toggle-hover-ready] {
   position: relative;
   isolation: isolate;
@@ -973,6 +981,11 @@
   padding-block: max(0px, calc((var(--muxui-control-size-lg) - 1em) / 2));
   min-block-size: var(--muxui-control-size-lg);
   gap: var(--muxui-semantic-layout-group-gap);
+}
+
+/* The group rounds its own corners, so a grouped button stays square at every size. */
+.muxui-toggle-button-group .muxui-toggle-button.muxui-toggle-button--sm {
+  border-radius: 0;
 }
 
 /* The RAC input remains the focus target; the indicator is the only painted control. */

@@ -90,5 +90,13 @@ export function ToggleButtonGroupMotionFixture() {
       }, h(ToggleButton, { id: 'one', disabled: true }, 'One'),
       h(ToggleButton, { id: 'long' }, 'Longer selection'),
       h(ToggleButton, { id: 'two' }, 'Two'))),
+    h('section', { id: 'small-section', 'aria-label': 'Small selection' },
+      h(ToggleButtonGroupCollection, {
+        id: 'small-toggle',
+        'aria-label': 'Small choices',
+        size: 'sm',
+        selectionMode: 'multiple',
+        defaultSelectedIds: ['one'],
+      }, buttons())),
   );
 }
