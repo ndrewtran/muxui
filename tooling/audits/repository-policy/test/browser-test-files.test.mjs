@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -29,4 +29,14 @@ test('a browser test is cross-engine when it calls browserEngines(), and helpers
   };
   for (const [name, text] of Object.entries(files)) await writeFile(join(root, 'test/browser', name), text);
   assert.deepEqual(browserTestFiles(root), { 'cross-engine': ['test/browser/b.test.mjs'], 'chromium-only': ['test/browser/a.test.mjs'] });
+});
+
+// The image's browser builds only launch from the playwright-core version that built them.
+test('the CI Playwright image is tagged with the playwright-core version React pins', () => {
+  const repositoryRoot = resolve(import.meta.dirname, '../../../..');
+  const workflow = readFileSync(resolve(repositoryRoot, '.github/workflows/ci.yml'), 'utf8');
+  const { devDependencies } = JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8'));
+  const images = workflow.match(/mcr\.microsoft\.com\/playwright\S*/gu) ?? [];
+  assert.ok(images.length > 0, 'ci.yml names a Playwright image');
+  for (const image of images) assert.equal(image, `mcr.microsoft.com/playwright:v${devDependencies['playwright-core']}-noble`);
 });

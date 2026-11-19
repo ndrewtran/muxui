@@ -60,10 +60,12 @@ the harness's `browserEngines()` is cross-engine, every other file is
 Chromium-only. Each job passes its list to `node --test --test-concurrency=1
 --test-shard=<n>/<total>`, which sorts the files and keeps every n-th, so the
 shards of a list never overlap and together run all of it. Chromium uses the
-runner's Chrome; Firefox and WebKit install Playwright's builds, with a 25-minute
-install step inside a 50-minute job. The Storybook jobs run with
-`MUXUI_STORYBOOK_AUDIT_EVENT=check:all`, `MUXUI_STORYBOOK_AUDIT_FORCE=1`, and no
-family or story selection. Check steps are limited to 20 minutes.
+runner's Chrome; Firefox and WebKit run in Playwright's container image, which
+has their builds and system libraries, inside a 30-minute job, and a test holds
+the image tag to the `playwright-core` version `packages/react` pins. The
+Storybook jobs run with `MUXUI_STORYBOOK_AUDIT_EVENT=check:all`,
+`MUXUI_STORYBOOK_AUDIT_FORCE=1`, and no family or story selection. Check steps
+are limited to 20 minutes.
 
 The aggregate `check` job passes only when every job passed; a failed,
 cancelled, or skipped job fails it. The job names are `CI_JOBS` in

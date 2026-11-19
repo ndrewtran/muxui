@@ -26,8 +26,16 @@ jobs:
   run:
     name: ${{ matrix.job }}
     runs-on: ubuntu-latest
-    # Firefox and WebKit jobs add a setup allowance for Playwright's apt install.
+    # Entries with a `container` run in it; '' (no container) keeps the rest on
+    # the runner host.
+    container: ${{ matrix.container || '' }}
+    # Firefox and WebKit jobs add an allowance for the image pull and a cold
+    # pnpm install.
     timeout-minutes: ${{ matrix.timeout || 20 }}
+    defaults:
+      run:
+        # The host's default shell, which a container would replace with sh.
+        shell: bash -e {0}
     env:
       # Generation below covers every prerequisite, so package scripts skip their
       # standalone prerequisite generation (prepare-prerequisites.mjs).
@@ -58,12 +66,25 @@ jobs:
             checks: pnpm --filter @muxui/react run check
           # React browser tests: files that call browserEngines() run in every
           # engine, the rest in Chromium only (src/browser-test-files.mjs).
+          # Chromium uses the runner's preinstalled Chrome. Firefox and WebKit run
+          # in Playwright's image, which has their builds (PLAYWRIGHT_BROWSERS_PATH)
+          # and system libraries. Its tag must be the playwright-core version
+          # packages/react pins; a repository-policy test holds them together.
+          # uid 1001 is the runner's user, so the job owns the workspace and HOME
+          # (Firefox refuses a HOME another user owns); --init reaps browser processes.
           - { job: browser chromium 1/2, tests: cross-engine, engine: chromium, shard: 1/2 }
           - { job: browser chromium 2/2, tests: cross-engine, engine: chromium, shard: 2/2 }
-          - { job: browser firefox 1/2, tests: cross-engine, engine: firefox, shard: 1/2, timeout: 50 }
-          - { job: browser firefox 2/2, tests: cross-engine, engine: firefox, shard: 2/2, timeout: 50 }
-          - { job: browser webkit 1/2, tests: cross-engine, engine: webkit, shard: 1/2, timeout: 50 }
-          - { job: browser webkit 2/2, tests: cross-engine, engine: webkit, shard: 2/2, timeout: 50 }
+          - job: browser firefox 1/2
+            tests: cross-engine
+            engine: firefox
+            shard: 1/2
+            timeout: 30
+            container: &playwright-image
+              image: mcr.microsoft.com/playwright:v1.62.1-noble
+              options: --user 1001 --init
+          - { job: browser firefox 2/2, tests: cross-engine, engine: firefox, shard: 2/2, timeout: 30, container: *playwright-image }
+          - { job: browser webkit 1/2, tests: cross-engine, engine: webkit, shard: 1/2, timeout: 30, container: *playwright-image }
+          - { job: browser webkit 2/2, tests: cross-engine, engine: webkit, shard: 2/2, timeout: 30, container: *playwright-image }
           - { job: browser chromium-only 1/3, tests: chromium-only, shard: 1/3 }
           - { job: browser chromium-only 2/3, tests: chromium-only, shard: 2/3 }
           - { job: browser chromium-only 3/3, tests: chromium-only, shard: 3/3 }
@@ -107,8 +128,10 @@ jobs:
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-store-${{ runner.os }}-
 
+      # A container job can't restore the host's store: the store path (under its
+      # HOME) and the compression (the image has no zstd) both form the cache version.
       - name: Restore pnpm store
-        if: matrix.job != 'packages'
+        if: matrix.job != 'packages' && !matrix.container
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.PNPM_STORE }}
@@ -123,33 +146,6 @@ jobs:
       - name: Prune pnpm store
         if: matrix.job == 'packages'
         run: pnpm store prune
-
-      # Chromium uses the runner's preinstalled Chrome. Firefox and WebKit use
-      # Playwright's builds, cached per runner OS, architecture, image OS,
-      # playwright-core version and engine; their system libraries install every
-      # time from the runner image's apt mirror, which can crawl, so the install
-      # has its own limit inside the job's setup allowance.
-      - name: Read playwright-core version
-        id: playwright
-        if: matrix.engine == 'firefox' || matrix.engine == 'webkit'
-        run: |
-          : "${ImageOS:?runner image OS identity is required for the browser cache}"
-          echo "image-os=$ImageOS" >> "$GITHUB_OUTPUT"
-          echo "version=$(node -p "require('./packages/react/package.json').devDependencies['playwright-core']")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        if: matrix.engine == 'firefox' || matrix.engine == 'webkit'
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.image-os }}-${{ steps.playwright.outputs.version }}-${{ matrix.engine }}
-
-      - name: Install Playwright browsers
-        if: matrix.engine == 'firefox' || matrix.engine == 'webkit'
-        timeout-minutes: 25
-        env:
-          ENGINE: ${{ matrix.engine }}
-        run: pnpm --filter @muxui/react exec playwright-core install --with-deps "$ENGINE"
 
       - name: Generate
         id: generate
