@@ -41,6 +41,8 @@ const sizedTargets = Object.freeze({
   'multi-select': { selector: '.muxui-multi-select__trigger-inner' },
   'tag-select': { anatomy: true, selector: '.muxui-tag-select__group' },
   'toggle-button': { selector: '.muxui-toggle-button' },
+  ...Object.fromEntries(['button', 'toggle-button'].flatMap((id) => ['icon', 'wrapped-icon', 'icon-token']
+    .map((variant) => [`${id}-${variant}`, { selector: id === 'button' ? '.muxui-button' : '.muxui-toggle-button' }]))),
   tabs: { count: 2, selector: '.muxui-tabs__tab' },
 });
 

@@ -14,6 +14,10 @@ function buttons(items = choices) {
   return items.map((item) => h(ToggleButton, { key: item.id, id: item.id, disabled: item.disabled }, item.label));
 }
 
+// An icon at its library's 24px default, placed directly beside each label.
+const glyph = () => h('svg', { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true' },
+  h('path', { d: 'M5 12h14', stroke: 'currentColor', strokeWidth: 2 }));
+
 export function ToggleButtonGroupMotionFixture() {
   const [primary, setPrimary] = React.useState(['one']);
   const [vertical, setVertical] = React.useState(['one']);
@@ -98,5 +102,12 @@ export function ToggleButtonGroupMotionFixture() {
         selectionMode: 'multiple',
         defaultSelectedIds: ['one'],
       }, buttons())),
+    h('section', { id: 'icon-section', 'aria-label': 'Selection with icons' },
+      h(ToggleButtonGroupCollection, {
+        id: 'icon-toggle',
+        'aria-label': 'Choices with icons',
+        size: 'sm',
+        defaultSelectedIds: ['one'],
+      }, choices.map((item) => h(ToggleButton, { key: item.id, id: item.id }, glyph(), item.label)))),
   );
 }

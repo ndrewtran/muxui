@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { Button, ButtonGroup, IconButton, LightboxClose, Toolbar } from '../../generated/index.mjs';
+import { Button, ButtonGroup, IconButton, LightboxClose, ToggleButton, Toolbar } from '../../generated/index.mjs';
 import { SubmitForms, submitControls } from './button-submit-fixture.mjs';
 import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
@@ -254,7 +254,52 @@ function observeRoles({ variants, sizes, assigned, semantic }) {
   return failures;
 }
 
+// An svg placed directly beside a Button or ToggleButton label takes the size's icon size: IconButton's 1rem at sm, and
+// the icon-size role (1.25rem) at md and lg. An icon inside the caller's own wrapper, IconButton's icon and the pending
+// spinner keep their sizes. The scope assigns the role above the label text.
+function iconFixture(css) {
+  const h = React.createElement;
+  const glyph = () => h('svg', { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true' }, h('path', { d: 'M5 12h14', stroke: 'currentColor' }));
+  const controls = (scope) => roleSizes.flatMap((size) => [
+    h(Button, { key: `button-${size}`, id: `${scope}-button-${size}`, size }, glyph(), 'Join'),
+    h(ToggleButton, { key: `toggle-${size}`, id: `${scope}-toggle-${size}`, size }, glyph(), 'Join'),
+    h(Button, { key: `wrapped-${size}`, id: `${scope}-wrapped-${size}`, size }, h('span', null, glyph()), 'Join'),
+    h(IconButton, { key: `icon-${size}`, id: `${scope}-icon-${size}`, size, 'aria-label': 'Add' }, glyph()),
+    h(Button, { key: `pending-${size}`, id: `${scope}-pending-${size}`, size, pending: true, showTextWhileLoading: true }, 'Saving'),
+  ]);
+  const body = renderToString(h('div', null,
+    h('div', null, ...controls('plain')),
+    h('div', { style: { '--muxui-component-button-icon-size': '28px' } }, ...controls('assigned'))));
+  return `<!doctype html><html data-muxui-color-scheme="light"><head><style>${css}</style></head><body>${body}</body></html>`;
+}
+
 for (const engine of browserEngines()) {
+  test(`An icon beside a Button or ToggleButton label takes the size's icon size in ${engine}`, { timeout: 120_000 }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      // Reduced motion stops the spinner's rotation, which would otherwise change its box between frames.
+      const tab = await browser.newPage({ reducedMotion: 'reduce' });
+      await tab.setContent(iconFixture(generatedStyles));
+      const sizes = await tab.evaluate((sizeNames) => {
+        const edge = (id, selector) => document.getElementById(id).querySelector(selector).getBoundingClientRect().width;
+        return Object.fromEntries(['plain', 'assigned'].flatMap((scope) => sizeNames.map((size) => [`${scope} ${size}`, {
+          button: edge(`${scope}-button-${size}`, '.muxui-button__label > svg'),
+          toggle: edge(`${scope}-toggle-${size}`, 'svg'),
+          wrapped: edge(`${scope}-wrapped-${size}`, 'svg'),
+          iconButton: edge(`${scope}-icon-${size}`, 'svg'),
+          spinner: edge(`${scope}-pending-${size}`, '.muxui-button__spinner'),
+        }])));
+      }, roleSizes);
+      const expected = (icon, size) => ({ button: icon, toggle: icon, wrapped: 24, iconButton: size === 'sm' ? 16 : 20, spinner: 14 });
+      assert.deepEqual(sizes, {
+        'plain sm': expected(16, 'sm'), 'plain md': expected(20, 'md'), 'plain lg': expected(20, 'lg'),
+        'assigned sm': expected(16, 'sm'), 'assigned md': expected(28, 'md'), 'assigned lg': expected(28, 'lg'),
+      });
+    } finally {
+      await browser.close();
+    }
+  });
+
   test(`Button and IconButton read their component color and radius roles in each scheme in ${engine}`, { timeout: 120_000 }, async () => {
     const browser = await launchBrowser(engine);
     try {

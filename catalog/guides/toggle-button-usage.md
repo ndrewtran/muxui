@@ -13,6 +13,7 @@ Use ToggleButton for toggling a persistent mode or option. Keep its Mux UI-owned
 
 - Name the toggle with the mode or option it controls, such as Bold, not an action such as Toggle bold.
 - Keep the label the same whether the toggle is on or off, since the selected style shows the state.
+- An svg placed directly beside the label takes the same icon size as in a [Button](/components/button/), so the ToggleButton keeps its control height. To size an icon yourself, follow the Button guidance.
 
 ## Size in a group
 

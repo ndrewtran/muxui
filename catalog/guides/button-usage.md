@@ -33,6 +33,12 @@ The Button emphasis in groups example shows one main action with lower-emphasis 
 - Keep the label a short phrase that reads on its own, without the text around it.
 - For an action with no visible text, use [IconButton](/components/icon-button/).
 
+## An icon beside the label
+
+Place a decorative icon directly in the Button, before or after the label. An svg placed there takes the Button's icon size: 1rem at the small size, as in IconButton, and Button's icon size role, 1.25rem by default, at the medium and large sizes. To give one icon another size, set the svg's width and height with CSS, such as a class; its width and height attributes do not change it.
+
+The Button keeps its control height for an icon no taller than the control, placed directly beside the label or in a wrapper displayed as flex. In an inline or block wrapper, the icon sits on a line of text, and the space below that line can make the Button taller.
+
 ## Common mistake
 
 Giving every action in a group the `primary` variant. When all of them are primary, none reads as the main action. Keep one `primary` and move the others to `neutral` or `ghost`.

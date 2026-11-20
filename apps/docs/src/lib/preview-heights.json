@@ -1,7 +1,7 @@
 {
 	"activity": {
-		"narrow": 344,
-		"wide": 257
+		"narrow": 326,
+		"wide": 251
 	},
 	"autocomplete": {
 		"narrow": 62,
@@ -168,8 +168,8 @@
 		"wide": 81
 	},
 	"message": {
-		"narrow": 263,
-		"wide": 263
+		"narrow": 258,
+		"wide": 258
 	},
 	"meter": {
 		"narrow": 45,

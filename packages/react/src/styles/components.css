@@ -99,10 +99,12 @@
   white-space: nowrap;
   user-select: none;
 
+  /* No block padding: the minimum height alone sets the size and align-items centres the
+     content, so an icon taller than the text does not make the Button taller. */
   padding-inline: var(--muxui-component-button-padding-inline, var(--muxui-semantic-control-padding-inline));
-  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1em) / 2));
   min-block-size: var(--muxui-component-button-min-height, var(--muxui-control-target-size, var(--muxui-control-size-md)));
   width: fit-content;
+  --muxui-button-icon-size: var(--muxui-component-button-icon-size);
 }
 
 .muxui-button:focus-visible {
@@ -126,6 +128,14 @@
   display: inline-flex;
   align-items: center;
   gap: inherit;
+}
+
+/* An svg placed directly beside the label, in a Button or a ToggleButton, takes the size
+   recipe's icon size. :where keeps it below any rule that sizes a specific icon. */
+:where(.muxui-button__label, .muxui-toggle-button) > svg {
+  flex: none;
+  inline-size: var(--muxui-button-icon-size);
+  block-size: var(--muxui-button-icon-size);
 }
 
 .muxui-button[data-muxui-state-pending] .muxui-button__label {
@@ -727,7 +737,9 @@
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
-  line-height: 1;
+  /* A label that wraps keeps leading above and below each line. A single line is centred in the
+     minimum height, so it sits where it would at line-height 1. */
+  line-height: var(--muxui-semantic-typography-label-line-height);
   cursor: pointer;
   transition:
     background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing),
@@ -736,9 +748,10 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
   user-select: none;
 
+  /* Sized like Button: the minimum height, with no block padding. */
   padding-inline: var(--muxui-semantic-control-padding-inline);
-  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1em) / 2));
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  --muxui-button-icon-size: var(--muxui-component-button-icon-size);
 }
 
 .muxui-toggle-button:focus-visible {
@@ -808,10 +821,13 @@
   width: 100%;
   border-right: none;
   border-bottom: 1px solid var(--muxui-semantic-color-neutral-22);
+  /* The divider adds to the button's height instead of taking it from the control size. */
+  --muxui-toggle-button-divider: 1px;
 }
 
 .muxui-toggle-button-group[data-muxui-state-orientation='vertical'] .muxui-toggle-button:last-child {
   border-bottom: none;
+  --muxui-toggle-button-divider: 0px;
 }
 
 .muxui-toggle-button-group[data-muxui-toggle-motion='single'] > .muxui-toggle-button:last-of-type {
@@ -820,6 +836,7 @@
 
 .muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-state-orientation='vertical'] > .muxui-toggle-button:last-of-type {
   border-bottom: none;
+  --muxui-toggle-button-divider: 0px;
 }
 
 /* A single-select group paints one measured fill while its real buttons keep
@@ -962,8 +979,8 @@
 .muxui-toggle-button.muxui-toggle-button--sm {
   font-size: var(--muxui-semantic-typography-label-s-font-size);
   padding-inline: var(--muxui-semantic-layout-inset-small);
-  padding-block: max(0px, calc((var(--muxui-control-size-sm) - 1em) / 2));
-  min-block-size: var(--muxui-control-size-sm);
+  --muxui-button-icon-size: 1rem;
+  min-block-size: calc(var(--muxui-control-size-sm) + var(--muxui-toggle-button-divider, 0px));
   gap: var(--muxui-semantic-layout-tight-gap);
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
@@ -971,15 +988,13 @@
 .muxui-toggle-button.muxui-toggle-button--md {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   padding-inline: var(--muxui-semantic-layout-inset-medium);
-  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1em) / 2));
-  min-block-size: var(--muxui-control-size-md);
+  min-block-size: calc(var(--muxui-control-size-md) + var(--muxui-toggle-button-divider, 0px));
 }
 
 .muxui-toggle-button.muxui-toggle-button--lg {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   padding-inline: var(--muxui-semantic-layout-inset-large);
-  padding-block: max(0px, calc((var(--muxui-control-size-lg) - 1em) / 2));
-  min-block-size: var(--muxui-control-size-lg);
+  min-block-size: calc(var(--muxui-control-size-lg) + var(--muxui-toggle-button-divider, 0px));
   gap: var(--muxui-semantic-layout-group-gap);
 }
 
@@ -1105,7 +1120,7 @@
 .muxui-button[data-muxui-size='sm'] {
   font-size: var(--muxui-semantic-typography-label-s-font-size);
   padding-inline: var(--muxui-semantic-layout-inset-small);
-  padding-block: max(0px, calc((var(--muxui-control-size-sm) - 1em) / 2));
+  --muxui-button-icon-size: 1rem;
   min-block-size: var(--muxui-control-size-sm);
   gap: var(--muxui-semantic-layout-tight-gap);
   border-radius: var(--muxui-semantic-shape-option-radius);
@@ -1114,14 +1129,12 @@
 .muxui-button[data-muxui-size='md'] {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   padding-inline: var(--muxui-component-button-padding-inline, var(--muxui-semantic-control-padding-inline));
-  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1em) / 2));
   min-block-size: var(--muxui-component-button-min-height, var(--muxui-control-size-md));
 }
 
 .muxui-button[data-muxui-size='lg'] {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   padding-inline: var(--muxui-semantic-layout-inset-large);
-  padding-block: max(0px, calc((var(--muxui-control-size-lg) - 1em) / 2));
   min-block-size: var(--muxui-control-size-lg);
   gap: var(--muxui-semantic-layout-group-gap);
 }
