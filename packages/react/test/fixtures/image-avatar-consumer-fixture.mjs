@@ -89,5 +89,14 @@ export function ImageAvatarConsumerFixture() {
       h('output', { id: 'avatar-errors' }, avatarErrors),
       h('output', { id: 'avatar-loads' }, avatarLoads),
     ),
+    // A positioned layer with no z-index that comes after a loaded avatar, as a sticky
+    // header or an overlay does, should paint over all of it, picture included.
+    h('section', { id: 'avatar-covered-case', style: { position: 'relative', inlineSize: 'fit-content' } },
+      h(Avatar.Root, { id: 'covered-avatar', size: 'md' },
+        h(Avatar.Image, { src: validImage, alt: 'Covered avatar' }),
+        h(Avatar.Fallback, null, 'CV'),
+      ),
+      h('div', { id: 'avatar-cover', style: { position: 'absolute', inset: 0, background: 'white' } }),
+    ),
   );
 }
