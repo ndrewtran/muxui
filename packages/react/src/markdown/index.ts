@@ -17,6 +17,12 @@ const HTTP_PROTOCOLS = new Set(['http:', 'https:']);
 const LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 const SCHEME = /^[A-Za-z][A-Za-z\d+.-]*:/u;
 const cx = (...values: unknown[]) => values.filter(Boolean).join(' ');
+// The Markdown parser hands over text, backslash escapes, inline code and image alt text HTML-escaped for its
+// own HTML renderer, while React escapes text again. Undo its five escapes in one pass per token field, so inline
+// code `&amp;` (escaped to `&amp;amp;`) stays as written. Code block text and link and image URLs are not
+// escaped, so they are never decoded; autolinks are read from their source instead (see inline).
+const PARSER_UNESCAPES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+const unescapeParser = (value = '') => value.replace(/&(?:amp|lt|gt|quot|#39);/gu, (escape) => PARSER_UNESCAPES[escape] ?? escape);
 
 /**
  * The props Mux UI defines for Markdown; the catalog's web.react API is derived from this
@@ -127,24 +133,29 @@ function inline(tokens: MarkdownToken[] | undefined, baseUrl: string | undefined
       continue;
     }
     if (token.type === 'text' || token.type === 'escape') {
-      output.push(Array.isArray(token.tokens) ? inline(token.tokens, baseUrl, depth + 1) : (token.text ?? ''));
+      output.push(Array.isArray(token.tokens) ? inline(token.tokens, baseUrl, depth + 1) : unescapeParser(token.text));
       continue;
     }
     if (token.type === 'strong') { output.push(React.createElement('strong', { key, className: 'muxui-markdown__strong' }, inline(token.tokens, baseUrl, depth + 1))); continue; }
     if (token.type === 'em') { output.push(React.createElement('em', { key, className: 'muxui-markdown__emphasis' }, inline(token.tokens, baseUrl, depth + 1))); continue; }
     if (token.type === 'del') { output.push(inline(token.tokens, baseUrl, depth + 1)); continue; }
-    if (token.type === 'codespan') { output.push(React.createElement('code', { key, className: 'muxui-markdown__code' }, token.text)); continue; }
+    if (token.type === 'codespan') { output.push(React.createElement('code', { key, className: 'muxui-markdown__code' }, unescapeParser(token.text))); continue; }
     if (token.type === 'br') { output.push(React.createElement('br', { key, className: 'muxui-markdown__break' })); continue; }
     if (token.type === 'image') {
       const src = safeUrl(token.href, HTTP_PROTOCOLS, baseUrl);
-      output.push(src
-        ? React.createElement('img', { key, className: 'muxui-markdown__image', src, alt: token.text ?? '' })
-        : (token.text ?? ''));
+      const alt = unescapeParser(token.text);
+      output.push(src ? React.createElement('img', { key, className: 'muxui-markdown__image', src, alt }) : alt);
       continue;
     }
     if (token.type === 'link') {
-      const children = inline(token.tokens, baseUrl, depth + 1);
-      const href = safeUrl(token.href, LINK_PROTOCOLS, baseUrl, true);
+      // An autolink's text and URL come escaped, so `&` and a written `&amp;` look alike. Show and link the
+      // spelling inside its angle brackets; an email autolink has no scheme and links with mailto:. Its
+      // children are still rendered first, so it meets the same depth limit as any link.
+      const rendered = inline(token.tokens, baseUrl, depth + 1);
+      const autolink = token.raw?.startsWith('<') && token.raw.endsWith('>') ? token.raw.slice(1, -1) : undefined;
+      const children = autolink ?? rendered;
+      const destination = autolink === undefined ? token.href : SCHEME.test(autolink) ? autolink : `mailto:${autolink}`;
+      const href = safeUrl(destination, LINK_PROTOCOLS, baseUrl, true);
       output.push(href
         ? React.createElement('a', { key, className: 'muxui-link', href, rel: 'noreferrer noopener' }, children)
         : children);

@@ -64,6 +64,63 @@ test('Markdown preserves indented code as paragraph content while fencing create
   assert.match(html, /<p class="muxui-markdown__paragraph">indented code<\/p>/u);
   assert.match(html, /<pre class="muxui-markdown__code-block" data-muxui-language="js"><code class="muxui-markdown__code-block-content">fenced code<\/code><\/pre>/u);
 });
+test('Markdown shows apostrophes, quotes, ampersands and angle brackets as written, as text, including inside dropped tags', () => {
+  const render = (source, baseUrl) => JSDOM.fragment(renderToStaticMarkup(React.createElement(Markdown, { source, baseUrl })));
+  const text = (source, selector) => render(source).querySelector(selector).textContent;
+  const links = (source) => [...render(source).querySelectorAll('a')].map((anchor) => [anchor.textContent, anchor.getAttribute('href')]);
+  const written = `It's "quoted" & a < b > c`;
+  // Text, headings, list items and table-like lines; a written &amp; is one ampersand.
+  assert.equal(text(written, 'p'), written);
+  assert.equal(text(`# ${written}`, 'h1'), written);
+  assert.equal(text(`- ${written}`, 'li'), written);
+  assert.equal(text(`| it's | a & b |`, 'p'), `| it's | a & b |`);
+  assert.equal(text('Fish &amp; chips, &amp;lt;tag&amp;gt;', 'p'), 'Fish & chips, &lt;tag&gt;');
+  assert.equal(text(String.raw`\& \<b\> \&amp;`, 'p'), '& <b> &amp;');
+  // Code keeps every character, including a written &amp;.
+  assert.equal(text('`Arc<Mutex<State>>` `it\'s "q" &amp;`', 'code'), 'Arc<Mutex<State>>');
+  assert.equal(render('`Arc<Mutex<State>>` `it\'s "q" &amp;`').querySelectorAll('code')[1].textContent, `it's "q" &amp;`);
+  assert.equal(text('```\nif (a < b && c > \'d\') return "&amp;";\n```', 'pre'), `if (a < b && c > 'd') return "&amp;";`);
+  // Text inside a dropped inline tag reads like other text, as HTML shows it, even when the tag is nested or spans paragraphs.
+  assert.equal(text('<kbd>A&amp;B</kbd>', 'p'), 'A&B');
+  assert.equal(text('Press <kbd><kbd>Ctrl</kbd> &amp; K</kbd>.', 'p'), 'Press Ctrl & K.');
+  assert.deepEqual([...render('x <kbd>A&amp;\n\n</kbd>\n\nFish &amp; chips').querySelectorAll('p')].map((paragraph) => paragraph.textContent), ['x A&', 'Fish & chips']);
+  assert.equal(text(`<kbd>![A &amp; B's](javascript:x)</kbd>`, 'p'), `A & B's`);
+  // Link text and image alt text are decoded; link, reference and image URLs are used as the parser gives them.
+  assert.deepEqual(links(String.raw`[Q & A's "notes"](https://example.com/?a=1&b=2) [notes](https://example.com/notes?rev=1\&#39;draft) [r][ref]` + '\n\n[ref]: https://example.com/?a=1&amp;b=2'), [
+    [`Q & A's "notes"`, 'https://example.com/?a=1&b=2'],
+    ['notes', 'https://example.com/notes?rev=1&#39;draft'],
+    ['r', 'https://example.com/?a=1&amp;b=2'],
+  ]);
+  const image = render(`![Q & A's "notes" <1>](https://example.com/x.png?a=1&amp;b=2)`).querySelector('img');
+  assert.deepEqual([image.getAttribute('alt'), image.getAttribute('src')], [`Q & A's "notes" <1>`, 'https://example.com/x.png?a=1&amp;b=2']);
+  assert.equal(text(`![Q & A's "notes"](javascript:x)`, 'p'), `Q & A's "notes"`);
+  // An autolink shows and links to the spelling inside its angle brackets.
+  assert.deepEqual(links('<https://example.com/?a=1&b=2> <https://example.com/?a=1&amp;b=2> <me@example.com> <mailto:me@example.com>'), [
+    ['https://example.com/?a=1&b=2', 'https://example.com/?a=1&b=2'],
+    ['https://example.com/?a=1&amp;b=2', 'https://example.com/?a=1&amp;b=2'],
+    ['me@example.com', 'mailto:me@example.com'],
+    ['mailto:me@example.com', 'mailto:me@example.com'],
+  ]);
+  // An autolink meets the same depth limit as any link.
+  for (const quotes of [31, 32]) {
+    assert.match(renderToStaticMarkup(React.createElement(Markdown, { source: `${'> '.repeat(quotes)}<https://example.test/>` })), /data-muxui-markdown-error="MARKDOWN_DEPTH_LIMIT_EXCEEDED"/u);
+  }
+  // Entity-obscured destinations stay blocked without baseUrl and resolve under it, never to a script or another site.
+  const obscured = '[a](&#x6A;avascript:alert(1)) [b](java&amp;#115;cript:alert(1)) [c](&#x2F;&#x2F;evil.example/) [d](&#47;&#47;evil.example/) <javascript:alert(1)> ![e](&#x6A;avascript:alert(1)) ![f](&#x2F;&#x2F;evil.example/x.png)';
+  assert.equal(render(obscured).querySelectorAll('a, img').length, 0);
+  assert.deepEqual([...render(obscured, 'https://base.example/docs/').querySelectorAll('a, img')].map((node) => node.getAttribute('href') ?? node.getAttribute('src')), [
+    'https://base.example/docs/&#x6A;avascript:alert(1)',
+    'https://base.example/docs/java&amp;#115;cript:alert(1)',
+    'https://base.example/docs/&#x2F;&#x2F;evil.example/',
+    'https://base.example/docs/&#47;&#47;evil.example/',
+    'https://base.example/docs/&#x6A;avascript:alert(1)',
+    'https://base.example/docs/&#x2F;&#x2F;evil.example/x.png',
+  ]);
+  // Escaped markup stays text and never becomes an element.
+  const html = renderToStaticMarkup(React.createElement(Markdown, { source: '&lt;script&gt;alert(1)&lt;/script&gt; &lt;img src=x onerror=alert(1)&gt; `<b>`' }));
+  assert.doesNotMatch(html, /<script|<img|<b>/u);
+  assert.equal(JSDOM.fragment(html).querySelector('p').textContent, '<script>alert(1)</script> <img src=x onerror=alert(1)> <b>');
+});
 test('TextEditor only accepts the finite owned document grammar', () => {
   const input = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hi', marks: [{ type: 'link', attrs: { href: 'javascript:bad' } }] }] }, { type: 'script', content: [] }] };
   const nestedList = { type: 'doc', content: [{ type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Parent' }] }, { type: 'orderedList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Child' }] }] }] }] }] }] };
