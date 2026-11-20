@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { ToggleButtonGroupMotionFixture } from '../fixtures/toggle-button-group-motion-fixture.mjs';
+import { ToggleButton, ToggleButtonGroup } from '../../generated/index.mjs';
 import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
 import { assertCrossesSelected, assertEntersInPlace, assertFillClear, assertFollowsDirection, assertHiddenInForcedColors, assertIdle, assertJumped, assertLayerColor, assertParksWithoutFade, assertReentersFromFade, assertSkipsItem, assertTravelled, faded, pointOnto, settledOn, travel } from './hover-layer-probes.mjs';
 
@@ -421,8 +424,64 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
       outline: getComputedStyle(button).outlineStyle,
     })));
     assert.deepEqual(small, Array(3).fill({ sm: true, radius: '0px', outline: 'none' }));
+
+    // A 24px icon beside each label takes the sm icon size, in the buttons and in the fill's label copy, so the group
+    // keeps the sm control height.
+    await page.waitForFunction(() => document.querySelector('#icon-toggle[data-muxui-toggle-motion-ready] .muxui-toggle-button-group__motion-label svg'));
+    const icons = await page.locator('#icon-toggle').evaluate((root) => {
+      const size = (node) => `${node.getBoundingClientRect().width}x${node.getBoundingClientRect().height}`;
+      return {
+        heights: [...root.querySelectorAll(':scope > .muxui-toggle-button')].map((button) => button.getBoundingClientRect().height),
+        icons: [...root.querySelectorAll('.muxui-toggle-button svg')].map(size),
+      };
+    });
+    assert.deepEqual(icons.heights, [32, 32, 32]);
+    assert.ok(icons.icons.length > 3, 'the fill copies at least one label');
+    assert.deepEqual(icons.icons, Array(icons.icons.length).fill('16x16'));
   } finally {
     await browser?.close();
     await close();
+  }
+});
+
+// A label that wraps in a narrow group keeps space above its first line and below its last, so the group's clipping hides
+// no accent or descender, at every size, horizontal and vertical, and with the text doubled.
+test('a wrapping ToggleButton label stays inside its button and its group at every size and at double text size', { timeout: 120_000 }, async () => {
+  const css = await readFile(resolve(import.meta.dirname, '../../generated/styles.css'), 'utf8');
+  const h = React.createElement;
+  const label = 'Ångström Ångström Ångström';
+  const groups = ['normal', 'double'].flatMap((scale) => ['sm', 'md', 'lg'].flatMap((size) => ['horizontal', 'vertical'].map((orientation) => h('div', {
+    key: `${scale}-${size}-${orientation}`, className: scale, style: { width: orientation === 'vertical' ? 105 : 230, margin: 16 },
+  }, h(ToggleButtonGroup, { size, orientation, 'aria-label': `${scale} ${size} ${orientation}`, defaultSelectedIds: ['a'] },
+    h(ToggleButton, { id: 'a' }, label), h(ToggleButton, { id: 'b' }, label))))));
+  const double = `.double .muxui-toggle-button { font-size: calc(var(--muxui-semantic-typography-label-m-font-size) * 2); }
+    .double .muxui-toggle-button--sm { font-size: calc(var(--muxui-semantic-typography-label-s-font-size) * 2); }`;
+  const browser = await launchBrowser();
+  try {
+    const page = await browser.newPage();
+    await page.setContent(`<!doctype html><html data-muxui-color-scheme="light"><head><style>${css}</style><style>${double}</style></head><body>${renderToString(h('div', null, ...groups))}</body></html>`);
+    await awaitFontsAndFrames(page);
+    const failures = await page.evaluate(() => [...document.querySelectorAll('.muxui-toggle-button-group')].flatMap((group) => {
+      const clip = group.getBoundingClientRect();
+      return [...group.querySelectorAll('.muxui-toggle-button')].flatMap((button, index) => {
+        const name = `${group.getAttribute('aria-label')} button ${index}`;
+        const box = button.getBoundingClientRect();
+        const style = getComputedStyle(button);
+        const range = document.createRange();
+        range.selectNodeContents(button);
+        // Each line's content area, from the font's ascent to its descent, which holds its accents and descenders.
+        const lines = [...range.getClientRects()];
+        const top = Math.min(...lines.map((line) => line.top));
+        const bottom = Math.max(...lines.map((line) => line.bottom));
+        const failed = [];
+        if (new Set(lines.map((line) => Math.round(line.top))).size < 2) failed.push(`${name} does not wrap`);
+        if (top <= box.top + parseFloat(style.borderTopWidth) || bottom >= box.bottom - parseFloat(style.borderBottomWidth)) failed.push(`${name} text ${top}-${bottom} touches its button ${box.top}-${box.bottom}`);
+        if (top < clip.top || bottom > clip.bottom) failed.push(`${name} text ${top}-${bottom} is outside its group ${clip.top}-${clip.bottom}`);
+        return failed;
+      });
+    }));
+    assert.deepEqual(failures, []);
+  } finally {
+    await browser.close();
   }
 });

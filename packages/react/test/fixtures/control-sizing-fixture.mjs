@@ -68,6 +68,22 @@ function icon() {
   }));
 }
 
+// An icon at its library's 24px default, taller than every size's label text.
+function libraryIcon() {
+  return h('svg', { 'aria-hidden': true, fill: 'none', height: 24, viewBox: '0 0 24 24', width: 24 },
+    h('path', { d: 'M5 12h14', stroke: 'currentColor', strokeLinecap: 'round', strokeWidth: 2 }));
+}
+
+// A labelled control with a 24px icon placed directly, wrapped in a span, and under a theme scope that sets the icon
+// size above the text; each keeps the control height.
+function iconLabelControls(id, Control, size) {
+  return [
+    control(`${id}-icon`, h(Control, { size }, libraryIcon(), 'Join')),
+    control(`${id}-wrapped-icon`, h(Control, { size }, h('span', { style: { display: 'inline-flex' } }, libraryIcon()), 'Join')),
+    control(`${id}-icon-token`, h('div', { style: { '--muxui-component-button-icon-size': '28px' } }, h(Control, { size }, libraryIcon(), 'Join'))),
+  ];
+}
+
 function control(id, element, className = '') {
   return h('div', { className: `sizing-case ${className}`.trim(), 'data-control-id': id, key: id }, element);
 }
@@ -218,6 +234,8 @@ function sizedControls(size, timeFieldsMounted) {
       size,
     }, tagItems.map((item) => h(TagSelect.Item, { id: item.id, key: item.id, textValue: item.label }, item.label)))),
     control('toggle-button', h(ToggleButton, { defaultSelected: true, size }, 'Pin')),
+    ...iconLabelControls('button', Button, size),
+    ...iconLabelControls('toggle-button', ToggleButton, size),
     control('tabs', h(Tabs, {
       defaultValue: 'overview',
       items: [

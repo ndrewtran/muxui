@@ -202,16 +202,18 @@ test('the picks: which families get a token step and which of their roles, how m
   });
   // A family with roles and no token step says why, and the reason is the one that holds: Activity's only role is a transition, which is
   // never a step; for seven others no rule that reads a color or size role matches an element the Basic example renders (checked against
-  // the example by jsdom in the notes test below); and for DataDiff, Switch, SwitchField, Tabs and TextField the roles are ones the recipe leaves out.
+  // the example by jsdom in the notes test below); ToggleButton's root reads Button's icon size role, which sizes only an icon its Basic
+  // example does not have; and for DataDiff, Switch, SwitchField, Tabs and TextField the roles are ones the recipe leaves out.
   const reachless = slugs.filter((slug) => all.get(slug).tokens.groups.some(({ id }) => id === 'component') && declarations(slug, 'token').length === 0);
-  assert.deepEqual(reachless, ['activity', 'code-block', 'data-diff', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar', 'switch', 'switch-field', 'tabs', 'text-field']);
+  assert.deepEqual(reachless, ['activity', 'code-block', 'data-diff', 'date-picker', 'date-range-picker', 'drop-zone', 'header-nav', 'select-native', 'sidebar', 'switch', 'switch-field', 'tabs', 'text-field', 'toggle-button']);
   const tokenNote = (slug) => all.get(slug).recipe.notes.find((note) => note.startsWith('No token step:'));
   const droppedNote = (slug) => all.get(slug).recipe.notes.find((note) => note.startsWith('No token step for '));
   assert.equal(tokenNote('activity'), 'No token step: Activity has no color or size role that a Mux rule reads.');
   const roles = (slug) => all.get(slug).tokens.groups.flatMap(({ id, rows }) => (id === 'component' ? rows : []));
   assert.deepEqual(roles('activity').map(({ type }) => type), ['transition']);
   const leftOut = ['data-diff', 'switch', 'switch-field', 'tabs', 'text-field'];
-  for (const slug of reachless.filter((candidate) => !['activity', ...leftOut].includes(candidate))) {
+  assert.equal(tokenNote('toggle-button'), "No token step: rules that read ToggleButton's color or size roles match elements its Basic example renders, but the generator cannot show that a role is what paints any of them (another rule may win, or a state it cannot decide may apply).");
+  for (const slug of reachless.filter((candidate) => !['activity', 'toggle-button', ...leftOut].includes(candidate))) {
     assert.match(tokenNote(slug), /^No token step: no rule that reads [A-Za-z]+'s color or size roles matches an element its Basic example renders \(for example .+\), so a role assigned on a wrapper would change nothing there\.$/u, slug);
     assert.equal(droppedNote(slug), undefined, slug);
     assert.ok(roles(slug).some(({ type, policy }) => policy === 'theme' && ['color', 'dimension'].includes(type)), `${slug} has a color or size role to explain`);

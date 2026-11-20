@@ -2287,6 +2287,18 @@
       "overridePolicy": "theme",
       "alias": "semantic.control.radius"
     },
+    "component.button.icon-size": {
+      "layer": "component",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Size of an svg icon placed directly beside a Button or ToggleButton label at the md and lg sizes; sm keeps 1rem.",
+      "overridePolicy": "theme",
+      "value": 20,
+      "relative": {
+        "value": 1.25,
+        "unit": "rem"
+      }
+    },
     "component.button.danger-ghost-foreground": {
       "layer": "component",
       "type": "color",
