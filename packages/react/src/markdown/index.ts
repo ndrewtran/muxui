@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ForwardRefExoticComponent, HTMLAttributes, ReactElement, ReactNode, RefAttributes } from 'react';
-import { Lexer, Tokenizer } from 'marked';
+import { Lexer } from 'marked';
 
 // Annotated `: number`: inferred, each would be declared as its literal, narrower than the type consumers have.
 /** Longest accepted source, in UTF-16 code units. */
@@ -21,18 +21,8 @@ const cx = (...values: unknown[]) => values.filter(Boolean).join(' ');
 // own HTML renderer, while React escapes text again. Undo its five escapes in one pass per token field, so inline
 // code `&amp;` (escaped to `&amp;amp;`) stays as written. Code block text and link and image URLs are not
 // escaped, so they are never decoded; autolinks are read from their source instead (see inline).
-const PARSER_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-const PARSER_UNESCAPES = Object.fromEntries(Object.entries(PARSER_ESCAPES).map(([character, escape]) => [escape, character]));
+const PARSER_UNESCAPES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
 const unescapeParser = (value = '') => value.replace(/&(?:amp|lt|gt|quot|#39);/gu, (escape) => PARSER_UNESCAPES[escape] ?? escape);
-// Inside an inline raw tag (pre, code, kbd or script) the parser hands text over as written. Escape every
-// character there, so unescapeParser gives it back as written when the tag is dropped.
-class MarkdownTokenizer extends Tokenizer {
-  override inlineText(src: string) {
-    const token = super.inlineText(src);
-    if (token && this.lexer.state.inRawBlock) token.text = token.text.replace(/[&<>"']/gu, (character) => PARSER_ESCAPES[character] ?? character);
-    return token;
-  }
-}
 
 /**
  * The props Mux UI defines for Markdown; the catalog's web.react API is derived from this
@@ -158,10 +148,12 @@ function inline(tokens: MarkdownToken[] | undefined, baseUrl: string | undefined
       continue;
     }
     if (token.type === 'link') {
-      // An autolink's text and URL come escaped, so `&` and a written `&amp;` look alike. Use the spelling
-      // inside its angle brackets; an email autolink has no scheme and links with mailto:.
+      // An autolink's text and URL come escaped, so `&` and a written `&amp;` look alike. Show and link the
+      // spelling inside its angle brackets; an email autolink has no scheme and links with mailto:. Its
+      // children are still rendered first, so it meets the same depth limit as any link.
+      const rendered = inline(token.tokens, baseUrl, depth + 1);
       const autolink = token.raw?.startsWith('<') && token.raw.endsWith('>') ? token.raw.slice(1, -1) : undefined;
-      const children = autolink ?? inline(token.tokens, baseUrl, depth + 1);
+      const children = autolink ?? rendered;
       const destination = autolink === undefined ? token.href : SCHEME.test(autolink) ? autolink : `mailto:${autolink}`;
       const href = safeUrl(destination, LINK_PROTOCOLS, baseUrl, true);
       output.push(href
@@ -217,7 +209,7 @@ export const Markdown: ForwardRefExoticComponent<MarkdownProps & RefAttributes<H
     return React.createElement('div', { ...rootProps, 'data-muxui-markdown-error': failure ?? 'MARKDOWN_INVALID_BASE_URL' }, invalidFallback);
   }
   try {
-    const tokens = Lexer.lex(source, { async: false, breaks: false, gfm: false, pedantic: false, tokenizer: new MarkdownTokenizer() });
+    const tokens = Lexer.lex(source, { async: false, breaks: false, gfm: false, pedantic: false });
     assertBounds(tokens);
     return React.createElement('div', rootProps, blocks(tokens, safeBase));
   } catch (error) {

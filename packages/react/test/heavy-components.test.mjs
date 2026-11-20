@@ -64,7 +64,7 @@ test('Markdown preserves indented code as paragraph content while fencing create
   assert.match(html, /<p class="muxui-markdown__paragraph">indented code<\/p>/u);
   assert.match(html, /<pre class="muxui-markdown__code-block" data-muxui-language="js"><code class="muxui-markdown__code-block-content">fenced code<\/code><\/pre>/u);
 });
-test('Markdown shows apostrophes, quotes, ampersands and angle brackets as written, as text', () => {
+test('Markdown shows apostrophes, quotes, ampersands and angle brackets as written, as text, including inside dropped tags', () => {
   const render = (source, baseUrl) => JSDOM.fragment(renderToStaticMarkup(React.createElement(Markdown, { source, baseUrl })));
   const text = (source, selector) => render(source).querySelector(selector).textContent;
   const links = (source) => [...render(source).querySelectorAll('a')].map((anchor) => [anchor.textContent, anchor.getAttribute('href')]);
@@ -80,9 +80,11 @@ test('Markdown shows apostrophes, quotes, ampersands and angle brackets as writt
   assert.equal(text('`Arc<Mutex<State>>` `it\'s "q" &amp;`', 'code'), 'Arc<Mutex<State>>');
   assert.equal(render('`Arc<Mutex<State>>` `it\'s "q" &amp;`').querySelectorAll('code')[1].textContent, `it's "q" &amp;`);
   assert.equal(text('```\nif (a < b && c > \'d\') return "&amp;";\n```', 'pre'), `if (a < b && c > 'd') return "&amp;";`);
-  // Text inside a dropped raw tag (pre, code, kbd or script) stays as written.
-  assert.equal(text('Before <script type="text/plain">A&amp;B</script> after', 'p'), 'Before A&amp;B after');
-  assert.equal(text(`<kbd>**A&amp;B's**</kbd> <code>"x" & y</code> &amp;`, 'p'), `A&amp;B's "x" & y &`);
+  // Text inside a dropped inline tag reads like other text, as HTML shows it, even when the tag is nested or spans paragraphs.
+  assert.equal(text('<kbd>A&amp;B</kbd>', 'p'), 'A&B');
+  assert.equal(text('Press <kbd><kbd>Ctrl</kbd> &amp; K</kbd>.', 'p'), 'Press Ctrl & K.');
+  assert.deepEqual([...render('x <kbd>A&amp;\n\n</kbd>\n\nFish &amp; chips').querySelectorAll('p')].map((paragraph) => paragraph.textContent), ['x A&', 'Fish & chips']);
+  assert.equal(text(`<kbd>![A &amp; B's](javascript:x)</kbd>`, 'p'), `A & B's`);
   // Link text and image alt text are decoded; link, reference and image URLs are used as the parser gives them.
   assert.deepEqual(links(String.raw`[Q & A's "notes"](https://example.com/?a=1&b=2) [notes](https://example.com/notes?rev=1\&#39;draft) [r][ref]` + '\n\n[ref]: https://example.com/?a=1&amp;b=2'), [
     [`Q & A's "notes"`, 'https://example.com/?a=1&b=2'],
@@ -99,6 +101,10 @@ test('Markdown shows apostrophes, quotes, ampersands and angle brackets as writt
     ['me@example.com', 'mailto:me@example.com'],
     ['mailto:me@example.com', 'mailto:me@example.com'],
   ]);
+  // An autolink meets the same depth limit as any link.
+  for (const quotes of [31, 32]) {
+    assert.match(renderToStaticMarkup(React.createElement(Markdown, { source: `${'> '.repeat(quotes)}<https://example.test/>` })), /data-muxui-markdown-error="MARKDOWN_DEPTH_LIMIT_EXCEEDED"/u);
+  }
   // Entity-obscured destinations stay blocked without baseUrl and resolve under it, never to a script or another site.
   const obscured = '[a](&#x6A;avascript:alert(1)) [b](java&amp;#115;cript:alert(1)) [c](&#x2F;&#x2F;evil.example/) [d](&#47;&#47;evil.example/) <javascript:alert(1)> ![e](&#x6A;avascript:alert(1)) ![f](&#x2F;&#x2F;evil.example/x.png)';
   assert.equal(render(obscured).querySelectorAll('a, img').length, 0);
