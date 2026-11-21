@@ -520,3 +520,131 @@ for (const engine of browserEngines()) {
     }
   });
 }
+
+// A search field with ClearButton draws it as its only clear control: the cancel button Chromium and WebKit add to a
+// search input stays hidden, and a field without ClearButton keeps that native button. Keyboard focus scrolls a row only
+// as far as the list's block padding, never to its edge. ?noclear leaves ClearButton out.
+const listEntry = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { CommandPalette } from '/src/supplemental/command-palette.ts';
+
+const h = React.createElement;
+const clear = !new URLSearchParams(location.search).has('noclear');
+const items = Array.from({ length: 30 }, (_, index) => h(CommandPalette.Item, { key: index, id: \`item-\${index}\`, title: \`Item \${index}\` }));
+createRoot(document.getElementById('root')).render(h(CommandPalette.Root, { defaultOpen: true },
+  h(CommandPalette.Backdrop, null, h(CommandPalette.Popup, null,
+    h(CommandPalette.Title, null, 'Commands'),
+    h(CommandPalette.Content, null,
+      h(CommandPalette.SearchField, null, h(CommandPalette.Input, { id: 'palette-input' }), clear && h(CommandPalette.ClearButton, { id: 'palette-clear' })),
+      h(CommandPalette.ListBox, { id: 'palette-list' }, items))))));
+`;
+
+const listPage = pageShell({
+  attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"',
+  head: '<link rel="stylesheet" href="/generated/styles.css">',
+  bodyAttributes: 'style="margin: 16px; background: var(--muxui-semantic-surface-canvas)"',
+  body: '<div id="root"></div>',
+  entry: '/command-palette-list-entry.mjs',
+});
+
+for (const engine of browserEngines()) {
+  test(`CommandPalette Input draws one clear control and the list keeps its padding in ${engine}`, { timeout: 120_000 }, async (t) => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/command-palette.ts'],
+      pages: { '/command-palette-list.html': listPage },
+      modules: { '/command-palette-list-entry.mjs': listEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      const tab = await browser.newPage({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
+      const errors = [];
+      tab.on('pageerror', (error) => errors.push(error.message));
+      await tab.goto(`${url}/command-palette-list.html`, { waitUntil: 'load' });
+      const input = tab.locator('#palette-input');
+      await input.waitFor();
+      await awaitFontsAndFrames(tab);
+
+      await t.test('arrow keys, Home and End stop the focused row at the list padding', async () => {
+        // The focused row's distance from the list's top and bottom edges, the list's block padding and its scroll
+        // offset, once the row holds still for a frame: WebKit scrolls a frame after the focus moves.
+        const read = (title) => tab.waitForFunction((expected) => {
+          const list = document.getElementById('palette-list');
+          const row = list.querySelector('[role="option"][data-muxui-state-focused]');
+          if (row?.textContent !== expected) return null;
+          const style = getComputedStyle(list);
+          const edges = list.getBoundingClientRect();
+          const box = row.getBoundingClientRect();
+          const read = { title: expected, top: box.top - edges.top, bottom: edges.bottom - box.bottom, scrollTop: list.scrollTop };
+          const previous = window.lastRowRead;
+          window.lastRowRead = read;
+          if (previous?.title !== read.title || previous.top !== read.top || previous.scrollTop !== read.scrollTop) return null;
+          return { ...read, paddingTop: parseFloat(style.paddingTop), paddingBottom: parseFloat(style.paddingBottom), scrolls: list.scrollHeight > list.clientHeight };
+        }, title, { polling: 'raf' }).then((handle) => handle.jsonValue());
+        const near = (actual, expected, message) => assert.ok(Math.abs(actual - expected) <= 1, `${message}: ${actual} is not ${expected}`);
+        await input.focus();
+
+        await tab.keyboard.press('End');
+        const last = await read('Item 29');
+        assert.ok(last.scrolls, 'the list scrolls');
+        assert.ok(last.paddingBottom > 0 && last.paddingTop > 0, 'the list has block padding');
+        near(last.bottom, last.paddingBottom, 'End leaves the bottom padding under the last row');
+
+        await tab.keyboard.press('Home');
+        const first = await read('Item 0');
+        near(first.top, first.paddingTop, 'Home leaves the top padding over the first row');
+
+        // ArrowDown to the first row past the fold, which scrolls the list and stops at the bottom padding.
+        let row;
+        for (let index = 1; index < 30 && !(row?.scrollTop > 0); index += 1) {
+          await tab.keyboard.press('ArrowDown');
+          row = await read(`Item ${index}`);
+        }
+        assert.ok(row.scrollTop > 0, 'ArrowDown scrolls the list');
+        near(row.bottom, row.paddingBottom, 'an arrow key past the fold leaves the bottom padding under the row');
+      });
+
+      // Shots of the Input with a query: as it is, and with the native cancel button forced on and forced off, which
+      // differ, so the comparison can see the button.
+      const cancelShots = async (page, field) => {
+        await field.fill('Item');
+        const shot = () => field.screenshot({ animations: 'disabled', caret: 'hide' });
+        const pseudo = '.muxui-command-palette__input::-webkit-search-cancel-button';
+        const resting = await shot();
+        const on = await page.addStyleTag({ content: `${pseudo} { display: block !important; -webkit-appearance: searchfield-cancel-button !important; appearance: auto !important; }` });
+        const drawn = await shot();
+        await on.evaluate((node) => node.remove());
+        const off = await page.addStyleTag({ content: `${pseudo} { display: none !important; -webkit-appearance: none !important; appearance: none !important; }` });
+        const hidden = await shot();
+        await off.evaluate((node) => node.remove());
+        assert.ok(!drawn.equals(hidden), 'the native cancel button changes the Input when it is drawn');
+        return { resting, hidden };
+      };
+
+      await t.test('the Input draws no native cancel button beside ClearButton', async () => {
+        await tab.locator('#palette-clear').waitFor({ state: 'attached' });
+        const { resting, hidden } = await cancelShots(tab, input);
+        assert.ok(await tab.locator('#palette-clear').isVisible(), 'ClearButton shows with a query');
+        assert.ok(resting.equals(hidden), 'the Input draws no native cancel button');
+      });
+
+      await t.test('the Input keeps the native cancel button without ClearButton', async () => {
+        const page = await browser.newPage({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
+        page.on('pageerror', (error) => errors.push(error.message));
+        await page.goto(`${url}/command-palette-list.html?noclear`, { waitUntil: 'load' });
+        const field = page.locator('#palette-input');
+        await field.waitFor();
+        await awaitFontsAndFrames(page);
+        assert.equal(await page.locator('.muxui-command-palette__clear-button').count(), 0, 'the field has no ClearButton');
+        const { resting, hidden } = await cancelShots(page, field);
+        assert.ok(!resting.equals(hidden), 'the Input draws the native cancel button');
+        await page.close();
+      });
+      assert.deepEqual(errors, []);
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
