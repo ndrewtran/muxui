@@ -396,18 +396,20 @@
 }
 
 /* React Aria sets --trigger-width to the field's width and places the popover at the field's start edge. Border-box
-   sizing and no start margin keep the whole popover, border included, at least that wide and flush with the field. */
+   sizing and no start margin keep the whole popover, border included, at least that wide and flush with the field.
+   React Aria also sets the popover's max-height inline, to the space it finds below or above the field, and that
+   overrides any max-height here, so the list holds the height cap; as a column, the popover shrinks the list into the
+   space. */
 .muxui-combo-box__popover {
   box-sizing: border-box;
-  padding: var(--muxui-semantic-layout-inset-tight);
+  display: flex;
+  flex-direction: column;
   min-width: var(--trigger-width);
-  max-height: 17.5rem;
   margin-block-start: -1px;
   box-shadow:
     0 4px 4px -10px rgb(0 0 0 / 4%),
     0 13px 13px -10px rgb(0 0 0 / 6%),
     0 40px 60px -10px rgb(0 0 0 / 8%);
-  overflow-y: auto;
 }
 
 :where(
@@ -424,10 +426,25 @@
   .muxui-select__list[data-muxui-size='lg']
 ) { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
+/* The list scrolls, not the popover: React Aria keeps the focused option in view by scrolling the list, and when the
+   list cannot scroll it scrolls the page, which closes the list. The padding sits inside the scrolling list, so the
+   scrollbar meets the popover's edge and the padding scrolls with the options; scroll padding as deep stops a focused
+   option at the padding. */
 .muxui-combo-box__list {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-tight-gap);
+  min-height: 0;
+  max-height: 17.5rem;
+  padding: var(--muxui-semantic-layout-inset-tight);
+  scroll-padding-block: var(--muxui-semantic-layout-inset-tight);
+  overflow-y: auto;
+}
+
+/* Options keep their height when the list scrolls, rather than shrinking to fit it. */
+.muxui-combo-box__option {
+  flex-shrink: 0;
 }
 
 .muxui-combo-box__option[data-muxui-state-selected] {

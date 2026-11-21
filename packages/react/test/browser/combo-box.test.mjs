@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { awaitFontsAndFrames, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // Each case renders one field, the selection cases inside a form. onSelect and submit events are logged to
 // window.events so the test can assert what the browser actually reported.
-// The page cannot scroll, because a scroll closes the open list and commits the field.
+// The page cannot scroll, because a scroll closes the open list and commits the field. The long case opens on a page
+// that can scroll, to show the list scrolls in its place.
 // The submit button sits above the field so the open list never covers it.
 const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
@@ -15,6 +16,7 @@ const entry = `import React from 'react';
   const log = (...event) => window.events.push(event);
   const cities = [{ id: 'mel', label: 'Melbourne' }, { id: 'syd', label: 'Sydney' }];
   const towns = [{ id: 'mel', label: 'Melbourne' }, { id: 'syd', label: 'Sydney', disabled: true }, { id: 'per', label: 'Perth' }];
+  const options = Array.from({ length: 40 }, (_, index) => ({ id: 'option-' + (index + 1), label: 'Option ' + (index + 1) }));
   const submit = (event) => {
     event.preventDefault();
     log('submit', new FormData(event.currentTarget).getAll('city'));
@@ -41,27 +43,36 @@ const entry = `import React from 'react';
     },
     // A field far wider than its options, so a list sized by its options alone shows as narrower than the field.
     list: () => h('div', { style: { width: '600px', padding: '24px' } }, h(ComboBox, { label: 'Town', items: towns })),
+    // Forty options, far more than the list shows, above content that makes the page taller than the viewport.
+    long: () => h('div', { style: { width: '320px', padding: '24px', minHeight: '300vh' } }, h(ComboBox, { label: 'Option', items: options })),
   };
   const name = new URLSearchParams(location.search).get('case');
   createRoot(document.getElementById('root')).render(h(cases[name]));
   document.documentElement.dataset.ready = name;`;
+
+// The scrolling test runs in every engine named; the others, and the shared Chrome, only when Chromium is among them.
+const engines = browserEngines();
+const chromiumSkip = !engines.includes('chromium') && 'runs in Chromium only, which MUXUI_BROWSER_ENGINES leaves out';
 
 let server;
 let browser;
 before(async () => {
   server = await startServer({
     entries: ['src/collections.mjs'],
-    pages: { '/combo-box.html': pageShell({ head: '<style>html, body { margin: 0; overflow: hidden; }</style>', body: '<div id="root"></div>', entry: '/combo-box-entry.mjs' }) },
+    pages: {
+      '/combo-box.html': pageShell({ head: '<style>html, body { margin: 0; overflow: hidden; }</style>', body: '<div id="root"></div>', entry: '/combo-box-entry.mjs' }),
+      '/combo-box-scroll.html': pageShell({ head: '<style>html, body { margin: 0; }</style>', body: '<div id="root"></div>', entry: '/combo-box-entry.mjs' }),
+    },
     modules: { '/combo-box-entry.mjs': entry },
   });
-  browser = await launchBrowser();
+  if (!chromiumSkip) browser = await launchBrowser();
 });
 after(async () => {
   await browser?.close();
   await server?.close();
 });
 
-test('real browser ComboBox reports a cleared selection and submits an empty value', { timeout: 90_000 }, async () => {
+test('real browser ComboBox reports a cleared selection and submits an empty value', { timeout: 90_000, skip: chromiumSkip }, async () => {
   const { url } = server;
   const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
   try {
@@ -130,7 +141,7 @@ test('real browser ComboBox reports a cleared selection and submits an empty val
   }
 });
 
-test('real browser ComboBox opens its list at the field\'s width and draws each option by its real state', { timeout: 90_000 }, async () => {
+test('real browser ComboBox opens its list at the field\'s width and draws each option by its real state', { timeout: 90_000, skip: chromiumSkip }, async () => {
   const { url } = server;
   const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
   try {
@@ -201,3 +212,123 @@ test('real browser ComboBox opens its list at the field\'s width and draws each 
     await page.close();
   }
 });
+
+// React Aria keeps the focused option in view by scrolling the list, and scrolls the page when the list cannot
+// scroll, which closes the list. A tall viewport leaves the list its 17.5rem cap; a short one leaves it only the space
+// React Aria reports below the field.
+for (const engine of engines) {
+  test(`real browser ComboBox scrolls its list, not the page, to keep the focused option in view in ${engine}`, { timeout: 120_000 }, async (t) => {
+    const { url } = server;
+    // Chromium runs in the file's browser; another engine gets its own.
+    const engineBrowser = engine === 'chromium' ? browser : await launchBrowser(engine);
+    try {
+      for (const [viewport, height] of [['tall', 700], ['short', 300]]) {
+        const page = await engineBrowser.newPage({ viewport: { width: 800, height } });
+        try {
+          page.setDefaultTimeout(10_000);
+          const errors = [];
+          page.on('pageerror', (error) => errors.push(error.message));
+          page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text()); });
+          await page.goto(`${url}/combo-box-scroll.html?case=long`, { waitUntil: 'load' });
+          await page.waitForFunction(() => document.documentElement.dataset.ready === 'long');
+          await awaitFontsAndFrames(page);
+          // Reduced motion opens the list in place, so its geometry is read at rest.
+          await page.evaluate(() => { document.documentElement.dataset.muxuiMotion = 'reduced'; });
+          // The open list and its focused option, once they hold still for three frames: React Aria scrolls the list a
+          // frame after the focus moves, and a page scroll closes the list a frame after that. While the list is open it
+          // waits for the expected option, when one is given; a closed list returns at once.
+          let reads = 0;
+          const settle = (expected) => page.waitForFunction(({ expected, call }) => {
+            const popover = document.querySelector('.muxui-combo-box__popover');
+            const list = document.querySelector('.muxui-combo-box__list');
+            const option = list?.querySelector('.muxui-combo-box__option[data-muxui-state-focused]');
+            const listBox = list?.getBoundingClientRect();
+            const optionBox = option?.getBoundingClientRect();
+            const read = {
+              open: document.querySelector('input[role="combobox"]').getAttribute('aria-expanded') === 'true' && Boolean(list),
+              label: option?.textContent ?? null,
+              pageScroll: window.scrollY,
+              listScroll: list?.scrollTop ?? null,
+              // The focused option's distance from the list's top and bottom edges.
+              top: option ? optionBox.top - listBox.top : null,
+              bottom: option ? listBox.bottom - optionBox.bottom : null,
+            };
+            if (read.open && expected !== undefined && read.label !== expected) return null;
+            const key = JSON.stringify(read);
+            const previous = window.lastComboBoxRead;
+            window.lastComboBoxRead = { key, call, count: previous?.key === key && previous.call === call ? previous.count + 1 : 1 };
+            if (window.lastComboBoxRead.count < 3) return null;
+            if (!popover || !list) return read;
+            const listStyle = getComputedStyle(list);
+            const popoverBox = popover.getBoundingClientRect();
+            return {
+              ...read,
+              inViewport: Boolean(option) && optionBox.top >= 0 && optionBox.bottom <= innerHeight,
+              paddingTop: parseFloat(listStyle.paddingTop),
+              paddingBottom: parseFloat(listStyle.paddingBottom),
+              height: listBox.height,
+              scrolls: list.scrollHeight > list.clientHeight,
+              // How far the list's bottom edge lies above the popover's inner bottom edge; below zero, the popover clips it.
+              inset: popoverBox.bottom - parseFloat(getComputedStyle(popover).borderBottomWidth) - listBox.bottom,
+              cap: 17.5 * parseFloat(getComputedStyle(document.documentElement).fontSize),
+              // The maximum height React Aria sets on the popover: the space it found for the list.
+              space: parseFloat(popover.style.maxHeight),
+            };
+          }, { expected, call: (reads += 1) }, { polling: 'raf' }).then((handle) => handle.jsonValue());
+
+          assert.ok(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight), `${viewport}: the page can scroll`);
+          await page.getByRole('combobox', { name: 'Option' }).focus();
+          const start = await page.evaluate(() => window.scrollY);
+          // ArrowDown opens the list on the first option; each one after moves to the next, down to the last.
+          let read;
+          for (let index = 1; index <= 40; index += 1) {
+            await page.keyboard.press('ArrowDown');
+            read = await settle(`Option ${index}`);
+            const step = `${viewport}: ArrowDown to Option ${index}`;
+            assert.equal(read.pageScroll, start, `${step} scrolls the page`);
+            assert.ok(read.open, `${step} closes the list`);
+            assert.equal(read.label, `Option ${index}`, step);
+            // Scroll padding as deep as the list's padding stops the focused option at the padding.
+            assert.ok(read.top >= read.paddingTop - 1 && read.bottom >= read.paddingBottom - 1, `${step}: the option sits ${read.top}px from the list's top and ${read.bottom}px from its bottom`);
+            assert.ok(read.inViewport, `${step}: the option is off screen`);
+          }
+          assert.ok(read.scrolls, `${viewport}: the list scrolls`);
+          assert.ok(read.height <= read.cap + 0.5, `${viewport}: a ${read.height}px list is taller than the ${read.cap}px cap`);
+          assert.ok(read.inset >= -0.5, `${viewport}: the popover clips the list by ${-read.inset}px`);
+          if (viewport === 'short') assert.ok(read.space < read.cap, `short: React Aria leaves ${read.space}px, not less than the ${read.cap}px cap`);
+          assert.ok(Math.abs(read.bottom - read.paddingBottom) <= 1, `${viewport}: the last option sits ${read.bottom}px above the list's end, not its ${read.paddingBottom}px padding`);
+
+          // Enter chooses the last option. Opening the list again scrolls straight to it, and the page stays put.
+          await page.keyboard.press('Enter');
+          await page.waitForFunction(() => document.querySelector('input[role="combobox"]').getAttribute('aria-expanded') === 'false');
+          await page.locator('.muxui-combo-box__trigger').click();
+          read = await settle('Option 40');
+          assert.equal(read.pageScroll, start, `${viewport}: opening on the chosen option scrolls the page`);
+          assert.ok(read.open, `${viewport}: opening on the chosen option closes the list`);
+          // Right after opening, React Aria measures the popover with its max-height lifted to the viewport's height.
+          // Where the space is shorter than the cap, the list grows for that measure, and WebKit and Firefox clamp its
+          // scroll to the taller list, so the chosen option opens below the fold there.
+          const clamped = viewport === 'short' && engine !== 'chromium' && `${engine} clamps the list's scroll while React Aria measures the popover at the viewport's height`;
+          await t.test(`${viewport}: opening on the chosen option shows it`, { skip: clamped }, () => {
+            assert.ok(read.top >= read.paddingTop - 1 && read.bottom >= read.paddingBottom - 1 && read.inViewport, `the chosen option sits ${read.top}px from the list's top and ${read.bottom}px from its bottom`);
+          });
+
+          // The mouse wheel scrolls the list back up, and the page stays put.
+          const list = page.locator('.muxui-combo-box__list');
+          const box = await list.boundingBox();
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+          await page.mouse.wheel(0, -120);
+          await page.waitForFunction((end) => document.querySelector('.muxui-combo-box__list').scrollTop < end, read.listScroll);
+          read = await settle();
+          assert.equal(read.pageScroll, start, `${viewport}: the wheel scrolls the page`);
+          assert.ok(read.open, `${viewport}: the wheel closes the list`);
+          assert.deepEqual(errors, [], errors.join('\n'));
+        } finally {
+          await page.close();
+        }
+      }
+    } finally {
+      if (engineBrowser !== browser) await engineBrowser.close();
+    }
+  });
+}
