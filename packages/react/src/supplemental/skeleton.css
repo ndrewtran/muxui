@@ -6,9 +6,8 @@
   min-inline-size: 0;
 }
 
-/* The group and its lines stand in for the caller's text, so they keep the type of the element they sit in instead of
-   taking Mux UI's defaults at a boundary, as Link does. */
-.muxui-skeleton,
+/* A line stands in for the caller's text, so it keeps the type of the element it sits in instead of taking Mux UI's defaults
+   at a boundary, as Link does. The group, circles and blocks keep Mux UI's own. */
 .muxui-skeleton__line {
   font-family: inherit;
   font-size: inherit;

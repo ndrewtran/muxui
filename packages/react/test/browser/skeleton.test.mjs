@@ -17,9 +17,10 @@ function tree(h, Skeleton) {
     comment('group', 'Loading comment'),
     h('div', { id: 'scoped', 'data-muxui-motion': 'reduced' }, comment('scoped-group', 'Loading reply')),
     // Plain block flow, so nothing stretches the placeholder to the text's height.
-    h('div', { id: 'lines', style: { fontSize: '20px', lineHeight: '30px', inlineSize: '320px' } },
-      h(Skeleton.Root, { id: 'placeholder' }, h(Skeleton.Line), h(Skeleton.Line)),
-      h('div', { id: 'text' }, h('div', null, 'One line'), h('div', null, 'Two lines')),
+    // The lines sit in the element that will hold the text, as the guide says, and take its type.
+    h('div', { id: 'lines', style: { inlineSize: '320px' } },
+      h(Skeleton.Root, { id: 'placeholder' }, h('div', { style: { fontSize: '20px', lineHeight: '30px' } }, h(Skeleton.Line), h(Skeleton.Line))),
+      h('div', { id: 'text', style: { fontSize: '20px', lineHeight: '30px' } }, h('div', null, 'One line'), h('div', null, 'Two lines')),
       h(Skeleton.Root, { id: 'heading-placeholder' }, h('h2', { style: { margin: 0, fontSize: '24px', lineHeight: '32px' } }, h(Skeleton.Line, { width: '60%' }))),
       h('h2', { id: 'heading', style: { margin: 0, fontSize: '24px', lineHeight: '32px' } }, 'Title')),
     h('div', { id: 'rtl', dir: 'rtl' }, h(Skeleton.Root, { id: 'rtl-group' }, h(Skeleton.Line))),

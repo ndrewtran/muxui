@@ -57,6 +57,9 @@ const size = ['width', 'height'];
 // (its classes without modifiers, so `.muxui-button.muxui-link` is another part), `reason` is where the behaviour is declared.
 const inheritsByDesign = [
   { part: '.muxui-link', properties: ['font-size', 'line-height', 'width', 'height'], reason: 'An inline Link sets `font-size: inherit` so it matches the text around it; its line-height is a multiple of that size, and its size follows.' },
+  // A Skeleton.Line stands in for a line of the caller's text, so it and its bar take that text's type, and its height is that line's.
+  { part: '.muxui-skeleton__line', properties: ['font-family', 'font-size', 'line-height'], reason: 'A Skeleton.Line sets `font-family`, `font-size` and `line-height` to `inherit` so it is one line of the text it stands for: its height is that line height.' },
+  { part: '.muxui-skeleton__bar', properties: ['font-family', 'font-size', 'line-height'], reason: 'The bar of a Skeleton.Line inherits the line\'s type, the text around it, so its height is that text\'s cap height.' },
 ];
 
 // The reset layer sits before every Mux UI layer, so it loses to anything Mux UI declares and shows only what a part left undeclared.

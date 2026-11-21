@@ -5,7 +5,7 @@ Use Skeleton to hold the place of content while it loads. `Skeleton.Root` is the
 ## Shaping the placeholder
 
 - Build the placeholder in the markup the content will use, with a shape where each piece of text or media will go, so the page does not move when the content arrives.
-- A `Skeleton.Line` is one line of the text around it: put it inside the element that will hold the text, such as a heading or a paragraph, and it takes that element's line height.
+- A `Skeleton.Line` is one line of the text around it: put it inside the element that will hold the text, such as a heading or a paragraph, and it takes that element's line height. The group itself, circles and blocks keep Mux UI's own type.
 - Give a line a `width` near the length of the text it stands for, and make the last line of a paragraph shorter.
 - Use `Skeleton.Circle` for an avatar or icon, at the size of the [Avatar](/components/avatar/) it stands for, and `Skeleton.Block` for media, by its height or aspect ratio.
 - Keep layouts for particular screens in your own code. Skeleton gives the shapes and the group, not the layout.
