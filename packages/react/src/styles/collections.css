@@ -3139,6 +3139,34 @@
     color: HighlightText;
   }
 
+  /* A Table row, GridList item and Tree item paint their own selected fill, which forced colours turn into Canvas with
+     the fill's alpha, and the selected Tab's own text colour turns into CanvasText; both outrank the pair above, so these
+     name it again. A disabled GridList or Tree item keeps the disabled colours above, and a link in a selected item
+     follows its text, since LinkText is only guaranteed legible on Canvas. */
+  .muxui-table .muxui-table__row:is([data-muxui-state-selected], [aria-selected='true']),
+  .muxui-tabs .muxui-tabs__tab:is([data-muxui-state-selected], [aria-selected='true']),
+  :is(.muxui-grid-list, .muxui-tree) :is(.muxui-grid-list__item, .muxui-tree__item):is([data-muxui-state-selected], [aria-selected='true']):not([data-muxui-state-disabled], [aria-disabled='true']) {
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .muxui-table .muxui-table__row:is([data-muxui-state-selected], [aria-selected='true']) a,
+  :is(.muxui-grid-list, .muxui-tree) :is(.muxui-grid-list__item, .muxui-tree__item):is([data-muxui-state-selected], [aria-selected='true']):not([data-muxui-state-disabled], [aria-disabled='true']) a {
+    color: HighlightText;
+  }
+
+  /* A colour scheme's tab colour rule ties the GrayText rule above on specificity and wins as a scoped rule, so a
+     disabled Tab names GrayText again here. */
+  .muxui-tabs .muxui-tabs__tab[data-muxui-state-disabled]:not([data-muxui-state-selected], [aria-selected='true']) {
+    color: GrayText;
+  }
+
+  /* A Virtualizer row's own dimming rule comes later in this file, so this one outranks it. */
+  .muxui-virtualizer .muxui-virtualizer__item:is([data-muxui-state-disabled], [aria-disabled='true']) {
+    opacity: 1;
+    color: GrayText;
+  }
+
   :where(.muxui-calendar__cell, .muxui-range-calendar__cell, .muxui-grid-list__item, .muxui-list-box__item, .muxui-menu__item, .muxui-select__option, .muxui-combo-box__option, .muxui-tabs__tab, .muxui-table__row):focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 1px;
