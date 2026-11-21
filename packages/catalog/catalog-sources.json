@@ -1859,6 +1859,10 @@
     {
       "family": "guide",
       "path": "catalog/guides/banner-usage.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/combo-box/examples/react/sections.example.json"
     }
   ]
 }

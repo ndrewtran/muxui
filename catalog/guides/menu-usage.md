@@ -15,6 +15,13 @@ Use the Mux UI Menu contract and provide an accessible name.
 
 The Menu for secondary commands example puts the main action beside the menu and groups the rest in named sections. The Nested React Menu example adds one Share submenu.
 
+## Shortcuts
+
+- Show an item's keyboard shortcut with Menu.Shortcut at the end of the item. Its key caps are decoration hidden from assistive technology, so state the same shortcut on the item with `aria-keyshortcuts`.
+- Menu.Shortcut only shows keys. The application registers the shortcut, and the label should match the keys of the platform it runs on.
+
+The Menu for secondary commands example shows the shortcut of its Duplicate page command.
+
 ## Content
 
 - Start each item with the verb for what it does, such as Duplicate page.

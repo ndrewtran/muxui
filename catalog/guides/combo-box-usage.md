@@ -16,6 +16,12 @@ The ComboBox and Autocomplete submitted values example puts both over the same r
 
 A ComboBox keeps the input text and the selected option as separate state. The option is identified by its ID, so give each item a stable ID and keep the ID, not the label, as the selection. If you control both, the application sets the text when an option is chosen. Emptying the input calls `onSelect` with no item, so set the selected ID to `null` and the text to an empty string there. Pass `selectedId={null}` for a controlled field with no selection; an empty string is not an ID and throws. The Controlled text and selection example wires both. The [Behavior](#behavior) section lists the callbacks, and a named form submits the selected ID, or an empty value when nothing is selected.
 
+## Groups of options
+
+- Pass `sections` in place of `items` to show the options under named headers, such as Recent and All teams. Each header is exposed to assistive technology as the name of its group.
+- Typing filters every section, and a section with no match is hidden. The arrow keys move through the options of every section as one list; the headers are not stops.
+- Keep item IDs unique across sections. The Options in named sections example groups teams this way.
+
 ## Content
 
 - Label the field with the record it picks, such as Depot or Customer, not Search.

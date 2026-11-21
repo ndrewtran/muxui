@@ -37,6 +37,13 @@
               "doc": "The full option set, filtered as the user types by a case- and accent-insensitive contains match on each item's text. Pass every option rather than a pre-filtered list."
             },
             {
+              "name": "sections",
+              "optional": true,
+              "type": "readonly ComboBoxSection[]",
+              "refs": ["combo-box#ComboBoxSection"],
+              "doc": "The full option set in named groups, in place of `items`, filtered the same way. A group with no matching option is hidden. Item ids are unique across the groups."
+            },
+            {
               "name": "value",
               "optional": true,
               "type": "string",
@@ -185,7 +192,7 @@
       "id": "combo-box#ComboBoxOwnProps",
       "name": "ComboBoxOwnProps",
       "module": "combo-box",
-      "text": "type ComboBoxOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  items?: MuxUIItems;\n  value?: string;\n  defaultValue?: string;\n  selectedId?: string | null;\n  defaultSelectedId?: string;\n  disabled?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  name?: string;\n  placeholder?: string;\n  onChange?: (value: string) => void;\n  onSelect?: (item?: MuxUICollectionItem) => void;\n};",
+      "text": "type ComboBoxOwnProps = {\n  label?: Exclude<React.ReactNode, null | undefined | boolean>;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  items?: MuxUIItems;\n  sections?: readonly ComboBoxSection[];\n  value?: string;\n  defaultValue?: string;\n  selectedId?: string | null;\n  defaultSelectedId?: string;\n  disabled?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  name?: string;\n  placeholder?: string;\n  onChange?: (value: string) => void;\n  onSelect?: (item?: MuxUICollectionItem) => void;\n};",
       "members": [
         {
           "name": "label",
@@ -211,6 +218,13 @@
           "type": "MuxUIItems",
           "refs": ["collection-items#MuxUIItems"],
           "doc": "The full option set, filtered as the user types by a case- and accent-insensitive contains match on each item's text. Pass every option rather than a pre-filtered list."
+        },
+        {
+          "name": "sections",
+          "optional": true,
+          "type": "readonly ComboBoxSection[]",
+          "refs": ["combo-box#ComboBoxSection"],
+          "doc": "The full option set in named groups, in place of `items`, filtered the same way. A group with no matching option is hidden. Item ids are unique across the groups."
         },
         {
           "name": "value",
@@ -293,7 +307,11 @@
           "doc": "Called with the chosen item, or with no item when the selection clears. Emptying the input clears the selection."
         }
       ],
-      "refs": ["collection-items#MuxUIItems", "collection-items#MuxUICollectionItem"]
+      "refs": [
+        "collection-items#MuxUIItems",
+        "combo-box#ComboBoxSection",
+        "collection-items#MuxUICollectionItem"
+      ]
     },
     {
       "id": "combo-box#ComboBoxProps",
@@ -305,6 +323,35 @@
       "owner": "combo-box",
       "text": "type ComboBoxProps = Omit<ComboBoxOwnProps, 'label'> & NamedFieldProps;",
       "refs": ["combo-box#ComboBoxOwnProps", "fields#NamedFieldProps"]
+    },
+    {
+      "id": "combo-box#ComboBoxSection",
+      "name": "ComboBoxSection",
+      "module": "combo-box",
+      "public": [
+        { "entry": ".", "name": "ComboBoxSection" }
+      ],
+      "owner": "combo-box",
+      "text": "interface ComboBoxSection {\n  id: string;\n  title: Exclude<React.ReactNode, null | undefined | boolean>;\n  items: MuxUIItems;\n}",
+      "members": [
+        {
+          "name": "id",
+          "type": "string",
+          "doc": "The section's stable id. It must differ from every other section's id and every item's id."
+        },
+        {
+          "name": "title",
+          "type": "Exclude<React.ReactNode, null | undefined | boolean>",
+          "doc": "The visible heading, which also names the group for assistive technology."
+        },
+        {
+          "name": "items",
+          "type": "MuxUIItems",
+          "refs": ["collection-items#MuxUIItems"],
+          "doc": "The section's options, in the same forms `items` takes."
+        }
+      ],
+      "refs": ["collection-items#MuxUIItems"]
     },
     {
       "id": "fields#ControlSize",

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:537ab42db10bbea85ab859206e6576f80ee14dc62f304d4491c9b219fe6609f8 -->
+<!-- @generated-content-sha256: sha256:ff5a67754983126d2625ab839d0e308c5d7e1b6c9407b153f4e00e1e66929bf0 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -166,7 +166,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorSwatch | experimental | . | .muxui-color-swatch | color, secondaryColor, shape, colorName, disabled |
 | ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | items, value, defaultValue, disabled, readOnly |
 | ColorWheel | experimental | . | .muxui-color-wheel | value, defaultValue, outerRadius, innerRadius, disabled, readOnly |
-| ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
+| ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, items, sections, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
 | CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, size, closeOnSelect; trigger: disabled; backdrop: dismissable, scrim; popup: translucent; close: disabled; content: autoFocusFirst; search-field: variant; clear-button: disabled; item: id, title, description, textValue, href, target, disabled, closeOnSelect; shortcut: keys |
 | DataDiff | experimental | . | .muxui-data-diff | label, description, columns, rows, selectedIds, defaultSelectedIds, pending, disabled, applyLabel, emptyMessage |
 | DateField | experimental | . | .muxui-date-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
@@ -189,7 +189,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Link | experimental | . | .muxui-link | href, disabled, current, target, rel |
 | ListBox | experimental | . | .muxui-list-box | items, selectedIds, defaultSelectedIds, disabled, selectionMode, layout, orientation; section: title; item: id, textValue, disabled |
 | Markdown | experimental | ./markdown | .muxui-markdown | source, baseUrl, invalidFallback |
-| Menu | experimental | . | .muxui-menu | open, defaultOpen, disabled, shouldCloseOnSelect; trigger: disabled; popup: placement, offset, crossOffset, shouldFlip, containerPadding, modal; list: items, disabled, shouldCloseOnSelect; item: id, textValue, disabled, shouldCloseOnSelect; submenu: delay; section: title |
+| Menu | experimental | . | .muxui-menu | open, defaultOpen, disabled, shouldCloseOnSelect; trigger: disabled; popup: placement, offset, crossOffset, shouldFlip, containerPadding, modal; list: items, disabled, shouldCloseOnSelect; item: id, textValue, disabled, shouldCloseOnSelect; shortcut: keys; submenu: delay; section: title |
 | Message | experimental | . | .muxui-message | sender, author, actions, sources, sourcesExpanded, defaultSourcesExpanded, followUps, streaming, streamingLabel |
 | Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions |
 | MultiSelect | experimental | . | .muxui-multi-select | size, label, placeholder, description, errorMessage, disabled, required, invalid, supportingText, emptyStateTitle, emptyStateDescription, items, selectedKeys, defaultSelectedKeys, showSearch, showFooter, selectedCountFormatter; item: disabled, textValue |
@@ -227,7 +227,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ToggleButton | experimental | . | .muxui-toggle-button | selected, defaultSelected, disabled, size, variant, preventFocusOnPress |
 | ToggleButtonGroup | experimental | . | .muxui-toggle-button-group | selectedIds, defaultSelectedIds, selectionMode, disabled, orientation, disallowEmptySelection, size |
 | TokenField | experimental | . | .muxui-token-field | label, value, defaultValue, disabled, readOnly, name, placeholder |
-| Toolbar | experimental | . | .muxui-toolbar | orientation |
+| Toolbar | experimental | . | .muxui-toolbar | orientation, variant |
 | Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, open, defaultOpen, disabled |
 | Tree | experimental | . | .muxui-tree | items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
 | Virtualizer | experimental | . | .muxui-virtualizer | layout, items, height, itemHeight, overscan, disabled, children, minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns |
@@ -246,12 +246,13 @@ These contracts are projected from the component bindings in the canonical catal
 - A Menu.Trigger inside a Toolbar sends Tab or Shift+Tab out of the Toolbar, as Tab from the closed trigger does.
 - Menu.Submenu accepts exactly a Menu.Item trigger and a Menu.Popup as its two children. It has no DOM host, className, or ref; style its item using .muxui-menu__item[data-muxui-state-has-submenu] and [data-muxui-state-open].
 - Items require stable string IDs. Supply textValue for rich content. A per-item onAction runs before list and root onAction/onSelect. Data-backed actions preserve normalized item metadata; compound actions return identity fields id, key, and value.
+- Menu.Shortcut shows key caps at the end of an item, one kbd per entry of keys, or its children when keys is empty or absent, and is hidden from assistive technology. Give the item its real shortcut with aria-keyshortcuts.
 - Menu.Popup accepts placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, and modal. Placement uses top, bottom, start, end, or a logical alignment such as bottom-start or end-top. Geometry numbers must be finite, containerPadding and delay must be nonnegative. Without a placement, a top-level popup opens at bottom-start and a popup inside a Menu.Submenu opens beside its item at end-top.
 - For context coordinates, position a consumer-owned element at the desired point and pass its element ref as anchorRef while controlling Menu.Root open. modal=false allows outside content to remain accessible.
-- Mux selectors are .muxui-menu__root, .muxui-menu__trigger, .muxui-menu__popup, .muxui-menu__list, .muxui-menu__item, .muxui-menu__section, .muxui-menu__header, and .muxui-menu__separator. Item states use data-muxui-state-disabled, data-muxui-state-focused, data-muxui-state-focus-visible, data-muxui-state-has-submenu, and data-muxui-state-open. Root uses data-muxui-state-open and data-muxui-state-disabled.
-- Trigger refs target native buttons and preserve native handlers. Root, Popup, List, and Item refs target divs; Section and Header refs target section/header elements; Separator refs target an hr.
+- Mux selectors are .muxui-menu__root, .muxui-menu__trigger, .muxui-menu__popup, .muxui-menu__list, .muxui-menu__item, .muxui-menu__shortcut, .muxui-menu__shortcut-key, .muxui-menu__section, .muxui-menu__header, and .muxui-menu__separator. Item states use data-muxui-state-disabled, data-muxui-state-focused, data-muxui-state-focus-visible, data-muxui-state-has-submenu, and data-muxui-state-open. Root uses data-muxui-state-open and data-muxui-state-disabled.
+- Trigger refs target native buttons and preserve native handlers. Root, Popup, List, and Item refs target divs; Section and Header refs target section/header elements; Separator refs target an hr; Shortcut refs target a span.
 
-Public parts: `root`, `trigger`, `popup`, `list`, `item`, `submenu`, `section`, `header`, `separator`.
+Public parts: `root`, `trigger`, `popup`, `list`, `item`, `shortcut`, `submenu`, `section`, `header`, `separator`.
 
 ### ListBox
 

@@ -493,11 +493,11 @@ export type { ListBoxItemProps, ListBoxProps, ListBoxSectionProps } from './list
 export { GridList } from './grid-list.js';
 export type { GridListItemProps, GridListProps } from './grid-list.js';
 export { Menu } from './menu.js';
-export type { MenuItemProps, MenuListProps, MenuPopupProps, MenuProps, MenuRootProps, MenuSectionProps, MenuSubmenuProps, MenuTriggerProps } from './menu.js';
+export type { MenuItemProps, MenuListProps, MenuPopupProps, MenuProps, MenuRootProps, MenuSectionProps, MenuShortcutProps, MenuSubmenuProps, MenuTriggerProps } from './menu.js';
 export { Virtualizer } from './virtualizer.js';
 export type { VirtualizerGridProps, VirtualizerProps, VirtualizerStackProps } from './virtualizer.js';
 export { ComboBox } from './combo-box.js';
-export type { ComboBoxProps } from './combo-box.js';
+export type { ComboBoxProps, ComboBoxSection } from './combo-box.js';
 export { Select } from './select.js';
 export type { SelectItemProps, SelectOptions, SelectPopupProps, SelectProps, SelectRootProps, SelectTriggerProps } from './select.js';
 export { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, Tooltip, useToast } from './overlays.js';

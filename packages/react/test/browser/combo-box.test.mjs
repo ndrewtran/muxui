@@ -41,6 +41,17 @@ const entry = `import React from 'react';
         h('button', { type: 'button', id: 'app-clear', onClick: () => { setText(''); setSelectedId(null); } }, 'Clear'),
         h('output', null, 'selected ' + (selectedId ?? 'none')));
     },
+    // The options in two named groups, and a third that holds none.
+    sections: () => h('form', { onSubmit: submit },
+      h('button', { type: 'submit' }, 'Submit'),
+      h(ComboBox, {
+        label: 'Topic', name: 'city', onSelect: (item) => log('select', item?.id ?? 'none'),
+        sections: [
+          { id: 'joined', title: 'Joined', items: [{ id: 'baking', label: 'Baking' }, { id: 'bikes', label: 'Bikes' }] },
+          { id: 'other', title: 'Not joined', items: [{ id: 'birds', label: 'Birds' }, { id: 'books', label: 'Books', disabled: true }, { id: 'boats', label: 'Boats' }] },
+          { id: 'archived', title: 'Archived', items: [] },
+        ],
+      })),
     // A field far wider than its options, so a list sized by its options alone shows as narrower than the field.
     list: () => h('div', { style: { width: '600px', padding: '24px' } }, h(ComboBox, { label: 'Town', items: towns })),
     // Forty options, far more than the list shows, above content that makes the page taller than the viewport.
@@ -135,6 +146,61 @@ test('real browser ComboBox reports a cleared selection and submits an empty val
     assert.equal(await input.inputValue(), '');
     assert.equal((await events()).length, eventCount, 'the application clearing its state is not reported back');
     assert.deepEqual(await submit(), ['']);
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await page.close();
+  }
+});
+
+test('real browser ComboBox groups its options in named sections that filter, navigate and select as one list', { timeout: 90_000, skip: chromiumSkip }, async () => {
+  const { url } = server;
+  const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
+  try {
+    page.setDefaultTimeout(10_000);
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text()); });
+    await page.goto(`${url}/combo-box.html?case=sections`, { waitUntil: 'load' });
+    await page.waitForFunction(() => document.documentElement.dataset.ready === 'sections');
+    await awaitFontsAndFrames(page);
+    const input = page.getByRole('combobox', { name: 'Topic' });
+    // Each group by its accessible name, with the names of its options.
+    const groups = () => page.getByRole('listbox').evaluate((list) => [...list.querySelectorAll('[role="group"]')].map((group) => {
+      const name = group.getAttribute('aria-label') ?? document.getElementById(group.getAttribute('aria-labelledby'))?.textContent;
+      return [name, [...group.querySelectorAll('[role="option"]')].map((option) => option.textContent)];
+    }));
+
+    await page.locator('.muxui-combo-box__trigger').click();
+    await page.getByRole('listbox').waitFor();
+    assert.equal(await page.getByRole('group', { name: 'Joined', exact: true }).count(), 1, 'the first group is named by its title');
+    assert.deepEqual(await groups(), [['Joined', ['Baking', 'Bikes']], ['Not joined', ['Birds', 'Books', 'Boats']]]);
+    // The headers are not options, so assistive technology does not count them among the choices.
+    assert.equal(await page.locator('.muxui-combo-box__header[role="option"]').count(), 0);
+    await page.keyboard.press('Escape');
+
+    // Typing filters each group, and a group with no match is hidden.
+    await input.pressSequentially('bi');
+    await page.getByRole('listbox').waitFor();
+    assert.deepEqual(await groups(), [['Joined', ['Bikes']], ['Not joined', ['Birds']]]);
+    await input.press('ArrowDown');
+    await input.press('ArrowDown');
+    assert.equal(await page.locator('.muxui-combo-box__option[data-muxui-state-focused]').textContent(), 'Birds', 'ArrowDown moves from one group into the next');
+    await input.fill('bo');
+    await page.waitForFunction(() => document.querySelectorAll('[role="listbox"] [role="group"]').length === 1);
+    assert.deepEqual(await groups(), [['Not joined', ['Books', 'Boats']]]);
+    // ArrowDown passes the disabled option, and Enter chooses the focused one.
+    await input.press('ArrowDown');
+    assert.equal(await page.locator('.muxui-combo-box__option[data-muxui-state-focused]').textContent(), 'Boats');
+    await input.press('Enter');
+    await page.waitForFunction(() => window.events.length === 1 && document.querySelector('input[role="combobox"]').value === 'Boats');
+    await page.locator('button[type="submit"]').click();
+    assert.deepEqual(await page.evaluate(() => window.events), [['select', 'boats'], ['submit', ['boats']]]);
+    // The button shows every option again, and typing while that list is open filters it.
+    await page.locator('.muxui-combo-box__trigger').click();
+    await page.waitForFunction(() => document.querySelectorAll('[role="listbox"] [role="option"]').length === 5);
+    await input.fill('ki');
+    await page.waitForFunction(() => document.querySelectorAll('[role="listbox"] [role="group"]').length === 1);
+    assert.deepEqual(await groups(), [['Joined', ['Baking']]]);
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await page.close();
@@ -326,6 +392,46 @@ for (const engine of engines) {
         } finally {
           await page.close();
         }
+      }
+    } finally {
+      if (engineBrowser !== browser) await engineBrowser.close();
+    }
+  });
+}
+
+// A wheel past the end of a long list does not scroll the page behind it, which would close the list: the list
+// contains its overscroll.
+for (const engine of engines) {
+  test(`real browser ComboBox keeps a wheel past the end of its list from scrolling the page in ${engine}`, { timeout: 120_000 }, async () => {
+    const { url } = server;
+    const engineBrowser = engine === 'chromium' ? browser : await launchBrowser(engine);
+    try {
+      const page = await engineBrowser.newPage({ viewport: { width: 800, height: 700 } });
+      try {
+        page.setDefaultTimeout(10_000);
+        await page.goto(`${url}/combo-box-scroll.html?case=long`, { waitUntil: 'load' });
+        await page.waitForFunction(() => document.documentElement.dataset.ready === 'long');
+        await awaitFontsAndFrames(page);
+        await page.evaluate(() => { document.documentElement.dataset.muxuiMotion = 'reduced'; });
+        await page.locator('.muxui-combo-box__trigger').click();
+        const list = page.locator('.muxui-combo-box__list');
+        await list.waitFor();
+        assert.equal(await list.evaluate((node) => getComputedStyle(node).overscrollBehaviorY), 'contain');
+        const frames = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))));
+        const start = await page.evaluate(() => window.scrollY);
+        const box = await list.boundingBox();
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        // A first wheel inside the list makes it the target the wheel scrolls, as a person's would.
+        await page.mouse.wheel(0, 120);
+        await page.waitForFunction(() => document.querySelector('.muxui-combo-box__list').scrollTop > 0);
+        await list.evaluate((node) => { node.scrollTop = node.scrollHeight; });
+        await frames();
+        await page.mouse.wheel(0, 480);
+        await frames();
+        assert.equal(await page.evaluate(() => window.scrollY), start, 'the page does not scroll');
+        assert.equal(await page.getByRole('combobox', { name: 'Option' }).getAttribute('aria-expanded'), 'true', 'the list stays open');
+      } finally {
+        await page.close();
       }
     } finally {
       if (engineBrowser !== browser) await engineBrowser.close();

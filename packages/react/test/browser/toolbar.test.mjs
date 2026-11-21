@@ -4,7 +4,8 @@ import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startSer
 
 // A Toolbar lays its controls out along its orientation, and the arrow keys
 // that move between them follow the same direction. A vertical Toolbar used to
-// keep the horizontal row, so ArrowDown moved focus sideways. Runs in every
+// keep the horizontal row, so ArrowDown moved focus sideways. The plain variant
+// drops the toolbar's own surface and keeps its keyboard behaviour. Runs in every
 // engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const entry = `
@@ -15,12 +16,16 @@ import { Button } from '/src/button.ts';
 import { ToggleButton } from '/src/components.ts';
 
 const h = React.createElement;
-const { orientation } = JSON.parse(new URLSearchParams(location.search).get('config'));
-createRoot(document.getElementById('root')).render(
-  h(Toolbar, { 'aria-label': 'Document actions', orientation, style: { inlineSize: 240 } },
+const { orientation, variant, scheme = 'light' } = JSON.parse(new URLSearchParams(location.search).get('config'));
+document.documentElement.dataset.muxuiColorScheme = scheme;
+createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+  // Text inputs, which WebKit's Tab stops at as it does not at a native button.
+  h('input', { id: 'before', 'aria-label': 'Before' }),
+  h(Toolbar, { 'aria-label': 'Document actions', orientation, variant, style: { inlineSize: 240 } },
     h(Button, null, 'First'),
     h(ToggleButton, null, 'Second'),
-    h(Button, null, 'Third')));
+    h(Button, null, 'Third')),
+  h('input', { id: 'after', 'aria-label': 'After' })));
 `;
 
 const page = pageShell({
@@ -48,8 +53,8 @@ for (const engine of browserEngines()) {
       tab.on('pageerror', (error) => errors.push(error.message));
       tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
 
-      const open = async (orientation) => {
-        await tab.goto(`${url}/toolbar.html?config=${encodeURIComponent(JSON.stringify({ orientation }))}`, { waitUntil: 'load' });
+      const open = async (orientation, config = {}) => {
+        await tab.goto(`${url}/toolbar.html?config=${encodeURIComponent(JSON.stringify({ orientation, ...config }))}`, { waitUntil: 'load' });
         await tab.locator('.muxui-toolbar button').first().waitFor();
         await awaitFontsAndFrames(tab);
       };
@@ -84,6 +89,36 @@ for (const engine of browserEngines()) {
           assert.ok(second.x >= first.x + first.width - 1 && third.x >= second.x + second.width - 1, `controls sit side by side (lefts ${first.x}, ${second.x}, ${third.x})`);
           assert.ok(Math.abs(first.y - second.y) <= 1 && Math.abs(second.y - third.y) <= 1, `controls share one top edge (${first.y}, ${second.y}, ${third.y})`);
           assert.deepEqual(await visit('ArrowRight'), LABELS, 'ArrowRight visits the controls left to right');
+        });
+      }
+
+      // The plain variant draws no surface in either scheme, where the contained default draws one; its controls keep
+      // one Tab stop, arrow navigation, and a visible keyboard ring.
+      const surface = () => tab.locator('.muxui-toolbar').evaluate((node) => {
+        const style = getComputedStyle(node);
+        return { fill: style.backgroundColor, border: style.borderTopWidth, padding: style.paddingTop };
+      });
+      const active = () => tab.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent);
+      for (const scheme of ['light', 'dark']) {
+        await t.test(`a plain toolbar draws no surface and keeps its keyboard behaviour in the ${scheme} scheme`, async () => {
+          await open(undefined, { scheme });
+          const contained = await surface();
+          assert.notEqual(contained.fill, 'rgba(0, 0, 0, 0)', 'the contained default is filled');
+          assert.equal(contained.border, '1px', 'the contained default is bordered');
+          await open(undefined, { scheme, variant: 'plain' });
+          assert.equal(await tab.locator('.muxui-toolbar').getAttribute('data-muxui-variant'), 'plain');
+          assert.deepEqual(await surface(), { fill: 'rgba(0, 0, 0, 0)', border: '0px', padding: '0px' }, 'no fill, border, or padding');
+          await tab.locator('#before').focus();
+          await tab.keyboard.press('Tab');
+          assert.equal(await active(), 'First', 'Tab enters on the first control');
+          const ring = await tab.evaluate(() => getComputedStyle(document.activeElement).boxShadow);
+          assert.notEqual(ring, 'none', 'the focused control shows its keyboard ring');
+          await tab.keyboard.press('ArrowRight');
+          assert.equal(await active(), 'Second', 'ArrowRight moves to the next control');
+          await tab.keyboard.press('Tab');
+          assert.equal(await active(), 'After', 'one Tab leaves the toolbar');
+          await tab.keyboard.press('Shift+Tab');
+          assert.equal(await active(), 'Second', 'Shift+Tab comes back to the control last focused');
         });
       }
 

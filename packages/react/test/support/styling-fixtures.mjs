@@ -137,12 +137,25 @@ export const clientFixtures = [
         h(M.Menu.Item, { id: 'paste' }, 'Paste')))),
   },
   {
+    family: 'menu', name: 'Menu.Root open with a shortcut', state: 'open',
+    element: ({ h, M }) => h(M.Menu.Root, { defaultOpen: true },
+      h(M.Menu.Trigger, null, 'Text style'),
+      h(M.Menu.Popup, null, h(M.Menu.List, { 'aria-label': 'Text style' },
+        h(M.Menu.Item, { id: 'normal' }, 'Normal text'),
+        h(M.Menu.Item, { id: 'heading', textValue: 'Heading', 'aria-keyshortcuts': 'Control+Alt+1' }, 'Heading', h(M.Menu.Shortcut, { keys: ['Ctrl', 'Alt', '1'] }))))),
+  },
+  {
     family: 'select', name: 'Select open', state: 'open',
     element: ({ h, M }) => h(M.Select, { label: 'City', items: ['Melbourne', 'Sydney'], defaultOpen: true }),
   },
   {
     family: 'combo-box', name: 'ComboBox opened from its trigger', state: 'open',
     element: ({ h, M }) => h(M.ComboBox, { label: 'City', items: ['Melbourne', 'Sydney'] }),
+    steps: [({ window, document }) => press(window, find(document, '.muxui-combo-box__trigger'))],
+  },
+  {
+    family: 'combo-box', name: 'ComboBox with sections opened from its trigger', state: 'open',
+    element: ({ h, M }) => h(M.ComboBox, { label: 'Team', sections: [{ id: 'recent', title: 'Recent', items: ['Design'] }, { id: 'all', title: 'All teams', items: ['Finance', 'Legal'] }] }),
     steps: [({ window, document }) => press(window, find(document, '.muxui-combo-box__trigger'))],
   },
   {
