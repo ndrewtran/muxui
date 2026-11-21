@@ -90,6 +90,19 @@
   margin-top: var(--muxui-semantic-layout-control-gap);
 }
 
+/* minRows and maxRows: the content grows with its text between the two, then scrolls inside. A row is one line in the
+   content's own line height, so it follows the font size and zoom, and the block padding is added to the rows. A cap
+   alone also lowers the default least height to it. minRows comes second, so it sets the least height when both apply. */
+.muxui-text-editor--max-rows .muxui-text-editor__content .ProseMirror {
+  min-height: min(7.5rem, calc(var(--muxui-text-editor-max-rows) * 1lh + 2 * var(--muxui-semantic-layout-inset-medium)));
+  max-height: calc(var(--muxui-text-editor-max-rows) * 1lh + 2 * var(--muxui-semantic-layout-inset-medium));
+  overflow-y: auto;
+}
+
+.muxui-text-editor--min-rows .muxui-text-editor__content .ProseMirror {
+  min-height: calc(var(--muxui-text-editor-min-rows) * 1lh + 2 * var(--muxui-semantic-layout-inset-medium));
+}
+
 /* The document is the component's own content. Its nodes take the surface's typography, never the host's rules for `p`, `li`,
    `blockquote`, `a`, ... Zero specificity, so the rules below still win; a heading keeps its role from base.css, and a code block
    keeps the browser's monospace face, stated here so a host rule for `pre` cannot replace it. */
@@ -742,5 +755,18 @@
         color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 6%, transparent)
       );
     }
+  }
+}
+
+/* Forced colours drop the box shadows that draw the content's edge and its focus, so both become outlines, as the text
+   fields draw them: a ButtonText edge at rest and a Highlight ring on focus. */
+@media (forced-colors: active) {
+  .muxui-text-editor__content .ProseMirror {
+    outline: 1px solid ButtonText !important;
+  }
+
+  .muxui-text-editor__content .ProseMirror:focus {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
   }
 }

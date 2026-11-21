@@ -2,10 +2,10 @@ import React from 'react';
 import type { ChangeEvent, ForwardRefExoticComponent, HTMLAttributes, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefAttributes } from 'react';
 import { createPortal } from 'react-dom';
 import { Extension, getText, getTextSerializersFromSchema, isNodeEmpty } from '@tiptap/core';
-import type { Editor, EditorEvents } from '@tiptap/core';
+import type { ChainedCommands, Editor, EditorEvents } from '@tiptap/core';
 import { closeHistory, isHistoryTransaction } from '@tiptap/pm/history';
 import { Fragment, Slice } from '@tiptap/pm/model';
-import type { Mark, Node as ProseMirrorNode, Schema } from '@tiptap/pm/model';
+import type { Mark, Node as ProseMirrorNode, ResolvedPos, Schema } from '@tiptap/pm/model';
 import { AllSelection, Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
 import type { Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
@@ -67,15 +67,46 @@ export type TextEditorHorizontalRuleNode = { type: 'horizontalRule' };
 export type TextEditorBlockNode = TextEditorParagraphNode | TextEditorHeadingNode | TextEditorListNode | TextEditorBlockquoteNode | TextEditorCodeBlockNode | TextEditorImageNode | TextEditorHorizontalRuleNode;
 export type TextEditorNode = TextEditorInlineNode | TextEditorBlockNode | TextEditorListItemNode;
 export type TextEditorDocument = { type: 'doc'; content: [TextEditorBlockNode, ...TextEditorBlockNode[]] };
+/**
+ * A command for `execute`. `heading` and `paragraph` set the block and leave one that already is it alone; `text` inserts plain
+ * text as typing does; `link` with `text` inserts or replaces the link's text, and at a caret in a link `link` and `unlink`
+ * act on the whole link.
+ */
 export type TextEditorCommand =
-  | { type: 'bold' | 'italic' | 'underline' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'unlink' | 'generate' }
+  | { type: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'paragraph' | 'horizontalRule' | 'unlink' | 'generate' }
+  | { type: 'heading'; level: 1 | 2 | 3 | 4 | 5 | 6 }
+  | { type: 'text'; text: string }
   | { type: 'align'; value: TextEditorAlignment }
   | { type: 'color'; value: string }
   | { type: 'fontFamily'; value: TextEditorFontFamily }
   | { type: 'fontSize'; value: TextEditorFontSize }
-  | { type: 'link'; href: string }
+  | { type: 'link'; href: string; text?: string }
   | { type: 'image'; src: string; alt?: string };
-export type TextEditorHandle = { focus(): void; execute(command: TextEditorCommand): boolean };
+export type TextEditorHandle = {
+  /**
+   * Focuses the editable content with its selection. By default focus follows a frame later and scrolls the selection into
+   * view; `preventScroll` focuses at once and scrolls nothing.
+   */
+  focus(options?: { preventScroll?: boolean }): void;
+  execute(command: TextEditorCommand): boolean;
+};
+/** The formatting at the selection, as `onFormattingChange` reports it. It holds plain values only. */
+export type TextEditorFormatting = {
+  /** True for a caret, false while text or a block is selected. */
+  readonly empty: boolean;
+  /** Each mark is true when all the selected text carries it, or at a caret when the next typed text would. */
+  readonly marks: { readonly bold: boolean; readonly italic: boolean; readonly underline: boolean; readonly strike: boolean; readonly code: boolean };
+  /** The address of the link at a caret, the one the next typed text would take, or of the one link all the selected text is in; otherwise null. */
+  readonly link: string | null;
+  /** The kind of text block that holds the selection, or null when it spans more than one kind or holds no text block. */
+  readonly block: 'paragraph' | 'heading' | 'codeBlock' | null;
+  /** The level of the headings the selection is in, when they share one; otherwise null. */
+  readonly headingLevel: 1 | 2 | 3 | 4 | 5 | 6 | null;
+  /** The nearest list that holds the whole selection, or null. */
+  readonly list: 'bulletList' | 'orderedList' | null;
+  /** True when a quote holds the whole selection. */
+  readonly quote: boolean;
+};
 export type TextEditorActionCallbacks = { setLink(href: string): boolean; unsetLink(): boolean };
 /** An action in the bar under a text selection. The caller supplies any icon. */
 export type TextEditorSelectionAction = {
@@ -170,9 +201,19 @@ type TextEditorOwnProps = {
    * a failure message with Try again and Dismiss.
    */
   onSelectionRequest?: (request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>;
+  /** Focuses the editable content once it is in the page, without scrolling, when the editor is editable. Only the first mount reads it. */
+  autoFocus?: boolean;
+  /** Called once the editable content is in the page and can take focus. It renders on the client after mount, so this runs after hydration. */
+  onReady?: () => void;
+  /** Called with the formatting at the selection when the editor is ready, then whenever a selection move or an edit changes it. */
+  onFormattingChange?: (formatting: TextEditorFormatting) => void;
+  /** The least height of the content, in lines of its text. A fraction is rounded down, and a value below 1 means the default height. */
+  minRows?: number;
+  /** The greatest height of the content, in lines of its text, beyond which it scrolls. It is rounded as minRows is and never less than minRows. */
+  maxRows?: number;
 };
 
-export type TextEditorProps = Omit<HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange'> & TextEditorOwnProps;
+export type TextEditorProps = Omit<HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange' | 'autoFocus'> & TextEditorOwnProps;
 
 const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 const SAFE_IMAGE_PROTOCOLS = new Set(['http:', 'https:']);
@@ -192,6 +233,11 @@ const blockNodeTypes: ReadonlySet<unknown> = new Set([
   'paragraph', 'heading', 'bulletList', 'orderedList', 'listItem', 'blockquote', 'codeBlock', 'image', 'horizontalRule',
 ]);
 const cx = (...values: unknown[]) => values.filter(Boolean).join(' ');
+
+/** A count for minRows or maxRows: a whole number of at least 1, or undefined for no count. */
+function rowCount(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 1 ? Math.floor(value) : undefined;
+}
 
 /**
  * A value offered as a document, node, mark, or attributes. It may be anything, so every function that takes one tests the
@@ -426,6 +472,17 @@ export function normalizeTextEditorDocument(value: unknown): TextEditorDocument 
   return { type: 'doc', content: content.length ? content as TextEditorDocument['content'] : [{ type: 'paragraph' }] };
 }
 
+/**
+ * The address as the link or image command stores it, or null when that command would refuse it: the same rule the document
+ * grammar applies. A link takes an absolute http, https, or mailto URL and an image an absolute http or https URL, with no
+ * user name or password, no surrounding space, and no control character. The result is the URL's normalized form, such as
+ * `https://example.com/` for `https://example.com`.
+ */
+export function normalizeTextEditorUrl(value: string, kind: 'link' | 'image'): string | null {
+  if (kind !== 'link' && kind !== 'image') return null;
+  return safeUrl(value, kind === 'image' ? SAFE_IMAGE_PROTOCOLS : SAFE_LINK_PROTOCOLS) ?? null;
+}
+
 // ProseMirror types attribute values as strings but hands them to setAttribute, which also takes the booleans the ARIA props can carry.
 type EditorAttributes = { [name: string]: string };
 
@@ -437,32 +494,243 @@ type EditorCallbacks = {
   onColorRequest?: (actions: { setColor(value: string): boolean }) => unknown;
 };
 
+/** What a transaction and an editor state share, so the caret helpers read either. */
+type SelectionState = { readonly doc: ProseMirrorNode; readonly selection: Selection; readonly storedMarks: readonly Mark[] | null };
+
+/** The text range that carries one link mark, with the mark. */
+type LinkRange = TextRange & { mark: Mark };
+
+const hrefOf = (mark: Mark | undefined): string | null => (typeof mark?.attrs.href === 'string' ? mark.attrs.href : null);
+
+/** The link at a caret: the one the next typed text would take, so the link is inclusive at its end but not at its start. */
+function caretLinkMark({ doc, selection, storedMarks }: SelectionState): Mark | undefined {
+  const type = doc.type.schema.marks.link;
+  return type && selection.empty ? type.isInSet(storedMarks ?? selection.$from.marks()) : undefined;
+}
+
+/** The text in the textblock of `$pos` that carries `mark` without a gap and reaches `$pos`, or null. */
+function markRange($pos: ResolvedPos, mark: Mark): TextRange | null {
+  const { parent } = $pos;
+  let start: number | null = null;
+  let position = $pos.start();
+  for (let index = 0; index < parent.childCount; index += 1) {
+    const child = parent.child(index);
+    const end = position + child.nodeSize;
+    if (mark.isInSet(child.marks)) {
+      start ??= position;
+      const next = index + 1 < parent.childCount ? parent.child(index + 1) : null;
+      if (!next || !mark.isInSet(next.marks)) {
+        if (start <= $pos.pos && $pos.pos <= end) return { from: start, to: end };
+        start = null;
+      }
+    } else {
+      start = null;
+    }
+    position = end;
+  }
+  return null;
+}
+
+/** The whole link a caret is in, or null at a caret outside one, for a link held only for typing, and for a range. */
+function caretLink(state: SelectionState): LinkRange | null {
+  const mark = caretLinkMark(state);
+  const range = mark ? markRange(state.selection.$from, mark) : null;
+  return mark && range ? { ...range, mark } : null;
+}
+
+/** The address of the link at a caret, or of the one link all the selected text is in; otherwise null. */
+function selectionLink(state: SelectionState): string | null {
+  const type = state.doc.type.schema.marks.link;
+  if (!type) return null;
+  const { selection } = state;
+  if (selection.empty) return hrefOf(caretLinkMark(state));
+  let href: string | null | undefined;
+  state.doc.nodesBetween(selection.from, selection.to, (node) => {
+    if (!node.isInline) return true;
+    const value = hrefOf(type.isInSet(node.marks));
+    href = href === undefined || href === value ? value : null;
+    return false;
+  });
+  return href ?? null;
+}
+
+/** Sets the whole link around a caret to a new address, keeping the caret where it is. */
+function relink(tr: Transaction, link: LinkRange, href: string): boolean {
+  const mark = link.mark.type.create({ ...link.mark.attrs, href });
+  tr.addMark(link.from, link.to, mark);
+  if (tr.storedMarks && link.mark.isInSet(tr.storedMarks)) tr.setStoredMarks(mark.addToSet(tr.storedMarks));
+  return true;
+}
+
+/**
+ * Puts `text`, linked to `href`, in place of the selected text, of the whole link at a caret in one, or at a caret, with the
+ * marks typed text would take there. The caret follows it, and the next typed text is not linked. Line breaks become spaces.
+ * Returns false where a link cannot go: in a code block, or in inline code, which excludes every other mark.
+ */
+function insertLink(tr: Transaction, href: string, text: string, link: LinkRange | null): boolean {
+  const { schema } = tr.doc.type;
+  const type = schema.marks.link;
+  const { selection } = tr;
+  const from = link ? link.from : selection.from;
+  const to = link ? link.to : selection.to;
+  const $from = tr.doc.resolve(from);
+  const inherited = (from === to ? tr.storedMarks ?? $from.marks() : $from.marksAcross(tr.doc.resolve(to))) ?? [];
+  if (!type || !$from.parent.inlineContent || !$from.parent.type.allowsMarkType(type) || inherited.some((mark) => mark.type !== type && mark.type.excludes(type))) return false;
+  const mark = type.create({ ...(link?.mark ?? type.isInSet(inherited))?.attrs, href });
+  const marks = mark.addToSet(inherited.filter((other) => $from.parent.type.allowsMarkType(other.type)));
+  tr.replaceWith(from, to, schema.text(text.replace(/\r\n|\r|\n/gu, ' '), marks));
+  tr.setSelection(TextSelection.create(tr.doc, tr.mapping.map(to, 1)));
+  // The link mark is inclusive, so without this the text typed straight after the new link would extend it.
+  tr.setStoredMarks(mark.removeFromSet(marks));
+  return true;
+}
+
+/** Removes the whole link around a caret, and the link the next typed text would take. */
+function unlinkCaret(tr: Transaction, link: LinkRange | null): boolean {
+  const type = tr.doc.type.schema.marks.link;
+  if (!type) return false;
+  if (link) tr.removeMark(link.from, link.to, type);
+  tr.removeStoredMark(type);
+  return true;
+}
+
+/**
+ * Replaces the selection with plain text the way typing does. It takes the marks typed text would take, and a line break
+ * becomes a hard break, except in a code block, which holds line breaks as text and no marks.
+ */
+function insertPlainText(tr: Transaction, text: string): boolean {
+  const { selection } = tr;
+  const { $from } = selection;
+  if ($from.parent.type.spec.code) {
+    tr.replaceSelectionWith(tr.doc.type.schema.text(text.replace(/\r\n?/gu, '\n')), false);
+    return true;
+  }
+  const marks = (tr.storedMarks ?? (selection.empty ? $from.marks() : $from.marksAcross(selection.$to)) ?? []).filter((mark) => $from.parent.type.allowsMarkType(mark.type));
+  tr.replaceSelection(new Slice(Fragment.from(plainTextNodes(tr.doc.type.schema, text, marks)), 0, 0));
+  return true;
+}
+
+/**
+ * Sets every selected text block to a heading of `level`, or to a paragraph for null, as the editor's own shortcut does. A
+ * selection that is all that kind and level already is left as it is, where the shortcut turns a heading back into a
+ * paragraph and lifts a list item's paragraph out of its list.
+ */
+function setBlock(editor: Editor, chain: ChainedCommands, level: number | null): boolean {
+  if (level === null) {
+    if (typeof chain.setParagraph !== 'function') return false;
+    return editor.isActive('paragraph') ? chain.run() : chain.setParagraph().run();
+  }
+  if (!Number.isInteger(level) || level < 1 || level > 6 || typeof chain.setHeading !== 'function') return false;
+  const attributes = { level: level as 1 | 2 | 3 | 4 | 5 | 6 };
+  return editor.isActive('heading', attributes) ? chain.run() : chain.setHeading(attributes).run();
+}
+
 function run(editor: Editor | null, action: TextEditorCommand, callbacks: EditorCallbacks = {}): boolean {
   if (!editor || editor.isDestroyed || !action || typeof action.type !== 'string') return false;
   if (action.type === 'generate') return typeof callbacks.onGenerate === 'function' && callbacks.onGenerate() !== false;
   if (!editor.isEditable) return false;
+  // The character limit refuses a transaction before it reaches the state, so a command that leaves the state as it was did not apply.
+  const before = editor.state;
+  const applied = (result: boolean) => result && editor.state !== before;
   const chain = editor.chain().focus();
-  if (action.type === 'bold') return chain.toggleBold().run();
-  if (action.type === 'italic') return chain.toggleItalic().run();
-  if (action.type === 'underline' && typeof chain.toggleUnderline === 'function') return chain.toggleUnderline().run();
-  if (action.type === 'bulletList') return chain.toggleBulletList().run();
-  if (action.type === 'orderedList') return chain.toggleOrderedList().run();
-  if (action.type === 'blockquote') return chain.toggleBlockquote().run();
-  if (action.type === 'codeBlock') return chain.toggleCodeBlock().run();
-  if (action.type === 'align' && ALIGNMENTS.has(action.value)) return chain.setTextAlign(action.value).run();
-  if (action.type === 'color' && safeColor(action.value) && typeof chain.setColor === 'function') return chain.setColor(action.value).run();
-  if (action.type === 'fontFamily' && FONT_FAMILIES.has(action.value) && typeof chain.setFontFamily === 'function') return chain.setFontFamily(action.value).run();
-  if (action.type === 'fontSize' && FONT_SIZES.has(action.value) && typeof chain.setFontSize === 'function') return chain.setFontSize(action.value).run();
+  if (action.type === 'bold') return applied(chain.toggleBold().run());
+  if (action.type === 'italic') return applied(chain.toggleItalic().run());
+  if (action.type === 'underline' && typeof chain.toggleUnderline === 'function') return applied(chain.toggleUnderline().run());
+  if (action.type === 'strike' && typeof chain.toggleStrike === 'function') return applied(chain.toggleStrike().run());
+  if (action.type === 'code' && typeof chain.toggleCode === 'function') return applied(chain.toggleCode().run());
+  if (action.type === 'bulletList') return applied(chain.toggleBulletList().run());
+  if (action.type === 'orderedList') return applied(chain.toggleOrderedList().run());
+  if (action.type === 'blockquote') return applied(chain.toggleBlockquote().run());
+  if (action.type === 'codeBlock') return applied(chain.toggleCodeBlock().run());
+  if (action.type === 'paragraph') return applied(setBlock(editor, chain, null));
+  if (action.type === 'heading') return applied(setBlock(editor, chain, action.level));
+  if (action.type === 'horizontalRule' && typeof chain.setHorizontalRule === 'function') return applied(chain.setHorizontalRule().run());
+  if (action.type === 'text') {
+    const { text } = action;
+    return typeof text === 'string' && text !== '' && applied(chain.command(({ tr }) => insertPlainText(tr, text)).run());
+  }
+  if (action.type === 'align' && ALIGNMENTS.has(action.value)) return applied(chain.setTextAlign(action.value).run());
+  if (action.type === 'color' && safeColor(action.value) && typeof chain.setColor === 'function') return applied(chain.setColor(action.value).run());
+  if (action.type === 'fontFamily' && FONT_FAMILIES.has(action.value) && typeof chain.setFontFamily === 'function') return applied(chain.setFontFamily(action.value).run());
+  if (action.type === 'fontSize' && FONT_SIZES.has(action.value) && typeof chain.setFontSize === 'function') return applied(chain.setFontSize(action.value).run());
   if (action.type === 'link' && typeof chain.setLink === 'function') {
     const href = safeUrl(action.href, SAFE_LINK_PROTOCOLS);
-    return href ? chain.setLink({ href }).run() : false;
+    const { text } = action;
+    if (!href || (text !== undefined && (typeof text !== 'string' || text === ''))) return false;
+    const link = caretLink(editor.state);
+    // Without text, a selection or a caret outside a link keeps the editor's own link command.
+    if (text === undefined && !link) return applied(chain.setLink({ href }).run());
+    return applied(chain.command(({ tr }) => (text === undefined ? relink(tr, link!, href) : insertLink(tr, href, text, link))).setMeta('preventAutolink', true).run());
   }
-  if (action.type === 'unlink' && typeof chain.unsetLink === 'function') return chain.unsetLink().run();
+  if (action.type === 'unlink' && typeof chain.unsetLink === 'function') {
+    if (!editor.state.selection.empty) return applied(chain.unsetLink().run());
+    const link = caretLink(editor.state);
+    return applied(chain.command(({ tr }) => unlinkCaret(tr, link)).setMeta('preventAutolink', true).run());
+  }
   if (action.type === 'image') {
     const src = safeUrl(action.src, SAFE_IMAGE_PROTOCOLS);
-    return src ? chain.setImage({ src, ...(typeof action.alt === 'string' ? { alt: action.alt.slice(0, 1_000) } : {}) }).run() : false;
+    return src ? applied(chain.setImage({ src, ...(typeof action.alt === 'string' ? { alt: action.alt.slice(0, 1_000) } : {}) }).run()) : false;
   }
   return false;
+}
+
+/** Focuses the editable content at once with its selection. ProseMirror's own focus scrolls nothing. */
+function focusWithoutScroll(editor: Editor) {
+  if (!editor.isDestroyed && editor.isEditable) editor.view.focus();
+}
+
+const sameFormatting = (a: TextEditorFormatting, b: TextEditorFormatting) => a.empty === b.empty && a.link === b.link && a.block === b.block
+  && a.headingLevel === b.headingLevel && a.list === b.list && a.quote === b.quote
+  && a.marks.bold === b.marks.bold && a.marks.italic === b.marks.italic && a.marks.underline === b.marks.underline
+  && a.marks.strike === b.marks.strike && a.marks.code === b.marks.code;
+
+/**
+ * The formatting at the selection. The marks are read as the built-in toolbar reads them. The block, list, and quote come from
+ * the text blocks whose content the selection covers, so a range that only reaches the edge of the next block, as a triple
+ * click selects, still reads as the block it covers.
+ */
+function readFormatting(editor: Editor): TextEditorFormatting {
+  const { state } = editor;
+  const { selection, doc } = state;
+  const blocks: { node: ProseMirrorNode; pos: number }[] = [];
+  if (selection.empty) {
+    if (selection.$from.parent.isTextblock) blocks.push({ node: selection.$from.parent, pos: selection.$from.before() });
+  } else {
+    const { from, to } = selection;
+    doc.nodesBetween(from, to, (node, pos) => {
+      if (!node.isTextblock) return true;
+      const start = pos + 1;
+      const end = pos + node.nodeSize - 1;
+      if (start === end ? from <= start && start < to : Math.max(from, start) < Math.min(to, end)) blocks.push({ node, pos });
+      return false;
+    });
+  }
+  const kinds = new Set(blocks.map(({ node }) => node.type.name));
+  const kind = kinds.size === 1 ? [...kinds][0] : null;
+  const block = kind === 'paragraph' || kind === 'heading' || kind === 'codeBlock' ? kind : null;
+  const levels = new Set(blocks.map(({ node }) => node.attrs.level));
+  const [level] = levels;
+  const headingLevel = block === 'heading' && levels.size === 1 && typeof level === 'number' && level >= 1 && level <= 6 ? level as NonNullable<TextEditorFormatting['headingLevel']> : null;
+  // The nodes that hold every counted block, from the nearest out.
+  const $first = doc.resolve(blocks[0]?.pos ?? selection.from);
+  let list: TextEditorFormatting['list'] = null;
+  let quote = false;
+  for (let depth = $first.sharedDepth(blocks.at(-1)?.pos ?? selection.to); depth > 0; depth -= 1) {
+    const { name } = $first.node(depth).type;
+    if (list === null && (name === 'bulletList' || name === 'orderedList')) list = name;
+    if (name === 'blockquote') quote = true;
+  }
+  return Object.freeze({
+    empty: selection.empty,
+    marks: Object.freeze({
+      bold: editor.isActive('bold'), italic: editor.isActive('italic'), underline: editor.isActive('underline'), strike: editor.isActive('strike'), code: editor.isActive('code'),
+    }),
+    link: selectionLink(state),
+    block,
+    headingLevel,
+    list,
+    quote,
+  });
 }
 
 /**
@@ -1435,10 +1703,11 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   value, defaultValue, onChange, disabled = false, invalid = false, placeholder = '', limit,
   toolbar = 'simple', floating = false, bubbleMenu = false, onLinkRequest, onImageRequest, onColorRequest, onGenerate,
   selectionActions, selectionInstruction = true, onSelectionRequest,
+  autoFocus = false, onReady, onFormattingChange, minRows, maxRows,
   label, description, errorMessage, required = false, readOnly = false,
   id, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, 'aria-describedby': ariaDescribedby,
   'aria-errormessage': ariaErrormessage, 'aria-invalid': ariaInvalid, 'aria-required': ariaRequired,
-  'aria-disabled': ariaDisabled, 'aria-readonly': ariaReadonly, className, ...props
+  'aria-disabled': ariaDisabled, 'aria-readonly': ariaReadonly, className, style, ...props
 }, ref) {
   // An omitted value is normalized like any other, so the editor never holds the shared `emptyDocument` itself.
   const initialValue = defaultValue === undefined ? emptyDocument : defaultValue;
@@ -1457,11 +1726,15 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   const limitRef = React.useRef(limit);
   const placeholderRef = React.useRef(placeholder);
   const callbacksRef = React.useRef({ onGenerate, onLinkRequest, onImageRequest, onColorRequest });
+  const lifecycleRef = React.useRef({ autoFocus, onReady, onFormattingChange });
   controlledValueRef.current = value;
   onChangeRef.current = onChange;
   limitRef.current = characterLimit;
   placeholderRef.current = placeholder;
   callbacksRef.current = { onGenerate, onLinkRequest, onImageRequest, onColorRequest };
+  lifecycleRef.current = { autoFocus, onReady, onFormattingChange };
+  const minRowCount = rowCount(minRows);
+  const maxRowCount = rowCount(maxRows) === undefined ? undefined : Math.max(rowCount(maxRows)!, minRowCount ?? 1);
   const labelledBy = ariaLabelledby ?? (label !== undefined ? labelId : undefined);
   const describedBy = [ariaDescribedby, description !== undefined ? descriptionId : undefined, errorMessage !== undefined ? errorId : undefined].filter(Boolean).join(' ') || undefined;
   const editorAttributes = React.useMemo(() => ({
@@ -1512,6 +1785,35 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
     editor.setOptions({ editorProps: { attributes: editorAttributes } });
     return undefined;
   }, [editor, editorAttributes]);
+
+  // Reports the formatting at once and after every transaction that changes it, selection-only moves included. The last
+  // report outlives a remount of the effect, so the same formatting is not reported twice for one editor.
+  const reportedFormatting = React.useRef<{ editor: Editor; formatting: TextEditorFormatting } | null>(null);
+  React.useEffect(() => {
+    if (!editor) return undefined;
+    const report = () => {
+      const callback = lifecycleRef.current.onFormattingChange;
+      if (!callback || editor.isDestroyed) return;
+      const formatting = readFormatting(editor);
+      const last = reportedFormatting.current;
+      if (last?.editor === editor && sameFormatting(last.formatting, formatting)) return;
+      reportedFormatting.current = { editor, formatting };
+      callback(formatting);
+    };
+    report();
+    editor.on('transaction', report);
+    return () => { editor.off('transaction', report); };
+  }, [editor]);
+
+  // The editor mounts its editable content after the first render, into a detached element that EditorContent then moves
+  // into the page, so ready waits until the content is connected, once per editor, and focus follows it.
+  const readyEditor = React.useRef<Editor | null>(null);
+  React.useEffect(() => {
+    if (!editor || editor.isDestroyed || readyEditor.current === editor || !editor.view.dom.isConnected) return;
+    readyEditor.current = editor;
+    if (lifecycleRef.current.autoFocus) focusWithoutScroll(editor);
+    lifecycleRef.current.onReady?.();
+  });
 
   const syncControlledValue = React.useCallback(() => {
     const external = controlledValueRef.current;
@@ -1571,14 +1873,25 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
     onColorRequest: onColorRequest ? (actions) => callbacksRef.current.onColorRequest?.(actions) : undefined,
   };
   React.useImperativeHandle(ref, () => ({
-    focus: () => { editor?.commands.focus(); },
+    focus: (options) => {
+      if (options?.preventScroll) {
+        if (editor) focusWithoutScroll(editor);
+      } else {
+        editor?.commands.focus();
+      }
+    },
     execute: (action) => run(editor, action, callbacksRef.current),
   }), [editor]);
 
   const variant = toolbar === 'floating' ? 'simple' : toolbar;
   const isFloating = floating ? floating : toolbar === 'floating';
+  // The row counts reach the stylesheet, which measures a row in the content's own line height.
+  const rowStyle = minRowCount === undefined && maxRowCount === undefined ? style : { '--muxui-text-editor-min-rows': minRowCount, '--muxui-text-editor-max-rows': maxRowCount, ...style };
   return React.createElement('div', {
-    ...props, className: cx('muxui-text-editor', className), 'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-read-only': readOnly ? readOnly : undefined, 'data-muxui-state-required': required ? required : undefined, 'data-muxui-state-invalid': (invalid ? invalid : errorMessage !== undefined) || undefined,
+    ...props,
+    className: cx('muxui-text-editor', minRowCount !== undefined && 'muxui-text-editor--min-rows', maxRowCount !== undefined && 'muxui-text-editor--max-rows', className),
+    style: rowStyle,
+    'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-read-only': readOnly ? readOnly : undefined, 'data-muxui-state-required': required ? required : undefined, 'data-muxui-state-invalid': (invalid ? invalid : errorMessage !== undefined) || undefined,
   }, label !== undefined ? React.createElement('label', { id: labelId, htmlFor: contentId, className: 'muxui-text-editor__label' }, label) : null,
   toolbar ? React.createElement(Toolbar, { editor, disabled: disabled ? disabled : readOnly, variant, floating: isFloating, callbacks }) : null,
   editor && bubbleMenu ? React.createElement(BubbleMenu, { editor, disabled: disabled ? disabled : readOnly, callbacks }) : null,

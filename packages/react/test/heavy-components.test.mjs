@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { closeHistory, undoDepth } from '@tiptap/pm/history';
 import { JSDOM } from 'jsdom';
 import { MARKDOWN_DEPTH_LIMIT, MARKDOWN_LINE_LENGTH_LIMIT, MARKDOWN_LINE_LIMIT, MARKDOWN_NODE_LIMIT, MARKDOWN_SOURCE_LIMIT, Markdown } from '../src/markdown/index.ts';
-import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument } from '../src/text-editor/index.ts';
+import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument, normalizeTextEditorUrl } from '../src/text-editor/index.ts';
 import { Resizable, ResizableHandle, ResizablePanel } from '../src/supplemental/resizable.ts';
 import { Lightbox, LightboxBackdrop, LightboxClose, LightboxContent, LightboxNext, LightboxPopup, LightboxTrigger } from '../src/supplemental/lightbox.ts';
 import { installDom } from './support/dom.mjs';
@@ -709,6 +709,414 @@ test('TextEditor marks its formatting tools as toggles and the Generate with AI 
     assert.equal(tool('Align left').getAttribute('aria-pressed'), 'false');
     assert.ok(tool('Generate with AI'));
     assert.equal(tool('Generate with AI').hasAttribute('aria-pressed'), false, 'an action is not pressed or released');
+  } finally {
+    await t.close();
+  }
+});
+
+const text = (value, marks) => (marks ? { type: 'text', text: value, marks } : { type: 'text', text: value });
+const paragraph = (...content) => ({ type: 'paragraph', ...(content.length ? { content } : {}) });
+const linkMark = (href) => ({ type: 'link', attrs: { href } });
+
+// mountEditor with the handle: `execute` returns what the command returned, and `json` is the portable document.
+async function mountCommandEditor(props) {
+  const handle = React.createRef();
+  const changes = [];
+  const t = await mountEditor({ ref: handle, toolbar: false, onChange: (value) => changes.push(value), ...props });
+  return {
+    ...t,
+    changes,
+    handle,
+    async execute(command) {
+      let result;
+      await act(async () => { result = handle.current.execute(command); });
+      return result;
+    },
+    json: () => normalizeTextEditorDocument(t.editor.getJSON()),
+    content: (index = 0) => normalizeTextEditorDocument(t.editor.getJSON()).content[index].content,
+    selection: () => [t.editor.state.selection.from, t.editor.state.selection.to],
+    undoSteps: () => undoDepth(t.editor.state),
+    // Starts a new undo step, so the next command's step is its own.
+    closeHistory: () => t.editor.view.dispatch(closeHistory(t.editor.state.tr)),
+    undo: () => act(async () => { t.editor.commands.undo(); }),
+  };
+}
+
+test('TextEditor strike and inline code commands toggle over a range and at a caret', async () => {
+  const t = await mountCommandEditor({ defaultValue: { type: 'doc', content: [paragraph(text('plain words'))] } });
+  try {
+    await t.select(t.at('plain'), t.at('plain') + 5);
+    assert.equal(await t.execute({ type: 'strike' }), true);
+    assert.deepEqual(t.content(), [text('plain', [{ type: 'strike' }]), text(' words')]);
+    assert.equal(await t.execute({ type: 'strike' }), true);
+    assert.deepEqual(t.content(), [text('plain words')], 'a second strike removes it');
+    assert.equal(await t.execute({ type: 'code' }), true);
+    assert.deepEqual(t.content(), [text('plain', [{ type: 'code' }]), text(' words')]);
+    // At a caret the mark waits for the next typed text.
+    await t.select(t.at('words') + 5);
+    assert.equal(await t.execute({ type: 'strike' }), true);
+    assert.deepEqual(t.content(), [text('plain', [{ type: 'code' }]), text(' words')], 'nothing changes until text is typed');
+    assert.equal(await t.execute({ type: 'text', text: '!' }), true);
+    assert.deepEqual(t.content().at(-1), text('!', [{ type: 'strike' }]));
+    await t.render({ readOnly: true });
+    assert.equal(await t.execute({ type: 'strike' }), false, 'a read-only editor refuses them');
+    assert.equal(await t.execute({ type: 'code' }), false);
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor heading and paragraph commands set the block and leave a block that already is one alone', async () => {
+  const t = await mountCommandEditor({ defaultValue: { type: 'doc', content: [
+    { type: 'heading', attrs: { level: 2 }, content: [text('Title')] },
+    { type: 'blockquote', content: [paragraph(text('quoted'))] },
+    { type: 'bulletList', content: [{ type: 'listItem', content: [paragraph(text('item'))] }] },
+    { type: 'codeBlock', content: [text('code')] },
+    // A last paragraph, so the editor appends none after the code block.
+    paragraph(text('last')),
+  ] } });
+  try {
+    const initial = t.json();
+    await t.select(t.at('Title') + 2);
+    assert.equal(await t.execute({ type: 'heading', level: 2 }), true, 'setting the current level succeeds');
+    assert.deepEqual(t.json(), initial, 'and keeps the heading, where the editor shortcut would make it a paragraph');
+    assert.deepEqual([t.changes.length, t.undoSteps()], [0, 0], 'reporting no change and adding no undo step');
+    assert.equal(await t.execute({ type: 'heading', level: 4 }), true);
+    assert.deepEqual(t.json().content[0], { type: 'heading', attrs: { level: 4 }, content: [text('Title')] });
+    assert.equal(await t.execute({ type: 'paragraph' }), true);
+    assert.deepEqual(t.json().content[0], paragraph(text('Title')));
+
+    await t.select(t.at('quoted') + 1);
+    assert.equal(await t.execute({ type: 'heading', level: 1 }), true);
+    assert.deepEqual(t.json().content[1], { type: 'blockquote', content: [{ type: 'heading', attrs: { level: 1 }, content: [text('quoted')] }] }, 'a heading set in a quote stays in it');
+    const quoted = t.json();
+    assert.equal(await t.execute({ type: 'heading', level: 1 }), true);
+    assert.deepEqual(t.json(), quoted, 'and setting it again leaves it there');
+
+    await t.select(t.at('item') + 1);
+    const listed = [t.json(), t.undoSteps()];
+    assert.equal(await t.execute({ type: 'paragraph' }), true);
+    assert.deepEqual([t.json(), t.undoSteps()], listed, 'a list item paragraph stays in its list');
+
+    await t.select(t.at('code') + 1);
+    assert.equal(await t.execute({ type: 'paragraph' }), true);
+    assert.deepEqual(t.json().content[3], paragraph(text('code')), 'a code block becomes a paragraph');
+    const before = t.json();
+    assert.equal(await t.execute({ type: 'heading', level: 7 }), false, 'a level outside 1 to 6 is refused');
+    assert.equal(await t.execute({ type: 'heading', level: 2.5 }), false);
+    assert.deepEqual(t.json(), before);
+    await t.render({ disabled: true });
+    assert.equal(await t.execute({ type: 'heading', level: 3 }), false, 'a disabled editor refuses them');
+    assert.equal(await t.execute({ type: 'paragraph' }), false);
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor inserts plain text as typing does, and a horizontal rule', async () => {
+  const t = await mountCommandEditor({ defaultValue: { type: 'doc', content: [
+    paragraph(text('one '), text('loud', [{ type: 'bold' }])),
+    { type: 'codeBlock', content: [text('let a')] },
+  ] } });
+  try {
+    await t.select(t.at('loud') + 2);
+    t.closeHistory();
+    assert.equal(await t.execute({ type: 'text', text: 'XY' }), true);
+    assert.deepEqual(t.content(), [text('one '), text('loXYud', [{ type: 'bold' }])], 'it takes the marks typed text would');
+    assert.deepEqual(t.selection(), [t.at('loXYud') + 4, t.at('loXYud') + 4], 'and leaves the caret after it');
+    await t.undo();
+    assert.deepEqual(t.content(), [text('one '), text('loud', [{ type: 'bold' }])], 'one undo step takes it away');
+
+    await t.select(t.at('one'), t.at('one') + 3);
+    assert.equal(await t.execute({ type: 'text', text: 'a\nb' }), true);
+    assert.deepEqual(t.content(), [text('a'), { type: 'hardBreak' }, text('b '), text('loud', [{ type: 'bold' }])], 'it replaces the selection, a line break becoming a hard break');
+    await t.select(t.at('let a') + 5);
+    assert.equal(await t.execute({ type: 'text', text: '\r\nlet b' }), true);
+    assert.deepEqual(t.json().content[1], { type: 'codeBlock', content: [text('let a\nlet b')] }, 'a code block keeps the line break as text');
+    assert.equal(await t.execute({ type: 'text', text: '' }), false, 'empty text inserts nothing');
+    assert.equal(await t.execute({ type: 'text', text: 42 }), false);
+
+    await t.select(t.at('loud') + 4);
+    assert.equal(await t.execute({ type: 'horizontalRule' }), true);
+    assert.deepEqual(t.json().content.slice(0, 2).map(({ type }) => type), ['paragraph', 'horizontalRule'], 'the rule follows the block it was inserted at');
+  } finally {
+    await t.close();
+  }
+});
+
+// "see " + "docs" linked to a, "more" linked to b, " end"; then inline code, then a code block and a last paragraph, so the
+// editor appends no paragraph of its own after the code block.
+const linkedDocument = { type: 'doc', content: [
+  paragraph(text('see '), text('docs', [linkMark('https://a.example/')]), text('more', [linkMark('https://b.example/')]), text(' end')),
+  paragraph(text('mono', [{ type: 'code' }]), text(' tail')),
+  { type: 'codeBlock', content: [text('block')] },
+  paragraph(text('last')),
+] };
+const [linkA, linkB, linkC] = ['https://a.example/', 'https://b.example/', 'https://c.example/'];
+async function withLinkedEditor(steps) {
+  const t = await mountCommandEditor({ defaultValue: linkedDocument });
+  try {
+    await steps(t);
+  } finally {
+    await t.close();
+  }
+}
+
+test('TextEditor link and unlink act on the whole link at a caret in one, the link the next typed text would take', async () => {
+  // Inside a link, link gives all of it the new address and leaves the caret where it was.
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at('docs') + 2);
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example' }), true);
+    assert.deepEqual(t.content(), [text('see '), text('docs', [linkMark(linkC)]), text('more', [linkMark(linkB)]), text(' end')]);
+    assert.deepEqual(t.selection(), [t.at('docs') + 2, t.at('docs') + 2]);
+  });
+  // Inside a link, unlink removes all of it.
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at('more') + 2);
+    assert.equal(await t.execute({ type: 'unlink' }), true);
+    assert.deepEqual(t.content(), [text('see '), text('docs', [linkMark(linkA)]), text('more end')]);
+  });
+  // At the end of a link the caret is in it, as typed text there would extend it, even with another link straight after.
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at('more'));
+    assert.equal(await t.execute({ type: 'unlink' }), true);
+    assert.deepEqual(t.content(), [text('see docs'), text('more', [linkMark(linkB)]), text(' end')]);
+  });
+  // At the start of a link the caret is outside it, so nothing is unlinked there.
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at('docs'));
+    assert.equal(await t.execute({ type: 'unlink' }), true);
+    assert.deepEqual(t.content(), linkedDocument.content[0].content);
+  });
+  // Over a range, unlink removes the link from the selected text only, as before.
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at('docs') + 1, t.at('docs') + 3);
+    await t.execute({ type: 'unlink' });
+    assert.deepEqual(t.content().slice(0, 4), [text('see '), text('d', [linkMark(linkA)]), text('oc'), text('s', [linkMark(linkA)])]);
+  });
+});
+
+test('TextEditor link with text inserts or replaces the link text, linked, and typing after it is not linked', async () => {
+  // At a caret outside a link the text is inserted with the marks typed text would take.
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at(' end') + 4);
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: ' guide' }), true);
+    assert.deepEqual(t.content().slice(-2), [text(' end'), text(' guide', [linkMark(linkC)])]);
+    assert.deepEqual(t.selection(), [t.at(' guide') + 6, t.at(' guide') + 6], 'the caret follows the link');
+    assert.equal(await t.execute({ type: 'text', text: '!' }), true);
+    assert.deepEqual(t.content().at(-1), text('!'), 'the next typed text is not linked');
+  });
+  // In a link, the text replaces all of it, and so does a selection.
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at('more') + 1);
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: 'other' }), true);
+    assert.deepEqual(t.content(), [text('see '), text('docs', [linkMark(linkA)]), text('other', [linkMark(linkC)]), text(' end')]);
+    await t.select(t.at('see'), t.at('see') + 3);
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: 'look\nhere' }), true);
+    assert.deepEqual(t.content()[0], text('look here', [linkMark(linkC)]), 'a line break in the text becomes a space');
+  });
+  // One undo step takes an inserted link away, its text and address together.
+  await withLinkedEditor(async (t) => {
+    const before = t.json();
+    await t.select(t.at(' tail') + 5);
+    t.closeHistory();
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: ' here' }), true);
+    await t.undo();
+    assert.deepEqual(t.json(), before);
+  });
+  // Without text, a caret outside a link keeps the link for the next typed text, as before.
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at(' end') + 4);
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example' }), true);
+    assert.deepEqual(t.content(), linkedDocument.content[0].content, 'nothing is inserted');
+    await t.execute({ type: 'text', text: 'x' });
+    assert.deepEqual(t.content().at(-1), text('x', [linkMark(linkC)]));
+  });
+  // Nothing is linked in inline code or a code block, for a refused address, or for empty text.
+  await withLinkedEditor(async (t) => {
+    const before = t.json();
+    await t.select(t.at('mono') + 2);
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: 'x' }), false, 'inline code takes no link');
+    await t.select(t.at('block') + 1, t.at('block') + 3);
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example' }), false, 'nor does a code block');
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: 'x' }), false);
+    await t.select(t.at(' tail') + 2);
+    assert.equal(await t.execute({ type: 'link', href: 'javascript:alert(1)', text: 'x' }), false, 'a refused address');
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: '' }), false, 'empty text');
+    assert.deepEqual(t.json(), before);
+  });
+});
+
+test('TextEditor commands that the character limit refuses return false and change nothing', async () => {
+  const t = await mountCommandEditor({ limit: 5, defaultValue: { type: 'doc', content: [paragraph(text('abcd'))] } });
+  try {
+    const before = t.json();
+    await t.select(t.at('abcd') + 4);
+    assert.equal(await t.execute({ type: 'text', text: 'xy' }), false, 'text past the limit');
+    assert.equal(await t.execute({ type: 'link', href: 'https://example.com', text: 'xy' }), false, 'a link whose text passes it');
+    assert.equal(await t.execute({ type: 'horizontalRule' }), false, 'a rule, whose block break counts two characters');
+    assert.equal(await t.execute({ type: 'image', src: 'https://example.com/a.png' }), false, 'an image, which the limit refused while the command still reported true');
+    assert.deepEqual([t.json(), t.changes], [before, []]);
+    assert.equal(await t.execute({ type: 'text', text: 'x' }), true, 'text that fits applies');
+  } finally {
+    await t.close();
+  }
+});
+
+// A heading, a list inside a list inside a quote, and a code block after a paragraph with bold and a link.
+const formattingDocument = { type: 'doc', content: [
+  paragraph(text('plain '), text('loud', [{ type: 'bold' }]), text(' '), text('site', [linkMark('https://a.example/')])),
+  { type: 'heading', attrs: { level: 2 }, content: [text('Title')] },
+  { type: 'blockquote', content: [{ type: 'bulletList', content: [{ type: 'listItem', content: [
+    paragraph(text('outer')),
+    { type: 'orderedList', content: [{ type: 'listItem', content: [paragraph(text('inner'))] }] },
+  ] }] }] },
+  { type: 'codeBlock', content: [text('code')] },
+] };
+
+test('TextEditor reports the formatting at the selection when it is ready and whenever a move or an edit changes it', async () => {
+  const reports = [];
+  const t = await mountCommandEditor({ defaultValue: formattingDocument, onFormattingChange: (formatting) => reports.push(formatting) });
+  try {
+    const rest = { empty: true, marks: { bold: false, italic: false, underline: false, strike: false, code: false }, link: null, block: 'paragraph', headingLevel: null, list: null, quote: false };
+    const latest = () => reports.at(-1);
+    const shape = () => [latest().block, latest().headingLevel, latest().list, latest().quote];
+    assert.deepEqual(reports, [rest], 'one report once the editor is ready, for the caret at the start');
+    await t.select(t.at('loud') + 2);
+    assert.deepEqual(latest(), { ...rest, marks: { ...rest.marks, bold: true } }, 'a move of the caret alone reports');
+    await t.select(t.at('loud'), t.at('loud') + 4);
+    assert.deepEqual(latest(), { ...rest, empty: false, marks: { ...rest.marks, bold: true } });
+    await t.select(t.at('site') + 2);
+    assert.equal(latest().link, 'https://a.example/');
+    await t.select(t.at('site'), t.at('site') + 4);
+    assert.equal(latest().link, 'https://a.example/', 'a range all in one link');
+    await t.select(t.at('loud'), t.at('site') + 4);
+    assert.equal(latest().link, null, 'a range partly linked');
+    await t.select(t.at('Title') + 1);
+    assert.deepEqual(shape(), ['heading', 2, null, false]);
+    await t.select(t.at('inner') + 1);
+    assert.deepEqual(shape(), ['paragraph', null, 'orderedList', true], 'the nearest list, and the quote around it');
+    await t.select(t.at('outer') + 1);
+    assert.deepEqual(shape(), ['paragraph', null, 'bulletList', true]);
+    await t.select(t.at('outer') + 1, t.at('inner') + 1);
+    assert.deepEqual(shape(), ['paragraph', null, 'bulletList', true], 'the nearest list that holds all the range');
+    await t.select(t.at('Title') + 1, t.at('outer') + 1);
+    assert.deepEqual(shape(), [null, null, null, false], 'a range over two kinds of block and no shared list');
+    await t.select(t.at('Title'), t.at('outer'));
+    assert.deepEqual(shape(), ['heading', 2, null, false], 'a range that only reaches the start of the next block, as a triple click selects');
+    await t.select(t.at('code') + 1);
+    assert.equal(latest().block, 'codeBlock');
+    await t.select(t.at('plain') + 2);
+    await t.shortcut('i');
+    assert.equal(latest().marks.italic, true, 'a mark held for typing reports without an edit');
+    const count = reports.length;
+    await t.execute({ type: 'text', text: 'ab' });
+    assert.equal(reports.length, count, 'an edit that keeps the formatting reports nothing');
+    for (const report of reports) {
+      assert.ok(Object.isFrozen(report) && Object.isFrozen(report.marks));
+      assert.deepEqual(JSON.parse(JSON.stringify(report)), report, 'a report holds plain values only');
+    }
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor is ready once its editable content is in the page, focuses it without scrolling when asked, and focuses at once on request', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const root = createRoot(document.querySelector('#root'));
+  const events = [];
+  const handle = React.createRef();
+  const content = () => document.querySelector('.ProseMirror');
+  const element = (props) => React.createElement(React.StrictMode, null, React.createElement(TextEditor, {
+    ref: handle,
+    'aria-label': 'Reply',
+    toolbar: false,
+    autoFocus: true,
+    onFormattingChange: () => events.push('formatting'),
+    onReady: () => events.push({ connected: content()?.isConnected, focused: document.activeElement === content() }),
+    ...props,
+  }));
+  let editor;
+  let destroyed;
+  try {
+    await act(async () => root.render(element()));
+    editor = content().editor;
+    destroyed = new Promise((resolve) => editor.on('destroy', resolve));
+    assert.deepEqual(events, ['formatting', { connected: true, focused: true }], 'the formatting, then ready once in strict mode, with the content in the page and focused');
+    await act(async () => root.render(element({ placeholder: 'Write a reply' })));
+    assert.equal(events.length, 2, 'a later render is not ready again');
+    content().blur();
+    handle.current.focus({ preventScroll: true });
+    assert.equal(document.activeElement, content(), 'focus without scrolling lands at once');
+    content().blur();
+    handle.current.focus();
+    assert.notEqual(document.activeElement, content(), 'the default focus waits a frame');
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); });
+    assert.equal(document.activeElement, content());
+  } finally {
+    await act(async () => root.unmount());
+    if (editor && !editor.isDestroyed) await destroyed;
+    restore();
+    dom.window.close();
+  }
+  let ready = 0;
+  const readOnly = await mountEditor({ toolbar: false, readOnly: true, autoFocus: true, onReady: () => { ready += 1; } });
+  try {
+    assert.equal(ready, 1, 'a read-only editor is ready too');
+    assert.notEqual(document.activeElement, readOnly.pm, 'but takes no focus');
+  } finally {
+    await readOnly.close();
+  }
+});
+
+test('TextEditor hands its row counts to the stylesheet on the server, rounded down, ignored below 1, and the cap never under the least', () => {
+  // The root's modifier classes and inline style, with the caller's own style kept after the row counts.
+  const html = (props) => renderToStaticMarkup(React.createElement(TextEditor, { 'aria-label': 'Note', toolbar: false, style: { color: 'red' }, ...props }));
+  const root = (props) => {
+    const [, classes, style] = /^<div class="([^"]*)" style="([^"]*)"/u.exec(html(props)) ?? [];
+    return [classes?.split(' ').filter((name) => name !== 'muxui-text-editor'), style];
+  };
+  assert.deepEqual(root({ minRows: 3 }), [['muxui-text-editor--min-rows'], '--muxui-text-editor-min-rows:3;color:red']);
+  assert.deepEqual(root({ maxRows: 2.9 }), [['muxui-text-editor--max-rows'], '--muxui-text-editor-max-rows:2;color:red'], 'a fraction is rounded down');
+  assert.deepEqual(root({ minRows: 4, maxRows: 2 }), [['muxui-text-editor--min-rows', 'muxui-text-editor--max-rows'], '--muxui-text-editor-min-rows:4;--muxui-text-editor-max-rows:4;color:red'], 'the cap is raised to the least height');
+  for (const props of [{ minRows: 0, maxRows: Number.NaN }, { minRows: Number.POSITIVE_INFINITY, maxRows: -2 }, {}]) {
+    assert.deepEqual(root(props), [[], 'color:red'], `no rows for ${JSON.stringify(props)}`);
+  }
+  assert.doesNotMatch(html({ autoFocus: true }), /autofocus/iu, 'autoFocus belongs to the editable content, not the root');
+});
+
+test('normalizeTextEditorUrl applies the rule that the link and image commands enforce', async () => {
+  const cases = [
+    // value, as a link, as an image
+    ['https://example.com', 'https://example.com/', 'https://example.com/'],
+    ['http://example.com/a b', 'http://example.com/a%20b', 'http://example.com/a%20b'],
+    ['mailto:team@example.com', 'mailto:team@example.com', null],
+    [' https://example.com', null, null],
+    ['https://example.com\n', null, null],
+    ['https://user:secret@example.com', null, null],
+    ['mailto:user:secret@example.com', null, null],
+    ['javascript:alert(1)', null, null],
+    ['data:image/png;base64,AAAA', null, null],
+    ['example.com', null, null],
+    ['', null, null],
+  ];
+  const t = await mountCommandEditor({ defaultValue: { type: 'doc', content: [paragraph(text('word'))] } });
+  try {
+    for (const [value, link, image] of cases) {
+      const label = JSON.stringify(value);
+      assert.equal(normalizeTextEditorUrl(value, 'link'), link, `${label} as a link`);
+      assert.equal(normalizeTextEditorUrl(value, 'image'), image, `${label} as an image`);
+      await t.select(t.at('word'), t.at('word') + 4);
+      assert.equal(await t.execute({ type: 'link', href: value }), link !== null, `the link command agrees on ${label}`);
+      if (link !== null) assert.deepEqual(t.content()[0], text('word', [linkMark(link)]));
+      // At a caret after the word, so an image goes in after it rather than in its place.
+      await t.select(t.at('word') + 4);
+      assert.equal(await t.execute({ type: 'image', src: value }), image !== null, `the image command agrees on ${label}`);
+      // Each image goes in straight after the paragraph, ahead of the ones before it.
+      if (image !== null) assert.deepEqual(t.json().content[1], { type: 'image', attrs: { src: image } });
+    }
+    assert.equal(normalizeTextEditorUrl('https://example.com', 'video'), null, 'an unknown kind');
   } finally {
     await t.close();
   }

@@ -1,5 +1,5 @@
-// The 32 exports of @muxui/react/text-editor, as the ledger record TEXT-EDITOR-02 asks the TextEditor Docs page to show them: the
-// component with its ref, attribute surface and every prop, the two functions with their signatures, and the 29 exported types
+// The 34 exports of @muxui/react/text-editor, as the ledger record TEXT-EDITOR-02 asks the TextEditor Docs page to show them: the
+// component with its ref, attribute surface and every prop, the three functions with their signatures, and the 30 exported types
 // declared as the page prints them.
 //
 // They are written out in full on purpose and checked against packages/react/src/text-editor/index.ts (`sourceProblems`), so a pin
@@ -11,7 +11,7 @@ import { resolve } from 'node:path';
 
 export const textEditorRef = 'TextEditorHandle';
 
-export const textEditorNative = { type: 'React.HTMLAttributes<HTMLDivElement>', omit: ['value', 'defaultValue', 'onChange'] };
+export const textEditorNative = { type: 'React.HTMLAttributes<HTMLDivElement>', omit: ['value', 'defaultValue', 'onChange', 'autoFocus'] };
 
 /** Every prop of TextEditor, in the order its declaration lists them. All are optional. */
 export const textEditorProps = [
@@ -37,11 +37,17 @@ export const textEditorProps = [
   ['selectionActions', 'readonly TextEditorSelectionAction[]'],
   ['selectionInstruction', 'boolean'],
   ['onSelectionRequest', '(request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>'],
+  ['autoFocus', 'boolean'],
+  ['onReady', '() => void'],
+  ['onFormattingChange', '(formatting: TextEditorFormatting) => void'],
+  ['minRows', 'number'],
+  ['maxRows', 'number'],
 ];
 
 export const textEditorFunctions = {
   isTextEditorDocument: 'isTextEditorDocument(value: unknown): value is TextEditorDocument',
   normalizeTextEditorDocument: 'normalizeTextEditorDocument(value: unknown): TextEditorDocument',
+  normalizeTextEditorUrl: "normalizeTextEditorUrl(value: string, kind: 'link' | 'image'): string | null",
 };
 
 /** The exported types, each as the page prints it. */
@@ -66,7 +72,13 @@ export const textEditorTypes = {
   content?: TextEditorPlainTextNode[];
 };`,
   TextEditorCommand: `type TextEditorCommand = {
-  type: 'bold' | 'italic' | 'underline' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'unlink' | 'generate';
+  type: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'paragraph' | 'horizontalRule' | 'unlink' | 'generate';
+} | {
+  type: 'heading';
+  level: 1 | 2 | 3 | 4 | 5 | 6;
+} | {
+  type: 'text';
+  text: string;
 } | {
   type: 'align';
   value: TextEditorAlignment;
@@ -82,6 +94,7 @@ export const textEditorTypes = {
 } | {
   type: 'link';
   href: string;
+  text?: string;
 } | {
   type: 'image';
   src: string;
@@ -93,8 +106,17 @@ export const textEditorTypes = {
 };`,
   TextEditorFontFamily: "type TextEditorFontFamily = 'Inter' | 'Comic Sans MS, Comic Sans' | 'serif' | 'monospace' | 'cursive';",
   TextEditorFontSize: "type TextEditorFontSize = '12px' | '14px' | '16px' | '18px' | '20px' | '24px' | '28px' | '32px';",
+  TextEditorFormatting: `type TextEditorFormatting = {
+  readonly empty: boolean;
+  readonly marks: { readonly bold: boolean; readonly italic: boolean; readonly underline: boolean; readonly strike: boolean; readonly code: boolean };
+  readonly link: string | null;
+  readonly block: 'paragraph' | 'heading' | 'codeBlock' | null;
+  readonly headingLevel: 1 | 2 | 3 | 4 | 5 | 6 | null;
+  readonly list: 'bulletList' | 'orderedList' | null;
+  readonly quote: boolean;
+};`,
   TextEditorHandle: `type TextEditorHandle = {
-  focus(): void;
+  focus(options?: { preventScroll?: boolean }): void;
   execute(command: TextEditorCommand): boolean;
 };`,
   TextEditorHardBreakNode: `type TextEditorHardBreakNode = {
@@ -143,7 +165,7 @@ export const textEditorTypes = {
   type: 'text';
   text: string;
 };`,
-  TextEditorProps: "type TextEditorProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange'> & TextEditorOwnProps;",
+  TextEditorProps: "type TextEditorProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange' | 'autoFocus'> & TextEditorOwnProps;",
   TextEditorSelectionAction: `type TextEditorSelectionAction = {
   id: string;
   label: string;
@@ -172,8 +194,8 @@ export const textEditorTypes = {
 };`,
 };
 
-/** The 32 exports by name: the component, the two functions and the 29 types, in the order the page's index lists them. */
-export const textEditorExports = ['TextEditor', 'isTextEditorDocument', 'normalizeTextEditorDocument', ...Object.keys(textEditorTypes)];
+/** The 34 exports by name: the component, the three functions and the 30 types, in the order the page's index lists them. */
+export const textEditorExports = ['TextEditor', 'isTextEditorDocument', 'normalizeTextEditorDocument', 'normalizeTextEditorUrl', ...Object.keys(textEditorTypes)];
 
 /** Strips what the printer and the author format differently: comments, whitespace, separators, the `React.` namespace and a leading `|`. */
 const squash = (text) => text
@@ -185,7 +207,7 @@ const squash = (text) => text
 
 /**
  * Where this file differs from the TextEditor source: every type is declared there as written here, every prop has the same
- * name and type in `TextEditorOwnProps`, the two functions and the ref and attribute surface are the source's. Empty when it
+ * name and type in `TextEditorOwnProps`, the three functions and the ref and attribute surface are the source's. Empty when it
  * holds; by default it reads the source on disk, so a change to a declaration shows up even when no model reads it.
  */
 export function sourceProblems(repositoryRoot, source = readFileSync(resolve(repositoryRoot, 'packages/react/src/text-editor/index.ts'), 'utf8')) {
@@ -194,7 +216,7 @@ export function sourceProblems(repositoryRoot, source = readFileSync(resolve(rep
   for (const [name, text] of Object.entries(textEditorTypes)) {
     if (!squashed.includes(`export${squash(text)}`)) problems.push(`the source does not declare ${name} as ${text}`);
   }
-  const exported = [...source.matchAll(/^export (?:type|function|const) (\w+)/gmu)].map(([, name]) => name).filter((name) => name.startsWith('TextEditor') || /TextEditorDocument$/u.test(name));
+  const exported = [...source.matchAll(/^export (?:type|function|const) (\w+)/gmu)].map(([, name]) => name).filter((name) => name.includes('TextEditor'));
   const expected = new Set(textEditorExports);
   for (const name of exported) if (!expected.has(name)) problems.push(`the source exports ${name}, which this file does not pin`);
   for (const name of expected) if (!exported.includes(name)) problems.push(`this file pins ${name}, which the source does not export`);
