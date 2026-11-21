@@ -52,6 +52,17 @@
   margin-block-end: var(--muxui-semantic-layout-group-gap);
 }
 
+/* A tight list item has no paragraph, so the gaps its paragraph gave come from here: below an item that does not
+ * end in a block, and between an item's text and a nested list, quote or code block. In a loose list they
+ * collapse with the paragraph's own margins. */
+.muxui-markdown li:has(+ li):not(:has(> :where(.muxui-markdown__heading, .muxui-markdown__blockquote, .muxui-markdown__code-block, .muxui-markdown__rule):last-child)) {
+  margin-block-end: var(--muxui-semantic-layout-group-gap);
+}
+
+.muxui-markdown li > :where(ul, ol, .muxui-markdown__blockquote, .muxui-markdown__code-block) {
+  margin-block-start: var(--muxui-semantic-layout-group-gap);
+}
+
 .muxui-markdown hr {
   margin-block: var(--muxui-semantic-layout-content-gap);
   border: 0;

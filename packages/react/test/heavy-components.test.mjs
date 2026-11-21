@@ -71,12 +71,46 @@ test('Markdown keeps an ordered list start number other than 1', () => {
   assert.equal(list('1. one').hasAttribute('start'), false);
   assert.equal(list('- item').hasAttribute('start'), false);
 });
-test('Markdown resolves backslash escapes in image alt text', () => {
-  const alt = (description) => JSDOM.fragment(renderToStaticMarkup(React.createElement(Markdown, { source: `![${description}](https://example.test/x.png)` }))).querySelector('img').getAttribute('alt');
+test('Markdown gives an image the plain text of its description as alt text', () => {
+  const render = (source) => renderToStaticMarkup(React.createElement(Markdown, { source, invalidFallback: 'Blocked' }));
+  const alt = (description, after = '') => JSDOM.fragment(render(`![${description}](https://example.test/x.png)${after}`)).querySelector('img').getAttribute('alt');
+  // Backslash escapes resolve; a backslash before anything but ASCII punctuation stays.
   assert.equal(alt('a \\* b'), 'a * b');
   assert.equal(alt('a \\\\ b'), 'a \\ b');
   assert.equal(alt('\\"quoted\\" \\<tag\\> \\& \\_'), '"quoted" <tag> & _');
   assert.equal(alt('a \\b c'), 'a \\b c');
+  assert.equal(alt('\\&amp;'), '&amp;');
+  assert.equal(alt('\\[x\\]'), '[x]');
+  // Emphasis, links and nested images give their text; code keeps every character.
+  assert.equal(alt('foo *bar* __baz__'), 'foo bar baz');
+  assert.equal(alt('foo [bar](https://example.test/) <https://example.test/?a&amp;b>'), 'foo bar https://example.test/?a&amp;b');
+  assert.equal(alt('foo ![bar](https://example.test/y.png)'), 'foo bar');
+  assert.equal(alt('a [b][r]', '\n\n[r]: https://example.test/'), 'a b');
+  assert.equal(alt('a `b\\*c` `d\\]` &amp;'), 'a b\\*c d\\] &');
+  // A reference image's description is read the same way.
+  assert.equal(JSDOM.fragment(render('![foo *bar*][r] ![*baz*]\n\n[r]: https://example.test/x.png\n[*baz*]: https://example.test/y.png')).querySelectorAll('img')[1].getAttribute('alt'), 'baz');
+  assert.equal(JSDOM.fragment(render('![foo *bar*][r]\n\n[r]: https://example.test/x.png')).querySelector('img').getAttribute('alt'), 'foo bar');
+  // Text inside a dropped tag reads like other text, as it does outside images.
+  assert.equal(alt('a <kbd>b</kbd>'), 'a <kbd>b</kbd>');
+  // An unsafe image shows the same text in its place.
+  assert.equal(JSDOM.fragment(render('![foo *bar*](javascript:x)')).querySelector('p').textContent, 'foo bar');
+  // The description meets the same depth and node limits as any other content.
+  const nested = (levels) => `${'**'.repeat(levels)}x${'**'.repeat(levels)}`;
+  assert.doesNotMatch(render(`![${nested(30)}](https://example.test/x.png)`), /data-muxui-markdown-error/u);
+  assert.match(render(`![${nested(MARKDOWN_DEPTH_LIMIT + 1)}](https://example.test/x.png)`), /data-muxui-markdown-error="MARKDOWN_DEPTH_LIMIT_EXCEEDED"/u);
+  assert.match(render(`![${'*a*\n'.repeat(MARKDOWN_NODE_LIMIT / 2)}](https://example.test/x.png)`), /data-muxui-markdown-error="MARKDOWN_NODE_LIMIT_EXCEEDED"/u);
+});
+test('Markdown renders tight list items without paragraphs and keeps them in loose lists', () => {
+  const render = (source) => JSDOM.fragment(renderToStaticMarkup(React.createElement(Markdown, { source })));
+  const items = (source) => [...render(source).querySelectorAll('li')].map((item) => item.innerHTML);
+  assert.deepEqual(items('- a\n- *b*'), ['a', '<em class="muxui-markdown__emphasis">b</em>']);
+  assert.deepEqual(items('1. a\n2. b'), ['a', 'b']);
+  assert.deepEqual(items('- a\n  - b\n- c'), ['a<ul class="muxui-markdown__list"><li class="muxui-markdown__list-item">b</li></ul>', 'b', 'c']);
+  assert.deepEqual(items('- a\n- b\n\n- c'), ['<p class="muxui-markdown__paragraph">a</p>', '<p class="muxui-markdown__paragraph">b</p>', '<p class="muxui-markdown__paragraph">c</p>']);
+  assert.deepEqual(items('- a\n  <!-- c -->\n  b'), ['a\nb']);
+  assert.deepEqual(items('- a\n\n  b'), ['<p class="muxui-markdown__paragraph">a</p><p class="muxui-markdown__paragraph">b</p>']);
+  // Blocks inside a tight item keep their own paragraphs.
+  assert.deepEqual(items('- > q'), ['<blockquote class="muxui-markdown__blockquote"><p class="muxui-markdown__paragraph">q</p></blockquote>']);
 });
 test('Markdown shows apostrophes, quotes, ampersands and angle brackets as written, as text, including inside dropped tags', () => {
   const render = (source, baseUrl) => JSDOM.fragment(renderToStaticMarkup(React.createElement(Markdown, { source, baseUrl })));
