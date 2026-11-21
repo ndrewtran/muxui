@@ -503,6 +503,7 @@ const r14Overlays = (
     <FileTrigger ref={createRef<HTMLInputElement>()} acceptedFileTypes={['image/png', 'image/jpeg'] as const} allowsMultiple onSelect={(files) => { const selected: File[] = files; void selected; }}>Choose files</FileTrigger>
     <Dialog title="Confirm" trigger={<button type="button">Open</button>}>Dialog content</Dialog>
     <Dialog aria-label="Programmatic dialog" open={false}>Dialog content</Dialog>
+    <Dialog title="Filters" presentation="sheet" defaultOpen>Dialog content</Dialog>
     <Popover aria-label="Details" trigger={<button type="button">Details</button>} placement="start" offset={8} crossOffset={0} shouldFlip containerPadding={12}>Popover content</Popover>
     <PreviewTrigger aria-label="Item preview" trigger={<a href="/items/1">Preview</a>} open={false} disabled placement="end" offset={8} crossOffset={0} shouldFlip containerPadding={12}>Preview content</PreviewTrigger>
     <ToastProvider><Toast message="Saved" variant="success" onDismiss={() => undefined} /></ToastProvider>
@@ -534,6 +535,9 @@ void fileTriggerAcceptAlias;
 // @ts-expect-error Dialog requires a title, aria-label, or aria-labelledby.
 const unnamedDialog = <Dialog>Content</Dialog>;
 void unnamedDialog;
+// @ts-expect-error Dialog presentation is center or sheet.
+const bottomDialog = <Dialog title="Filters" presentation="bottom">Content</Dialog>;
+void bottomDialog;
 // @ts-expect-error Popover requires an accessible name.
 const unnamedPopover = <Popover trigger={<button type="button">Open</button>}>Content</Popover>;
 void unnamedPopover;
