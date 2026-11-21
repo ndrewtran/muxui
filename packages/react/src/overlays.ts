@@ -1000,13 +1000,50 @@ export const PreviewTrigger: ForwardRefExoticComponent<PreviewTriggerProps & Ref
 
 PreviewTrigger.displayName = 'PreviewTrigger';
 
-const TooltipMotion = React.forwardRef<HTMLDivElement, AriaTooltipProps>(function TooltipMotion({ children, triggerRef: requestedTriggerRef, ...props }, ref) {
+interface ContentScope extends PresetScope {
+  colorScheme: ColorMode;
+}
+
+const SCOPE_ATTRIBUTES = ['data-muxui-color-scheme', ...PRESET_ATTRIBUTES];
+
+// A tooltip's surface is the inverse of the scheme around it, where only dark counts as dark, as the stylesheet reads
+// it. Its content is a scope of that inverse scheme, with the preset theme and contrast around the tooltip, because a
+// palette is chosen from the attributes on one element.
+function readContentScope(tooltip: Element): ContentScope {
+  const scheme = tooltip.parentElement?.closest('[data-muxui-color-scheme]')?.getAttribute('data-muxui-color-scheme');
+  return { colorScheme: scheme === 'dark' ? 'light' : 'dark', ...readPresetScope(tooltip) };
+}
+
+/**
+ * The scope a tooltip's content resolves in, read when the tooltip mounts and again whenever the scheme, theme or
+ * contrast changes around it, so tokens and components inside read on the inverted surface.
+ */
+function useContentScope(node: HTMLDivElement | null): ContentScope | null {
+  const [scope, setScope] = React.useState<ContentScope | null>(null);
+  useIsomorphicLayoutEffect(() => {
+    if (!node || node.nodeType !== 1 || !node.isConnected) return undefined;
+    const sync = () => {
+      const next = readContentScope(node);
+      setScope((current) => current?.colorScheme === next.colorScheme && current.theme === next.theme && current.contrast === next.contrast ? current : next);
+    };
+    sync();
+    return observeAncestorAttributes([node, node.ownerDocument.documentElement], SCOPE_ATTRIBUTES, sync);
+  }, [node]);
+  return scope;
+}
+
+// display: contents keeps the scope out of layout, so the surface and plain text paint as they would without it. Its
+// class is internal, like the Dialog's motion origin: no anatomy part, and not a styling hook.
+const CONTENT_SCOPE_STYLE = { display: 'contents' } as const;
+
+const TooltipMotion = React.forwardRef<HTMLDivElement, Omit<AriaTooltipProps, 'children'> & { children?: ReactNode }>(function TooltipMotion({ children, triggerRef: requestedTriggerRef, ...props }, ref) {
   const triggerContext = React.useContext(AriaTooltipContext);
   const contextTriggerRef = triggerContext && 'triggerRef' in triggerContext ? triggerContext.triggerRef : undefined;
   const triggerRef = requestedTriggerRef ?? contextTriggerRef;
   const reducedMotionTriggerRef = contextTriggerRef ?? triggerRef;
   const [node, setNode] = React.useState<HTMLDivElement | null>(null);
   const setRef = React.useMemo(() => mergeRefs<HTMLDivElement>(setNode, ref), [ref]);
+  const scope = useContentScope(node);
 
   useIsomorphicLayoutEffect(() => {
     if (!node || node.nodeType !== 1 || !node.isConnected) return undefined;
@@ -1027,7 +1064,13 @@ const TooltipMotion = React.forwardRef<HTMLDivElement, AriaTooltipProps>(functio
     ...props,
     ref: setRef,
     triggerRef,
-    children,
+    children: React.createElement('span', {
+      className: 'muxui-tooltip__scope',
+      style: CONTENT_SCOPE_STYLE,
+      'data-muxui-color-scheme': scope?.colorScheme,
+      'data-muxui-theme': scope?.theme,
+      'data-muxui-contrast': scope?.contrast,
+    }, children),
   });
 });
 
