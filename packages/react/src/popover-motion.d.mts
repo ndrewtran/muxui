@@ -6,3 +6,6 @@ import type { PopoverProps } from 'react-aria-components';
 
 /** A React Aria Popover that animates its open and close cycle; `data-muxui-modal` reaches the DOM. */
 export declare const PopoverMotion: ForwardRefExoticComponent<PopoverProps & { 'data-muxui-modal'?: boolean } & RefAttributes<HTMLElement>>;
+
+/** Whether a popup started opening earlier in the render under way. */
+export declare function isPopupOpening(): boolean;

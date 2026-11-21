@@ -1,22 +1,27 @@
 import assert from 'node:assert/strict';
+import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { PopoverAnchorFixture } from '../fixtures/popover-anchor-fixture.mjs';
-import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, repositoryRoot, startServer } from './harness.mjs';
 
 // Cross-engine proof of a Popover opened from code, without a trigger. Server markup holds none of it, and one open from
 // the start opens after hydration, named and placed against its anchor. Its owner hears Escape, an outside press and
 // the close slot; a press on its anchor is not an outside press, nor, non-modal, is the focus that press moves, while a
 // modal one closes on a press where its anchor is. A collision boundary keeps it inside an element where the viewport
-// alone would let it overflow, in either direction, and scrolls what does not fit; a replaced or removed boundary or
+// alone would let it overflow, in either direction, and scrolls what does not fit; one narrower than its content keeps
+// it inside too, the catalog's boundary example among them, and wraps the text; a replaced or removed boundary or
 // anchor is picked up while it is open. It follows an anchor that layout moves or that mounts after it, and stays put
 // when an anchor of its own unmounts and the window resizes. An initial focus target takes focus in one move, and a
 // return target takes focus when the opener is gone. Reduced motion and the colour scheme scope are read from its
 // anchor; forced colours paint it in system colours (emulated in Chromium only). Inside a sheet on a phone-sized
 // viewport, it opens from its tool after the sheet rests, keeps its distance from its anchor on every frame while the
 // sheet slides in, and opened in the same update as the sheet it is on top of it; it stays inside the sheet's panel,
-// keeps its field focused, hides the sheet from the accessibility tree, and closes first.
+// keeps its field focused, hides the sheet from the accessibility tree, and closes first. Opened in the same update as a
+// centred Dialog or another Popover around it, or mounting open with a menu that the same press opens, it is on top of
+// that too, and focus comes to rest on the body at no step; opened from a menu's item, it is on top as the menu closes.
+// A Popover open as it mounts on its own, with a trigger, is in the page when its owner's effects run.
 // Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const WIDE = { width: 900, height: 700 };
@@ -34,6 +39,37 @@ function documentHtml(url) {
     bodyAttributes: 'style="margin:0;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"',
     body: `<div id="root">${body}</div>`,
     entry: '/test/fixtures/popover-anchor-browser-entry.mjs',
+  });
+}
+
+// A page rendered in the browser alone: the catalog's boundary example from its own source (`case=example`), or a
+// paragraph of ordinary text in a region 232 pixels wide (`case=paragraph`). Each has a Share trigger, and the region
+// that bounds the Popover is the first element in #root.
+const BOUNDARY_ENTRY = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Button, Popover } from '@muxui/react';
+import { PopoverBoundaryExample } from '/@fs${resolve(repositoryRoot, 'catalog/components/popover/examples/react/boundary.tsx')}';
+
+const h = React.createElement;
+function Paragraph() {
+  const regionRef = React.useRef(null);
+  return h('div', { ref: regionRef, style: { inlineSize: 232, blockSize: 360, border: '1px solid' } },
+    h(Popover, { 'aria-label': 'About sharing', boundaryRef: regionRef, placement: 'bottom-start', trigger: h(Button, { variant: 'neutral' }, 'Share') },
+      h('p', { style: { margin: 0 } }, 'Anyone with the link can open the page, and the people you invite by name can comment on it and edit it too.')));
+}
+const example = new URLSearchParams(window.location.search).get('case') === 'example';
+createRoot(document.getElementById('root')).render(h(example ? PopoverBoundaryExample : Paragraph));
+`;
+
+function boundaryHtml(url) {
+  const dir = url.searchParams.get('dir') === 'rtl' ? ' dir="rtl" lang="ar"' : '';
+  return pageShell({
+    attributes: `data-muxui-color-scheme="light" data-muxui-motion="full"${dir}`,
+    head: '<link rel="stylesheet" href="/generated/styles.css">',
+    bodyAttributes: 'style="margin:16px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"',
+    body: '<div id="root"></div>',
+    entry: '/popover-boundary-entry.mjs',
   });
 }
 
@@ -87,6 +123,14 @@ async function focusAfterClose(page, id) {
   return activeId(page);
 }
 
+// Where focus rests after four frames and a pause: React Aria restores focus a frame after an overlay unmounts, and the
+// fallback runs a frame after that.
+async function restingFocus(page) {
+  await frames(page, 4);
+  await page.waitForTimeout(150);
+  return activeId(page);
+}
+
 // Records every element focus moves to, by id or tag, from now on.
 const recordFocus = (page) => page.evaluate(() => {
   window.__focusLog = [];
@@ -117,7 +161,16 @@ const waitForSheetRest = (page) => page.evaluate(() => new Promise((resolve) => 
 
 for (const engine of browserEngines()) {
   test(`a Popover opened from code is placed against its anchor, stays inside its boundary, and moves focus as told in ${engine}`, { timeout: 300_000 }, async (t) => {
-    const server = await startServer({ entries: ['test/fixtures/popover-anchor-browser-entry.mjs'], pages: { '/popover-anchor.html': documentHtml } });
+    const server = await startServer({
+      entries: ['test/fixtures/popover-anchor-browser-entry.mjs'],
+      pages: { '/popover-anchor.html': documentHtml, '/popover-boundary.html': boundaryHtml },
+      // The catalog source imports the package by its public name.
+      alias: { '@muxui/react': '/muxui-react.mjs' },
+      modules: {
+        '/popover-boundary-entry.mjs': BOUNDARY_ENTRY,
+        '/muxui-react.mjs': "export { Button } from '/src/button.ts';\nexport { Popover } from '/src/overlays.ts';\n",
+      },
+    });
     let browser;
     try {
       browser = await launchBrowser(engine);
@@ -156,6 +209,20 @@ for (const engine of browserEngines()) {
         assert.ok(Math.abs(surface.left - anchor.left) < 2, 'bottom-start lines up the start edges');
         assert.equal(await page.locator('[aria-expanded], [aria-controls], [aria-haspopup]').count(), 0, 'nothing claims to be its trigger');
       }));
+
+      await t.test('open as it mounts on its own, with defaultOpen or a controlled open, its content is in the page when its owner\'s effect runs', async () => {
+        for (const how of ['default', 'controlled']) {
+          await withPage({}, async (page) => {
+            await setProps(page, { rename: how });
+            await page.locator('#name').waitFor();
+            await frames(page, 2);
+            assert.equal(await page.evaluate(() => window.__popoverAnchor.renameFound), true, `${how}: the owner's effect finds the name field in the page`);
+            assert.equal(await activeId(page), 'name', `${how}: the field the owner focused keeps focus`);
+            await page.keyboard.type('X');
+            assert.equal(await page.locator('#name').inputValue(), 'X', `${how}: typing replaces the name the owner selected`);
+          });
+        }
+      });
 
       await t.test('opened from code it takes focus from its opener, Escape asks its owner to close it, and focus returns to the opener', () => withPage({}, async (page) => {
         await openFromTool(page);
@@ -237,6 +304,29 @@ for (const engine of browserEngines()) {
             await settled(page);
             assert.equal(await insideOf(page, '#frame', 12), true, 'with the frame as boundary it stays inside, containerPadding from its edges');
           });
+        });
+      }
+
+      for (const dir of ['ltr', 'rtl']) {
+        await t.test(`in ${dir}, a boundary narrower than its content keeps it inside: the catalog's boundary example, and a paragraph in a region 232 pixels wide`, async () => {
+          for (const which of ['example', 'paragraph']) {
+            const context = await browser.newContext({ viewport: WIDE, locale: dir === 'rtl' ? 'ar-EG' : 'en-US' });
+            const page = await context.newPage();
+            page.setDefaultTimeout(10_000);
+            const errors = [];
+            page.on('pageerror', (error) => errors.push(error.message));
+            try {
+              await page.goto(`${server.url}/popover-boundary.html?${new URLSearchParams({ case: which, dir })}`, { waitUntil: 'load' });
+              await page.getByRole('button', { name: 'Share' }).click();
+              await popover(page).waitFor();
+              await settled(page);
+              const [region, surface] = [await rectOf(page, '#root > div'), await rectOf(page, '.muxui-popover')];
+              assert.equal(await insideOf(page, '#root > div', 12), true, `${which}: it stays containerPadding inside the region: ${JSON.stringify({ region, surface })}`);
+              assert.deepEqual(errors, [], errors.join(' | '));
+            } finally {
+              await context.close();
+            }
+          }
         });
       }
 
@@ -425,6 +515,39 @@ for (const engine of browserEngines()) {
         }));
       }
 
+      await t.test('mounting open with a menu that one press of its trigger opens, it is on top: Escape closes it and then the menu, and focus never rests on the body', () => withPage({ props: { menu: true, mountWhenOpen: true } }, async (page) => {
+        const menu = page.getByRole('menu', { name: 'Insert' });
+        await page.locator('#insert').click();
+        await popover(page).waitFor();
+        await menu.waitFor();
+        await page.waitForFunction(() => document.querySelector('.muxui-popover').contains(document.activeElement));
+        await page.keyboard.press('Escape');
+        await popover(page).waitFor({ state: 'detached' });
+        const resting = await restingFocus(page);
+        assert.equal(await menu.count(), 1, 'the first Escape closes only the Popover');
+        assert.equal(await menu.evaluate((node) => node.contains(document.activeElement)), true, `focus rests in the menu, not on ${resting}`);
+        await page.keyboard.press('Escape');
+        await menu.waitFor({ state: 'detached' });
+        assert.equal(await restingFocus(page), 'insert', 'the second Escape closes the menu and focus returns to its trigger');
+      }));
+
+      await t.test('opened from an item of a menu, mounting open or not, it is on top as the menu closes, and Escape returns focus to the menu\'s trigger', async () => {
+        for (const mountWhenOpen of [true, false]) {
+          await withPage({ props: { menu: 'item', mountWhenOpen } }, async (page) => {
+            await page.locator('#insert').click();
+            await page.getByRole('menuitem', { name: 'Image' }).click();
+            await popover(page).waitFor();
+            await page.waitForFunction(() => document.querySelector('.muxui-popover').contains(document.activeElement));
+            assert.equal(await popover(page).evaluate((node) => Boolean(node.closest('[inert]'))), false, `mountWhenOpen ${mountWhenOpen}: the Popover is not inert`);
+            await page.keyboard.press('Escape');
+            await popover(page).waitFor({ state: 'detached' });
+            // The menu may still be leaving, and focus is its own until it has gone.
+            await page.getByRole('menu').waitFor({ state: 'detached' });
+            assert.equal(await restingFocus(page), 'insert', `mountWhenOpen ${mountWhenOpen}: focus returns to the menu's trigger`);
+          });
+        }
+      });
+
       await t.test('a Popover unmounted while open hands focus to its return target when its opener is gone too', () => withPage({ props: { returnFocus: true } }, async (page) => {
         await openFromTool(page);
         await setProps(page, { mounted: false, opener: 'disabled' });
@@ -582,6 +705,28 @@ for (const engine of browserEngines()) {
             await page.waitForFunction(() => document.querySelector('.muxui-dialog')?.contains(document.activeElement));
             await page.keyboard.press('Escape');
             await page.locator('.muxui-dialog__backdrop').waitFor({ state: 'detached' });
+          });
+        }
+      });
+
+      await t.test('opened in the same update as a sheet, a centred Dialog or a Popover around it, it is on top: Escape closes it and then its container, and focus never rests on the body', async () => {
+        for (const layout of ['sheet', 'dialog', 'popover']) {
+          await withPage({ viewport: layout === 'sheet' ? PHONE : WIDE, props: { layout, anchor: 'row', initialFocus: true } }, async (page) => {
+            const inner = page.getByRole('dialog', { name: 'Add link' });
+            const container = layout === 'popover' ? '[role="dialog"][aria-label="Reply"]' : '.muxui-dialog';
+            await page.locator('#reply-with-link').focus();
+            await page.keyboard.press('Enter');
+            await inner.waitFor();
+            await page.waitForFunction(() => document.activeElement?.id === 'address');
+            assert.deepEqual(await exposedDialogs(page), ['Add link'], `${layout}: the Popover alone is in the accessibility tree`);
+            await page.keyboard.press('Escape');
+            await inner.waitFor({ state: 'detached' });
+            assert.equal(await page.locator(container).count(), 1, `${layout}: the first Escape closes only the Popover`);
+            await restingFocus(page);
+            assert.equal(await page.evaluate((selector) => document.querySelector(selector).contains(document.activeElement), container), true, `${layout}: focus rests inside the container, not on ${await activeId(page)}`);
+            await page.keyboard.press('Escape');
+            await page.locator(container).waitFor({ state: 'detached' });
+            assert.equal(await restingFocus(page), 'reply-with-link', `${layout}: the second Escape closes the container and focus returns to its opener`);
           });
         }
       });
