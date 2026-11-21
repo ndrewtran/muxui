@@ -126,7 +126,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   // AlertDialog's Root owns the open state; Trigger and Close own disabled and onActivate, and the other parts own none.
   { slug: 'alert-dialog', name: 'AlertDialog', part: 'Root', parts: { trigger: 'Trigger', close: 'Close' }, source: 'packages/react/src/supplemental/alert-dialog.ts' },
   // Sidebar's Root owns the column's border and density; Provider, Search, Section, NavItem, NavButton, AccountCard, AccountMenu, MobileTrigger and FeatureCard own the rest.
-  { slug: 'sidebar', name: 'Sidebar', part: 'Root', parts: { provider: 'Provider', search: 'Search', section: 'Section', 'nav-item': 'NavItem', 'nav-button': 'NavButton', 'account-card': 'AccountCard', 'account-menu': 'AccountMenu', 'mobile-trigger': 'MobileTrigger', 'feature-card': 'FeatureCard' }, source: 'packages/react/src/supplemental/sidebar.ts' },
+  { slug: 'sidebar', name: 'Sidebar', part: 'Root', parts: { provider: 'Provider', search: 'Search', 'nav-list': 'NavList', section: 'Section', 'nav-item': 'NavItem', 'nav-button': 'NavButton', 'account-card': 'AccountCard', 'account-menu': 'AccountMenu', 'mobile-trigger': 'MobileTrigger', 'feature-card': 'FeatureCard' }, source: 'packages/react/src/supplemental/sidebar.ts' },
   // Skeleton's root is Skeleton.Root, the group, which owns label; Line, Circle and Block own their sizes.
   { slug: 'skeleton', name: 'Skeleton', part: 'Root', parts: { line: 'Line', circle: 'Circle', block: 'Block' }, source: 'packages/react/src/supplemental/skeleton.ts' },
   // Input and TextArea are compounds whose Root owns the props; their other parts own none.

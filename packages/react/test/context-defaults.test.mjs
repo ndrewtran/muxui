@@ -164,6 +164,8 @@ const audited = [
       // Sidebar.NavItem and NavButton render links and a details group of their own: current becomes a class and aria-current, defaultExpanded seeds the group's own state, and no React Aria context reaches either.
       ...expand(['sidebar.nav-item'], ['current', 'defaultExpanded']),
       ...expand(['sidebar.nav-button'], ['current']),
+      // Sidebar.Section seeds its own open state from defaultExpanded, and its heading is a React Aria button that receives none of it.
+      ...expand(['sidebar.section'], ['defaultExpanded']),
       // MultiSelect turns required and invalid into a status line, a description and data attributes of its own: aria-required is unsupported on the button that opens it, so React Aria receives neither.
       ...expand(['multi-select'], ['required', 'invalid']),
       // TagSelect sends required to React Aria only as aria-required, never as isRequired, and filters its items into the list it gives the ListBox, so no React Aria context reaches either.

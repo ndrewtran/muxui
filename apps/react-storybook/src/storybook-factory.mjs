@@ -132,7 +132,7 @@ export const STORY_API_PARTS = Object.freeze({
   Card: Object.freeze(['button']),
   HeaderNav: Object.freeze(['logo', 'nav-button']),
   AlertDialog: Object.freeze(['trigger', 'close']),
-  Sidebar: Object.freeze(['provider', 'search', 'section', 'nav-item', 'nav-button', 'account-card', 'account-menu', 'mobile-trigger', 'feature-card']),
+  Sidebar: Object.freeze(['provider', 'search', 'nav-list', 'section', 'nav-item', 'nav-button', 'account-card', 'account-menu', 'mobile-trigger', 'feature-card']),
   CommandPalette: Object.freeze([
     Object.freeze({ part: 'trigger', props: Object.freeze(['disabled']) }),
     Object.freeze({ part: 'backdrop', props: Object.freeze(['dismissable']) }),
@@ -1294,14 +1294,18 @@ const SIDEBAR_SAMPLE_ITEMS = [{ href: '#now', label: 'Now' }, { href: '#next', l
  * The first NavItem takes label, href, current, external, badge, and icon; the Roadmap group takes items and
  * its open state. Search takes placeholder, value, and onChange. AccountCard takes name, email, avatarSrc,
  * avatarAlt, and status, FeatureCard takes title, description, and dismissLabel, and MobileTrigger takes logo.
+ * The first NavItem also takes action and className, and the Projects Section takes collapsible; the Section's open
+ * state shares its names with the Roadmap group, which takes them.
+ * NavList takes navLabel. The specimen also draws a group break, a row action and the Footer; the Anatomy story adds one
+ * named landmark of its own, since a canvas of several sidebars would repeat a landmark name.
  * onAction belongs to the AccountMenu inside the card, whose own items stay its Menu.Item children here. One
  * navigation fills the column and the mobile drawer, and the consumer owns the FeatureCard, so dismissing it
  * removes it here. Whatever is left in `root` is the aside's own: no part-owned arg may stay in it.
  */
 function SidebarPreview({
   collapsed, defaultCollapsed, onCollapsedChange, shortcut,
-  label, href, current, external, badge, icon,
-  items, expanded, defaultExpanded, onExpandedChange,
+  label, href, current, external, badge, icon, action, className,
+  items, expanded, defaultExpanded, onExpandedChange, collapsible, navLabel,
   placeholder, value, onChange,
   name, email, avatarSrc, avatarAlt, status,
   title, description, dismissLabel, logo,
@@ -1310,11 +1314,12 @@ function SidebarPreview({
 }) {
   const [dismissed, setDismissed] = React.useState(false);
   const Icon = typeof icon === 'function' ? icon : SidebarSpecimenIcon;
-  const navigation = e(MuxUI.Sidebar.NavList, null,
-    e(MuxUI.Sidebar.NavItem, { href: fallback(href, '#overview'), icon: Icon, current, external, badge }, fallback(label, 'Overview')),
+  const navigation = e(MuxUI.Sidebar.NavList, { navLabel },
+    e(MuxUI.Sidebar.NavItem, { href: fallback(href, '#overview'), icon: Icon, current, external, badge, action, className }, fallback(label, 'Overview')),
     e(MuxUI.Sidebar.NavItem, { icon: Icon, items: items ?? SIDEBAR_SAMPLE_ITEMS, expanded, defaultExpanded, onExpandedChange }, 'Roadmap'),
-    e(MuxUI.Sidebar.Section, { label: 'Projects' },
-      e(MuxUI.Sidebar.NavItem, { href: '#settings', icon: Icon }, 'Settings'),
+    e(MuxUI.Sidebar.NavDivider),
+    e(MuxUI.Sidebar.Section, { label: 'Projects', collapsible },
+      e(MuxUI.Sidebar.NavItem, { href: '#settings', icon: Icon, action: e(MuxUI.IconButton, { size: 'sm', 'aria-label': 'Pin Settings' }, e(SidebarSpecimenIcon)) }, 'Settings'),
     ),
   );
   return e(MuxUI.Sidebar.Provider, { collapsed, defaultCollapsed, onCollapsedChange, shortcut },
@@ -1324,6 +1329,7 @@ function SidebarPreview({
       e(MuxUI.Sidebar.Search, { placeholder: fallback(placeholder, 'Search'), value, onChange }),
       e(MuxUI.Sidebar.Divider),
       navigation,
+      e(MuxUI.Sidebar.Footer, null, e(MuxUI.Sidebar.NavList, null, e(MuxUI.Sidebar.NavItem, { href: '#help', icon: Icon }, 'Help'))),
       e(MuxUI.Sidebar.AccountCard, { name: fallback(name, 'Sample user'), email: fallback(email, 'sample@example.com'), avatarSrc, avatarAlt, status },
         e(MuxUI.Sidebar.AccountMenu, { onAction },
           e(MuxUI.Menu.Item, { id: 'profile' }, 'Profile'),
@@ -2104,6 +2110,8 @@ function anatomyArgsForBinding(record, sourceArgs) {
   // errorMessage renders only while invalid, so the anatomy shows the error part through invalid.
   if (props.has('errorMessage') && props.has('invalid')) args.invalid = true;
   if (record.family === 'ColorSwatchPicker') args.defaultValue = '#ff0000';
+  // A collapsible Section draws its heading button, the section-toggle part.
+  if (record.family === 'Sidebar') args.collapsible = true;
   // The label part is the field label Calendar renders only when it has a label.
   if (record.family === 'Calendar') args.label = 'Date';
   if (record.family === 'ListBox') {
@@ -2363,7 +2371,11 @@ function AnatomyHarness({ record, args }) {
     ? e(MuxUI.ColorPicker, { defaultValue: '#ff0000' },
       e(MuxUI.ColorSlider, { label: 'Red', channel: 'red', defaultValue: '#ff0000' }),
       e(MuxUI.ColorSwatch, { color: '#ff0000' }))
-    : null;
+    : record.family === 'Sidebar'
+      // One sidebar whose list is a named landmark: the nav part, once, so no landmark name repeats on the canvas.
+      ? e('div', { style: { blockSize: '6rem' } }, e(MuxUI.Sidebar.Root, { 'aria-label': 'Landmark specimen' },
+        e(MuxUI.Sidebar.NavList, { navLabel: 'Specimen navigation' }, e(MuxUI.Sidebar.NavItem, { href: '#specimen' }, 'Specimen'))))
+      : null;
   const content = [
     renderStateCoverage(record, anatomyArgs),
     anatomySupport,

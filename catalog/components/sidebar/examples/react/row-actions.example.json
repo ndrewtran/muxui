@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:sidebar-row-actions-react",
+  "kind": "example",
+  "name": "Sidebar row actions",
+  "summary": "Give each project row a Pin action of its own beside its link, and break the pinned rows from the rest with a divider inside the list.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:sidebar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 3
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/sidebar/examples/react/row-actions.tsx"
+}

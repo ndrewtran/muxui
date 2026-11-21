@@ -1421,7 +1421,8 @@ test('Sidebar routes each prop to its part and the mobile drawer carries the sam
     await settleRuntime();
     const drawer = document.querySelector('.muxui-sidebar__mobile-dialog');
     assert.ok(drawer, 'the drawer opens');
-    const desktop = [...host.querySelectorAll('.muxui-sidebar .muxui-sidebar__nav-list a')].map((link) => link.getAttribute('href'));
+    // The column's foot is its own; the drawer carries the navigation list.
+    const desktop = [...host.querySelectorAll(':is(.muxui-sidebar, .muxui-sidebar > nav) > .muxui-sidebar__nav-list a')].map((link) => link.getAttribute('href'));
     assert.deepEqual([...drawer.querySelectorAll('a')].map((link) => link.getAttribute('href')), desktop);
     assert.ok(desktop.length >= 5 && desktop.every((href) => href.startsWith('#')), 'working destinations, not a placeholder word');
   });
@@ -1438,6 +1439,7 @@ const STORY_CONTROL_SAMPLES = {
     label: 'Inbox', href: '/inbox', current: true, external: true, badge: '3', icon: ({ className }) => React.createElement('svg', { className }), items: [{ href: '/a', label: 'Alpha' }],
     expanded: true, defaultExpanded: true, placeholder: 'Find', value: 'roadmap', name: 'Ada', email: 'ada@example.com', avatarSrc: '/ada.png', avatarAlt: 'Ada at work', status: 'online',
     title: 'Try Beta', description: 'Early access', dismissLabel: 'Not now', logo: 'Acme',
+    action: React.createElement('button', { type: 'button', 'aria-label': 'Pin Inbox' }), className: 'pinned', collapsible: false, navLabel: 'Workspace',
     onCollapsedChange: () => {}, onChange: () => {}, onExpandedChange: () => {}, onAction: () => {}, onDismiss: () => {},
   },
 };
@@ -1477,6 +1479,10 @@ test('every control of a moved compound reaches the part that owns it and none l
   assert.equal(full.querySelector('.muxui-sidebar__feature-card-title').textContent, 'Try Beta', 'title heads the feature card');
   assert.equal(full.querySelector('.muxui-sidebar__feature-card-description').textContent, 'Early access', 'description supports it');
   assert.equal(full.querySelector('.muxui-sidebar__feature-card-dismiss').textContent, 'Not now', 'dismissLabel names its button');
+  // The first item takes the row action and the class; collapsible reaches the Projects section.
+  assert.equal(full.querySelector('.muxui-sidebar__nav-item.pinned .muxui-sidebar__nav-action button').getAttribute('aria-label'), 'Pin Inbox', 'action sits beside the first link');
+  assert.equal(full.querySelector('.muxui-sidebar__section-toggle'), null, 'collapsible: false leaves the Projects heading static');
+  assert.equal(full.querySelector('.muxui-sidebar > nav.muxui-sidebar__nav').getAttribute('aria-label'), 'Workspace', 'navLabel names the landmark around the list');
   // Left out, each part keeps its own sample or default.
   const bare = new JSDOM(renderToStaticMarkup(renderFamily('Sidebar', { avatarSrc: '/ada.png' }))).window.document;
   assert.equal(bare.querySelector('.muxui-sidebar__account-avatar').getAttribute('alt'), 'Sample user');
@@ -1484,6 +1490,7 @@ test('every control of a moved compound reaches the part that owns it and none l
   assert.equal(bare.querySelector('.muxui-sidebar__feature-card-title').textContent, 'Try Scale');
   assert.equal(bare.querySelector('.muxui-sidebar__feature-card-description').textContent, 'Explore tokens');
   assert.equal(bare.querySelector('.muxui-sidebar__feature-card-dismiss').textContent, 'Dismiss');
+  assert.equal(new JSDOM(renderToStaticMarkup(renderFamily('Sidebar', { collapsible: true }))).window.document.querySelector('.muxui-sidebar__section-toggle')?.getAttribute('aria-expanded'), 'true', 'collapsible gives the Projects section its heading button');
 });
 
 test('InputTags keeps supplied seeds and copy, and offers placement and tag-focus specimens', async () => {
@@ -2520,7 +2527,7 @@ test('the On cell of every row is what the document shows: its tags, each carryi
       }
     }
   }
-  assert.equal(cells, 938, 'every row of every table was compared');
+  assert.equal(cells, 944, 'every row of every table was compared');
 });
 
 // The expectation above is derived in the test from the document; these cells are written out, so it cannot drift with the code: a part in a
@@ -2599,7 +2606,7 @@ const interactionAndOverlayZero = Object.freeze([
   'Activity.focused', 'AlertDialog.open', 'Calendar.focused', 'Card.focused', 'ColorPicker.focused', 'DataDiff.focused', 'Dialog.focused', 'Dialog.open',
   'HeaderNav.focused', 'IconButton.focus-visible', 'IconButton.hovered', 'IconButton.pressed', 'Lightbox.open', 'Link.pressed', 'Menu.focused', 'Message.focused',
   'MultiSelect.open', 'Popover.focused', 'Popover.open', 'PreviewTrigger.closing', 'PreviewTrigger.open', 'PreviewTrigger.opening', 'PromptComposer.focused',
-  'RangeCalendar.focused', 'SelectNative.focused', 'TextEditor.focused', 'ToggleButton.pressed', 'Toolbar.focused', 'Tooltip.closing', 'Tooltip.open', 'Tooltip.opening',
+  'RangeCalendar.focused', 'SelectNative.focused', 'Sidebar.pressed', 'TextEditor.focused', 'ToggleButton.pressed', 'Toolbar.focused', 'Tooltip.closing', 'Tooltip.open', 'Tooltip.opening',
 ]);
 const interactionNames = new Set(['focused', 'focus-visible', 'focus-within', 'hovered', 'pressed', 'dragging', 'drop-target', 'entering', 'exiting', 'open', 'opening', 'closing']);
 // The catalog states and statuses no documented hook shows in the canvas, each with the reason found by reading the family's source.

@@ -23,8 +23,8 @@ import { sidebarUnreachable, sidebarFocusFirst, sidebarHandoff, SidebarDrawerExi
 
 /**
  * The props Mux UI defines for Sidebar.Root, the compound's root; the catalog's web.react API is derived from
- * this type (Decision 0031). Provider, Search, Section, NavItem, NavButton, AccountCard, AccountMenu, MobileTrigger and
- * FeatureCard define theirs in the OwnProps types below, and Toggle, Header, Divider and NavList define none.
+ * this type (Decision 0031). Provider, Search, NavList, Section, NavItem, NavButton, AccountCard, AccountMenu, MobileTrigger
+ * and FeatureCard define theirs in the OwnProps types below, and Toggle, Header, Divider, NavDivider and Footer define none.
  * They are type literals, not interfaces, so the public props types stay assignable to Record<string, unknown>.
  */
 type SidebarOwnProps = {
@@ -56,10 +56,25 @@ type SidebarSearchOwnProps = {
   onChange?: ChangeEventHandler<HTMLInputElement>;
 };
 
+/** The props Mux UI defines for Sidebar.NavList; its API is the nav-list entry in the catalog's partApis. */
+type SidebarNavListOwnProps = {
+  /** Wraps the list in a `nav` landmark with this accessible name. Without it the list has no landmark of its own. */
+  navLabel?: string;
+};
+
 /** The props Mux UI defines for Sidebar.Section; its API is the section entry in the catalog's partApis. */
+// The open-state fields repeat SidebarExpandedProps, which the derivation does not read through an intersection.
 type SidebarSectionOwnProps = {
   /** The section's visible heading, which also names its list. */
   label: ReactNode;
+  /** Makes the heading a button that shows and hides the section's items. A folded rail shows every section's items and no button. */
+  collapsible?: boolean;
+  /** Whether a collapsible section is open, when the caller controls it. */
+  expanded?: boolean;
+  /** Whether a collapsible section starts open, when it controls itself. */
+  defaultExpanded?: boolean;
+  /** Called with the new open state each time a collapsible section opens or closes. */
+  onExpandedChange?: (expanded: boolean) => void;
 };
 
 /** The icon a nav item or button draws: a component that takes a class name, such as one from an icon library. */
@@ -77,12 +92,12 @@ export type SidebarExpandedProps = {
 
 /**
  * A nested nav entry. An entry with `items` and no `href` is a disclosure group; with both, it is a link beside a
- * toggle button. `id` is a stable React key and defaults to `href`.
+ * toggle button. `id` is a stable React key and defaults to `href`. `icon` draws a smaller icon before the label.
  */
 // The two arms repeat SidebarExpandedProps and the fields they share, since the derivation reads no intersection with a union.
 export type SidebarNavEntry =
-  | { expanded?: boolean; defaultExpanded?: boolean; onExpandedChange?: (expanded: boolean) => void; id?: string; label: ReactNode; current?: boolean; href: string; items?: SidebarNavEntry[] }
-  | { expanded?: boolean; defaultExpanded?: boolean; onExpandedChange?: (expanded: boolean) => void; id?: string; label: ReactNode; current?: boolean; href?: string; items: SidebarNavEntry[] };
+  | { expanded?: boolean; defaultExpanded?: boolean; onExpandedChange?: (expanded: boolean) => void; id?: string; label: ReactNode; icon?: ComponentType<SidebarIconProps>; current?: boolean; href: string; items?: SidebarNavEntry[] }
+  | { expanded?: boolean; defaultExpanded?: boolean; onExpandedChange?: (expanded: boolean) => void; id?: string; label: ReactNode; icon?: ComponentType<SidebarIconProps>; current?: boolean; href?: string; items: SidebarNavEntry[] };
 
 /** The props Mux UI defines for Sidebar.NavItem; its API is the nav-item entry in the catalog's partApis. */
 // The open-state fields repeat SidebarExpandedProps, which the derivation does not read through an intersection.
@@ -105,6 +120,13 @@ type SidebarNavItemOwnProps = {
   defaultExpanded?: boolean;
   /** Called with the new open state each time the group opens or closes. */
   onExpandedChange?: (expanded: boolean) => void;
+  /**
+   * A control of its own beside the link, such as an IconButton or a Menu trigger, which the caller names. It is a
+   * separate tab stop after the link; folded, it shows over the row while it has keyboard focus. Needs `href`.
+   */
+  action?: ReactNode;
+  /** A class for the item's list element. */
+  className?: string;
 };
 
 /** The props Mux UI defines for Sidebar.NavButton; its API is the nav-button entry in the catalog's partApis. */
@@ -164,6 +186,7 @@ export type SidebarToggleProps = Omit<IconButtonProps, 'aria-label' | 'aria-labe
 type SidebarSearchProps = PartProps<HTMLDivElement> & SidebarSearchOwnProps;
 export type SidebarSectionProps = PartProps<HTMLLIElement> & SidebarSectionOwnProps;
 export type SidebarNavItemProps = SidebarNavItemOwnProps & { children?: ReactNode };
+export type SidebarNavListProps = PartProps<HTMLUListElement> & SidebarNavListOwnProps;
 type SidebarNavButtonProps = AnchorHTMLAttributes<HTMLAnchorElement> & SidebarNavButtonOwnProps;
 type SidebarAccountCardProps = PartProps<HTMLDivElement> & SidebarAccountCardOwnProps;
 /** The part of Menu's list props that AccountMenu supports. The card's button names the menu and owns its open state. */
@@ -261,13 +284,16 @@ type SidebarNavNodeProps = SidebarExpandedProps & {
   external?: boolean;
   items?: SidebarNavEntry[];
   child?: boolean;
+  action?: ReactNode;
+  className?: string;
 };
 /**
  * One nav entry at any depth, as a link, a disclosure group, or a link group. Without `href`, items form a native
- * details group; with `href`, the link and a separate toggle button share a row, since a summary cannot hold a link.
- * `child` entries are the rows nested under a top-level NavItem: label only, no icon, mark, badge, or rail tooltip.
+ * details group; with `href`, the link and a separate toggle button share a row, since a summary cannot hold a link,
+ * and so does an action. `child` entries are the rows nested under a top-level NavItem: a label and an optional icon,
+ * with no mark, badge, action, or rail tooltip.
  */
-function SidebarNavNode({ label, href, icon: Icon, badge, current = false, external = false, items, child = false, expanded, defaultExpanded, onExpandedChange }: SidebarNavNodeProps): ReactElement {
+function SidebarNavNode({ label, href, icon: Icon, badge, current = false, external = false, items, child = false, action, className: itemClassName, expanded, defaultExpanded, onExpandedChange }: SidebarNavNodeProps): ReactElement {
   const sidebar = React.useContext(SidebarContext);
   const [open, setOpen] = useSidebarExpanded({ expanded, defaultExpanded, onExpandedChange });
   const detailsRef = React.useRef<HTMLDetailsElement>(null);
@@ -291,18 +317,24 @@ function SidebarNavNode({ label, href, icon: Icon, badge, current = false, exter
   const leading = Icon ? h(Icon, { className: 'muxui-sidebar__nav-icon', ...{ 'aria-hidden': true } }) : initial && h('span', { className: 'muxui-sidebar__nav-mark', 'aria-hidden': true }, initial);
   // A link group's toggle takes its name from the rendered label, so a label that is a component still names it. A child's label is its link's whole content.
   const linkGroup = Boolean(href && items?.length);
-  const body = (...trailing: ReactNode[]) => (child ? [label, ...trailing] : [leading, h('span', { id: linkGroup ? labelId : undefined, className: 'muxui-sidebar__nav-label' }, label), badge && h('span', { className: 'muxui-sidebar__nav-badge' }, badge), ...trailing]);
+  const body = (...trailing: ReactNode[]) => (child ? [leading, label, ...trailing] : [leading, h('span', { id: linkGroup ? labelId : undefined, className: 'muxui-sidebar__nav-label' }, label), badge && h('span', { className: 'muxui-sidebar__nav-badge' }, badge), ...trailing]);
   const named = (node: ReactElement) => (child ? node : h(SidebarRailTooltip, { label, children: node }));
   const className = cx('muxui-sidebar__nav-link', child && 'muxui-sidebar__nav-child-link', current && 'muxui-sidebar__nav-link--current');
   const chevron = h(ChevronDownIcon, { className: 'muxui-sidebar__nav-chevron', 'aria-hidden': true, focusable: 'false' });
+  // The action sits beside the link, never inside it, so each keeps its own name and tab stop. A summary cannot hold it.
+  const hasAction = action !== undefined && action !== null && action !== false;
+  if (hasAction && !href) throw new Error('Sidebar.NavItem takes an action only with an href');
+  const trailingAction = hasAction ? h('div', { className: 'muxui-sidebar__nav-action' }, action) : null;
   const nested = items?.length ? h('ul', { ref: listRef, id: href ? listId : undefined, className: 'muxui-sidebar__nav-children', hidden: href ? !open : undefined }, items.map((entry, index) => h(SidebarNavNode, { key: entry.id ?? entry.href ?? index, ...entry, child: true }))) : null;
   let content;
   if (!nested) {
     content = named(h(AriaLink, { href, className, ...{ 'aria-current': current ? 'page' : undefined } }, ...body(external && h(ExternalLinkIcon, { className: 'muxui-sidebar__nav-external', 'aria-hidden': true, focusable: 'false' }))));
+    if (trailingAction) content = h('div', { className: 'muxui-sidebar__nav-row' }, content, trailingAction);
   } else if (href) {
     content = h(React.Fragment, null,
       h('div', { className: 'muxui-sidebar__nav-row' },
         named(h(AriaLink, { id: child ? labelId : undefined, href, className, ...{ 'aria-current': current ? 'page' : undefined } }, ...body())),
+        trailingAction,
         h(AriaButton, { ref: controlRef, className: 'muxui-sidebar__nav-button muxui-sidebar__nav-toggle', 'aria-labelledby': labelId, 'aria-expanded': open, 'aria-controls': listId, onPress: () => setOpen(!open) }, chevron)),
       nested);
   } else {
@@ -311,7 +343,7 @@ function SidebarNavNode({ label, href, icon: Icon, badge, current = false, exter
     const onToggle = (event: React.SyntheticEvent<HTMLDetailsElement>) => { if (event.currentTarget.open === open) return; setOpen(event.currentTarget.open); rerender(); };
     content = h('details', { ref: detailsRef, className: 'muxui-sidebar__nav-details', open, onToggle }, named(h('summary', { ref: controlRef, className, onClick }, ...body(chevron))), nested);
   }
-  return h('li', { className: 'muxui-sidebar__nav-item' }, content);
+  return h('li', { className: cx('muxui-sidebar__nav-item', itemClassName) }, content);
 }
 
 const SidebarProvider = function SidebarProvider({ collapsed, defaultCollapsed = false, onCollapsedChange, shortcut, children }: SidebarProviderProps) {
@@ -435,10 +467,39 @@ const SidebarSearch = /*#__PURE__*/ React.forwardRef<HTMLDivElement, SidebarSear
     h('input', { ref: inputRef, className: 'muxui-sidebar__search-input', placeholder, value, onChange, 'aria-label': placeholder })));
 });
 const SidebarDivider = /*#__PURE__*/ React.forwardRef<HTMLHRElement, PartProps<HTMLHRElement>>(function SidebarDivider(props, ref) { return nativePart('hr', 'muxui-sidebar__divider', props, ref); });
-const SidebarNavList = /*#__PURE__*/ React.forwardRef<HTMLUListElement, PartProps<HTMLUListElement>>(function SidebarNavList(props, ref) { return nativePart('ul', 'muxui-sidebar__nav-list', props, ref); });
-const SidebarSection = /*#__PURE__*/ React.forwardRef<HTMLLIElement, SidebarSectionProps>(function SidebarSection({ label, className, children, ...props }, ref) { const labelId = React.useId(); return h('li', { ...props, ref, className: cx('muxui-sidebar__section', className) }, h('span', { id: labelId, className: 'muxui-sidebar__section-label' }, label), h('ul', { className: 'muxui-sidebar__section-items', 'aria-labelledby': labelId }, children)); });
+// The list keeps the ref and every attribute; `navLabel` only adds the landmark around it.
+const SidebarNavList = /*#__PURE__*/ React.forwardRef<HTMLUListElement, SidebarNavListProps>(function SidebarNavList({ navLabel, ...props }, ref) {
+  const list = nativePart('ul', 'muxui-sidebar__nav-list', props, ref);
+  return navLabel ? h('nav', { className: 'muxui-sidebar__nav', 'aria-label': navLabel }, list) : list;
+});
+// A decorative break between groups of rows inside a list: an item hidden from assistive technology, so the list
+// still holds only list items and its count is unchanged.
+const SidebarNavDivider = /*#__PURE__*/ React.forwardRef<HTMLLIElement, PartProps<HTMLLIElement>>(function SidebarNavDivider(props, ref) { return nativePart('li', 'muxui-sidebar__nav-divider', { 'aria-hidden': true, ...props }, ref); });
+const SidebarSection = /*#__PURE__*/ React.forwardRef<HTMLLIElement, SidebarSectionProps>(function SidebarSection({ label, collapsible = false, expanded, defaultExpanded = true, onExpandedChange, className, children, ...props }, ref) {
+  const sidebar = React.useContext(SidebarContext);
+  const labelId = React.useId();
+  const listId = React.useId();
+  const listRef = React.useRef<HTMLUListElement>(null);
+  const toggleRef = React.useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useSidebarExpanded({ expanded, defaultExpanded, onExpandedChange });
+  // A folded rail hides the heading's button and shows every section's items, so a closed section hides them again on unfolding.
+  const shown = !collapsible || open || Boolean(sidebar?.collapsed);
+  // Hiding the items, by the button, the caller's `expanded`, or unfolding, moves focus on one of them to the button.
+  useIsomorphicLayoutEffect(() => {
+    const list = listRef.current;
+    if (shown || !list || !list.contains((list.getRootNode() as Document | ShadowRoot).activeElement)) return;
+    toggleRef.current?.focus({ preventScroll: true });
+  }, [shown]);
+  const heading = h('span', { id: labelId, className: 'muxui-sidebar__section-label' }, label);
+  const title = collapsible
+    ? h(AriaButton, { ref: toggleRef, className: 'muxui-sidebar__section-toggle', 'aria-expanded': open, 'aria-controls': listId, onPress: () => setOpen(!open) }, heading, h(ChevronDownIcon, { className: 'muxui-sidebar__nav-chevron', 'aria-hidden': true, focusable: 'false' }))
+    : heading;
+  return h('li', { ...props, ref, className: cx('muxui-sidebar__section', className) }, title, h('ul', { ref: listRef, id: collapsible ? listId : undefined, className: 'muxui-sidebar__section-items', 'aria-labelledby': labelId, hidden: shown ? undefined : true }, children));
+});
+/** The column's foot, after the nav list: it stays in view while the list scrolls, and sticks to the bottom of the window when Root runs past it. */
+const SidebarFooter = /*#__PURE__*/ React.forwardRef<HTMLDivElement, PartProps<HTMLDivElement>>(function SidebarFooter(props, ref) { return nativePart('div', 'muxui-sidebar__footer', props, ref); });
 // The item hands each owned prop to the node, which also draws the nested entries, and the attributes it does not know go along.
-const SidebarNavItem = function SidebarNavItem({ children, href, icon, badge, current = false, external = false, items, expanded, defaultExpanded = false, onExpandedChange, ...props }: SidebarNavItemProps) { return h(SidebarNavNode, { ...props, href, icon, badge, current, external, items, expanded, defaultExpanded, onExpandedChange, label: children }); };
+const SidebarNavItem = function SidebarNavItem({ children, href, icon, badge, current = false, external = false, items, expanded, defaultExpanded = false, onExpandedChange, action, className, ...props }: SidebarNavItemProps) { return h(SidebarNavNode, { ...props, href, icon, badge, current, external, items, expanded, defaultExpanded, onExpandedChange, action, className, label: children }); };
 const SidebarNavButton = /*#__PURE__*/ React.forwardRef<HTMLAnchorElement, SidebarNavButtonProps>(function SidebarNavButton({ href, icon: Icon, label, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, 'aria-label': label, className: cx('muxui-sidebar__nav-button', current && 'muxui-sidebar__nav-button--current', className) }, Icon && h(Icon, { className: 'muxui-sidebar__nav-btn-icon', ...{ 'aria-hidden': true } }), props.children); });
 const SidebarAccountCard = /*#__PURE__*/ React.forwardRef<HTMLDivElement, SidebarAccountCardProps>(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) {
   const sidebar = React.useContext(SidebarContext);
@@ -521,7 +582,9 @@ export const Sidebar: {
   Header: ForwardRefExoticComponent<PartProps<HTMLDivElement> & RefAttributes<HTMLDivElement>>;
   Search: ForwardRefExoticComponent<SidebarSearchProps & RefAttributes<HTMLDivElement>>;
   Divider: ForwardRefExoticComponent<PartProps<HTMLHRElement> & RefAttributes<HTMLHRElement>>;
-  NavList: ForwardRefExoticComponent<PartProps<HTMLUListElement> & RefAttributes<HTMLUListElement>>;
+  NavList: ForwardRefExoticComponent<SidebarNavListProps & RefAttributes<HTMLUListElement>>;
+  /** A decorative break between groups of rows inside a NavList or Section, hidden from assistive technology. */
+  NavDivider: ForwardRefExoticComponent<PartProps<HTMLLIElement> & RefAttributes<HTMLLIElement>>;
   Section: ForwardRefExoticComponent<SidebarSectionProps & RefAttributes<HTMLLIElement>>;
   NavItem: ComponentType<SidebarNavItemProps>;
   NavButton: ForwardRefExoticComponent<SidebarNavButtonProps & RefAttributes<HTMLAnchorElement>>;
@@ -531,6 +594,8 @@ export const Sidebar: {
   AccountMenu: ForwardRefExoticComponent<SidebarAccountMenuProps & RefAttributes<HTMLDivElement>>;
   MobileTrigger: ComponentType<SidebarMobileTriggerProps>;
   FeatureCard: ForwardRefExoticComponent<SidebarFeatureCardProps & RefAttributes<HTMLDivElement>>;
+  /** The column's foot after the nav list, which stays in view while the list scrolls, open or folded. */
+  Footer: ForwardRefExoticComponent<PartProps<HTMLDivElement> & RefAttributes<HTMLDivElement>>;
 } = /*#__PURE__*/ Object.freeze({
   Provider: SidebarProvider,
   Root: SidebarRoot,
@@ -539,6 +604,7 @@ export const Sidebar: {
   Search: SidebarSearch,
   Divider: SidebarDivider,
   NavList: SidebarNavList,
+  NavDivider: SidebarNavDivider,
   Section: SidebarSection,
   NavItem: SidebarNavItem,
   NavButton: SidebarNavButton,
@@ -546,4 +612,5 @@ export const Sidebar: {
   AccountMenu: SidebarAccountMenu,
   MobileTrigger: SidebarMobileTrigger,
   FeatureCard: SidebarFeatureCard,
+  Footer: SidebarFooter,
 });
