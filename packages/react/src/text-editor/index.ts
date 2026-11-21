@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ChangeEvent, ForwardRefExoticComponent, HTMLAttributes, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefAttributes } from 'react';
 import { createPortal } from 'react-dom';
-import { Extension, getText, getTextSerializersFromSchema } from '@tiptap/core';
+import { Extension, getText, getTextSerializersFromSchema, isNodeEmpty } from '@tiptap/core';
 import type { Editor, EditorEvents } from '@tiptap/core';
 import { closeHistory, isHistoryTransaction } from '@tiptap/pm/history';
 import { Fragment, Slice } from '@tiptap/pm/model';
@@ -465,22 +465,41 @@ function run(editor: Editor | null, action: TextEditorCommand, callbacks: Editor
   return false;
 }
 
+/**
+ * Reads `read(editor)` and renders again when a transaction changes the result. The editor's React binding does not
+ * render on transactions, so each control that shows the selection's formatting subscribes for itself; a primitive
+ * result lets an unchanged one skip the render.
+ */
+function useEditorValue<Value extends boolean | string>(editor: Editor | null, read: (editor: Editor) => Value, fallback: Value): Value {
+  const subscribe = React.useCallback((notify: () => void) => {
+    editor?.on('transaction', notify);
+    return () => { editor?.off('transaction', notify); };
+  }, [editor]);
+  return React.useSyncExternalStore(subscribe, () => (editor ? read(editor) : fallback), () => fallback);
+}
+
+/** The selection's font family or size when it is one the toolbar lists, else the toolbar's default. */
+function textStyleValue(editor: Editor, name: 'fontFamily' | 'fontSize', values: ReadonlySet<string>, fallback: string): string {
+  const value: unknown = editor.getAttributes('textStyle')[name];
+  return typeof value === 'string' && values.has(value) ? value : fallback;
+}
+
 type ActionProps = { editor: Editor | null; disabled: boolean; action: TextEditorCommand; label: string; icon?: LucideIcon; callbacks: EditorCallbacks };
 
 function Action({ editor, disabled, action, label, icon: Icon, callbacks }: ActionProps) {
-  const active = action.type === 'align'
-    ? editor?.isActive({ textAlign: action.value })
+  const active = useEditorValue(editor, (current) => (action.type === 'align'
+    ? current.isActive({ textAlign: action.value })
     : action.type === 'fontFamily'
-      ? editor?.getAttributes('textStyle').fontFamily === action.value
+      ? current.getAttributes('textStyle').fontFamily === action.value
       : action.type === 'fontSize'
-        ? editor?.getAttributes('textStyle').fontSize === action.value
-        : editor?.isActive(action.type);
+        ? current.getAttributes('textStyle').fontSize === action.value
+        : current.isActive(action.type)), false);
   const buttonProps = {
     className: cx('muxui-text-editor__btn', active && 'muxui-text-editor__btn--active'),
     'data-muxui-state-disabled': disabled ? 'true' : undefined,
     disabled,
     'aria-label': label,
-    'aria-pressed': Boolean(active),
+    'aria-pressed': active,
     onActivate: () => run(editor, action, callbacks),
   };
   return Icon
@@ -562,10 +581,12 @@ function Toolbar({ editor, disabled, variant, floating, callbacks }: ToolbarProp
     return href === '' ? linkActions.unsetLink() : linkActions.setLink(href);
   };
   const className = cx('muxui-text-editor__toolbar', advanced && 'muxui-text-editor__toolbar--advanced', floating && 'muxui-text-editor__toolbar--floating');
+  const fontFamily = useEditorValue(editor, (current) => textStyleValue(current, 'fontFamily', FONT_FAMILIES, 'Inter'), 'Inter');
+  const fontSize = useEditorValue(editor, (current) => textStyleValue(current, 'fontSize', FONT_SIZES, '16px'), '16px');
   return React.createElement('div', { role: 'toolbar', 'aria-label': 'Formatting', className },
     advanced ? React.createElement(React.Fragment, null,
-      React.createElement('select', { className: 'muxui-text-editor__select', disabled, 'aria-label': 'Font family', defaultValue: 'Inter', onChange: (event: ChangeEvent<HTMLSelectElement>) => run(editor, { type: 'fontFamily', value: event.target.value as TextEditorFontFamily }) }, [...FONT_FAMILIES].map((value) => React.createElement('option', { key: value, value, className: 'muxui-text-editor__option' }, value === 'Comic Sans MS, Comic Sans' ? 'Comic Sans' : value[0].toUpperCase() + value.slice(1)))),
-      React.createElement('select', { className: 'muxui-text-editor__select', disabled, 'aria-label': 'Font size', defaultValue: '16px', onChange: (event: ChangeEvent<HTMLSelectElement>) => run(editor, { type: 'fontSize', value: event.target.value as TextEditorFontSize }) }, [...FONT_SIZES].map((value) => React.createElement('option', { key: value, value, className: 'muxui-text-editor__option' }, value.replace('px', '')))),
+      React.createElement('select', { className: 'muxui-text-editor__select', disabled, 'aria-label': 'Font family', value: fontFamily, onChange: (event: ChangeEvent<HTMLSelectElement>) => run(editor, { type: 'fontFamily', value: event.target.value as TextEditorFontFamily }) }, [...FONT_FAMILIES].map((value) => React.createElement('option', { key: value, value, className: 'muxui-text-editor__option' }, value === 'Comic Sans MS, Comic Sans' ? 'Comic Sans' : value[0].toUpperCase() + value.slice(1)))),
+      React.createElement('select', { className: 'muxui-text-editor__select', disabled, 'aria-label': 'Font size', value: fontSize, onChange: (event: ChangeEvent<HTMLSelectElement>) => run(editor, { type: 'fontSize', value: event.target.value as TextEditorFontSize }) }, [...FONT_SIZES].map((value) => React.createElement('option', { key: value, value, className: 'muxui-text-editor__option' }, value.replace('px', '')))),
       Separator(),
     ) : null,
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'bold' }, label: 'Bold', icon: Bold }),
@@ -1366,6 +1387,26 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
     }, content)) : null);
 }
 
+/**
+ * Names a non-empty placeholder on the textbox as aria-placeholder while the document is empty and editable, the states
+ * in which Tiptap's Placeholder marks the empty editor. The drawn copy is generated text that the stylesheet gives empty
+ * alternative text, so it is not read as the content.
+ */
+function placeholderLabel(placeholder: string) {
+  return Extension.create({
+    name: 'muxuiPlaceholderLabel',
+    addProseMirrorPlugins() {
+      const { editor } = this;
+      return [new Plugin({
+        key: new PluginKey('muxuiPlaceholderLabel'),
+        props: {
+          attributes: (state): EditorAttributes => (placeholder && editor.isEditable && isNodeEmpty(state.doc) ? { 'aria-placeholder': placeholder } : {}),
+        },
+      })];
+    },
+  });
+}
+
 // Re-renders only when the character count changes, for every transaction in either mode.
 function CharactersLeft({ editor, limit }: { editor: Editor | null; limit: number }) {
   const length = React.useSyncExternalStore(
@@ -1418,6 +1459,8 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   const describedBy = [ariaDescribedby, description !== undefined ? descriptionId : undefined, errorMessage !== undefined ? errorId : undefined].filter(Boolean).join(' ') || undefined;
   const editorAttributes = React.useMemo(() => ({
     ...(contentId ? { id: contentId } : {}),
+    // Enter starts a new paragraph, and a textbox is single-line unless it says otherwise.
+    'aria-multiline': 'true',
     ...(ariaLabel !== undefined ? { 'aria-label': ariaLabel } : {}),
     ...(labelledBy !== undefined ? { 'aria-labelledby': labelledBy } : {}),
     ...(describedBy !== undefined ? { 'aria-describedby': describedBy } : {}),
@@ -1438,6 +1481,7 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Image,
       Placeholder.configure({ placeholder }),
+      placeholderLabel(placeholder),
       selectionRangePainter().extension,
       characterLimitFilter(limitRef),
     ],
