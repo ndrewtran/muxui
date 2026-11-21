@@ -195,14 +195,23 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
     await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'full'));
     await page.waitForFunction(() => [...document.querySelectorAll('.muxui-menu__popup')].every((node) => !node.hasAttribute('data-muxui-motion-reduced')));
     await waitForMenuOverlay(page, 'Two', { aligned: true, identity: true });
+    // A 300 ms budget here was missed on loaded CI runners: it times three round trips to the browser as well as the
+    // settle. The travel it interrupts is stretched to 3 s, so a 1 s budget leaves room for a busy runner and still
+    // fails an overlay that keeps travelling instead of settling.
+    const setTravel = (duration) => page.evaluate((value) => {
+      document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', value);
+      document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-spring-visual-duration', value);
+    }, duration);
+    await setTravel('3000ms');
     await page.keyboard.press('ArrowDown');
     await waitForMenuTravel(page, 'Three');
 
     const motionReducedAt = Date.now();
     await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => document.querySelector('.muxui-menu__popup')?.hasAttribute('data-muxui-motion-reduced'));
-    await waitForMenuOverlay(page, 'Three', { aligned: true, identity: true, timeout: 300 });
-    assert.ok(Date.now() - motionReducedAt < 300, 'trigger-local reduced mode settles the nested Menu overlay during travel');
+    await waitForMenuOverlay(page, 'Three', { aligned: true, identity: true, timeout: 1000 });
+    assert.ok(Date.now() - motionReducedAt < 1000, 'trigger-local reduced mode settles the nested Menu overlay during travel');
+    await setTravel('800ms');
 
     await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'full'));
     await page.waitForFunction(() => [...document.querySelectorAll('.muxui-menu__popup')].every((node) => !node.hasAttribute('data-muxui-motion-reduced')));

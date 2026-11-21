@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:popover-open-from-code-react",
+  "kind": "example",
+  "name": "Popover opened from code",
+  "summary": "Open a Popover without a trigger from a toolbar tool and place it against the whole toolbar with anchorRef.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:popover#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 5
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/popover/examples/react/open-from-code.tsx"
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:popover-boundary-react",
+  "kind": "example",
+  "name": "Popover inside a boundary",
+  "summary": "Keep a Popover inside a narrow region with boundaryRef, so it flips and shifts against the region instead of the viewport.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:popover#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 6
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/popover/examples/react/boundary.tsx"
+}

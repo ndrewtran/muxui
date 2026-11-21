@@ -1,6 +1,6 @@
 # Popover usage
 
-Use Popover for anchored contextual content. Provide a focusable trigger and an accessible name for the dialog surface.
+Use Popover for anchored contextual content. Give it a focusable trigger, or open it from code against an anchor, and an accessible name for the dialog surface.
 
 ## Modal or non-modal
 
@@ -18,6 +18,27 @@ The Popover modes example shows a non-modal details Popover with an action and a
 
 - Keep the content to what the trigger names: a few lines of information, or one small control with its action.
 - Name the dialog surface for what it holds, such as Report details, with `aria-label`.
+
+## Open it from code
+
+Leave out the trigger when something other than one toggle opens the Popover, such as a toolbar tool, a menu item or a keyboard shortcut.
+
+- Without a `trigger`, only `open` or `defaultOpen` opens the Popover, and `anchorRef` is required: it names the element the Popover is placed against.
+- The anchor can be larger than the control that opens it, such as the whole toolbar, so the Popover lines up with the row rather than one tool.
+- Name the surface with `aria-label` as usual. Escape inside it, an outside press and the close slot reach your open-change callback; a press on the anchor is not an outside press.
+- The server renders nothing of the Popover, and one open from the start opens after hydration. Reduced motion is read from around the anchor.
+- The Popover opened from code example opens an address field from a Link tool and places it under the toolbar.
+
+## Keep it inside a region
+
+- Set `boundaryRef` when the Popover must stay inside an element smaller than the viewport, such as an embedded app or a sheet: it flips, shifts and shortens to fit, `containerPadding` from the region's edges.
+- The Popover inside a boundary example keeps the Popover of a button in a region's corner inside that region.
+
+## Where focus goes
+
+- A modal Popover focuses its own surface when it opens. Set `initialFocusRef` to an element inside it, such as its only field, to focus that instead, in one move; the Popover initial focus example does this for a rename field.
+- Closing returns focus to the element that was focused when the Popover opened. When that element may be removed, hidden or disabled by then, set `returnFocusRef` to where focus goes instead.
+- The Popover return focus example sends focus to its New report button after a row and its Actions trigger are deleted.
 
 ## Color scheme
 

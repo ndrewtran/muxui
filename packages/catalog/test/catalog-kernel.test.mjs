@@ -273,7 +273,7 @@ test('examples section orders by authored preference, not artifact ID', () => {
   // popover-anchored-react sorts before popover-basic-react by ID but has preference 1.
   assert.deepEqual(
     response.data.value.map(({ id }) => id),
-    ['muxui:example:popover-basic-react', 'muxui:example:popover-anchored-react', 'muxui:example:popover-non-dismissable-react', 'muxui:example:popover-modes-react', 'muxui:example:popover-color-scheme-react'],
+    ['muxui:example:popover-basic-react', 'muxui:example:popover-anchored-react', 'muxui:example:popover-non-dismissable-react', 'muxui:example:popover-modes-react', 'muxui:example:popover-color-scheme-react', 'muxui:example:popover-open-from-code-react', 'muxui:example:popover-boundary-react', 'muxui:example:popover-initial-focus-react', 'muxui:example:popover-return-focus-react'],
   );
 });
 

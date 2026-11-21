@@ -228,7 +228,7 @@ const labelOnly = ['autocomplete', 'calendar', 'checkbox-group', 'color-area', '
 const EXPLAINED_DIFFERENCES = [
   // The arm of a props type re-declares the member without its comment (Omit drops it), so the comment the
   // catalog carries is the one on the same-named member of the family's OwnProps type, which the model keeps.
-  ...[...labelOnly.map((slug) => `${slug}.label`), 'resizable.sizes', 'resizable.defaultSizes', 'dialog.title', 'code-block.mode', 'code-block.source', 'code-block.before', 'code-block.after', 'virtualizer.layout', 'virtualizer.children', 'select.description', 'text.variant', 'text.size']
+  ...[...labelOnly.map((slug) => `${slug}.label`), 'resizable.sizes', 'resizable.defaultSizes', 'dialog.title', 'popover.trigger', 'code-block.mode', 'code-block.source', 'code-block.before', 'code-block.after', 'virtualizer.layout', 'virtualizer.children', 'select.description', 'text.variant', 'text.size']
     .map((key) => `own-props-comment ${key}`),
   // Select's arms re-declare errorMessage with a comment of their own, so the declaration and the catalog say different things.
   'arm-comment select.errorMessage',

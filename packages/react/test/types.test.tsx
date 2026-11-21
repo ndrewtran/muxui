@@ -505,6 +505,8 @@ const r14Overlays = (
     <Dialog aria-label="Programmatic dialog" open={false}>Dialog content</Dialog>
     <Dialog title="Filters" presentation="sheet" defaultOpen>Dialog content</Dialog>
     <Popover aria-label="Details" trigger={<button type="button">Details</button>} placement="start" offset={8} crossOffset={0} shouldFlip containerPadding={12}>Popover content</Popover>
+    <Popover aria-label="Add link" anchorRef={createRef<HTMLDivElement>()} open boundaryRef={createRef<HTMLDivElement>()} initialFocusRef={createRef<HTMLInputElement>()} returnFocusRef={createRef<HTMLButtonElement>()}>Popover content</Popover>
+    <Popover aria-label="Add link" anchorRef={createRef<HTMLDivElement>()} defaultOpen>Popover content</Popover>
     <PreviewTrigger aria-label="Item preview" trigger={<a href="/items/1">Preview</a>} open={false} disabled placement="end" offset={8} crossOffset={0} shouldFlip containerPadding={12}>Preview content</PreviewTrigger>
     <ToastProvider><Toast message="Saved" variant="success" onDismiss={() => undefined} /></ToastProvider>
     <Tooltip trigger={<button type="button">Help</button>} content="Helpful information" delay={500} closeDelay={0} disabled placement="bottom" offset={0} crossOffset={0} shouldFlip containerPadding={12} />
@@ -541,6 +543,12 @@ void bottomDialog;
 // @ts-expect-error Popover requires an accessible name.
 const unnamedPopover = <Popover trigger={<button type="button">Open</button>}>Content</Popover>;
 void unnamedPopover;
+// @ts-expect-error A Popover without a trigger requires an anchorRef.
+const unanchoredPopover = <Popover aria-label="Add link" open>Content</Popover>;
+void unanchoredPopover;
+// @ts-expect-error An initial focus target is an HTML element that can take focus, not any element.
+const elementFocusPopover = <Popover aria-label="Add link" anchorRef={createRef<HTMLDivElement>()} initialFocusRef={createRef<Element>()}>Content</Popover>;
+void elementFocusPopover;
 // @ts-expect-error PreviewTrigger requires a trigger.
 const triggerlessPreview = <PreviewTrigger aria-label="Preview">Content</PreviewTrigger>;
 void triggerlessPreview;

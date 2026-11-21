@@ -102,8 +102,8 @@ const GUIDES = {
   'drop-zone': { native: ['aria-label', 'getFile()'] },
   tooltip: {},
   'preview-trigger': {},
-  // aria-label names the dialog surface.
-  popover: { native: ['aria-label'] },
+  // aria-label names the dialog surface. The ref props are declared beside the derived API, on Popover's own props.
+  popover: { native: ['aria-label'], reference: { Popover: ['anchorRef', 'boundaryRef', 'initialFocusRef', 'returnFocusRef'] } },
   dialog: {},
   // The native validation rules a form checks are the browser's, not Form's.
   form: { native: ['required', 'type', 'pattern'] },
@@ -215,10 +215,10 @@ const GUIDES = {
 // ColorModePicker, and ThemePicker are separate documentation work.
 const WITHOUT_GUIDE = ['color-mode-picker', 'color-mode-toggle', 'theme-picker'];
 
-/** Finite spans missing from their exact declaration owner (never a component-wide bag). */
+/** Finite spans missing from their exact declaration owner (never a component-wide bag), members an alternative of its props declares included. */
 function missingFromReference(file, surfaces) {
   return Object.entries(surfaces).flatMap(([name, spans]) => {
-    const members = file.exports.find((item) => item.name === name)?.parts?.flatMap((part) => part.members ?? [])
+    const members = file.exports.find((item) => item.name === name)?.parts?.flatMap((part) => [...(part.members ?? []), ...(part.alternatives ?? []).flatMap((alternative) => alternative.members)])
       ?? file.types.find((item) => item.name === name)?.members ?? [];
     const names = new Set(members.flatMap((member) => [member.name, ...(member.values ?? [])]));
     return spans.filter((span) => !names.has(span)).map((span) => `${name}: ${span}`);
