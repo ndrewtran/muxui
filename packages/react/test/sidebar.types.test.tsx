@@ -78,3 +78,26 @@ void accountDisabled;
 // @ts-expect-error The card needs the name it shows.
 const nameless = <Sidebar.AccountCard email="ada@example.com" />;
 void nameless;
+
+// A row's own action, a folding Section, icons on nested entries, the nav landmark, the group break and the foot.
+const dividerRef = createRef<HTMLLIElement>();
+const footerRef = createRef<HTMLDivElement>();
+const listRef = createRef<HTMLUListElement>();
+const rows = (
+  <Sidebar.Root aria-label="Workspace">
+    <Sidebar.NavList ref={listRef} navLabel="Workspace">
+      <Sidebar.Section label="Projects" collapsible defaultExpanded={false} onExpandedChange={(expanded: boolean) => void expanded}>
+        <Sidebar.NavItem href="/atlas" className="pinned" action={<button type="button" aria-label="Pin Atlas" />} items={[{ href: '/atlas/brief', label: 'Brief', icon: () => null }]}>Atlas</Sidebar.NavItem>
+        <Sidebar.NavDivider ref={dividerRef} />
+      </Sidebar.Section>
+    </Sidebar.NavList>
+    <Sidebar.Footer ref={footerRef}>Help</Sidebar.Footer>
+  </Sidebar.Root>
+);
+void rows;
+// @ts-expect-error The landmark's name is a string.
+const wrongNavLabel = <Sidebar.NavList navLabel={<b>Workspace</b>} />;
+// @ts-expect-error The Section's expanded callback receives a boolean.
+const wrongSection = <Sidebar.Section label="Projects" collapsible onExpandedChange={(expanded: string) => void expanded} />;
+void wrongNavLabel;
+void wrongSection;

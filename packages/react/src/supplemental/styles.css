@@ -2364,13 +2364,25 @@ header.muxui-header-nav.muxui-header-nav--background {
 }
 
 /* sidebar */
+/* The open and folded widths of a Root inside Sidebar.Provider, declared where a layout beside Root can read them.
+   Both exclude Root's 1px edge. The rail is redeclared in every Mux UI scope, so it follows that scope's spacing. */
+:where(:root) {
+  --muxui-component-sidebar-open-size: 16rem;
+}
+
+:where(:root, [data-muxui-color-scheme], [data-muxui-contrast], [data-muxui-motion], [data-muxui-density], [data-muxui-direction], [data-muxui-responsive]) {
+  /* Nav icons keep their offset from the edge, so the rail is the icon column plus an equal gutter on each side. */
+  --muxui-component-sidebar-rail-size: calc(2 * (var(--muxui-semantic-layout-inset-tiny) + var(--muxui-semantic-layout-inset-small)) + 1.25rem);
+}
+
+/* The ground and edge read instance hooks first, so one sidebar can take the page's own colours. */
 .muxui-sidebar {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--muxui-semantic-color-neutral-10);
+  background: var(--muxui-component-sidebar-background, var(--muxui-semantic-color-neutral-10));
   color: var(--muxui-semantic-color-neutral-100);
-  border-right: 1px solid var(--muxui-semantic-color-neutral-20);
+  border-right: 1px solid var(--muxui-component-sidebar-border-color, var(--muxui-semantic-color-neutral-20));
 }
 
 .muxui-sidebar--no-border {
@@ -2455,6 +2467,38 @@ header.muxui-header-nav.muxui-header-nav--background {
   overflow-y: auto;
 }
 
+/* The nav landmark around a NavList takes the list's place in the column, so the list still fills it and scrolls. */
+.muxui-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-block-size: 0;
+}
+
+/* A break between groups of rows: a hairline from the rows' inline padding, in the colour of the rail's section dividers. */
+.muxui-sidebar__nav-divider {
+  margin-block: var(--muxui-semantic-layout-dense-gap);
+  padding-inline: var(--muxui-semantic-layout-inset-small);
+  list-style: none;
+}
+
+.muxui-sidebar__nav-divider::before {
+  content: '';
+  display: block;
+  border-block-start: 1px solid var(--muxui-semantic-color-neutral-20);
+}
+
+/* The column's foot stays in view below the scrolling list, and sticks to the window's bottom edge when Root runs past
+   it. Its ground is the sidebar's own, so rows passing under it never show through. */
+.muxui-sidebar__footer {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+  flex: none;
+  padding: var(--muxui-semantic-layout-inset-medium) var(--muxui-semantic-layout-inset-large);
+  background: var(--muxui-component-sidebar-background, var(--muxui-semantic-color-neutral-10));
+}
+
 
 
 .muxui-sidebar__nav-item {
@@ -2497,6 +2541,13 @@ header.muxui-header-nav.muxui-header-nav--background {
   outline-offset: 2px;
 }
 
+/* A row's own action, beside its link. */
+.muxui-sidebar__nav-action {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+
 
 .muxui-sidebar__nav-link::-webkit-details-marker {
   display: none;
@@ -2518,6 +2569,12 @@ header.muxui-header-nav.muxui-header-nav--background {
 .muxui-sidebar__nav-link:hover .muxui-sidebar__nav-icon,
 .muxui-sidebar__nav-link--current .muxui-sidebar__nav-icon {
   color: var(--muxui-semantic-color-neutral-90);
+}
+
+/* A nested entry's icon is smaller, to sit with the nested rows' smaller text. */
+.muxui-sidebar__nav-child-link .muxui-sidebar__nav-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 
@@ -2576,7 +2633,8 @@ header.muxui-header-nav.muxui-header-nav--background {
 }
 
 details[open] > summary .muxui-sidebar__nav-chevron,
-.muxui-sidebar__nav-toggle[aria-expanded='true'] .muxui-sidebar__nav-chevron {
+.muxui-sidebar__nav-toggle[aria-expanded='true'] .muxui-sidebar__nav-chevron,
+.muxui-sidebar__section-toggle[aria-expanded='true'] .muxui-sidebar__nav-chevron {
   transform: rotate(-180deg);
 }
 
@@ -2982,6 +3040,49 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   list-style: none;
 }
 
+/* A closed collapsible section keeps its items out of the layout, as a closed details does. */
+.muxui-sidebar__section-items[hidden] {
+  display: none;
+}
+
+/* A collapsible section's heading: the label and a chevron on a nav row's box, with its hover, pressed and focus states. */
+:where(.muxui-sidebar__section-toggle) {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+}
+
+.muxui-sidebar__section-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-control-gap);
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-block-size: var(--muxui-control-size-md);
+  padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
+  border-radius: var(--muxui-semantic-shape-navigation-radius);
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--muxui-semantic-motion-state-transition-duration) var(--muxui-semantic-motion-state-transition-easing);
+}
+
+.muxui-sidebar__section-toggle > .muxui-sidebar__section-label {
+  flex: 1;
+  padding: 0;
+}
+
+.muxui-sidebar__section-toggle:hover {
+  background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
+}
+
+.muxui-sidebar__section-toggle:focus-visible {
+  outline: 2px solid var(--muxui-semantic-focus-ring);
+  outline-offset: 2px;
+}
+
 /* Compact density: nav rows, the gaps between them, section labels, and nesting step in from the same spacing tokens.
    Text and icon sizes and focus rings stay as they are. Every row keeps the small control height, above the 24px
    minimum target size, and border-box makes that height the row's own whatever box model the page sets. Placed before
@@ -2998,6 +3099,11 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 .muxui-sidebar[data-muxui-sidebar-density='compact'] .muxui-sidebar__nav-toggle {
   block-size: var(--muxui-control-size-sm);
+}
+
+.muxui-sidebar[data-muxui-sidebar-density='compact'] .muxui-sidebar__section-toggle {
+  padding-block: var(--muxui-semantic-layout-inset-tight);
+  min-block-size: var(--muxui-control-size-sm);
 }
 
 .muxui-sidebar[data-muxui-sidebar-density='compact'] .muxui-sidebar__nav-children {
@@ -3020,31 +3126,36 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 /* Rows touch, so the next row's fill would paint over the bottom of a focused control's ring. Rows are atomic
    when they paint, so the focused control rises above its neighbours; overlays sit well above this. */
-.muxui-sidebar[data-muxui-sidebar-density='compact'] :is(.muxui-sidebar__nav-link, .muxui-sidebar__nav-toggle):focus-visible {
+.muxui-sidebar[data-muxui-sidebar-density='compact'] :is(.muxui-sidebar__nav-link, .muxui-sidebar__nav-toggle, .muxui-sidebar__section-toggle):focus-visible {
   position: relative;
   z-index: 1;
 }
 
 /* Folding icon rail: a Root inside Sidebar.Provider sizes itself and animates between the expanded width and the rail. */
 .muxui-sidebar[data-muxui-foldable] {
-  /* Nav icons keep their offset from the edge, so the rail is the icon column plus an equal gutter on each side. */
+  /* The gutter on each side of the rail's icon column; the rail size above is built from the same inset. */
   --muxui-component-sidebar-rail-gutter: var(--muxui-semantic-layout-inset-tiny);
-  --muxui-component-sidebar-rail-size: calc(2 * (var(--muxui-component-sidebar-rail-gutter) + var(--muxui-semantic-layout-inset-small)) + 1.25rem);
   flex: none;
   overflow: hidden;
   transition: inline-size var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
 }
 
+/* A scroll container would hold a sticky Footer inside Root, whose foot can sit below the window; clip clips the same
+   without being one, so the Footer sticks to the window instead. */
+.muxui-sidebar[data-muxui-foldable]:has(> .muxui-sidebar__footer) {
+  overflow: clip;
+}
+
 /* Zero specificity, so a width the consumer sets on Root replaces this expanded default. */
 :where(.muxui-sidebar[data-muxui-foldable]) {
-  inline-size: 16rem;
+  inline-size: var(--muxui-component-sidebar-open-size);
 }
 
 .muxui-sidebar[data-muxui-collapsed] {
   inline-size: var(--muxui-component-sidebar-rail-size);
 }
 
-.muxui-sidebar[data-muxui-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card) {
+.muxui-sidebar[data-muxui-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__footer, .muxui-sidebar__account-card) {
   transition:
     padding-inline var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
     margin-inline var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
@@ -3065,19 +3176,20 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 @media (prefers-reduced-motion: reduce) {
   .muxui-sidebar[data-muxui-foldable],
-  .muxui-sidebar[data-muxui-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) {
+  .muxui-sidebar[data-muxui-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__footer, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) {
     transition-duration: 0s !important;
   }
 }
 
 :where([data-muxui-motion='reduced']) .muxui-sidebar[data-muxui-foldable],
-:where([data-muxui-motion='reduced']) .muxui-sidebar[data-muxui-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) {
+:where([data-muxui-motion='reduced']) .muxui-sidebar[data-muxui-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__footer, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) {
   transition-duration: 0s !important;
 }
 
 /* Folded, the header and nav list narrow their gutters and header content is clipped to the rail, so its leading element stays in place and nothing reflows. */
 .muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__header,
-.muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-list {
+.muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-list,
+.muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__footer {
   padding-inline: var(--muxui-component-sidebar-rail-gutter);
 }
 
@@ -3108,9 +3220,51 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   .muxui-sidebar__nav-external,
   .muxui-sidebar__nav-children,
   .muxui-sidebar__account-trigger,
-  .muxui-sidebar__feature-card
+  .muxui-sidebar__feature-card,
+  .muxui-sidebar__section-toggle
 ) {
   display: none;
+}
+
+/* Folded, a row's action is clipped like the labels and keeps its tab stop. While it has focus, or its menu is open,
+   it shows over the row's end on the sidebar's ground, so a keyboard user sees what they operate. */
+.muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-row {
+  position: relative;
+}
+
+.muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-action:not(:focus-within, :has([aria-expanded='true'])) {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-action:is(:focus-within, :has([aria-expanded='true'])) {
+  position: absolute;
+  z-index: 1;
+  inset-block: 0;
+  inset-inline-end: 0;
+  border-radius: var(--muxui-semantic-shape-navigation-radius);
+  background: var(--muxui-component-sidebar-background, var(--muxui-semantic-color-neutral-10));
+}
+
+/* The divider narrows to the icon column. */
+.muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-divider {
+  inline-size: 1rem;
+  margin-inline: auto;
+  padding-inline: 0;
+}
+
+/* Rows in the foot are a NavList inside the Footer: the Footer gives the padding, open and folded, and the list neither
+   grows nor scrolls. */
+:is(.muxui-sidebar, .muxui-sidebar__mobile-dialog) .muxui-sidebar__footer > .muxui-sidebar__nav-list {
+  flex: none;
+  padding: 0;
+  overflow: visible;
 }
 
 /* A thin divider takes the place of the section label. */
@@ -3175,9 +3329,12 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-sidebar {
-    background: var(--muxui-semantic-color-neutral-14);
-    border-color: var(--muxui-semantic-color-neutral-22);
+    background: var(--muxui-component-sidebar-background, var(--muxui-semantic-color-neutral-14));
+    border-color: var(--muxui-component-sidebar-border-color, var(--muxui-semantic-color-neutral-22));
     color: var(--muxui-semantic-color-neutral-100);
+  }
+  :scope :is(.muxui-sidebar__footer, .muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-action) {
+    background: var(--muxui-component-sidebar-background, var(--muxui-semantic-color-neutral-14));
   }
 
   :scope .muxui-sidebar__search-icon {
@@ -3459,6 +3616,67 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
     :scope .muxui-sidebar__nav-link--current .muxui-sidebar__nav-icon {
       color: var(--muxui-semantic-color-neutral-100);
+    }
+  }
+}
+
+/* Pressed: a deeper tint than hover on a row, and a deeper overlay than hover on the current row, so pointer-down reads
+   apart from both; keyboard focus is untouched. Each scheme scope repeats it, because the scoped hover rules above
+   outrank an unscoped rule of the same specificity. */
+@media (forced-colors: none) {
+  :is(
+    .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):is(:active, [data-muxui-state-pressed]),
+    .muxui-sidebar__nav-button:not(.muxui-sidebar__nav-button--current):is(:active, [data-muxui-state-pressed]),
+    .muxui-sidebar__section-toggle:is(:active, [data-muxui-state-pressed])
+  ) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 12%, transparent);
+    background-image: none;
+  }
+  :is(
+    .muxui-sidebar__nav-link--current:is(:active, [data-muxui-state-pressed]),
+    .muxui-sidebar__nav-button--current:is(:active, [data-muxui-state-pressed])
+  ) {
+    background-image: linear-gradient(
+      color-mix(in srgb, currentColor 12%, transparent),
+      color-mix(in srgb, currentColor 12%, transparent)
+    );
+  }
+  @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+    :scope :is(
+      .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):is(:active, [data-muxui-state-pressed]),
+      .muxui-sidebar__nav-button:not(.muxui-sidebar__nav-button--current):is(:active, [data-muxui-state-pressed]),
+      .muxui-sidebar__section-toggle:is(:active, [data-muxui-state-pressed])
+    ) {
+      background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 12%, transparent);
+      background-image: none;
+    }
+    :scope :is(
+      .muxui-sidebar__nav-link--current:is(:active, [data-muxui-state-pressed]),
+      .muxui-sidebar__nav-button--current:is(:active, [data-muxui-state-pressed])
+    ) {
+      background-image: linear-gradient(
+        color-mix(in srgb, currentColor 12%, transparent),
+        color-mix(in srgb, currentColor 12%, transparent)
+      );
+    }
+  }
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope :is(
+      .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):is(:active, [data-muxui-state-pressed]),
+      .muxui-sidebar__nav-button:not(.muxui-sidebar__nav-button--current):is(:active, [data-muxui-state-pressed]),
+      .muxui-sidebar__section-toggle:is(:active, [data-muxui-state-pressed])
+    ) {
+      background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 12%, transparent);
+      background-image: none;
+    }
+    :scope :is(
+      .muxui-sidebar__nav-link--current:is(:active, [data-muxui-state-pressed]),
+      .muxui-sidebar__nav-button--current:is(:active, [data-muxui-state-pressed])
+    ) {
+      background-image: linear-gradient(
+        color-mix(in srgb, currentColor 12%, transparent),
+        color-mix(in srgb, currentColor 12%, transparent)
+      );
     }
   }
 }

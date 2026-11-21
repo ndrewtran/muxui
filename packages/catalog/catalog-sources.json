@@ -1811,6 +1811,22 @@
     {
       "family": "example",
       "path": "catalog/components/toggle-button/examples/react/quiet.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/sidebar/examples/react/collapsible-sections.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/sidebar/examples/react/layout-widths.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/sidebar/examples/react/pinned-footer.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/sidebar/examples/react/row-actions.example.json"
     }
   ]
 }

@@ -229,8 +229,10 @@ const markupFlags = {
   current: '[aria-current="page"], [class*="--current"]',
   // Sidebar.Root marks itself folded.
   defaultCollapsed: '[data-muxui-collapsed]',
-  // A Sidebar nav group is a native details element, open once expanded.
-  defaultExpanded: 'details[open]',
+  // A Sidebar nav group is a native details element, open once expanded; a Section shows its items while open.
+  defaultExpanded: 'details[open], .muxui-sidebar__section-items:not([hidden])',
+  // A collapsible Sidebar Section's heading is a button.
+  collapsible: '.muxui-sidebar__section-toggle',
   // Sidebar's border is removed by a modifier, and an external nav link draws an icon that says so.
   hideBorder: '.muxui-sidebar--no-border',
   external: '.muxui-sidebar__nav-external',
@@ -372,6 +374,7 @@ const partRenders = {
   'Sidebar.search': { render: () => h(generated.Sidebar.Search) },
   'Sidebar.nav-item': { scope: 'ul', render: () => h('ul', null, h(generated.Sidebar.NavItem, { href: '/leaf' }, 'Leaf'), h(generated.Sidebar.NavItem, { items: [{ href: '/child', label: 'Child' }] }, 'Group')) },
   'Sidebar.nav-button': { scope: 'a', render: () => h(generated.Sidebar.NavButton, { href: '/docs', label: 'Docs' }) },
+  'Sidebar.section': { scope: 'li', render: () => h(generated.Sidebar.Section, { label: 'Projects' }, h(generated.Sidebar.NavItem, { href: '/a' }, 'A')) },
   // AlertDialog.Trigger is the one button a closed dialog renders; Close sits in the popup and states no default.
   'AlertDialog.trigger': { scope: 'button', render: () => alertDialog() },
   // HeaderNav.NavButton is a plain link, which shows aria-current only when it is the current page.
@@ -535,6 +538,10 @@ const behaviourObservers = {
   // Search shows its placeholder in the input and gives it as the input's name.
   'Sidebar.search': {
     placeholder: (props) => new JSDOM(renderToString(h(generated.Sidebar.Search, props))).window.document.querySelector('input')?.getAttribute('placeholder'),
+  },
+  // A collapsible Section reports its open state on its heading button.
+  'Sidebar.section': {
+    defaultExpanded: (props) => new JSDOM(renderToString(h(generated.Sidebar.Section, { label: 'Projects', collapsible: true, ...props }))).window.document.querySelector('button')?.getAttribute('aria-expanded') === 'true',
   },
   AlertDialog: {
     // The dialog sits in a portal that stays empty until it opens, so the default shows only in whether it is open once mounted.
@@ -1008,7 +1015,7 @@ test('catalog defaults only behaviour shows are compared with what the renderer 
     placement: ['bottom-start', 'end-top'], placeholder: ['Select an option', 'Pick one'], disabled: [false, true],
     inputLabel: ['Message', 'Prompt'], multiple: [true, false], expansionTrigger: ['row', 'chevron'], storageKey: ['muxui-color-mode', 'theme'], allowDuplicates: [false, true],
     defaultOpen: [false, true], closeOnSelect: [true, false], dismissable: [true, false], scrim: [false, true], translucent: [false, true], autoFocusFirst: [false, true],
-    showSearch: [true, false], showFooter: [true, false], required: [false, true],
+    showSearch: [true, false], showFooter: [true, false], required: [false, true], defaultExpanded: [true, false],
     emptyStateTitle: ['No results found', 'Nothing here'], emptyStateDescription: ['Please try a different search term.', 'Try again.'],
   };
   for (const [name, observers] of Object.entries(behaviourObservers)) {

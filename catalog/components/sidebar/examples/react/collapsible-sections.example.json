@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:sidebar-collapsible-sections-react",
+  "kind": "example",
+  "name": "Sidebar collapsible sections",
+  "summary": "Fold titled sections open and closed from their headings, with icons on nested entries, inside a named navigation landmark.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:sidebar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 4
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/sidebar/examples/react/collapsible-sections.tsx"
+}

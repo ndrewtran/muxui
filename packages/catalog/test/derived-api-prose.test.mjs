@@ -73,6 +73,7 @@ test('the Button guide covers exactly the variants its derived API declares', as
 // `described` lists, by derived type name, the spans a guide states about a format that type's description
 // states, such as the date format; each must appear in that description, so a changed format fails the guide.
 // It excuses prose spans only too.
+const SIDEBAR_CUSTOM_PROPERTIES = ['--muxui-component-sidebar-open-size', '--muxui-component-sidebar-rail-size', '--muxui-component-sidebar-background', '--muxui-component-sidebar-border-color'];
 const GUIDES = {
   button: { native: ['type', 'submit', 'reset', 'requestSubmit'] },
   'icon-button': { native: ['aria-label', 'aria-labelledby', 'type="button"', 'type="submit"'] },
@@ -198,7 +199,9 @@ const GUIDES = {
   'header-nav': { native: ['display: none'] },
   // primary, danger and neutral are the variants of Button, which the guide says the dialog's actions use.
   'alert-dialog': { from: { button: ['primary', 'danger', 'neutral'] } },
-  sidebar: {},
+  // Sidebar's widths and its ground and edge are public custom properties, which no derived block records, as NumberField's
+  // width is; the test after this one checks each is read in Sidebar's stylesheet.
+  sidebar: { native: SIDEBAR_CUSTOM_PROPERTIES },
   skeleton: {},
   // The command and hook option fields belong to these declaration types, not the root block.
   'command-palette': { reference: { CommandPaletteCommand: ['subtitle', 'keywords'], UseCommandPaletteOptions: ['onError', 'close'] } },
@@ -405,6 +408,16 @@ test('every API name a derived component\'s guide states is in its derived API o
       assert.deepEqual(invalidExampleLiterals(code, derived), [], `${slug} guide finite example values`);
     }
   }
+});
+
+// The custom properties the Sidebar guide documents are excused as native above; each must still be read through var() by a
+// Sidebar rule in its stylesheet, so a renamed or dropped property fails the guide.
+test('every custom property the Sidebar guide states is read by a Sidebar rule', async () => {
+  const css = (await read('packages/react/src/supplemental/styles.css')).replace(/\/\*[\s\S]*?\*\//gu, '');
+  const sidebarRules = [...css.matchAll(/([^{}]*)\{([^{}]*)\}/gu)].filter(([, selector]) => selector.includes('muxui-sidebar')).map(([, , body]) => body).join('\n');
+  const read_ = (name) => new RegExp(`var\\(\\s*${name}\\s*[,)]`, 'u').test(sidebarRules);
+  assert.deepEqual(SIDEBAR_CUSTOM_PROPERTIES.filter((name) => !read_(name)), []);
+  assert.equal(read_('--muxui-component-sidebar-missing'), false, 'an unknown property is not read');
 });
 
 // The picker guide names the slider's colorSpace, hsb, and hsl. They are checked against the slider's derived API,

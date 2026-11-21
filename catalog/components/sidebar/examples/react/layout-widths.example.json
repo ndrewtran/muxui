@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:sidebar-layout-widths-react",
+  "kind": "example",
+  "name": "Sidebar beside a layout",
+  "summary": "Size a layout beside a folding sidebar from its published open and folded widths, and give the sidebar the page's own ground and edge.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:sidebar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 6
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/sidebar/examples/react/layout-widths.tsx"
+}

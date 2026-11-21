@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:sidebar-pinned-footer-react",
+  "kind": "example",
+  "name": "Sidebar pinned footer",
+  "summary": "Keep an action at the foot of a folding sidebar in view while a long list scrolls above it, open and folded.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:sidebar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 5
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/sidebar/examples/react/pinned-footer.tsx"
+}

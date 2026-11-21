@@ -23,18 +23,24 @@
     "search",
     "divider",
     "nav-list",
+    "nav",
+    "nav-divider",
     "section",
+    "section-toggle",
     "nav-item",
+    "nav-action",
     "nav-button",
     "account-card",
     "account-menu",
     "mobile-trigger",
-    "feature-card"
+    "feature-card",
+    "footer"
   ],
   "states": [
     "desktop",
     "mobile",
     "current",
+    "pressed",
     "external",
     "expanded",
     "collapsed",
@@ -47,7 +53,11 @@
       "Mobile navigation traps focus and returns it to the trigger on close.",
       "Toggle keeps one accessible name, reports aria-expanded, and controls the root by id.",
       "A folded rail keeps every nav label in its link's accessible name and names it in a tooltip on hover and keyboard focus.",
-      "The fold shortcut is ignored while focus is in an input, textarea, select, or contenteditable element, including inside a shadow root, and during IME composition."
+      "The fold shortcut is ignored while focus is in an input, textarea, select, or contenteditable element, including inside a shadow root, and during IME composition.",
+      "A collapsible Section heading is a button that reports aria-expanded and controls its list, which stays named by the heading; closing it moves focus from an item it hides to the button.",
+      "A NavItem action is a separate control after the link, with its own name and tab stop, reachable without hover; folded, it keeps its tab stop and shows while it has focus.",
+      "A NavDivider is a list item hidden from assistive technology, so a list stays a list of items.",
+      "NavList with navLabel is wrapped in a nav landmark of that name; without it, the column has no navigation landmark of its own."
     ]
   },
   "bindings": {
@@ -78,6 +88,18 @@
         "A folded nav item without an icon shows the first character of its label in the icon column, or a dot when the label has no text; the label stays in its accessible name and tooltip.",
         "Folding moves focus out of content it hides: a hidden nested link goes to the header of its outermost group, the Search input to its folded button, anything else to the first Toggle that accepts focus, or to Root when none does.",
         "Closing a group, whether the user or the caller's expanded does it, moves focus from a link it hides to the group's own summary or toggle.",
+        "A collapsible Section opens under the caller with expanded and onExpandedChange, or manages itself from defaultExpanded; collapsible sections start open, and a Section without collapsible renders as it always has. Its heading button shows and hides the section's items, and closing it, by the user, the caller, or unfolding the rail, moves focus from an item it hides to the button.",
+        "A folded rail shows every collapsible Section's items and hides its heading button; focus on the button moves out as folding moves it from other hidden content.",
+        "A NavItem with an href takes an action, a control the caller supplies and names, such as an IconButton or a Menu trigger, shown after the link and before a link group's toggle; it is a separate tab stop, and an action without href throws.",
+        "Folded, a NavItem action is clipped like the labels and keeps its tab stop; while it has focus or its menu is open, it shows over the row's end on the sidebar's ground.",
+        "A NavItem className goes on its list item.",
+        "A nested entry takes an icon, drawn smaller than a top-level one, before its label.",
+        "NavDivider is a decorative break between groups of rows inside a NavList or Section: a list item hidden from assistive technology, narrowed to the icon column when folded.",
+        "NavList with navLabel wraps the list in a nav landmark of that name, which takes the list's place in the column; the list keeps its ref and attributes and still fills and scrolls the column.",
+        "Footer is the column's foot after the nav list. It stays in view while the list scrolls, open and folded, and sticks to the bottom of the window when Root runs past it; while a Footer is a direct child, a folding Root clips with overflow: clip instead of hidden, so it is not a scroll container.",
+        "Nav rows, nav buttons and collapsible Section headings show a pressed tint, deeper than hover; a current row pressed keeps its current colour under a deeper overlay than its hover.",
+        "The open width is --muxui-component-sidebar-open-size (16rem) and the folded width is --muxui-component-sidebar-rail-size, both declared at the document root and the rail size again in every Mux UI scope, so a layout beside Root reads the same values; both exclude Root's 1px edge, and either set on Root or an ancestor inside the scope changes Root's width.",
+        "--muxui-component-sidebar-background and --muxui-component-sidebar-border-color, set on Root or an ancestor, replace the sidebar's ground and edge in light and dark; the Footer and a folded row's focused action read the same ground.",
         "With several Providers that set a shortcut, the one whose Root or Toggle holds the focus handles the chord, otherwise the one mounted last, whatever shortcut changes happened since; only that Provider prevents the default.",
         "The shortcut yields to a control outside Sidebar that handles the chord itself; only targets inside a Root or Toggle are taken before they can stop it.",
         "Inside a Provider, a MobileTrigger whose header layout hides while its drawer is open closes the drawer and moves focus to the matching column link, else the current link, a Toggle, or Root; a Root that layout hides while it holds focus hands focus to the rendered menu button.",
@@ -91,7 +113,11 @@
         "Mobile navigation traps focus and returns it to the trigger on close.",
         "Toggle keeps one accessible name, reports aria-expanded, and controls the root by id.",
         "A folded rail keeps every nav label in its link's accessible name and names it in a tooltip on hover and keyboard focus.",
-        "The fold shortcut is ignored while focus is in an input, textarea, select, or contenteditable element, including inside a shadow root, and during IME composition."
+        "The fold shortcut is ignored while focus is in an input, textarea, select, or contenteditable element, including inside a shadow root, and during IME composition.",
+        "A collapsible Section heading is a button that reports aria-expanded and controls its list, which stays named by the heading; closing it moves focus from an item it hides to the button.",
+        "A NavItem action is a separate control after the link, with its own name and tab stop, reachable without hover; folded, it keeps its tab stop and shows while it has focus.",
+        "A NavDivider is a list item hidden from assistive technology, so a list stays a list of items.",
+        "NavList with navLabel is wrapped in a nav landmark of that name; without it, the column has no navigation landmark of its own."
       ],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",

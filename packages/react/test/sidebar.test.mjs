@@ -380,3 +380,100 @@ test('MobileTrigger keeps a pressable logo its own: it opens nothing and takes n
     assert.ok(document.querySelector('[role="dialog"]'), 'the menu button still opens the drawer');
   });
 });
+
+test('a NavItem action sits beside its link, outside it, and the item takes a className', () => {
+  const action = h('button', { type: 'button', 'aria-label': 'Pin Atlas' });
+  const html = renderToString(nav(h(Sidebar.NavItem, { href: '/atlas', icon: Icon, action, className: 'pinned' }, 'Atlas')));
+  assert.match(html, /^<aside class="muxui-sidebar"><ul class="muxui-sidebar__nav-list"><li class="muxui-sidebar__nav-item pinned"><div class="muxui-sidebar__nav-row"><a [^>]*href="\/atlas"[^>]*>.*?<\/a><div class="muxui-sidebar__nav-action"><button type="button" aria-label="Pin Atlas"><\/button><\/div><\/div><\/li>/u);
+  // In a link group the action comes after the link and before the group's toggle.
+  const group = renderToString(nav(h(Sidebar.NavItem, { href: '/atlas', action, items: [{ href: '/atlas/brief', label: 'Brief' }] }, 'Atlas')));
+  assert.match(group, /<div class="muxui-sidebar__nav-row"><a [^>]*>.*?<\/a><div class="muxui-sidebar__nav-action">.*?<\/div><button [^>]*muxui-sidebar__nav-toggle/u);
+  // Without an action or className the markup is what it always was.
+  assert.equal(renderToString(nav(h(Sidebar.NavItem, { href: '/atlas', action: null }, 'Atlas'))), renderToString(nav(h(Sidebar.NavItem, { href: '/atlas' }, 'Atlas'))));
+  assert.doesNotMatch(renderToString(nav(h(Sidebar.NavItem, { href: '/atlas' }, 'Atlas'))), /nav-row|nav-action/u);
+  assert.throws(() => renderToString(nav(h(Sidebar.NavItem, { action, items: [{ href: '/leaf', label: 'Leaf' }] }, 'Group'))), /Sidebar\.NavItem takes an action only with an href/u);
+});
+
+test('a nested entry draws its icon before its label', () => {
+  const html = renderToString(nav(h(Sidebar.NavItem, { defaultExpanded: true, items: [{ href: '/brief', label: 'Brief', icon: Icon }, { href: '/notes', label: 'Notes' }] }, 'Atlas')));
+  assert.match(html, /<a class="muxui-sidebar__nav-link muxui-sidebar__nav-child-link"[^>]*href="\/brief"[^>]*><svg class="muxui-sidebar__nav-icon" aria-hidden="true"><\/svg>Brief<\/a>/u);
+  assert.match(html, /href="\/notes"[^>]*>Notes<\/a>/u);
+});
+
+test('NavList wraps itself in a named nav landmark only when given navLabel, and NavDivider and Footer render their parts', async () => {
+  const ref = React.createRef();
+  const html = renderToString(h(Sidebar.Root, null, h(Sidebar.NavList, { navLabel: 'Workspace', 'aria-label': 'Pages' }, h(Sidebar.NavItem, { href: '/a' }, 'A'), h(Sidebar.NavDivider), h(Sidebar.NavItem, { href: '/b' }, 'B')), h(Sidebar.Footer, null, 'Foot')));
+  assert.match(html, /^<aside class="muxui-sidebar"><nav class="muxui-sidebar__nav" aria-label="Workspace"><ul aria-label="Pages" class="muxui-sidebar__nav-list">/u);
+  assert.match(html, /<li aria-hidden="true" class="muxui-sidebar__nav-divider"><\/li>/u);
+  assert.match(html, /<\/nav><div class="muxui-sidebar__footer">Foot<\/div><\/aside>$/u);
+  assert.doesNotMatch(renderToString(nav(h(Sidebar.NavItem, { href: '/a' }, 'A'))), /<nav/u);
+  await withDom(h(Sidebar.NavList, { navLabel: 'Workspace', ref }), async () => {
+    assert.equal(ref.current?.tagName, 'UL', 'the ref stays on the list');
+  });
+});
+
+test('a Section renders as before unless collapsible, and a collapsible one starts open with a button that controls its list', () => {
+  const plain = renderToString(h(Sidebar.Section, { label: 'Projects' }, h(Sidebar.NavItem, { href: '/a' }, 'A')));
+  assert.doesNotMatch(plain, /<button|hidden|section-toggle/u);
+  assert.equal(renderToString(h(Sidebar.Section, { label: 'Projects', collapsible: false, defaultExpanded: false }, h(Sidebar.NavItem, { href: '/a' }, 'A'))), plain);
+  const open = renderToString(h(Sidebar.Section, { label: 'Projects', collapsible: true }, h(Sidebar.NavItem, { href: '/a' }, 'A')));
+  const button = /<button [^>]*>/u.exec(open)?.[0] ?? '';
+  assert.match(button, /class="muxui-sidebar__section-toggle"/u);
+  assert.match(button, /aria-expanded="true"/u);
+  const controls = /aria-controls="([^"]+)"/u.exec(button)?.[1];
+  const labelId = /<span id="([^"]+)" class="muxui-sidebar__section-label">Projects<\/span>/u.exec(open)?.[1];
+  assert.ok(controls && labelId, 'the button controls a list and holds the label');
+  assert.match(open, new RegExp(`<ul id="${controls}" class="muxui-sidebar__section-items" aria-labelledby="${labelId}">`, 'u'), 'the list stays named by the heading');
+  assert.match(renderToString(h(Sidebar.Section, { label: 'Projects', collapsible: true, defaultExpanded: false }, h(Sidebar.NavItem, { href: '/a' }, 'A'))), /<ul [^>]*class="muxui-sidebar__section-items"[^>]* hidden="">/u);
+});
+
+test('a collapsible Section opens and closes from its button, follows a controlling caller, and moves focus out of rows it hides', async () => {
+  const changes = [];
+  let setOpen;
+  function Controlled() {
+    const [open, set] = React.useState(true);
+    setOpen = set;
+    return h(Sidebar.Section, { label: 'Controlled', collapsible: true, expanded: open, onExpandedChange: (next) => changes.push(next) }, h(Sidebar.NavItem, { href: '/c' }, 'C'));
+  }
+  await withDom(nav(h(Sidebar.Section, { label: 'Projects', collapsible: true, onExpandedChange: (next) => changes.push(next) }, h(Sidebar.NavItem, { href: '/a' }, 'A')), h(Controlled)), async (document) => {
+    const [own, controlled] = document.querySelectorAll('.muxui-sidebar__section');
+    const button = own.querySelector('.muxui-sidebar__section-toggle');
+    const list = own.querySelector('.muxui-sidebar__section-items');
+    await act(async () => own.querySelector('a').focus());
+    await click(button);
+    assert.equal(button.getAttribute('aria-expanded'), 'false');
+    assert.equal(list.hidden, true);
+    assert.equal(document.activeElement, button, 'focus on a hidden row moves to the button');
+    await click(button);
+    assert.equal(list.hidden, false);
+    assert.deepEqual(changes, [false, true]);
+    // A controlled section asks and waits; the caller closing it moves focus out of its rows too.
+    changes.length = 0;
+    const controlledButton = controlled.querySelector('button');
+    await click(controlledButton);
+    assert.deepEqual(changes, [false]);
+    assert.equal(controlledButton.getAttribute('aria-expanded'), 'true', 'a refused change leaves it open');
+    await act(async () => controlled.querySelector('a').focus());
+    await act(async () => setOpen(false));
+    assert.equal(controlled.querySelector('ul').hidden, true);
+    assert.equal(document.activeElement, controlledButton);
+  });
+});
+
+test('a folded rail shows a closed Section\'s rows, and unfolding hides them again and moves focus to its button', async () => {
+  let fold;
+  function Folding() {
+    const [collapsed, setCollapsed] = React.useState(true);
+    fold = setCollapsed;
+    return h(Sidebar.Provider, { collapsed, onCollapsedChange: setCollapsed }, h(Sidebar.Root, null, h(Sidebar.NavList, null,
+      h(Sidebar.Section, { label: 'Projects', collapsible: true, defaultExpanded: false }, h(Sidebar.NavItem, { href: '/a', icon: Icon }, 'A')))));
+  }
+  await withDom(h(Folding), async (document) => {
+    const list = document.querySelector('.muxui-sidebar__section-items');
+    assert.equal(list.hidden, false, 'folded, the rows show');
+    await act(async () => document.querySelector('a').focus());
+    await act(async () => fold(false));
+    assert.equal(list.hidden, true, 'unfolded, the closed section hides them again');
+    assert.equal(document.activeElement, document.querySelector('.muxui-sidebar__section-toggle'));
+  });
+});

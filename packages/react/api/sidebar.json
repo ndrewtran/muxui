@@ -166,13 +166,40 @@
         },
         "types": {}
       },
-      "section": {
-        "member": "Section",
+      "nav-list": {
+        "member": "NavList",
         "props": [
-          "label"
+          "navLabel"
         ],
         "events": [],
         "defaults": {},
+        "propDetails": {
+          "navLabel": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "Wraps the list in a `nav` landmark with this accessible name. Without it the list has no landmark of its own."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "section": {
+        "member": "Section",
+        "props": [
+          "label",
+          "collapsible",
+          "expanded",
+          "defaultExpanded"
+        ],
+        "events": [
+          "expandedChange"
+        ],
+        "defaults": {
+          "collapsible": false,
+          "defaultExpanded": true
+        },
         "propDetails": {
           "label": {
             "type": {
@@ -181,9 +208,51 @@
             },
             "required": true,
             "description": "The section's visible heading, which also names its list."
+          },
+          "collapsible": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Makes the heading a button that shows and hides the section's items. A folded rail shows every section's items and no button."
+          },
+          "expanded": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether a collapsible section is open, when the caller controls it."
+          },
+          "defaultExpanded": {
+            "type": {
+              "kind": "boolean"
+            },
+            "required": false,
+            "description": "Whether a collapsible section starts open, when it controls itself."
           }
         },
-        "eventDetails": {},
+        "eventDetails": {
+          "expandedChange": {
+            "prop": "onExpandedChange",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "expanded",
+                  "type": {
+                    "kind": "boolean"
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called with the new open state each time a collapsible section opens or closes."
+          }
+        },
         "types": {}
       },
       "nav-item": {
@@ -196,7 +265,9 @@
           "items",
           "external",
           "expanded",
-          "defaultExpanded"
+          "defaultExpanded",
+          "action",
+          "className"
         ],
         "events": [
           "expandedChange"
@@ -275,6 +346,21 @@
             },
             "required": false,
             "description": "Whether the group starts open, when it controls itself."
+          },
+          "action": {
+            "type": {
+              "kind": "host",
+              "name": "React.ReactNode"
+            },
+            "required": false,
+            "description": "A control of its own beside the link, such as an IconButton or a Menu trigger, which the caller names. It is a\nseparate tab stop after the link; folded, it shows over the row while it has keyboard focus. Needs `href`."
+          },
+          "className": {
+            "type": {
+              "kind": "string"
+            },
+            "required": false,
+            "description": "A class for the item's list element."
           }
         },
         "eventDetails": {
@@ -377,6 +463,21 @@
                       "readonly": false
                     },
                     {
+                      "name": "icon",
+                      "type": {
+                        "kind": "host",
+                        "name": "React.ComponentType",
+                        "typeArguments": [
+                          {
+                            "kind": "reference",
+                            "name": "SidebarIconProps"
+                          }
+                        ]
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
                       "name": "current",
                       "type": {
                         "kind": "boolean"
@@ -464,6 +565,21 @@
                       "readonly": false
                     },
                     {
+                      "name": "icon",
+                      "type": {
+                        "kind": "host",
+                        "name": "React.ComponentType",
+                        "typeArguments": [
+                          {
+                            "kind": "reference",
+                            "name": "SidebarIconProps"
+                          }
+                        ]
+                      },
+                      "required": false,
+                      "readonly": false
+                    },
+                    {
                       "name": "current",
                       "type": {
                         "kind": "boolean"
@@ -496,7 +612,7 @@
                 }
               ]
             },
-            "description": "A nested nav entry. An entry with `items` and no `href` is a disclosure group; with both, it is a link beside a\ntoggle button. `id` is a stable React key and defaults to `href`."
+            "description": "A nested nav entry. An entry with `items` and no `href` is a disclosure group; with both, it is a link beside a\ntoggle button. `id` is a stable React key and defaults to `href`. `icon` draws a smaller icon before the label."
           }
         }
       },
