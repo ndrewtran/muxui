@@ -58,7 +58,7 @@
       ],
       "accessibility": [
         "Expose button role, pressed state, accessible name, and disabled state",
-        "Under forced colours a quiet ToggleButton uses system colours: Highlight when selected and GrayText at full opacity when disabled",
+        "Under forced colours a default or quiet ToggleButton uses system colours: a ButtonText edge, Highlight when selected, GrayText at full opacity when disabled, and a Highlight keyboard focus outline",
         "A quiet ToggleButton keeps the keyboard focus ring when it draws no outline"
       ],
       "tokenRecipe": {

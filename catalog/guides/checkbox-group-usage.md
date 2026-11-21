@@ -11,8 +11,8 @@ Use CheckboxGroup for several related options chosen together. Give the group a 
 
 - Use the default vertical layout in general. Each option gets its own row, which keeps a list of options easy to scan.
 - Use `orientation="horizontal"` only for a few short options, such as Email and SMS.
-- A group never wraps its options, and each label stays on one line.
-- In a container narrower than its options, a horizontal group runs past the edge, as the CheckboxGroup in a narrow container example shows.
+- In a container narrower than its options, a horizontal group wraps them onto more rows and a long label wraps its text, as the CheckboxGroup in a narrow container example shows.
+- A horizontal group puts its description and its error each on a row of their own below the options.
 
 ## Content
 

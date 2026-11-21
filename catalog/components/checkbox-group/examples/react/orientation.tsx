@@ -5,7 +5,7 @@ export function CheckboxGroupOrientationExample() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap }}>
-      {/* A narrow container shows how each layout copes. A group never wraps its options. */}
+      {/* A narrow container shows how each layout copes. A horizontal group wraps its options onto more rows. */}
       <div style={{ boxSizing: 'border-box', width: '12rem', padding: gap, display: 'flex', flexDirection: 'column', gap, border: '1px dashed currentColor' }}>
         <CheckboxGroup label="Notify me by" name="notify-vertical">
           <Checkbox value="email">Email</Checkbox>
@@ -18,7 +18,7 @@ export function CheckboxGroupOrientationExample() {
           <Checkbox value="push">Push</Checkbox>
         </CheckboxGroup>
       </div>
-      <p>The horizontal group runs past the dashed edge of its container.</p>
+      <p>The horizontal group wraps its options inside the dashed edge of its container.</p>
     </div>
   );
 }

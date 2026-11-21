@@ -3,7 +3,7 @@
   "id": "muxui:example:checkbox-group-orientation-react",
   "kind": "example",
   "name": "CheckboxGroup in a narrow container",
-  "summary": "Compare a vertical and a horizontal CheckboxGroup in a narrow container, where a horizontal group runs past the edge.",
+  "summary": "Compare a vertical and a horizontal CheckboxGroup in a narrow container, where a horizontal group wraps its options onto more rows.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:checkbox-group#web.react",
