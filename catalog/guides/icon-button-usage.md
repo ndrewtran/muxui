@@ -31,8 +31,7 @@ their dimensions. Use `Button` when visible text is needed.
 Corners follow Button: the medium and large sizes take the Button radius role,
 and the small size (`sm`) takes the theme's option radius, the radius that
 options, rows and fields share. The [Button](/components/button/) guide's
-Corner radius section shows how a theme changes each one and how one small
-IconButton, such as a round one, gets its own corner.
+Corner radius section shows how a theme changes each one.
 
 `pending` replaces the icon with a static indicator, preserves the accessible
 name and focusability, and blocks activation without changing the button size.

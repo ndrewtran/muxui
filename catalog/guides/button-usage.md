@@ -54,16 +54,6 @@ A theme sets the two roles separately. Changing the option radius also changes t
 }
 ```
 
-To give one small Button or IconButton a different corner, such as a round one, set the option radius on that element. Only that element and anything inside it change:
-
-```css
-.round-button {
-  --muxui-semantic-shape-option-radius: var(--muxui-semantic-shape-pill-radius);
-}
-```
-
-This holds for a button on its own. Inside an attached ButtonGroup or a Toolbar, the group or the toolbar can set the corners instead.
-
 ## Common mistake
 
 Giving every action in a group the `primary` variant. When all of them are primary, none reads as the main action. Keep one `primary` and move the others to `neutral` or `ghost`.
