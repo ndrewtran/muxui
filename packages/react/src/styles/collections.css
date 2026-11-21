@@ -2916,10 +2916,12 @@
   pointer-events: none;
 }
 
-/* Forced colours paint every option in system colours, where dimming would only lower their contrast. */
+/* Forced colours paint every option in system colours, where dimming would only lower their contrast, so a disabled
+   option keeps full opacity and takes GrayText to tell it from an enabled one. */
 @media (forced-colors: active) {
   .muxui-combo-box__option[aria-disabled='true'] {
     opacity: 1;
+    color: GrayText;
   }
 }
 
@@ -3058,7 +3060,10 @@
     box-shadow: none;
   }
 
-  :where(
+  /* Dimming only lowers contrast here, so a disabled item keeps full opacity, and one that carries text takes GrayText
+     instead. The selectors keep their specificity, unlike the :where() lists around them, so they win over each family's
+     dimming and colour rules above. */
+  :is(
     .muxui-color-area[data-muxui-state-disabled],
     .muxui-color-area__thumb[data-muxui-state-disabled],
     .muxui-color-slider[data-muxui-state-disabled],
@@ -3072,12 +3077,30 @@
     .muxui-menu__item[data-muxui-state-disabled],
     .muxui-menu__item[aria-disabled='true'],
     .muxui-radio-group__radio[data-muxui-state-disabled],
+    .muxui-select__option[aria-disabled='true'],
     .muxui-slider[data-muxui-state-disabled],
     .muxui-table__row[data-muxui-state-disabled],
     .muxui-tree__item[data-muxui-state-disabled],
     .muxui-tabs__tab[data-muxui-state-disabled]
   ) {
     opacity: 1;
+  }
+
+  /* A selected Table row or Tab keeps the Highlight pair of the selected rule below (a selected ListBox item's pair is
+     !important); the other families draw a disabled item the same whether it is selected or not. */
+  :is(
+    .muxui-grid-list__item[data-muxui-state-disabled],
+    .muxui-list-box__item[data-muxui-state-disabled],
+    .muxui-list-box__item[aria-disabled='true'],
+    .muxui-menu__item[data-muxui-state-disabled],
+    .muxui-menu__item[aria-disabled='true'],
+    .muxui-radio-group__radio[data-muxui-state-disabled],
+    .muxui-select__option[aria-disabled='true'],
+    .muxui-tree__item[data-muxui-state-disabled],
+    .muxui-table__row[data-muxui-state-disabled]:not([data-muxui-state-selected], [aria-selected='true']),
+    .muxui-tabs__tab[data-muxui-state-disabled]:not([data-muxui-state-selected], [aria-selected='true'])
+  ) {
+    color: GrayText;
   }
 
   :where(.muxui-calendar__cell, .muxui-range-calendar__cell, .muxui-grid-list__item, .muxui-list-box__item, .muxui-menu__item, .muxui-select__option, .muxui-combo-box__option, .muxui-tabs__tab, .muxui-table__row)[data-muxui-state-selected],
