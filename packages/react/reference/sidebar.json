@@ -192,11 +192,28 @@
           "member": "NavList",
           "form": "forwardRef",
           "members": [
-            { "name": "className", "optional": true, "type": "string" }
+            { "name": "className", "optional": true, "type": "string" },
+            {
+              "name": "navLabel",
+              "optional": true,
+              "type": "string",
+              "doc": "Wraps the list in a `nav` landmark with this accessible name. Without it the list has no landmark of its own."
+            }
           ],
           "ref": { "type": "HTMLUListElement" },
           "natives": [
             { "type": "React.HTMLAttributes<HTMLUListElement>" }
+          ]
+        },
+        {
+          "member": "NavDivider",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
+          ],
+          "ref": { "type": "HTMLLIElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLLIElement>" }
           ]
         },
         {
@@ -208,6 +225,30 @@
               "name": "label",
               "type": "React.ReactNode",
               "doc": "The section's visible heading, which also names its list."
+            },
+            {
+              "name": "collapsible",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Makes the heading a button that shows and hides the section's items. A folded rail shows every section's items and no button."
+            },
+            {
+              "name": "expanded",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether a collapsible section is open, when the caller controls it."
+            },
+            {
+              "name": "defaultExpanded",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether a collapsible section starts open, when it controls itself."
+            },
+            {
+              "name": "onExpandedChange",
+              "optional": true,
+              "type": "(expanded: boolean) => void",
+              "doc": "Called with the new open state each time a collapsible section opens or closes."
             }
           ],
           "ref": { "type": "HTMLLIElement" },
@@ -274,6 +315,18 @@
               "optional": true,
               "type": "(expanded: boolean) => void",
               "doc": "Called with the new open state each time the group opens or closes."
+            },
+            {
+              "name": "action",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "A control of its own beside the link, such as an IconButton or a Menu trigger, which the caller names. It is a\nseparate tab stop after the link; folded, it shows over the row while it has keyboard focus. Needs `href`."
+            },
+            {
+              "name": "className",
+              "optional": true,
+              "type": "string",
+              "doc": "A class for the item's list element."
             },
             { "name": "children", "optional": true, "type": "React.ReactNode" }
           ],
@@ -401,6 +454,17 @@
               "type": "() => void",
               "doc": "Called when the dismiss button is pressed; without it the card has no button."
             }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLDivElement>" }
+          ]
+        },
+        {
+          "member": "Footer",
+          "form": "forwardRef",
+          "members": [
+            { "name": "className", "optional": true, "type": "string" }
           ],
           "ref": { "type": "HTMLDivElement" },
           "natives": [
@@ -790,13 +854,14 @@
         { "entry": ".", "name": "SidebarNavEntry" }
       ],
       "owner": "sidebar",
-      "text": "type SidebarNavEntry = {\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n  id?: string;\n  label: React.ReactNode;\n  current?: boolean;\n  href: string;\n  items?: SidebarNavEntry[];\n} | {\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n  id?: string;\n  label: React.ReactNode;\n  current?: boolean;\n  href?: string;\n  items: SidebarNavEntry[];\n};"
+      "text": "type SidebarNavEntry = {\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n  id?: string;\n  label: React.ReactNode;\n  icon?: React.ComponentType<SidebarIconProps>;\n  current?: boolean;\n  href: string;\n  items?: SidebarNavEntry[];\n} | {\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n  id?: string;\n  label: React.ReactNode;\n  icon?: React.ComponentType<SidebarIconProps>;\n  current?: boolean;\n  href?: string;\n  items: SidebarNavEntry[];\n};",
+      "refs": ["sidebar#SidebarIconProps"]
     },
     {
       "id": "sidebar#SidebarNavItemOwnProps",
       "name": "SidebarNavItemOwnProps",
       "module": "sidebar",
-      "text": "type SidebarNavItemOwnProps = {\n  href?: string;\n  icon?: React.ComponentType<SidebarIconProps>;\n  badge?: React.ReactNode;\n  current?: boolean;\n  items?: SidebarNavEntry[];\n  external?: boolean;\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n};",
+      "text": "type SidebarNavItemOwnProps = {\n  href?: string;\n  icon?: React.ComponentType<SidebarIconProps>;\n  badge?: React.ReactNode;\n  current?: boolean;\n  items?: SidebarNavEntry[];\n  external?: boolean;\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n  action?: React.ReactNode;\n  className?: string;\n};",
       "members": [
         {
           "name": "href",
@@ -853,6 +918,18 @@
           "optional": true,
           "type": "(expanded: boolean) => void",
           "doc": "Called with the new open state each time the group opens or closes."
+        },
+        {
+          "name": "action",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "A control of its own beside the link, such as an IconButton or a Menu trigger, which the caller names. It is a\nseparate tab stop after the link; folded, it shows over the row while it has keyboard focus. Needs `href`."
+        },
+        {
+          "name": "className",
+          "optional": true,
+          "type": "string",
+          "doc": "A class for the item's list element."
         }
       ],
       "refs": ["sidebar#SidebarIconProps", "sidebar#SidebarNavEntry"]
@@ -876,6 +953,31 @@
         { "name": "children", "optional": true, "type": "React.ReactNode" }
       ],
       "refs": ["sidebar#SidebarNavItemOwnProps"]
+    },
+    {
+      "id": "sidebar#SidebarNavListOwnProps",
+      "name": "SidebarNavListOwnProps",
+      "module": "sidebar",
+      "text": "type SidebarNavListOwnProps = {\n  navLabel?: string;\n};",
+      "members": [
+        {
+          "name": "navLabel",
+          "optional": true,
+          "type": "string",
+          "doc": "Wraps the list in a `nav` landmark with this accessible name. Without it the list has no landmark of its own."
+        }
+      ]
+    },
+    {
+      "id": "sidebar#SidebarNavListProps",
+      "name": "SidebarNavListProps",
+      "module": "sidebar",
+      "public": [
+        { "entry": ".", "name": "SidebarNavListProps" }
+      ],
+      "owner": "sidebar",
+      "text": "type SidebarNavListProps = PartProps<HTMLUListElement> & SidebarNavListOwnProps;",
+      "refs": ["part-utils#PartProps", "sidebar#SidebarNavListOwnProps"]
     },
     {
       "id": "sidebar#SidebarOwnProps",
@@ -965,12 +1067,36 @@
       "id": "sidebar#SidebarSectionOwnProps",
       "name": "SidebarSectionOwnProps",
       "module": "sidebar",
-      "text": "type SidebarSectionOwnProps = {\n  label: React.ReactNode;\n};",
+      "text": "type SidebarSectionOwnProps = {\n  label: React.ReactNode;\n  collapsible?: boolean;\n  expanded?: boolean;\n  defaultExpanded?: boolean;\n  onExpandedChange?: (expanded: boolean) => void;\n};",
       "members": [
         {
           "name": "label",
           "type": "React.ReactNode",
           "doc": "The section's visible heading, which also names its list."
+        },
+        {
+          "name": "collapsible",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Makes the heading a button that shows and hides the section's items. A folded rail shows every section's items and no button."
+        },
+        {
+          "name": "expanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether a collapsible section is open, when the caller controls it."
+        },
+        {
+          "name": "defaultExpanded",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether a collapsible section starts open, when it controls itself."
+        },
+        {
+          "name": "onExpandedChange",
+          "optional": true,
+          "type": "(expanded: boolean) => void",
+          "doc": "Called with the new open state each time a collapsible section opens or closes."
         }
       ]
     },

@@ -1152,6 +1152,7 @@
         { "name": "SidebarExpandedProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
         { "name": "SidebarNavEntry", "kind": "type", "owner": "sidebar", "module": "sidebar" },
         { "name": "SidebarNavItemProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
+        { "name": "SidebarNavListProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
         { "name": "SidebarProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
         { "name": "SidebarProviderProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },
         { "name": "SidebarSectionProps", "kind": "type", "owner": "sidebar", "module": "sidebar" },

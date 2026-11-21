@@ -384,7 +384,11 @@
       "examples": [
         "catalog/components/sidebar/examples/react/basic.tsx",
         "catalog/components/sidebar/examples/react/grouping.tsx",
-        "catalog/components/sidebar/examples/react/responsive.tsx"
+        "catalog/components/sidebar/examples/react/responsive.tsx",
+        "catalog/components/sidebar/examples/react/row-actions.tsx",
+        "catalog/components/sidebar/examples/react/collapsible-sections.tsx",
+        "catalog/components/sidebar/examples/react/pinned-footer.tsx",
+        "catalog/components/sidebar/examples/react/layout-widths.tsx"
       ],
       "export": {
         "module": ".",

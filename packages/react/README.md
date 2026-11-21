@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:9df51e625dc9455685fc117f8fb22bda35a7d89bf1490343d8a40620735869fa -->
+<!-- @generated-content-sha256: sha256:326a5a6dee06b562345fed84984bec3f2a6e9f777e5007b7e0aa4bac18df1298 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -206,7 +206,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Select | experimental | . | .muxui-select | label, description, errorMessage, items, value, defaultValue, open, defaultOpen, disabled, size, readOnly, required, invalid, name, placeholder, children, selectedContent, trigger, placement, offset, crossOffset, shouldFlip, containerPadding, modal; trigger: disabled; popup: placement, offset, crossOffset, shouldFlip, containerPadding, modal; list: items; option: id, textValue, disabled |
 | SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, disabled, required, invalid, size |
 | Separator | experimental | . | .muxui-separator | orientation |
-| Sidebar | experimental | . | .muxui-sidebar | hideBorder, density; provider: collapsed, defaultCollapsed, shortcut; search: placeholder, value; section: label; nav-item: href, icon, badge, current, items, external, expanded, defaultExpanded; nav-button: icon, label, current; account-card: name, email, avatarSrc, avatarAlt, status; account-menu: items; mobile-trigger: logo; feature-card: title, description, dismissLabel |
+| Sidebar | experimental | . | .muxui-sidebar | hideBorder, density; provider: collapsed, defaultCollapsed, shortcut; search: placeholder, value; nav-list: navLabel; section: label, collapsible, expanded, defaultExpanded; nav-item: href, icon, badge, current, items, external, expanded, defaultExpanded, action, className; nav-button: icon, label, current; account-card: name, email, avatarSrc, avatarAlt, status; account-menu: items; mobile-trigger: logo; feature-card: title, description, dismissLabel |
 | Skeleton | experimental | . | .muxui-skeleton | label; line: width; circle: size; block: width, height, aspectRatio |
 | Slider | experimental | . | .muxui-slider | label, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
 | Switch | experimental | . | .muxui-switch | label, description, errorMessage, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
