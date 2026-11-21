@@ -494,12 +494,14 @@ function Action({ editor, disabled, action, label, icon: Icon, callbacks }: Acti
       : action.type === 'fontSize'
         ? current.getAttributes('textStyle').fontSize === action.value
         : current.isActive(action.type)), false);
+  // Generate with AI is an action, so it carries no pressed state; every other tool toggles formatting.
+  const toggle = action.type !== 'generate';
   const buttonProps = {
     className: cx('muxui-text-editor__btn', active && 'muxui-text-editor__btn--active'),
     'data-muxui-state-disabled': disabled ? 'true' : undefined,
     disabled,
     'aria-label': label,
-    'aria-pressed': active,
+    'aria-pressed': toggle ? active : undefined,
     onActivate: () => run(editor, action, callbacks),
   };
   return Icon
@@ -1392,7 +1394,7 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
  * in which Tiptap's Placeholder marks the empty editor. The drawn copy is generated text that the stylesheet gives empty
  * alternative text, so it is not read as the content.
  */
-function placeholderLabel(placeholder: string) {
+function placeholderLabel(placeholderRef: { readonly current: string }) {
   return Extension.create({
     name: 'muxuiPlaceholderLabel',
     addProseMirrorPlugins() {
@@ -1400,7 +1402,10 @@ function placeholderLabel(placeholder: string) {
       return [new Plugin({
         key: new PluginKey('muxuiPlaceholderLabel'),
         props: {
-          attributes: (state): EditorAttributes => (placeholder && editor.isEditable && isNodeEmpty(state.doc) ? { 'aria-placeholder': placeholder } : {}),
+          attributes: (state): EditorAttributes => {
+            const placeholder = placeholderRef.current;
+            return placeholder && editor.isEditable && isNodeEmpty(state.doc) ? { 'aria-placeholder': placeholder } : {};
+          },
         },
       })];
     },
@@ -1450,10 +1455,12 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   const initialContent = value === undefined ? initial : normalizeTextEditorDocument(value);
   const onChangeRef = React.useRef(onChange);
   const limitRef = React.useRef(limit);
+  const placeholderRef = React.useRef(placeholder);
   const callbacksRef = React.useRef({ onGenerate, onLinkRequest, onImageRequest, onColorRequest });
   controlledValueRef.current = value;
   onChangeRef.current = onChange;
   limitRef.current = characterLimit;
+  placeholderRef.current = placeholder;
   callbacksRef.current = { onGenerate, onLinkRequest, onImageRequest, onColorRequest };
   const labelledBy = ariaLabelledby ?? (label !== undefined ? labelId : undefined);
   const describedBy = [ariaDescribedby, description !== undefined ? descriptionId : undefined, errorMessage !== undefined ? errorId : undefined].filter(Boolean).join(' ') || undefined;
@@ -1480,8 +1487,10 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
       TextStyleKit,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Image,
-      Placeholder.configure({ placeholder }),
-      placeholderLabel(placeholder),
+      // Tiptap keeps the extensions it was created with, so both read the latest placeholder through a ref. The view
+      // redraws them when useEditor re-applies the options after each render.
+      Placeholder.configure({ placeholder: () => placeholderRef.current }),
+      placeholderLabel(placeholderRef),
       selectionRangePainter().extension,
       characterLimitFilter(limitRef),
     ],

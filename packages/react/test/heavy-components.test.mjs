@@ -650,6 +650,36 @@ test('TextEditor content is a multiline textbox that names its placeholder while
   }
 });
 
+test('TextEditor draws and names a placeholder changed after mount, the same text in both', async () => {
+  const t = await mountEditor({ toolbar: false, placeholder: 'Write a note' });
+  try {
+    // The stylesheet draws the empty paragraph's data-placeholder.
+    const shown = () => [t.pm.querySelector('p.is-editor-empty')?.getAttribute('data-placeholder'), t.pm.getAttribute('aria-placeholder')];
+    assert.deepEqual(shown(), ['Write a note', 'Write a note']);
+    await t.render({ placeholder: 'Write a reply' });
+    assert.deepEqual(shown(), ['Write a reply', 'Write a reply'], 'a new placeholder replaces the drawn and the named one');
+    await t.render({ placeholder: '' });
+    assert.deepEqual(shown(), ['', null], 'an emptied placeholder draws and names nothing');
+    await t.render({ placeholder: 'Write a note' });
+    assert.deepEqual(shown(), ['Write a note', 'Write a note']);
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor marks its formatting tools as toggles and the Generate with AI action as no toggle', async () => {
+  const t = await mountEditor({ toolbar: 'advanced', onGenerate() {} });
+  try {
+    const tool = (name) => document.querySelector(`[role="toolbar"][aria-label="Formatting"] [aria-label="${name}"]`);
+    assert.equal(tool('Bold').getAttribute('aria-pressed'), 'false');
+    assert.equal(tool('Align left').getAttribute('aria-pressed'), 'false');
+    assert.ok(tool('Generate with AI'));
+    assert.equal(tool('Generate with AI').hasAttribute('aria-pressed'), false, 'an action is not pressed or released');
+  } finally {
+    await t.close();
+  }
+});
+
 // Mounts a TextEditor with a selection bar in its own jsdom. The editor text is
 // "Hello brave new world"; "brave" is bold and spans positions 7 to 12.
 const selectionDocument = { type: 'doc', content: [{ type: 'paragraph', content: [
