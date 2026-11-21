@@ -64,6 +64,20 @@ test('Markdown preserves indented code as paragraph content while fencing create
   assert.match(html, /<p class="muxui-markdown__paragraph">indented code<\/p>/u);
   assert.match(html, /<pre class="muxui-markdown__code-block" data-muxui-language="js"><code class="muxui-markdown__code-block-content">fenced code<\/code><\/pre>/u);
 });
+test('Markdown keeps an ordered list start number other than 1', () => {
+  const list = (source) => JSDOM.fragment(renderToStaticMarkup(React.createElement(Markdown, { source }))).querySelector('ol, ul');
+  assert.equal(list('3. three\n4. four').getAttribute('start'), '3');
+  assert.equal(list('0. zero').getAttribute('start'), '0');
+  assert.equal(list('1. one').hasAttribute('start'), false);
+  assert.equal(list('- item').hasAttribute('start'), false);
+});
+test('Markdown resolves backslash escapes in image alt text', () => {
+  const alt = (description) => JSDOM.fragment(renderToStaticMarkup(React.createElement(Markdown, { source: `![${description}](https://example.test/x.png)` }))).querySelector('img').getAttribute('alt');
+  assert.equal(alt('a \\* b'), 'a * b');
+  assert.equal(alt('a \\\\ b'), 'a \\ b');
+  assert.equal(alt('\\"quoted\\" \\<tag\\> \\& \\_'), '"quoted" <tag> & _');
+  assert.equal(alt('a \\b c'), 'a \\b c');
+});
 test('Markdown shows apostrophes, quotes, ampersands and angle brackets as written, as text, including inside dropped tags', () => {
   const render = (source, baseUrl) => JSDOM.fragment(renderToStaticMarkup(React.createElement(Markdown, { source, baseUrl })));
   const text = (source, selector) => render(source).querySelector(selector).textContent;

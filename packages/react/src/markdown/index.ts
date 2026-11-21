@@ -23,6 +23,9 @@ const cx = (...values: unknown[]) => values.filter(Boolean).join(' ');
 // escaped, so they are never decoded; autolinks are read from their source instead (see inline).
 const PARSER_UNESCAPES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
 const unescapeParser = (value = '') => value.replace(/&(?:amp|lt|gt|quot|#39);/gu, (escape) => PARSER_UNESCAPES[escape] ?? escape);
+// The parser hands over image alt text as written, so resolve its backslash escapes: a backslash before ASCII
+// punctuation is dropped, and any other backslash stays.
+const unescapeBackslashes = (value: string) => value.replace(/\\([!-/:-@[-`{-~])/gu, '$1');
 
 /**
  * The props Mux UI defines for Markdown; the catalog's web.react API is derived from this
@@ -44,7 +47,7 @@ type MarkdownCell = { tokens?: MarkdownToken[] };
 // A marked token as the renderer reads it: the fields it reads, each optional because the renderer checks it
 // before use. Every token marked produces fits, as its own Token union is closed shapes plus an open one.
 type MarkdownToken = {
-  type: string; raw?: string; text?: string; href?: string; lang?: string; depth?: number; ordered?: boolean;
+  type: string; raw?: string; text?: string; href?: string; lang?: string; depth?: number; ordered?: boolean; start?: number | '';
   tokens?: MarkdownToken[]; items?: MarkdownToken[]; header?: MarkdownCell[]; rows?: MarkdownCell[][];
 };
 // One rendered inline piece: text, or an element.
@@ -143,7 +146,7 @@ function inline(tokens: MarkdownToken[] | undefined, baseUrl: string | undefined
     if (token.type === 'br') { output.push(React.createElement('br', { key, className: 'muxui-markdown__break' })); continue; }
     if (token.type === 'image') {
       const src = safeUrl(token.href, HTTP_PROTOCOLS, baseUrl);
-      const alt = unescapeParser(token.text);
+      const alt = unescapeBackslashes(unescapeParser(token.text));
       output.push(src ? React.createElement('img', { key, className: 'muxui-markdown__image', src, alt }) : alt);
       continue;
     }
@@ -192,7 +195,9 @@ function blocks(tokens: MarkdownToken[] | undefined, baseUrl: string | undefined
     if (token.type === 'blockquote') return React.createElement('blockquote', { key, className: 'muxui-markdown__blockquote' }, blocks(token.tokens, baseUrl, depth + 1, counter));
     if (token.type === 'list') {
       const Tag = token.ordered ? 'ol' : 'ul';
-      return React.createElement(Tag, { key, className: 'muxui-markdown__list' }, (token.items ?? []).map((item, itemIndex) => React.createElement('li', { key: itemIndex, className: 'muxui-markdown__list-item' }, blocks(item.tokens, baseUrl, depth + 1, counter))));
+      // An ordered list carries the number it starts at, which may be 0; a bullet list carries ''.
+      const start = token.ordered && typeof token.start === 'number' && token.start !== 1 ? token.start : undefined;
+      return React.createElement(Tag, { key, className: 'muxui-markdown__list', start }, (token.items ?? []).map((item, itemIndex) => React.createElement('li', { key: itemIndex, className: 'muxui-markdown__list-item' }, blocks(item.tokens, baseUrl, depth + 1, counter))));
     }
     if (token.type === 'hr') return React.createElement('hr', { key, className: 'muxui-markdown__rule' });
     if (Array.isArray(token.tokens)) return React.createElement('p', { key, className: 'muxui-markdown__paragraph' }, inline(token.tokens, baseUrl, depth + 1));
