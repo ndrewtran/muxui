@@ -375,6 +375,7 @@ FileTrigger.displayName = 'FileTrigger';
 // take focus instead. With none, focus stays on the body. Call this from a
 // component inside the overlay's FocusScope: React runs unmount cleanups
 // parent first, so this frame runs after React Aria's own restore frame.
+// Returns the opener it recorded, or null when the body had focus.
 function useOpenerFocusFallback() {
   const [opener] = React.useState(() => {
     const element = typeof document === 'undefined' ? null : document.activeElement;
@@ -402,6 +403,23 @@ function useOpenerFocusFallback() {
       });
     };
   }, [opener]);
+  return opener?.element ?? null;
+}
+
+// Restores focus as React Aria's FocusScope does: through this cancelable
+// event, so a collection that reuses its DOM nodes can focus its own item
+// instead, and under a virtual cursor only once running transitions end and
+// only if focus has not moved meanwhile.
+function restoreFocusTo(element: Element) {
+  if (!element.dispatchEvent(new CustomEvent('react-aria-focus-scope-restore', { bubbles: true, cancelable: true }))) return;
+  const ownerDocument = element.ownerDocument;
+  const from = ownerDocument.activeElement;
+  const focus = () => {
+    const active = ownerDocument.activeElement;
+    if (element.isConnected && (active === from || active === ownerDocument.body)) (element as HTMLElement).focus({ preventScroll: true });
+  };
+  if (getInteractionModality() === 'virtual') runAfterTransition(focus);
+  else focus();
 }
 
 interface DialogContentProps {
@@ -662,6 +680,8 @@ function usePresetScope(triggerRef: RefObject<Element | null> | undefined, enabl
 
 interface PopoverSurfaceProps {
   modal: boolean;
+  open: boolean;
+  positionerRef: RefObject<HTMLElement | null>;
   children?: ReactNode;
   onPointerDownCapture: () => void;
   id?: string;
@@ -670,19 +690,38 @@ interface PopoverSurfaceProps {
   className: string;
 }
 
-function PopoverSurface({ modal, children, onPointerDownCapture, ...props }: PopoverSurfaceProps) {
+function PopoverSurface({ modal, open, positionerRef, children, onPointerDownCapture, ...props }: PopoverSurfaceProps) {
   const surfaceRef = React.useRef<HTMLElement>(null);
-  useOpenerFocusFallback();
+  const opener = useOpenerFocusFallback();
   React.useEffect(() => {
     const surface = surfaceRef.current;
-    if (modal && surface && !surface.contains(surface.ownerDocument.activeElement)) {
-      surface.focus({ preventScroll: true });
+    if (!modal || !surface) return undefined;
+    const ownerDocument = surface.ownerDocument;
+    // Also on a reopen during the exit, which keeps this surface mounted.
+    if (open) {
+      if (!surface.contains(ownerDocument.activeElement)) surface.focus({ preventScroll: true });
+      return undefined;
     }
-  }, [modal]);
+    // Closing has started: give focus back now, not when the exit animation
+    // ends and React Aria restores it. A frame later the page is no longer
+    // inert and an overlay opened in the same update has taken focus. Only
+    // focus still in the popover's own element, or lost to the body, moves:
+    // focus elsewhere, even in an overlay opened from inside, stays put, and
+    // React Aria's restore on unmount still covers an opener that has gone.
+    const view = ownerDocument.defaultView;
+    const frame = view?.requestAnimationFrame(() => {
+      const active = ownerDocument.activeElement;
+      const inPopover = !active || active === ownerDocument.body || positionerRef.current?.contains(active);
+      if (opener?.isConnected && inPopover) restoreFocusTo(opener);
+    });
+    return () => {
+      if (frame !== undefined) view?.cancelAnimationFrame(frame);
+    };
+  }, [modal, open, opener, positionerRef]);
   // A stable scope releases containment without resetting consumer content.
-  // The enclosing RAC Popover remains the focus-restoration owner.
+  // Containment ends when closing starts, so focus can leave the exiting surface.
   return React.createElement(FocusScope, {
-    contain: modal,
+    contain: modal && open,
     children: React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1, onPointerDownCapture }, children),
   });
 }
@@ -746,6 +785,8 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
   }, React.createElement(PopoverSurface, {
     modal,
+    open,
+    positionerRef,
     // Capture phase: RAC's usePress stops pointerdown propagation.
     onPointerDownCapture: () => {
       pressedInsideRef.current = true;
