@@ -44,7 +44,7 @@ const readSheet = (page) => page.evaluate(() => {
     left: rect.left,
     right: rect.right,
     height: rect.height,
-    y: Number.parseFloat(panel.style.getPropertyValue('--muxui-modal-y')) || 0,
+    y: Number.parseFloat(getComputedStyle(panel).getPropertyValue('--muxui-modal-y')) || 0,
     dragging: panel.hasAttribute('data-muxui-state-dragging'),
     reduced: panel.hasAttribute('data-muxui-dialog-reduced'),
     focusInside: panel.contains(document.activeElement),
@@ -58,7 +58,7 @@ const waitForFocus = (page, id) => page.waitForFunction((target) => document.act
 async function waitForRest(page, timeout) {
   await page.waitForFunction(() => {
     const panel = document.querySelector('.muxui-dialog');
-    return Boolean(panel) && panel.style.getPropertyValue('--muxui-modal-y') === '' && !panel.hasAttribute('data-muxui-state-dragging');
+    return Boolean(panel) && getComputedStyle(panel).getPropertyValue('--muxui-modal-y') === '' && !panel.hasAttribute('data-muxui-state-dragging');
   }, undefined, timeout ? { timeout } : undefined);
 }
 
@@ -69,6 +69,41 @@ async function openSheet(page) {
 }
 
 const waitForClosed = (page) => page.locator('.muxui-dialog__backdrop').waitFor({ state: 'detached' });
+
+// How far the nested Popover sits from its trigger, on whichever side of it the Popover is, and how far its top is below
+// the trigger's top, once the Popover has held still for five frames.
+const popoverGap = (page) => page.evaluate(async () => {
+  const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+  const node = document.querySelector('.muxui-popover');
+  let last = null;
+  for (let still = 0, frames = 0; still < 5 && frames < 120; frames += 1) {
+    await frame();
+    const top = node.getBoundingClientRect().top;
+    still = top === last ? still + 1 : 0;
+    last = top;
+  }
+  const trigger = document.querySelector('#nested-trigger').getBoundingClientRect();
+  const popover = node.getBoundingClientRect();
+  const above = popover.top + popover.height / 2 < trigger.top + trigger.height / 2;
+  return { gap: above ? trigger.top - popover.bottom : popover.top - trigger.bottom, offset: popover.top - trigger.top };
+});
+
+// Counts the resize events the page itself hears, from before any page script runs.
+const countResizes = () => {
+  window.__muxuiResizes = { window: 0, viewport: 0 };
+  window.addEventListener('resize', () => { window.__muxuiResizes.window += 1; });
+  window.visualViewport?.addEventListener('resize', () => { window.__muxuiResizes.viewport += 1; });
+};
+
+const LONG_TITLE = 'Choose the filters, the sorting, the grouping and the columns that every saved list in this workspace shows to the people who open it';
+
+// A point low on the part of the title in view, under the top band, so a drag up from it stays inside the window.
+const titlePoint = (page) => page.evaluate(() => {
+  const title = document.querySelector('.muxui-dialog__title').getBoundingClientRect();
+  const band = document.querySelector('.muxui-dialog__grip').getBoundingClientRect();
+  const panel = document.querySelector('.muxui-dialog').getBoundingClientRect();
+  return { x: title.left + title.width / 2, y: Math.max(band.bottom + 12, Math.min(title.bottom, panel.bottom, window.innerHeight) - 12) };
+});
 
 // Where a part of the sheet is, whether it lies inside the panel's box, and whether a press at its middle reaches it.
 const reach = (page, selector) => page.locator(selector).evaluate((node) => {
@@ -88,7 +123,7 @@ const duringEntry = (page, step) => page.evaluate(async (name) => {
   while (!(panel = document.querySelector('.muxui-dialog'))) await frame();
   await frame();
   await frame();
-  const y = Number.parseFloat(panel.style.getPropertyValue('--muxui-modal-y')) || 0;
+  const y = Number.parseFloat(getComputedStyle(panel).getPropertyValue('--muxui-modal-y')) || 0;
   if (name === 'press') {
     const grip = panel.querySelector('.muxui-dialog__grip');
     const rect = grip.getBoundingClientRect();
@@ -114,6 +149,37 @@ async function slowDrag(page, selector, dy, { release = true } = {}) {
   }
   await page.waitForTimeout(150);
   if (release) await page.mouse.up();
+}
+
+// Opens the sheet, drags it a little and lets it return to rest, then opens the Dialog inside it; returns where that
+// Dialog's panel and backdrop are, against the page and the sheet, once its panel has held still for five frames.
+async function openInner(page) {
+  await openSheet(page);
+  await slowDrag(page, '.muxui-dialog__grip', 40);
+  await waitForRest(page);
+  await page.locator('#inner-trigger').click();
+  await page.locator('#inner-body').waitFor();
+  return page.evaluate(async () => {
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+    const panel = document.querySelector('#inner-body').closest('.muxui-dialog');
+    let last = null;
+    for (let still = 0, frames = 0; still < 5 && frames < 240; frames += 1) {
+      await frame();
+      const { top, left } = panel.getBoundingClientRect();
+      still = `${top} ${left}` === last ? still + 1 : 0;
+      last = `${top} ${left}`;
+    }
+    const box = panel.getBoundingClientRect();
+    const backdrop = panel.closest('.muxui-dialog__backdrop').getBoundingClientRect();
+    const sheet = document.querySelector('.muxui-dialog').getBoundingClientRect();
+    return {
+      backdrop: [backdrop.left, backdrop.top, backdrop.width, backdrop.height].map(Math.round),
+      view: [window.innerWidth, window.innerHeight],
+      centre: [box.left + box.width / 2 - window.innerWidth / 2, box.top + box.height / 2 - window.innerHeight / 2],
+      edges: [box.left - sheet.left, box.right - sheet.right, box.bottom - sheet.bottom],
+      above: panel.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)),
+    };
+  });
 }
 
 // A flick of a touch pointer, dispatched within one task a few milliseconds apart by the page's own clock, so its
@@ -227,7 +293,7 @@ for (const engine of browserEngines()) {
           if (!panel || !backdrop) return null;
           let opacity = 1;
           for (let node = panel; node; node = node.parentElement) opacity *= Number(getComputedStyle(node).opacity);
-          return { y: Number.parseFloat(panel.style.getPropertyValue('--muxui-modal-y')) || 0, opacity };
+          return { y: Number.parseFloat(getComputedStyle(panel).getPropertyValue('--muxui-modal-y')) || 0, opacity };
         });
         await openSheet(page);
         const frames = await entry.stop();
@@ -277,7 +343,7 @@ for (const engine of browserEngines()) {
         const exit = await recordFrames(page, () => {
           const panel = document.querySelector('.muxui-dialog');
           if (!panel) return null;
-          return { y: Number.parseFloat(panel.style.getPropertyValue('--muxui-modal-y')) || 0, opacity: Number(getComputedStyle(panel).opacity), backdrop: Number(getComputedStyle(panel.closest('.muxui-dialog__backdrop')).opacity) };
+          return { y: Number.parseFloat(getComputedStyle(panel).getPropertyValue('--muxui-modal-y')) || 0, opacity: Number(getComputedStyle(panel).opacity), backdrop: Number(getComputedStyle(panel.closest('.muxui-dialog__backdrop')).opacity) };
         });
         await page.keyboard.press('Escape');
         await waitForClosed(page);
@@ -404,7 +470,7 @@ for (const engine of browserEngines()) {
         assert.ok(below > 96, `the press came while the sheet was still more than the dismiss distance below rest: ${below}`);
         await page.waitForFunction(() => {
           const panel = document.querySelector('.muxui-dialog');
-          return !panel || (panel.style.getPropertyValue('--muxui-modal-y') === '' && !panel.hasAttribute('data-muxui-state-dragging'));
+          return !panel || (getComputedStyle(panel).getPropertyValue('--muxui-modal-y') === '' && !panel.hasAttribute('data-muxui-state-dragging'));
         });
         assert.equal(await page.locator('.muxui-dialog').count(), 1, 'the sheet finished its slide and stayed open');
         assert.deepEqual(await changes(page), [true]);
@@ -500,12 +566,8 @@ for (const engine of browserEngines()) {
         await page.locator('.muxui-popover').waitFor();
         await waitForRest(page);
         await awaitFontsAndFrames(page);
-        const gap = await page.evaluate(() => {
-          const trigger = document.querySelector('#nested-trigger').getBoundingClientRect();
-          const popover = document.querySelector('.muxui-popover').getBoundingClientRect();
-          return Math.min(Math.abs(popover.top - trigger.bottom), Math.abs(trigger.top - popover.bottom));
-        });
-        assert.ok(gap < 24, `the Popover sits against its trigger once the sheet rests: ${gap} pixels apart`);
+        const { gap } = await popoverGap(page);
+        assert.ok(gap >= 0 && gap < 24, `the Popover sits against its trigger once the sheet rests: ${gap} pixels apart`);
         // React Aria keeps the press away from the sheet while the Popover is open and closes the Popover on it, so no
         // drag can move the sheet under an open Popover.
         const grip = await page.locator('.muxui-dialog__grip').boundingBox();
@@ -517,6 +579,124 @@ for (const engine of browserEngines()) {
         await page.locator('.muxui-popover').waitFor({ state: 'detached' });
         await waitForRest(page);
         assert.equal(await page.locator('.muxui-dialog').count(), 1, 'the press closed only the Popover');
+      }));
+
+      await t.test('a sheet sends the page no resize as it slides in, is dragged, settles and leaves, with or without a nested Popover, which still follows its trigger', () => withPage({ initScript: countResizes }, async (page) => {
+        const resizes = () => page.evaluate(() => window.__muxuiResizes);
+        // Counted from here, so only what follows the press on the trigger counts.
+        await page.evaluate(() => { window.__muxuiResizes = { window: 0, viewport: 0 }; });
+        await openSheet(page);
+        await slowDrag(page, '.muxui-dialog__grip', 40);
+        await waitForRest(page);
+        await page.keyboard.press('Escape');
+        await waitForClosed(page);
+        assert.deepEqual(await resizes(), { window: 0, viewport: 0 }, 'a sheet with nothing open inside it');
+        await waitForFocus(page, 'trigger');
+        const below = await duringEntry(page, 'nested');
+        assert.ok(below > 40, `the Popover opened while the sheet was still sliding: ${below}`);
+        await page.locator('.muxui-popover').waitFor();
+        await waitForRest(page);
+        await awaitFontsAndFrames(page);
+        const { gap } = await popoverGap(page);
+        assert.ok(gap >= 0 && gap < 24, `the Popover sits against its trigger once the sheet rests: ${gap} pixels apart`);
+        await page.keyboard.press('Escape');
+        await page.locator('.muxui-popover').waitFor({ state: 'detached' });
+        await page.locator('.muxui-dialog__close').click();
+        await waitForClosed(page);
+        assert.deepEqual(await resizes(), { window: 0, viewport: 0 }, 'a sheet with a Popover open inside it');
+      }));
+
+      await t.test('a Dialog opened inside the sheet covers the page and rests where one opened from the page does, and keeps still as the sheet leaves under it', async () => {
+        await withPage({}, async (page) => {
+          await page.evaluate(() => window.__muxuiSheet.setProps({ inner: 'center' }));
+          const placed = await openInner(page);
+          assert.deepEqual(placed.backdrop, [0, 0, ...placed.view], 'the inner backdrop covers the page');
+          assert.ok(placed.centre.every((delta) => Math.abs(delta) <= 1), `the inner Dialog sits in the middle of the page: ${placed.centre}`);
+          assert.equal(placed.above, true, 'the inner Dialog paints above the sheet');
+          // The owner closes the sheet while the inner Dialog is open: the sheet slides out, and the inner Dialog takes
+          // none of its travel.
+          const drift = await page.evaluate(async () => {
+            const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+            const panel = document.querySelector('#inner-body').closest('.muxui-dialog');
+            const sheet = document.querySelector('.muxui-dialog');
+            const start = panel.getBoundingClientRect().top;
+            let most = 0;
+            let travelled = 0;
+            window.__muxuiSheet.setOpen(false);
+            for (let frames = 0; frames < 20; frames += 1) {
+              await frame();
+              if (!panel.isConnected) break;
+              most = Math.max(most, Math.abs(panel.getBoundingClientRect().top - start));
+              travelled = Math.max(travelled, Number.parseFloat(getComputedStyle(sheet).getPropertyValue('--muxui-modal-y')) || 0);
+            }
+            return { most, travelled };
+          });
+          assert.ok(drift.travelled > 40, `the sheet slid out while the inner Dialog was open: ${drift.travelled}`);
+          assert.ok(drift.most <= 1, `the inner Dialog kept still as the sheet left: ${drift.most} pixels`);
+          await waitForClosed(page);
+        });
+        await withPage({}, async (page) => {
+          await page.evaluate(() => window.__muxuiSheet.setProps({ inner: 'sheet' }));
+          const placed = await openInner(page);
+          assert.deepEqual(placed.backdrop, [0, 0, ...placed.view], 'the inner backdrop covers the page');
+          assert.ok(placed.edges.every((delta) => Math.abs(delta) <= 1), `the inner sheet rests on the bottom edge as the sheet does: ${placed.edges}`);
+          assert.equal(placed.above, true, 'the inner sheet paints above the sheet');
+          await page.keyboard.press('Escape');
+          await page.locator('#inner-body').waitFor({ state: 'detached' });
+          assert.equal(await page.locator('.muxui-dialog').count(), 1, 'Escape closes only the inner sheet');
+          await waitForFocus(page, 'inner-trigger');
+        });
+      });
+
+      await t.test('narrowing the window during a drag ends the drag, so the rewrapped sheet neither trails the pointer nor dismisses', () => withPage({ wordy: true }, async (page) => {
+        await openSheet(page);
+        const grip = await page.locator('.muxui-dialog__grip').boundingBox();
+        const x = grip.x + grip.width / 2;
+        const y = grip.y + grip.height / 2;
+        await slowDrag(page, '.muxui-dialog__grip', 60, { release: false });
+        await page.setViewportSize({ width: 270, height: VIEWPORT.height });
+        await waitForRest(page, 3_000).catch(() => {});
+        const ended = await readSheet(page);
+        assert.deepEqual([ended.y, ended.dragging], [0, false], 'the narrowing ended the drag and the sheet settled');
+        await page.mouse.move(x, y + 260, { steps: 4 });
+        await page.mouse.up();
+        assert.equal(await page.locator('.muxui-dialog').count(), 1, 'the rest of the gesture does not dismiss the sheet');
+        assert.deepEqual(await changes(page), [true]);
+      }));
+
+      await t.test('a drag up from the title of a sheet whose header outgrows it scrolls the content, and the sheet stays at rest', () => withPage({ viewport: { width: 320, height: 230 } }, async (page) => {
+        await page.evaluate((title) => window.__muxuiSheet.setProps({ title }), LONG_TITLE);
+        await openSheet(page);
+        const point = await titlePoint(page);
+        await page.mouse.move(point.x, point.y);
+        await page.mouse.down();
+        for (let step = 1; step <= 6; step += 1) {
+          await page.mouse.move(point.x, point.y - step * 20);
+          await page.waitForTimeout(25);
+        }
+        const held = await readSheet(page);
+        await page.mouse.up();
+        const scrolled = await page.locator('.muxui-dialog').evaluate((node) => node.scrollTop);
+        assert.ok(scrolled >= 100, `the drag up scrolled the content: ${scrolled}`);
+        assert.equal(held.y, 0, 'the sheet itself stayed at rest');
+        assert.equal(await page.locator('.muxui-dialog').count(), 1);
+      }));
+
+      await t.test('a finger drawn up from that title scrolls the content too', { skip: engine === 'chromium' ? false : 'touch input is sent through the Chrome DevTools Protocol' }, () => withPage({ viewport: { width: 320, height: 230 }, hasTouch: true }, async (page) => {
+        await page.evaluate((title) => window.__muxuiSheet.setProps({ title }), LONG_TITLE);
+        await openSheet(page);
+        const point = await titlePoint(page);
+        const cdp = await page.context().newCDPSession(page);
+        const touch = (type, dy) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: point.x, y: point.y + dy, id: 1 }] });
+        await touch('touchStart', 0);
+        for (let step = 1; step <= 6; step += 1) {
+          await touch('touchMove', -step * 20);
+          await page.waitForTimeout(25);
+        }
+        await touch('touchEnd');
+        const scrolled = await page.locator('.muxui-dialog').evaluate((node) => node.scrollTop);
+        assert.ok(scrolled >= 100, `the finger scrolled the content: ${scrolled}`);
+        assert.equal(await page.locator('.muxui-dialog').count(), 1);
       }));
 
       await t.test('in a 320 by 230 viewport a wrapped description scrolls with the content, and the actions and the close button stay in reach', async () => {
@@ -564,6 +744,7 @@ for (const engine of browserEngines()) {
         await page.evaluate(() => window.__muxuiSheet.setProps({ dismissable: true }));
         await page.locator('.muxui-dialog__grip').waitFor();
         await slowDrag(page, '.muxui-dialog__grip', 130, { release: false });
+        await page.evaluate(() => { window.__muxuiPanel = document.querySelector('.muxui-dialog'); });
         await page.evaluate(() => window.__muxuiSheet.setProps({ presentation: 'center' }));
         await page.mouse.up();
         // The centred Dialog's own motion hands the panel back to its stylesheet when it settles.
@@ -574,9 +755,10 @@ for (const engine of browserEngines()) {
         const centred = await page.evaluate(() => {
           const panel = document.querySelector('.muxui-dialog');
           const rect = panel.getBoundingClientRect();
-          return { y: panel.style.getPropertyValue('--muxui-modal-y'), middle: rect.top + rect.height / 2 };
+          return { y: getComputedStyle(panel).getPropertyValue('--muxui-modal-y'), middle: rect.top + rect.height / 2 };
         });
         assert.ok(centred.y === '' && Math.abs(centred.middle - VIEWPORT.height / 2) < 1, `the Dialog settles in the middle: ${JSON.stringify(centred)}`);
+        assert.equal(await page.evaluate(() => document.querySelector('.muxui-dialog') === window.__muxuiPanel), true, 'the panel and its content stay mounted through the change');
 
         // Back to a sheet while the centred Dialog is still fading in, the sheet keeps none of that fade.
         await page.keyboard.press('Escape');
@@ -613,6 +795,11 @@ for (const engine of browserEngines()) {
             scale: { get: () => scale },
           });
           Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => viewport });
+          // A scroll of the visible viewport down the page with no change of size.
+          window.__muxuiScrollViewport = (top) => {
+            offsetTop = top;
+            viewport.dispatchEvent(new Event('scroll'));
+          };
           window.__muxuiSetViewport = (next) => {
             height = next.height ?? null;
             offsetTop = next.offsetTop ?? 0;
@@ -644,6 +831,20 @@ for (const engine of browserEngines()) {
           await awaitFontsAndFrames(page);
           await bottomAt(VIEWPORT.height);
           await page.evaluate(() => window.__muxuiSetViewport({}));
+          await bottomAt(VIEWPORT.height);
+          // A scroll alone, with a Popover open in the sheet: the Popover moves with its trigger.
+          await page.locator('#nested-trigger').click();
+          await page.locator('.muxui-popover').waitFor();
+          await awaitFontsAndFrames(page);
+          const unscrolled = await popoverGap(page);
+          await page.evaluate(() => window.__muxuiScrollViewport(90));
+          await bottomAt(VIEWPORT.height + 90);
+          await awaitFontsAndFrames(page);
+          const scrolled = await popoverGap(page);
+          assert.ok(Math.abs(scrolled.offset - unscrolled.offset) < 1, `the Popover moved with its trigger: ${unscrolled.offset} then ${scrolled.offset} below its top`);
+          await page.keyboard.press('Escape');
+          await page.locator('.muxui-popover').waitFor({ state: 'detached' });
+          await page.evaluate(() => window.__muxuiScrollViewport(0));
 
           // The keyboard comes up during a drag: the drag ends and the sheet settles above the keyboard, so it never trails the pointer.
           await slowDrag(page, '.muxui-dialog__grip', 80, { release: false });
@@ -675,6 +876,19 @@ for (const engine of browserEngines()) {
         assert.equal(await page.locator('.muxui-dialog').count(), 1);
         assert.deepEqual(await changes(page), [true]);
       }));
+
+      for (const dir of ['ltr', 'rtl']) {
+        await t.test(`in ${dir} with a 12 pixel root font, the close button and the top band stay 44 pixels`, () => withPage({ dir }, async (page) => {
+          await page.evaluate(() => { document.documentElement.style.fontSize = '12px'; });
+          await openSheet(page);
+          const sizes = await page.evaluate(() => {
+            const close = document.querySelector('.muxui-dialog__close').getBoundingClientRect();
+            const grip = document.querySelector('.muxui-dialog__grip').getBoundingClientRect();
+            return [close.width, close.height, grip.height].map(Math.round);
+          });
+          assert.deepEqual(sizes, [44, 44, 44], 'the target and the band keep 44 pixels');
+        }));
+      }
 
       for (const dir of ['ltr', 'rtl']) {
         await t.test(`in ${dir}, the close button is a 44 pixel target at the logical end, clear of the title, and each safe-area inset pads its own side`, () => withPage({ dir }, async (page) => {
@@ -773,6 +987,9 @@ for (const engine of browserEngines()) {
 
       await t.test('under forced colours the sheet stays opaque in system colours, and its grip and close button follow them', { skip: engine === 'chromium' ? false : 'forced colours are emulated in Chromium only' }, () => withPage({ forcedColors: 'active' }, async (page) => {
         await openSheet(page);
+        // The sheet slides in under the pointer that pressed the trigger, so the pointer leaves the grip first.
+        await page.mouse.move(VIEWPORT.width / 2, VIEWPORT.height - 4);
+        await page.waitForFunction(() => !document.querySelector('.muxui-dialog__grip').matches(':hover'));
         const forced = await page.evaluate(() => {
           const panel = document.querySelector('.muxui-dialog');
           let opacity = 1;
@@ -819,7 +1036,7 @@ for (const engine of browserEngines()) {
           const panel = document.querySelector('.muxui-dialog');
           const backdrop = panel.closest('.muxui-dialog__backdrop');
           return {
-            y: panel.style.getPropertyValue('--muxui-modal-y'),
+            y: getComputedStyle(panel).getPropertyValue('--muxui-modal-y'),
             reduced: panel.hasAttribute('data-muxui-dialog-reduced'),
             grip: getComputedStyle(panel.querySelector('.muxui-dialog__grip'), '::before').display,
             transition: getComputedStyle(backdrop).transitionDuration,

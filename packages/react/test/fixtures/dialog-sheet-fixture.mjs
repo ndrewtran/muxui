@@ -11,15 +11,16 @@ const WORDY = 'Choose what the list shows. The rows can be narrowed by name, own
 /**
  * A sheet for the browser proof. `mode` picks the sheet: `long` scrolls its content and holds a field and a nested
  * Popover, `short` holds one line, `rejected` is long with an owner that keeps it open, and `locked` is long and not
- * dismissable. `wordy` gives it a description that wraps over many lines, and `presentation` and `dismissable`
- * override the sheet's own. Each open change is reported through `onOpenChange`.
+ * dismissable. `wordy` gives it a description that wraps over many lines, `inner` adds a Dialog presented that way
+ * inside a long sheet, and `title`, `presentation` and `dismissable` override the sheet's own. Each open change is
+ * reported through `onOpenChange`.
  */
-export function DialogSheetFixture({ mode = 'long', open, onOpenChange, defaultOpen, wordy = false, presentation = 'sheet', dismissable = mode !== 'locked' }) {
+export function DialogSheetFixture({ mode = 'long', open, onOpenChange, defaultOpen, wordy = false, inner, title = 'Filters', presentation = 'sheet', dismissable = mode !== 'locked' }) {
   const short = mode === 'short';
   return h('div', { id: 'sheet-scope', 'data-muxui-motion': 'full' },
     h('p', { id: 'page-text' }, 'Page content behind the sheet.'),
     h(Dialog, {
-      title: 'Filters',
+      title,
       description: short ? undefined : wordy ? WORDY : 'Choose what the list shows.',
       presentation,
       trigger: h('button', { type: 'button', id: 'trigger' }, 'Open sheet'),
@@ -35,5 +36,7 @@ export function DialogSheetFixture({ mode = 'long', open, onOpenChange, defaultO
         h('input', { id: 'sheet-field', defaultValue: 'Quarterly report draft' }),
         h(Popover, { 'aria-label': 'More filters', trigger: h('button', { type: 'button', id: 'nested-trigger' }, 'More filters') },
           h('button', { type: 'button', id: 'nested-action' }, 'Nested action')),
+        inner ? h(Dialog, { title: 'Inner', presentation: inner, trigger: h('button', { type: 'button', id: 'inner-trigger' }, 'Open inner') },
+          h('p', { id: 'inner-body' }, 'One line inside the inner Dialog.')) : null,
         h('ul', { id: 'rows' }, ROWS.map((row) => h('li', { key: row }, row))))));
 }
