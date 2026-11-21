@@ -10,6 +10,7 @@
       "description",
       "errorMessage",
       "items",
+      "sections",
       "value",
       "defaultValue",
       "selectedId",
@@ -85,6 +86,18 @@
         },
         "required": false,
         "description": "The full option set, filtered as the user types by a case- and accent-insensitive contains match on each item's text. Pass every option rather than a pre-filtered list."
+      },
+      "sections": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "ComboBoxSection"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "The full option set in named groups, in place of `items`, filtered the same way. A group with no matching option is hidden. Item ids are unique across the groups."
       },
       "value": {
         "type": {
@@ -235,6 +248,63 @@
       }
     },
     "types": {
+      "ComboBoxSection": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false,
+              "description": "The section's stable id. It must differ from every other section's id and every item's id."
+            },
+            {
+              "name": "title",
+              "type": {
+                "kind": "host",
+                "name": "Exclude",
+                "typeArguments": [
+                  {
+                    "kind": "host",
+                    "name": "React.ReactNode"
+                  },
+                  {
+                    "kind": "union",
+                    "members": [
+                      {
+                        "kind": "null"
+                      },
+                      {
+                        "kind": "undefined"
+                      },
+                      {
+                        "kind": "boolean"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": false,
+              "description": "The visible heading, which also names the group for assistive technology."
+            },
+            {
+              "name": "items",
+              "type": {
+                "kind": "reference",
+                "name": "MuxUIItems"
+              },
+              "required": true,
+              "readonly": false,
+              "description": "The section's options, in the same forms `items` takes."
+            }
+          ]
+        },
+        "description": "A named group of ComboBox options, which the list shows under its title."
+      },
       "MuxUICollectionItem": {
         "type": {
           "kind": "object",

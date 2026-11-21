@@ -20,6 +20,13 @@
               "values": ["horizontal", "vertical"],
               "doc": "The direction the controls are laid out and the arrow keys move focus along. Vertical stacks them in a column."
             },
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "'contained' | 'plain'",
+              "values": ["contained", "plain"],
+              "doc": "The look of the toolbar itself. `contained` draws a filled, bordered surface around the controls; `plain` draws none, so the controls sit on the surface around them. Keyboard behaviour is the same in both."
+            },
             { "name": "children", "optional": true, "type": "React.ReactNode" },
             { "name": "className", "optional": true, "type": "string" }
           ],
@@ -57,7 +64,7 @@
       "id": "toolbar#ToolbarOwnProps",
       "name": "ToolbarOwnProps",
       "module": "toolbar",
-      "text": "type ToolbarOwnProps = {\n  orientation?: 'horizontal' | 'vertical';\n};",
+      "text": "type ToolbarOwnProps = {\n  orientation?: 'horizontal' | 'vertical';\n  variant?: 'contained' | 'plain';\n};",
       "members": [
         {
           "name": "orientation",
@@ -65,6 +72,13 @@
           "type": "'horizontal' | 'vertical'",
           "values": ["horizontal", "vertical"],
           "doc": "The direction the controls are laid out and the arrow keys move focus along. Vertical stacks them in a column."
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "'contained' | 'plain'",
+          "values": ["contained", "plain"],
+          "doc": "The look of the toolbar itself. `contained` draws a filled, bordered surface around the controls; `plain` draws none, so the controls sit on the surface around them. Keyboard behaviour is the same in both."
         }
       ]
     },

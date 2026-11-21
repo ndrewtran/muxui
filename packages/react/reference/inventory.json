@@ -264,6 +264,7 @@
         },
         { "name": "ComboBox", "kind": "value", "owner": "combo-box", "module": "combo-box" },
         { "name": "ComboBoxProps", "kind": "type", "owner": "combo-box", "module": "combo-box" },
+        { "name": "ComboBoxSection", "kind": "type", "owner": "combo-box", "module": "combo-box" },
         {
           "name": "CommandPalette",
           "kind": "value",
@@ -681,6 +682,7 @@
         { "name": "MenuProps", "kind": "type", "owner": "menu", "module": "menu" },
         { "name": "MenuRootProps", "kind": "type", "owner": "menu", "module": "menu" },
         { "name": "MenuSectionProps", "kind": "type", "owner": "menu", "module": "menu" },
+        { "name": "MenuShortcutProps", "kind": "type", "owner": "menu", "module": "menu" },
         { "name": "MenuSubmenuProps", "kind": "type", "owner": "menu", "module": "menu" },
         { "name": "MenuTriggerProps", "kind": "type", "owner": "menu", "module": "menu" },
         { "name": "Message", "kind": "value", "owner": "message", "module": "message" },

@@ -350,6 +350,22 @@
           "natives": [
             { "type": "React.HTMLAttributes<HTMLHRElement>" }
           ]
+        },
+        {
+          "member": "Shortcut",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "keys",
+              "optional": true,
+              "type": "readonly string[]",
+              "doc": "The keys of the shortcut, each shown in a kbd element. The children show when there are none."
+            }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
         }
       ]
     }
@@ -732,6 +748,31 @@
       "owner": "menu",
       "text": "type MenuSectionProps = Omit<React.HTMLAttributes<HTMLElement>, 'title'> & MenuSectionOwnProps;",
       "refs": ["menu#MenuSectionOwnProps"]
+    },
+    {
+      "id": "menu#MenuShortcutOwnProps",
+      "name": "MenuShortcutOwnProps",
+      "module": "menu",
+      "text": "type MenuShortcutOwnProps = {\n  keys?: readonly string[];\n};",
+      "members": [
+        {
+          "name": "keys",
+          "optional": true,
+          "type": "readonly string[]",
+          "doc": "The keys of the shortcut, each shown in a kbd element. The children show when there are none."
+        }
+      ]
+    },
+    {
+      "id": "menu#MenuShortcutProps",
+      "name": "MenuShortcutProps",
+      "module": "menu",
+      "public": [
+        { "entry": ".", "name": "MenuShortcutProps" }
+      ],
+      "owner": "menu",
+      "text": "type MenuShortcutProps = React.HTMLAttributes<HTMLSpanElement> & MenuShortcutOwnProps;",
+      "refs": ["menu#MenuShortcutOwnProps"]
     },
     {
       "id": "menu#MenuSubmenuOwnProps",

@@ -6,11 +6,13 @@
   "export": "Toolbar",
   "api": {
     "props": [
-      "orientation"
+      "orientation",
+      "variant"
     ],
     "events": [],
     "defaults": {
-      "orientation": "horizontal"
+      "orientation": "horizontal",
+      "variant": "contained"
     },
     "propDetails": {
       "orientation": {
@@ -33,6 +35,27 @@
           "vertical"
         ],
         "description": "The direction the controls are laid out and the arrow keys move focus along. Vertical stacks them in a column."
+      },
+      "variant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "contained"
+            },
+            {
+              "kind": "literal",
+              "value": "plain"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "contained",
+          "plain"
+        ],
+        "description": "The look of the toolbar itself. `contained` draws a filled, bordered surface around the controls; `plain` draws none, so the controls sit on the surface around them. Keyboard behaviour is the same in both."
       }
     },
     "eventDetails": {},
