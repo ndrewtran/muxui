@@ -207,9 +207,11 @@
   padding: 0;
 }
 
-/* Placeholder */
+/* Placeholder. The textbox names it as aria-placeholder, so the drawn copy has empty alternative text and is not
+   read as the content; an engine without alternative text keeps the first declaration and still draws it. */
 .muxui-text-editor__content .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
+  content: attr(data-placeholder) / '';
   float: left;
   color: var(--muxui-field-placeholder-color);
   pointer-events: none;

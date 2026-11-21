@@ -509,6 +509,147 @@ test('TextEditor advanced controls expose the color dialog and durable image URL
   }
 });
 
+// ProseMirror reads Mod as Meta where the platform Node reports is Apple's, and as Ctrl elsewhere.
+const modKey = /Mac|iP(hone|[oa]d)/u.test(globalThis.navigator?.platform ?? '') ? { metaKey: true } : { ctrlKey: true };
+
+// Mounts a TextEditor and returns its parts, with `at(text)`, the document position where `text` starts.
+async function mountEditor(props) {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  // jsdom has no layout, so give ProseMirror's coordinate lookups empty rectangles.
+  dom.window.Range.prototype.getClientRects = () => [];
+  dom.window.Range.prototype.getBoundingClientRect = () => ({ left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 });
+  const root = createRoot(document.querySelector('#root'));
+  const render = (next) => act(async () => root.render(React.createElement(TextEditor, { 'aria-label': 'Draft', ...props, ...next })));
+  await render();
+  const pm = document.querySelector('.ProseMirror');
+  const { editor } = pm;
+  const destroyed = new Promise((resolve) => editor.on('destroy', resolve));
+  return {
+    pm, editor, render,
+    at(text) {
+      let position;
+      editor.state.doc.descendants((node, pos) => {
+        if (position === undefined && node.isText && node.text.includes(text)) position = pos + node.text.indexOf(text);
+      });
+      return position;
+    },
+    select: (from, to = from) => act(async () => { pm.focus(); editor.commands.setTextSelection({ from, to }); }),
+    shortcut: (key) => act(async () => pm.dispatchEvent(new KeyboardEvent('keydown', { key, ...modKey, bubbles: true, cancelable: true }))),
+    async close() {
+      await act(async () => root.unmount());
+      // Tiptap destroys the editor after the unmount; the window it reads must still exist.
+      if (!editor.isDestroyed) await destroyed;
+      restore();
+      dom.window.close();
+    },
+  };
+}
+
+test('TextEditor toolbar tools show the formatting at the selection as the selection and formatting change', async () => {
+  const t = await mountEditor({ toolbar: 'advanced', defaultValue: { type: 'doc', content: [
+    { type: 'paragraph', attrs: { textAlign: 'center' }, content: [{ type: 'text', text: 'plain ' }, { type: 'text', text: 'loud', marks: [{ type: 'bold' }] }] },
+    { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'item' }] }] }] },
+    { type: 'paragraph', content: [{ type: 'text', text: 'styled', marks: [{ type: 'textStyle', attrs: { fontFamily: 'serif', fontSize: '18px' } }] }] },
+  ] } });
+  try {
+    const toolbar = document.querySelector('[role="toolbar"][aria-label="Formatting"]');
+    const tool = (name) => toolbar.querySelector(`[aria-label="${name}"]`);
+    const pressed = () => [...toolbar.querySelectorAll('[aria-pressed="true"]')].map((node) => node.getAttribute('aria-label'));
+    const filled = () => [...toolbar.querySelectorAll('.muxui-text-editor__btn--active')].map((node) => node.getAttribute('aria-label'));
+    const fonts = () => [tool('Font family').value, tool('Font size').value];
+
+    await t.select(t.at('plain') + 2);
+    assert.deepEqual(pressed(), ['Align center'], 'a caret in centered plain text');
+    assert.deepEqual(fonts(), ['Inter', '16px']);
+    await t.select(t.at('loud'), t.at('loud') + 4);
+    assert.deepEqual(pressed(), ['Bold', 'Align center'], 'selecting bold text presses Bold');
+    await t.shortcut('i');
+    assert.deepEqual(pressed(), ['Bold', 'Italic', 'Align center'], 'the italic shortcut presses Italic');
+    await act(async () => tool('Italic').click());
+    assert.deepEqual(pressed(), ['Bold', 'Align center'], 'pressing Italic removes italic and releases it');
+    await act(async () => tool('Underline').click());
+    await act(async () => tool('Align right').click());
+    assert.deepEqual(pressed(), ['Bold', 'Underline', 'Align right']);
+    assert.deepEqual(filled(), pressed(), 'every pressed tool, and only those, has the active fill');
+    await t.select(t.at('item') + 1);
+    assert.deepEqual(pressed(), ['Bullet list'], 'a caret in a list item presses Bullet list');
+    await act(async () => tool('Bullet list').click());
+    assert.deepEqual(pressed(), [], 'pressing Bullet list lifts the item out of the list');
+    await t.select(t.at('styled') + 2);
+    assert.deepEqual(fonts(), ['serif', '18px'], 'the font selects show the font at the caret');
+    await t.select(t.at('plain') + 2);
+    assert.deepEqual(fonts(), ['Inter', '16px']);
+
+    // Picking a value applies it and the select keeps showing it, over a range and at a caret.
+    const pick = (name, value) => act(async () => {
+      tool(name).value = value;
+      tool(name).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await t.select(t.at('plain'), t.at('plain') + 5);
+    await pick('Font family', 'monospace');
+    await pick('Font size', '24px');
+    assert.deepEqual(fonts(), ['monospace', '24px']);
+    assert.deepEqual(t.editor.state.doc.nodeAt(t.at('plain')).marks.map(({ type, attrs }) => [type.name, attrs.fontFamily, attrs.fontSize]), [['textStyle', 'monospace', '24px']]);
+    await t.select(t.at('item') + 1);
+    assert.deepEqual(fonts(), ['Inter', '16px']);
+    await pick('Font family', 'cursive');
+    assert.deepEqual(fonts(), ['cursive', '16px'], 'a font picked at a caret shows until the caret moves');
+    assert.equal(t.editor.getAttributes('textStyle').fontFamily, 'cursive');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor bubble menu tools show the formatting of the selection as it changes', async () => {
+  const t = await mountEditor({ toolbar: false, bubbleMenu: true, defaultValue: { type: 'doc', content: [
+    { type: 'paragraph', content: [{ type: 'text', text: 'plain ' }, { type: 'text', text: 'loud', marks: [{ type: 'bold' }] }] },
+  ] } });
+  try {
+    const pressed = () => [...document.querySelectorAll('[aria-label="Selection formatting"] [aria-pressed="true"]')].map((node) => node.getAttribute('aria-label'));
+    await t.select(t.at('plain'), t.at('plain') + 5);
+    assert.deepEqual(pressed(), []);
+    await t.shortcut('i');
+    assert.deepEqual(pressed(), ['Italic'], 'the italic shortcut presses Italic');
+    await t.select(t.at('loud'), t.at('loud') + 4);
+    assert.deepEqual(pressed(), ['Bold'], 'a new selection shows its own formatting');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor content is a multiline textbox that names its placeholder while the document is empty and editable', async () => {
+  const t = await mountEditor({ toolbar: false, placeholder: 'Write a note' });
+  try {
+    // The stylesheet draws the placeholder on the empty paragraph Tiptap's Placeholder marks.
+    const drawn = () => t.pm.querySelector('p.is-editor-empty:first-child') !== null;
+    assert.equal(t.pm.getAttribute('role'), 'textbox');
+    assert.equal(t.pm.getAttribute('aria-multiline'), 'true', 'Enter starts a new paragraph, so the textbox is multiline');
+    assert.equal(drawn(), true);
+    assert.equal(t.pm.getAttribute('aria-placeholder'), 'Write a note', 'the empty editor names the placeholder it draws');
+    await act(async () => { t.editor.commands.insertContent('Hi'); });
+    assert.equal(drawn(), false);
+    assert.equal(t.pm.hasAttribute('aria-placeholder'), false, 'text replaces the placeholder');
+    await act(async () => { t.editor.commands.clearContent(true); });
+    assert.equal(drawn(), true);
+    assert.equal(t.pm.getAttribute('aria-placeholder'), 'Write a note', 'emptying the editor brings it back');
+    await t.render({ readOnly: true });
+    assert.equal(drawn(), false);
+    assert.equal(t.pm.hasAttribute('aria-placeholder'), false, 'a read-only editor draws no placeholder');
+    assert.equal(t.pm.getAttribute('aria-multiline'), 'true');
+    await t.render({ readOnly: false });
+    assert.equal(t.pm.getAttribute('aria-placeholder'), 'Write a note');
+  } finally {
+    await t.close();
+  }
+  const blank = await mountEditor({ toolbar: false });
+  try {
+    assert.equal(blank.pm.hasAttribute('aria-placeholder'), false, 'no placeholder, no attribute');
+  } finally {
+    await blank.close();
+  }
+});
+
 // Mounts a TextEditor with a selection bar in its own jsdom. The editor text is
 // "Hello brave new world"; "brave" is bold and spans positions 7 to 12.
 const selectionDocument = { type: 'doc', content: [{ type: 'paragraph', content: [
