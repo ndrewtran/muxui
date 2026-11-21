@@ -285,15 +285,16 @@
   background-color: transparent;
 }
 
-/* The overlays opened inside a sheet portal into its layer: a point on the sheet's resting bottom edge, above the
-   panel, that moves with the sheet, so an overlay placed against a trigger in the sheet moves with that trigger. It
-   moves by its offset, not a transform, so a fixed overlay in it, such as a Dialog opened from the sheet, still covers
-   the page, and what portals into it takes none of the sheet's travel or viewport offset. */
+/* The overlays opened inside a sheet portal into its layer: a line along the sheet's resting bottom edge, above the
+   panel, that moves with the sheet, so an overlay placed against a trigger in the sheet moves with that trigger. The
+   line is as wide as the page, so an overlay in it wraps as it does on the page, and has no height, so it takes no
+   press. It moves by its offset, not a transform, so a fixed overlay in it, such as a Dialog opened from the sheet,
+   still covers the page, and what portals into it takes none of the sheet's travel or viewport offset. */
 .muxui-dialog__layer {
   position: fixed;
   left: 0;
   bottom: calc(100% - var(--visual-viewport-height, 100%) - var(--muxui-dialog-viewport-top, 0px) - var(--muxui-modal-y, 0px));
-  width: 0;
+  width: 100%;
   height: 0;
   z-index: 102;
 }

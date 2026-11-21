@@ -182,6 +182,24 @@ async function openInner(page) {
   });
 }
 
+// The size of the overlay that `selector` names, once it has held still for five frames, its distance from the
+// trigger it opened from, on whichever side it is, and the trigger's width.
+const settledBox = (page, selector, trigger) => page.evaluate(async ({ selector: target, trigger: from }) => {
+  const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+  let node = null;
+  for (let frames = 0; !(node = document.querySelector(target)) && frames < 240; frames += 1) await frame();
+  let last = null;
+  for (let still = 0, frames = 0; still < 5 && frames < 240; frames += 1) {
+    await frame();
+    const { left, top, width, height } = node.getBoundingClientRect();
+    still = `${left} ${top} ${width} ${height}` === last ? still + 1 : 0;
+    last = `${left} ${top} ${width} ${height}`;
+  }
+  const box = node.getBoundingClientRect();
+  const anchor = document.querySelector(from).getBoundingClientRect();
+  return { width: box.width, height: box.height, gap: box.top >= anchor.bottom ? box.top - anchor.bottom : anchor.top - box.bottom, anchorWidth: anchor.width };
+}, { selector, trigger });
+
 // A flick of a touch pointer, dispatched within one task a few milliseconds apart by the page's own clock, so its
 // speed does not depend on round trips to the browser. The pointer is synthetic, so the sheet cannot capture it.
 const flick = (page, selector, dy) => page.evaluate(({ selector: target, distance }) => {
@@ -646,6 +664,50 @@ for (const engine of browserEngines()) {
           assert.equal(await page.locator('.muxui-dialog').count(), 1, 'Escape closes only the inner sheet');
           await waitForFocus(page, 'inner-trigger');
         });
+      });
+
+      await t.test('a Tooltip, a Popover and a Select list inside the sheet keep the size and place they have in a centred Dialog, in either direction, and the layer they portal into takes no press', async () => {
+        for (const dir of ['ltr', 'rtl']) {
+          const seen = {};
+          for (const presentation of ['center', 'sheet']) {
+            await withPage({ dir }, async (page) => {
+              await page.evaluate((next) => window.__muxuiSheet.setProps({ overlays: true, presentation: next }), presentation);
+              await openSheet(page);
+              await page.locator('#tip-trigger').hover();
+              const tooltip = await settledBox(page, '.muxui-tooltip', '#tip-trigger');
+              await page.mouse.move(1, 1);
+              await page.locator('.muxui-tooltip').waitFor({ state: 'detached' });
+              await page.locator('#note-trigger').click();
+              const popover = await settledBox(page, '.muxui-popover:has(#note-text)', '#note-trigger');
+              await page.keyboard.press('Escape');
+              await page.locator('#note-text').waitFor({ state: 'detached' });
+              await page.locator('.muxui-select__trigger').click();
+              const list = await settledBox(page, '.muxui-select__popup', '.muxui-select__trigger');
+              await page.keyboard.press('Escape');
+              await page.locator('.muxui-select__popup').waitFor({ state: 'detached' });
+              seen[presentation] = { tooltip, popover, list };
+              if (presentation !== 'sheet') return;
+              // The layer spans the page along the sheet's bottom edge and takes no room, so a press there reaches the sheet.
+              const layer = await page.evaluate(() => {
+                const box = document.querySelector('.muxui-dialog__layer').getBoundingClientRect();
+                const panel = document.querySelector('.muxui-dialog');
+                const hits = [0.1, 0.5, 0.9].map((share) => panel.contains(document.elementFromPoint(window.innerWidth * share, window.innerHeight - 2)));
+                return { height: box.height, hits };
+              });
+              assert.equal(layer.height, 0, `in ${dir} the layer takes no room`);
+              assert.deepEqual(layer.hits, [true, true, true], `in ${dir} a press along the sheet's bottom edge reaches the sheet`);
+            });
+          }
+          const { center, sheet } = seen;
+          for (const part of ['tooltip', 'popover']) {
+            for (const measure of ['width', 'height', 'gap']) {
+              assert.ok(Math.abs(sheet[part][measure] - center[part][measure]) <= 1, `in ${dir} the ${part}'s ${measure} is ${sheet[part][measure]} in the sheet and ${center[part][measure]} in a centred Dialog`);
+            }
+          }
+          for (const [presentation, { list }] of Object.entries(seen)) {
+            assert.ok(Math.abs(list.width - list.anchorWidth) <= 1, `in ${dir} the Select list is ${list.width} wide under a ${list.anchorWidth} field in the ${presentation} presentation`);
+          }
+        }
       });
 
       await t.test('narrowing the window during a drag ends the drag, so the rewrapped sheet neither trails the pointer nor dismisses', () => withPage({ wordy: true }, async (page) => {
