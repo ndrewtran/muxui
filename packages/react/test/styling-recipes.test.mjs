@@ -186,6 +186,9 @@ test('the picks: which families get a token step and which of their roles, how m
   assert.deepEqual(tokens, {
     // The Basic example is a danger Button, which paints its own colors: only the radius reaches it.
     button: ['--muxui-component-button-radius: 999px'],
+    // Badge paints its tones from TagGroup's tone tokens, so its recipe themes the brand badge of its Basic example by them: the brand
+    // text and the weak tint that is its soft fill, a navy and white pair.
+    badge: ['--muxui-component-taggroup-brand-foreground: #ffffff', '--muxui-component-taggroup-brand-tint-weak: #1e1b4b'],
     // The checked box and its mark, found on the selected indicator the Basic example renders.
     // A color is chosen by the property its role paints, not by its position: a surface and the text drawn on it, when the recipe assigns
     // both, get a navy and white pair; a fill and the mark drawn on it, when neither holds text, get a violet and white pair that stands

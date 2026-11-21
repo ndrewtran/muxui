@@ -461,8 +461,8 @@ test('every family\'s recipe changes what it says it changes, in light and dark'
   assert.deepEqual(unchanged, []);
   assert.deepEqual(unreadable, [], `every element a color step paints keeps the contrast guard: text 1.5x the WCAG rule for its size and weight, a mark or a fill that holds no text 3:1, nothing lower than it was`);
   // The readings: every element each color step paints, in light and in dark.
-  assert.deepEqual(kinds, { text: 12, mark: 6, fill: 6 }, 'readings: TagGroup\'s three tags under both its steps, then the mark and the fill of Checkbox, CheckboxField and IconButton, in two color schemes');
-  assert.equal(steps, 298, 'steps measured in 83 Basic examples, each in two color schemes; four visible portal recipes have live proof');
+  assert.deepEqual(kinds, { text: 20, mark: 6, fill: 6 }, 'readings: TagGroup\'s three tags and Badge\'s two brand badges under both their steps, then the mark and the fill of Checkbox, CheckboxField and IconButton, in two color schemes');
+  assert.equal(steps, 304, 'steps measured in 84 Basic examples, each in two color schemes; four visible portal recipes have live proof');
 });
 
 test('the rule the guard holds text to: 4.5:1 for normal text, 3:1 for large text and for a glyph, by the element\'s own size and weight', () => {

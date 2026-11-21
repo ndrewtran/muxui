@@ -81,6 +81,7 @@ const GUIDES = {
   image: { native: ['width', 'height'] },
   // Avatar's block is Avatar.Root's; alt is Avatar.Image's native image attribute.
   avatar: { native: ['alt', 'alt=""'] },
+  badge: {},
   message: { native: ['http', 'https'] },
   activity: {},
   'data-diff': { native: ['0', 'false', 'null'] },
