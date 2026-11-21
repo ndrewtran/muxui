@@ -33,7 +33,7 @@ The Selection actions React TextEditor example runs a caller-owned edit with a K
 - Check an address with `normalizeTextEditorUrl` before sending it. The link and image commands refuse exactly what it refuses.
 - Keep the tools one Tab stop with arrow keys between them, as [Toolbar](/components/toolbar/) does, and give each tool a name and its pressed state.
 
-The TextEditor with its own toolbar example builds these tools.
+The TextEditor with its own formatting controls example builds them.
 
 ## Opening and focus
 

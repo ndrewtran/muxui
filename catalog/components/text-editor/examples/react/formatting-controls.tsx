@@ -2,11 +2,11 @@ import { useRef, useState } from 'react';
 import { Button, TextField, ToggleButton, Toolbar } from '@muxui/react';
 import { TextEditor, normalizeTextEditorUrl, type TextEditorCommand, type TextEditorFormatting, type TextEditorHandle } from '@muxui/react/text-editor';
 
-type Tool = { label: string; on: (formatting: TextEditorFormatting) => boolean; command: (on: boolean) => TextEditorCommand };
+type Control = { label: string; on: (formatting: TextEditorFormatting) => boolean; command: (on: boolean) => TextEditorCommand };
 
-// Each tool shows the formatting the editor reports and sends a command back. Heading sets the block and leaves a heading
-// that already is one alone, so the tool sends a paragraph to turn its heading off.
-const tools: Tool[] = [
+// Each control shows the formatting the editor reports and sends a command back. Heading sets the block and leaves a heading
+// that already is one alone, so the control sends a paragraph to turn its heading off.
+const controls: Control[] = [
   { label: 'Bold', on: ({ marks }) => marks.bold, command: () => ({ type: 'bold' }) },
   { label: 'Italic', on: ({ marks }) => marks.italic, command: () => ({ type: 'italic' }) },
   { label: 'Strikethrough', on: ({ marks }) => marks.strike, command: () => ({ type: 'strike' }) },
@@ -16,7 +16,7 @@ const tools: Tool[] = [
   { label: 'Bullet list', on: ({ list }) => list === 'bulletList', command: () => ({ type: 'bulletList' }) },
 ];
 
-export function CustomToolbarTextEditorExample() {
+export function FormattingControlsTextEditorExample() {
   const editor = useRef<TextEditorHandle>(null);
   const [formatting, setFormatting] = useState<TextEditorFormatting | null>(null);
   const [address, setAddress] = useState('');
@@ -33,11 +33,11 @@ export function CustomToolbarTextEditorExample() {
   return (
     <div>
       <Toolbar aria-label="Formatting">
-        {tools.map((tool) => {
-          const on = formatting ? tool.on(formatting) : false;
+        {controls.map((control) => {
+          const on = formatting ? control.on(formatting) : false;
           return (
-            <ToggleButton key={tool.label} selected={on} onActivate={() => editor.current?.execute(tool.command(on))}>
-              {tool.label}
+            <ToggleButton key={control.label} selected={on} onActivate={() => editor.current?.execute(control.command(on))}>
+              {control.label}
             </ToggleButton>
           );
         })}

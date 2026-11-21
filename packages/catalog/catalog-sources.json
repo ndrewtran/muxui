@@ -1866,7 +1866,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/text-editor/examples/react/custom-toolbar.example.json"
+      "path": "catalog/components/text-editor/examples/react/formatting-controls.example.json"
     },
     {
       "family": "example",
