@@ -257,7 +257,8 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     const portal = portalPage.locator('.muxui-select__popup');
     assert.notEqual(await portal.evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
     assert.equal(await portal.evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-reference-color-brand-60').trim()), appliedBrand);
-    assert.equal(await portal.evaluate((node) => getComputedStyle(node).boxSizing), 'content-box');
+    // The popup sizes by its border box, so its border counts toward the width that matches its trigger.
+    assert.equal(await portal.evaluate((node) => getComputedStyle(node).boxSizing), 'border-box');
 
     await portalPage.goto(`${url}/components/number-field/`);
     const numberStepper = portalPage.locator('.muxui-number-field__stepper').first();
