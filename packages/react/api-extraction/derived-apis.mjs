@@ -30,6 +30,7 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'message', name: 'Message', source: 'packages/react/src/supplemental/message.ts' },
   // Badge is a single component: its API is the export's own.
   { slug: 'badge', name: 'Badge', source: 'packages/react/src/supplemental/badge.ts' },
+  { slug: 'banner', name: 'Banner', source: 'packages/react/src/supplemental/banner.ts' },
   { slug: 'activity', name: 'Activity', source: 'packages/react/src/supplemental/activity.ts' },
   { slug: 'data-diff', name: 'DataDiff', source: 'packages/react/src/supplemental/data-diff.ts' },
   { slug: 'checkbox', name: 'Checkbox', source: 'packages/react/src/components.ts' },
