@@ -395,11 +395,13 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
+/* React Aria sets --trigger-width to the field's width and places the popover at the field's start edge. Border-box
+   sizing and no start margin keep the whole popover, border included, at least that wide and flush with the field. */
 .muxui-combo-box__popover {
+  box-sizing: border-box;
   padding: var(--muxui-semantic-layout-inset-tight);
-  min-width: var(--anchor-width);
+  min-width: var(--trigger-width);
   max-height: 17.5rem;
-  margin-inline-start: 1px;
   margin-block-start: -1px;
   box-shadow:
     0 4px 4px -10px rgb(0 0 0 / 4%),
@@ -2897,12 +2899,28 @@
 }
 
 /* RAC state attributes are mirrored by the wrappers for deterministic styling. */
-.muxui-combo-box__option[aria-disabled='true'],
 .muxui-select__option[aria-disabled='true'] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+/* A disabled ComboBox option is dimmed and unfilled, as a disabled ListBox or Menu item is, so it never looks like
+   the highlighted option. Coming later at the same specificity, it also replaces the shared disabled fill in base.css. */
+.muxui-combo-box__option[aria-disabled='true'] {
+  opacity: 0.45;
+  background-color: transparent;
+  color: var(--muxui-semantic-content-default);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Forced colours paint every option in system colours, where dimming would only lower their contrast. */
+@media (forced-colors: active) {
+  .muxui-combo-box__option[aria-disabled='true'] {
+    opacity: 1;
+  }
 }
 
 .muxui-list-box__item[data-muxui-state-disabled],
@@ -3566,27 +3584,6 @@
     0 4px 4px -10px rgb(0 0 0 / 4%),
     0 13px 13px -10px rgb(0 0 0 / 6%),
     0 40px 60px -10px rgb(0 0 0 / 8%);
-}
-
-/* Opening a combobox places focus on its first option in the local fixture. RAC
-   keeps focus on the input, so mirror that visual state on the first rendered
-   option without changing the input's focus semantics. */
-@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope
-    .muxui-combo-box__popover
-    .muxui-combo-box__option:first-child {
-    background-color: var(--muxui-semantic-color-neutral-default-14);
-    color: var(--muxui-semantic-color-neutral-default-90);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope
-    .muxui-combo-box__popover
-    .muxui-combo-box__option:first-child {
-    background-color: var(--muxui-semantic-color-neutral-default-96);
-    color: var(--muxui-semantic-content-default);
-  }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
