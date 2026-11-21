@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:5ed164642e0c4e138a0bb3595f47928696a89a159aac1f47ed2788d776aeeb12 -->
+<!-- @generated-content-sha256: sha256:9df51e625dc9455685fc117f8fb22bda35a7d89bf1490343d8a40620735869fa -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -222,7 +222,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ThemePicker | experimental | . | .muxui-theme-picker | value, defaultValue, random, disabled |
 | TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |
 | Toast | experimental | . | .muxui-toast | message, title, variant, duration |
-| ToggleButton | experimental | . | .muxui-toggle-button | selected, defaultSelected, disabled, size |
+| ToggleButton | experimental | . | .muxui-toggle-button | selected, defaultSelected, disabled, size, variant, preventFocusOnPress |
 | ToggleButtonGroup | experimental | . | .muxui-toggle-button-group | selectedIds, defaultSelectedIds, selectionMode, disabled, orientation, disallowEmptySelection, size |
 | TokenField | experimental | . | .muxui-token-field | label, value, defaultValue, disabled, readOnly, name, placeholder |
 | Toolbar | experimental | . | .muxui-toolbar | orientation |

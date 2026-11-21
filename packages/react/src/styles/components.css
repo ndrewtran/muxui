@@ -772,7 +772,7 @@
   color: var(--muxui-semantic-color-neutral-80-fg);
 }
 
-.muxui-toggle-button[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]) {
+.muxui-toggle-button[data-muxui-state-selected]:hover:not([data-muxui-state-disabled], [data-muxui-variant='quiet']) {
   background-color: var(--muxui-semantic-color-neutral-90);
   outline-color: var(--muxui-semantic-color-neutral-90);
   color: var(--muxui-semantic-color-neutral-80-fg);
@@ -1324,14 +1324,14 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-toggle-button[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]) {
+  :scope .muxui-toggle-button[data-muxui-state-selected]:hover:not([data-muxui-state-disabled], [data-muxui-variant='quiet']) {
     background-color: var(--muxui-semantic-color-neutral-90);
     border-color: var(--muxui-semantic-color-neutral-90);
   }
 }
 
 @media (forced-colors: none) {
-  .muxui-toggle-button[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]):not(.muxui-toggle-button-group .muxui-toggle-button) {
+  .muxui-toggle-button[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]):not(.muxui-toggle-button-group .muxui-toggle-button, [data-muxui-variant='quiet']) {
     background-color: var(--muxui-semantic-color-neutral-80);
     outline-color: var(--muxui-semantic-color-neutral-80);
     background-image: linear-gradient(
@@ -1343,10 +1343,109 @@
 
 @media (forced-colors: none) {
   @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-    :scope .muxui-toggle-button[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]):not(.muxui-toggle-button-group .muxui-toggle-button) {
+    :scope .muxui-toggle-button[data-muxui-state-selected]:hover:not([data-muxui-state-disabled]):not(.muxui-toggle-button-group .muxui-toggle-button, [data-muxui-variant='quiet']) {
       background-color: var(--muxui-semantic-color-neutral-80);
       outline-color: var(--muxui-semantic-color-neutral-80);
     }
+  }
+}
+
+/* A standalone ToggleButton shows a pressed fill while a pointer or Space holds it, apart from its rest, hover and
+   selected fills. A grouped one keeps the group's motion layers. The selected rule has a dark copy because the dark
+   selected-hover recipe above is scoped and would otherwise win. */
+@media (forced-colors: none) {
+  .muxui-toggle-button[data-muxui-state-pressed]:not([data-muxui-state-disabled]):not(.muxui-toggle-button-group .muxui-toggle-button, [data-muxui-variant='quiet']) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 16%, transparent);
+  }
+
+  .muxui-toggle-button[data-muxui-state-selected][data-muxui-state-pressed]:not([data-muxui-state-disabled]):not(.muxui-toggle-button-group .muxui-toggle-button, [data-muxui-variant='quiet']) {
+    background-color: var(--muxui-semantic-color-neutral-70);
+    background-image: none;
+    outline-color: var(--muxui-semantic-color-neutral-70);
+  }
+
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope .muxui-toggle-button[data-muxui-state-selected][data-muxui-state-pressed]:not([data-muxui-state-disabled]):not(.muxui-toggle-button-group .muxui-toggle-button, [data-muxui-variant='quiet']) {
+      background-color: var(--muxui-semantic-color-neutral-70);
+      background-image: none;
+      outline-color: var(--muxui-semantic-color-neutral-70);
+    }
+  }
+}
+
+/* The quiet variant draws no outline and no selected fill, for a toggle repeated down a list. Selected text turns
+   from muted to strong, and the caller changes the glyph or label with the state, so colour is not the only cue.
+   Each rule has a dark copy because the dark recipes above are scoped and would otherwise win. */
+.muxui-toggle-button[data-muxui-variant='quiet'] {
+  outline-color: transparent;
+  color: var(--muxui-semantic-content-muted);
+}
+
+.muxui-toggle-button[data-muxui-variant='quiet'][data-muxui-state-selected] {
+  background-color: transparent;
+  outline-color: transparent;
+  color: var(--muxui-semantic-content-strong);
+}
+
+.muxui-toggle-button[data-muxui-variant='quiet']:hover:not([data-muxui-state-disabled]) {
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
+  outline-color: transparent;
+  color: var(--muxui-semantic-content-strong);
+}
+
+.muxui-toggle-button[data-muxui-variant='quiet'][data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 16%, transparent);
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toggle-button[data-muxui-variant='quiet'] {
+    outline-color: transparent;
+    color: var(--muxui-semantic-content-muted);
+  }
+
+  :scope .muxui-toggle-button[data-muxui-variant='quiet'][data-muxui-state-selected] {
+    background-color: transparent;
+    outline-color: transparent;
+    color: var(--muxui-semantic-content-strong);
+  }
+
+  :scope .muxui-toggle-button[data-muxui-variant='quiet']:hover:not([data-muxui-state-disabled]) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
+    outline-color: transparent;
+    color: var(--muxui-semantic-content-strong);
+  }
+
+  :scope .muxui-toggle-button[data-muxui-variant='quiet'][data-muxui-state-pressed]:not([data-muxui-state-disabled]) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 16%, transparent);
+  }
+}
+
+/* Under forced colours a quiet ToggleButton uses system colours: a ButtonText edge as every button has, and Highlight
+   for the selected one as in a group. !important, as in the other forced-colour rules, so the scoped dark recipes
+   cannot paint over them. */
+@media (forced-colors: active) {
+  .muxui-toggle-button[data-muxui-variant='quiet'] {
+    outline-color: ButtonText !important;
+    background-color: ButtonFace !important;
+    background-image: none !important;
+    color: ButtonText !important;
+  }
+
+  .muxui-toggle-button[data-muxui-variant='quiet'][data-muxui-state-selected] {
+    background-color: Highlight !important;
+    color: HighlightText !important;
+  }
+
+  .muxui-toggle-button[data-muxui-variant='quiet'][data-muxui-state-disabled] {
+    outline-color: GrayText !important;
+    background-color: ButtonFace !important;
+    color: GrayText !important;
+  }
+
+  .muxui-toggle-button[data-muxui-variant='quiet']:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    box-shadow: none !important;
   }
 }
 

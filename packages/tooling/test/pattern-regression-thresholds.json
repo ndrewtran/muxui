@@ -427,6 +427,30 @@
           286
         ],
         "afterFirstMeasurement": true
+      },
+      {
+        "query": "billing toggle",
+        "field": "expectedWithin",
+        "from": 10,
+        "to": 12,
+        "change": "expectedWithin 10 -> 12",
+        "reason": "Every example id carries its family slug, so each example of a family named in the query outranks a pattern that matches by description. The pattern already sat on the tenth-place limit, and the two ToggleButton examples for the quiet variant and for keeping focus on press, one per new capability, move it to twelfth. The pattern's own score is unchanged and the weakness stays recorded on the query.",
+        "pullRequests": [
+          511
+        ],
+        "afterFirstMeasurement": true
+      },
+      {
+        "query": "billing toggle",
+        "field": "knownWeakness",
+        "from": "The Toggle component ids and names outscore any pattern for a component word, so the pattern ranks ninth.",
+        "to": "Every example id carries its family slug, so each example of a family named in the query outranks a pattern that matches by description: the Toggle component, example and guide ids and names outscore the pattern for a component word. The pattern ranked ninth, then sat on the tenth-place limit, and ranks twelfth once the quiet and keep-focus ToggleButton examples are added.",
+        "change": "knownWeakness extended to say why each example of a family named in the query outranks the pattern, and that it ranks twelfth",
+        "reason": "The weakness that moves the limit is stated, not passed as a better rank.",
+        "pullRequests": [
+          511
+        ],
+        "afterFirstMeasurement": true
       }
     ]
   },
@@ -624,9 +648,9 @@
           "muxui:component:toggle-button-group",
           "muxui:example:toggle-button-group-basic-react"
         ],
-        "expectedWithin": 10,
+        "expectedWithin": 12,
         "expectedId": "muxui:pattern:pricing-plans",
-        "knownWeakness": "The Toggle component ids and names outscore any pattern for a component word, so the pattern ranks ninth."
+        "knownWeakness": "Every example id carries its family slug, so each example of a family named in the query outranks a pattern that matches by description: the Toggle component, example and guide ids and names outscore the pattern for a component word. The pattern ranked ninth, then sat on the tenth-place limit, and ranks twelfth once the quiet and keep-focus ToggleButton examples are added."
       },
       {
         "query": "settings form",

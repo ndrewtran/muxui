@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:toggle-button-keep-focus-react",
+  "kind": "example",
+  "name": "ToggleButton that keeps focus on press",
+  "summary": "Formatting tools that leave focus and the text selection in the field on a pointer press, while the keyboard still reaches them.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:toggle-button#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/toggle-button/examples/react/keep-focus.tsx"
+}

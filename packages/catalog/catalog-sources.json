@@ -1803,6 +1803,14 @@
     {
       "family": "guide",
       "path": "catalog/guides/skeleton-usage.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/toggle-button/examples/react/keep-focus.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/toggle-button/examples/react/quiet.example.json"
     }
   ]
 }

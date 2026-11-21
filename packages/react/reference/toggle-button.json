@@ -39,6 +39,19 @@
               "doc": "The control size. Without one, a ToggleButton in a ToggleButtonGroup takes the group's size, and any other takes md."
             },
             {
+              "name": "variant",
+              "optional": true,
+              "type": "'default' | 'quiet'",
+              "values": ["default", "quiet"],
+              "doc": "How the selected state is drawn. default fills a selected ToggleButton. quiet draws no outline and no selected fill,\nfor a toggle repeated down a list: its text turns from muted to strong, and the caller changes the glyph or label\nwith the state. quiet is not available inside a ToggleButtonGroup, which draws its own selected fill."
+            },
+            {
+              "name": "preventFocusOnPress",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Keeps focus where it is when a pointer presses the ToggleButton, such as a formatting tool that must leave the text\nselection in an editor. The keyboard still focuses and activates it."
+            },
+            {
               "name": "onChange",
               "optional": true,
               "type": "(selected: boolean) => void",
@@ -63,6 +76,8 @@
                 "defaultSelected",
                 "disabled",
                 "size",
+                "variant",
+                "preventFocusOnPress",
                 "onChange",
                 "onActivate",
                 "children",
@@ -116,7 +131,7 @@
       "id": "components#ToggleButtonOwnProps",
       "name": "ToggleButtonOwnProps",
       "module": "components",
-      "text": "interface ToggleButtonOwnProps {\n  selected?: boolean;\n  defaultSelected?: boolean;\n  disabled?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n  onChange?: (selected: boolean) => void;\n  onActivate?: (event: ToggleButtonActivationEvent) => void;\n}",
+      "text": "interface ToggleButtonOwnProps {\n  selected?: boolean;\n  defaultSelected?: boolean;\n  disabled?: boolean;\n  size?: 'sm' | 'md' | 'lg';\n  variant?: 'default' | 'quiet';\n  preventFocusOnPress?: boolean;\n  onChange?: (selected: boolean) => void;\n  onActivate?: (event: ToggleButtonActivationEvent) => void;\n}",
       "members": [
         {
           "name": "selected",
@@ -142,6 +157,19 @@
           "type": "'sm' | 'md' | 'lg'",
           "values": ["sm", "md", "lg"],
           "doc": "The control size. Without one, a ToggleButton in a ToggleButtonGroup takes the group's size, and any other takes md."
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "'default' | 'quiet'",
+          "values": ["default", "quiet"],
+          "doc": "How the selected state is drawn. default fills a selected ToggleButton. quiet draws no outline and no selected fill,\nfor a toggle repeated down a list: its text turns from muted to strong, and the caller changes the glyph or label\nwith the state. quiet is not available inside a ToggleButtonGroup, which draws its own selected fill."
+        },
+        {
+          "name": "preventFocusOnPress",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Keeps focus where it is when a pointer presses the ToggleButton, such as a formatting tool that must leave the text\nselection in an editor. The keyboard still focuses and activates it."
         },
         {
           "name": "onChange",

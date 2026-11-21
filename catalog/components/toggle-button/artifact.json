@@ -29,7 +29,9 @@
     "nameRequired": true,
     "obligations": [
       "Expose pressed state",
-      "Expose disabled state"
+      "Expose disabled state",
+      "Show the selected state by more than colour: a quiet ToggleButton's caller changes its glyph or label with the state",
+      "Keep every ToggleButton reachable and operable from the keyboard, including one that keeps focus on a pointer press"
     ]
   },
   "bindings": {
@@ -47,10 +49,17 @@
         "Selection is either controlled by the application or managed by the component",
         "size must be sm, md, or lg, or ToggleButton throws a TypeError",
         "Outside a ToggleButtonGroup, size defaults to md",
-        "Inside a ToggleButtonGroup, a ToggleButton without size takes the size of the group, and a size on the ToggleButton takes precedence"
+        "Inside a ToggleButtonGroup, a ToggleButton without size takes the size of the group, and a size on the ToggleButton takes precedence",
+        "variant must be default or quiet, or ToggleButton throws a TypeError",
+        "default fills a selected ToggleButton; quiet draws no outline and no selected fill, and its selected text turns from muted to strong",
+        "variant quiet inside a ToggleButtonGroup throws a TypeError, since the group draws its own selected fill",
+        "A ToggleButton outside a group shows a pressed fill while a pointer or Space holds it; inside a group the group's paint applies",
+        "With preventFocusOnPress, a pointer press toggles the ToggleButton and leaves focus and the text selection where they were; Tab and the arrow keys of a Toolbar still focus it"
       ],
       "accessibility": [
-        "Expose button role, pressed state, accessible name, and disabled state"
+        "Expose button role, pressed state, accessible name, and disabled state",
+        "Under forced colours a quiet ToggleButton uses system colours: Highlight when selected and GrayText at full opacity when disabled",
+        "A quiet ToggleButton keeps the keyboard focus ring when it draws no outline"
       ],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",
@@ -74,7 +83,10 @@
           { "token": "semantic.control.size-sm", "requirement": "required" },
           { "token": "semantic.control.size-md", "requirement": "required" },
           { "token": "semantic.control.size-lg", "requirement": "required" },
-          { "token": "component.button.icon-size", "requirement": "required" }
+          { "token": "component.button.icon-size", "requirement": "required" },
+          { "token": "semantic.content.muted", "requirement": "required" },
+          { "token": "semantic.content.strong", "requirement": "required" },
+          { "token": "semantic.surface.strong", "requirement": "required" }
         ]
       },
       "runtimeProfiles": {}
