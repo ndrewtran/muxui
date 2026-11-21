@@ -2283,7 +2283,7 @@
       "layer": "component",
       "type": "dimension",
       "unit": "px",
-      "meaning": "Public Button corner-radius customization point.",
+      "meaning": "Public Button corner-radius customization point at the md and lg sizes; sm reads semantic.shape.option-radius.",
       "overridePolicy": "theme",
       "alias": "semantic.control.radius"
     },

@@ -28,6 +28,12 @@ button/form attributes follow `Button`. Every size is square, with minimum
 heights aligned to Mux buttons. Theme control and spacing tokens determine
 their dimensions. Use `Button` when visible text is needed.
 
+Corners follow Button: the medium and large sizes take the Button radius role,
+and the small size (`sm`) takes the theme's option radius, the radius that
+options, rows and fields share. The [Button](/components/button/) guide's
+Corner radius section shows how a theme changes each one and how one small
+IconButton, such as a round one, gets its own corner.
+
 `pending` replaces the icon with a static indicator, preserves the accessible
 name and focusability, and blocks activation without changing the button size.
 IconButton has no `showTextWhileLoading` prop. `disabled` uses the normal
