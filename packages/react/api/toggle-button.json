@@ -9,7 +9,9 @@
       "selected",
       "defaultSelected",
       "disabled",
-      "size"
+      "size",
+      "variant",
+      "preventFocusOnPress"
     ],
     "events": [
       "change",
@@ -17,7 +19,8 @@
     ],
     "defaults": {
       "defaultSelected": false,
-      "disabled": false
+      "disabled": false,
+      "variant": "default"
     },
     "propDetails": {
       "selected": {
@@ -66,6 +69,34 @@
           "lg"
         ],
         "description": "The control size. Without one, a ToggleButton in a ToggleButtonGroup takes the group's size, and any other takes md."
+      },
+      "variant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "default"
+            },
+            {
+              "kind": "literal",
+              "value": "quiet"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "default",
+          "quiet"
+        ],
+        "description": "How the selected state is drawn. default fills a selected ToggleButton. quiet draws no outline and no selected fill,\nfor a toggle repeated down a list: its text turns from muted to strong, and the caller changes the glyph or label\nwith the state. quiet is not available inside a ToggleButtonGroup, which draws its own selected fill."
+      },
+      "preventFocusOnPress": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Keeps focus where it is when a pointer presses the ToggleButton, such as a formatting tool that must leave the text\nselection in an editor. The keyboard still focuses and activates it."
       }
     },
     "eventDetails": {
