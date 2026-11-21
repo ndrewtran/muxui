@@ -23,7 +23,7 @@ import { overlayGeometry, normalizeBoolean } from './overlay-positioning.mjs';
 import { createFocusManager } from 'react-aria/private/focus/FocusScope';
 import { PopoverMotion } from './popover-motion.mjs';
 import type { ButtonActivationEvent } from './button.ts';
-import { classNames, accessibleName } from './control-utils.ts';
+import { classNames, accessibleName, withHostAttributes } from './control-utils.ts';
 import { textContent, normalizeItems, collectionItem } from './collection-items.ts';
 import type { MuxUICollectionItem, MuxUIItems, NormalizedItem } from './collection-items.ts';
 import { CollectionTrigger } from './collection-trigger.ts';
@@ -298,6 +298,10 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
   const MenuItem = React.forwardRef<HTMLDivElement, MenuItemProps>(function MenuItem({ children, id, textValue, disabled = false, className, onAction, shouldCloseOnSelect, ...props }, ref) {
     const context = React.useContext(MenuContext);
     const effectiveDisabled = disabled ? disabled : context.disabled;
+    // The menu moves the tab stop between its items, so the caller's tabIndex is not laid under React Aria's DOM props.
+    const { tabIndex: _tabIndex, ...hostAttributes } = props;
+    // The element React Aria renders: an anchor for an item an untyped caller gives an href, otherwise a div.
+    const itemElement = 'href' in props && props.href ? 'a' : 'div';
     return React.createElement(AriaMenuItem, {
       ...(props as AriaMenuItemProps), ref, id,
       // A conditional, not ??: extraction reads a fallback on an owned prop as an executed default, and the item's own text is none.
@@ -308,6 +312,7 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       onAction: onAction ? () => { if (!effectiveDisabled) onAction(); } : undefined,
       ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
       className: classNames('muxui-menu__item', className),
+      render: (domProps: object) => React.createElement(itemElement, withHostAttributes(hostAttributes, domProps)),
     }, children);
   });
 
