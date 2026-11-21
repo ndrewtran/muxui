@@ -7,7 +7,7 @@
 //   DISCLOSURE-01    title is required and children optional, the ref is HTMLDivElement, and there is no Disclosure.Title.
 //   SWITCH-FIELD-01  Root's ref is HTMLDivElement and Button's is HTMLLabelElement, with onChange(checked: boolean), name and value.
 //   TEXT-AREA-01     TextArea.Root's ref is HTMLDivElement, TextArea.TextArea's is HTMLTextAreaElement, with its native surface named.
-//   TEXT-EDITOR-02   the text-editor entry lists all 32 exports, each declared exactly (the component's props, two signatures, 29 types).
+//   TEXT-EDITOR-02   the text-editor entry lists all 34 exports, each declared exactly (the component's props, three signatures, 30 types).
 //   X-002 (part)     CommandPalette says which parts need a Root around them.
 //   DATA-DIFF        DataDiff closes its table with the members it types never (a reviewed fact, not a ledger record).
 import { readFileSync } from 'node:fs';
@@ -82,10 +82,10 @@ const ref = (record, part, expected) => expect(record, part?.ref === expected, `
 	const { api } = page('text-editor');
 	const names = ['TextEditor', ...Object.keys(textEditorFunctions), ...Object.keys(textEditorTypes)];
 	const shown = [...api.exports.map(({ name }) => name), ...api.types.map(({ name }) => name)];
-	expect(record, names.length === 32 && shown.length === 32 && names.every((name) => shown.includes(name)), `the page must list the 32 exports of @muxui/react/text-editor, and lists ${shown.length}: missing ${names.filter((name) => !shown.includes(name)).join(', ') || 'none'}.`);
+	expect(record, names.length === 34 && shown.length === 34 && names.every((name) => shown.includes(name)), `the page must list the 34 exports of @muxui/react/text-editor, and lists ${shown.length}: missing ${names.filter((name) => !shown.includes(name)).join(', ') || 'none'}.`);
 	for (const item of api.exports) expect(record, item.import === `import { ${item.name} } from '@muxui/react/text-editor';`, `${item.name} must be imported from @muxui/react/text-editor, and shows "${item.import}".`);
 	for (const type of api.types) expect(record, type.imports.length === 1 && type.imports[0] === `import type { ${type.name} } from '@muxui/react/text-editor';`, `${type.name} must be imported from @muxui/react/text-editor.`);
-	// The two functions, by their exact signatures.
+	// The three functions, by their exact signatures.
 	for (const [name, signature] of Object.entries(textEditorFunctions)) {
 		const got = api.exports.find((item) => item.name === name)?.signature;
 		expect(record, got === signature, `${name} must have the signature "${signature}", and shows "${got}".`);

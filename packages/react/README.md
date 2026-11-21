@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:ff5a67754983126d2625ab839d0e308c5d7e1b6c9407b153f4e00e1e66929bf0 -->
+<!-- @generated-content-sha256: sha256:f8f9263bdc89ef72c9e9c6e7936c0c8b2eb5a3cbbcc3468dfe24acd93a6833f9 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -219,7 +219,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TagSelect | experimental | . | .muxui-tag-select | size, label, placeholder, description, errorMessage, disabled, required, invalid, items, selectedKeys, defaultSelectedKeys, getItemLabel; item: disabled, textValue |
 | Text | experimental | . | .muxui-text | variant, size, color, as, truncate |
 | TextArea | experimental | . | .muxui-text-area | value, defaultValue, disabled, invalid, required, readOnly, size |
-| TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, bubbleMenu, selectionActions, selectionInstruction |
+| TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, bubbleMenu, selectionActions, selectionInstruction, autoFocus, minRows, maxRows |
 | TextField | experimental | . | .muxui-text-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, type, inputProps |
 | ThemePicker | experimental | . | .muxui-theme-picker | value, defaultValue, random, disabled |
 | TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |

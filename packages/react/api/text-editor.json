@@ -21,7 +21,10 @@
       "floating",
       "bubbleMenu",
       "selectionActions",
-      "selectionInstruction"
+      "selectionInstruction",
+      "autoFocus",
+      "minRows",
+      "maxRows"
     ],
     "events": [
       "change",
@@ -29,7 +32,9 @@
       "imageRequest",
       "colorRequest",
       "generate",
-      "selectionRequest"
+      "selectionRequest",
+      "ready",
+      "formattingChange"
     ],
     "defaults": {
       "disabled": false,
@@ -40,7 +45,8 @@
       "toolbar": "simple",
       "floating": false,
       "bubbleMenu": false,
-      "selectionInstruction": true
+      "selectionInstruction": true,
+      "autoFocus": false
     },
     "propDetails": {
       "value": {
@@ -188,6 +194,27 @@
         },
         "required": false,
         "description": "Shows the \"Describe edits\" field in the selection bar. Defaults to true."
+      },
+      "autoFocus": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Focuses the editable content once it is in the page, without scrolling, when the editor is editable. Only the first mount reads it."
+      },
+      "minRows": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The least height of the content, in lines of its text. A fraction is rounded down, and a value below 1 means the default height."
+      },
+      "maxRows": {
+        "type": {
+          "kind": "number"
+        },
+        "required": false,
+        "description": "The greatest height of the content, in lines of its text, beyond which it scrolls. It is rounded as minRows is and never less than minRows."
       }
     },
     "eventDetails": {
@@ -380,6 +407,39 @@
         },
         "required": false,
         "description": "Called when an action or instruction is sent. A returned promise shows the pending state; a rejection shows\na failure message with Try again and Dismiss."
+      },
+      "ready": {
+        "prop": "onReady",
+        "type": {
+          "kind": "function",
+          "parameters": [],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called once the editable content is in the page and can take focus. It renders on the client after mount, so this runs after hydration."
+      },
+      "formattingChange": {
+        "prop": "onFormattingChange",
+        "type": {
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "formatting",
+              "type": {
+                "kind": "reference",
+                "name": "TextEditorFormatting"
+              },
+              "required": true
+            }
+          ],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Called with the formatting at the selection when the editor is ready, then whenever a selection move or an edit changes it."
       }
     },
     "types": {
@@ -696,6 +756,186 @@
             }
           ]
         }
+      },
+      "TextEditorFormatting": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "empty",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true,
+              "readonly": true,
+              "description": "True for a caret, false while text or a block is selected."
+            },
+            {
+              "name": "marks",
+              "type": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": "bold",
+                    "type": {
+                      "kind": "boolean"
+                    },
+                    "required": true,
+                    "readonly": true
+                  },
+                  {
+                    "name": "italic",
+                    "type": {
+                      "kind": "boolean"
+                    },
+                    "required": true,
+                    "readonly": true
+                  },
+                  {
+                    "name": "underline",
+                    "type": {
+                      "kind": "boolean"
+                    },
+                    "required": true,
+                    "readonly": true
+                  },
+                  {
+                    "name": "strike",
+                    "type": {
+                      "kind": "boolean"
+                    },
+                    "required": true,
+                    "readonly": true
+                  },
+                  {
+                    "name": "code",
+                    "type": {
+                      "kind": "boolean"
+                    },
+                    "required": true,
+                    "readonly": true
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": true,
+              "description": "Each mark is true when all the selected text carries it, or at a caret when the next typed text would."
+            },
+            {
+              "name": "link",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "string"
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": true,
+              "description": "The address of the link at a caret, the one the next typed text would take, or of the one link all the selected text is in; otherwise null."
+            },
+            {
+              "name": "block",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "literal",
+                    "value": "paragraph"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": "heading"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": "codeBlock"
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": true,
+              "description": "The kind of text block that holds the selection, or null when it spans more than one kind or holds no text block."
+            },
+            {
+              "name": "headingLevel",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "literal",
+                    "value": 1
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 2
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 3
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 4
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 5
+                  },
+                  {
+                    "kind": "literal",
+                    "value": 6
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": true,
+              "description": "The level of the headings the selection is in, when they share one; otherwise null."
+            },
+            {
+              "name": "list",
+              "type": {
+                "kind": "union",
+                "members": [
+                  {
+                    "kind": "literal",
+                    "value": "bulletList"
+                  },
+                  {
+                    "kind": "literal",
+                    "value": "orderedList"
+                  },
+                  {
+                    "kind": "null"
+                  }
+                ]
+              },
+              "required": true,
+              "readonly": true,
+              "description": "The nearest list that holds the whole selection, or null."
+            },
+            {
+              "name": "quote",
+              "type": {
+                "kind": "boolean"
+              },
+              "required": true,
+              "readonly": true,
+              "description": "True when a quote holds the whole selection."
+            }
+          ]
+        },
+        "description": "The formatting at the selection, as `onFormattingChange` reports it. It holds plain values only."
       },
       "TextEditorHardBreakNode": {
         "type": {
