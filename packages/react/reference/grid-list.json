@@ -122,7 +122,17 @@
             },
             { "name": "className", "optional": true, "type": "string" },
             { "name": "style", "optional": true, "type": "React.CSSProperties" },
-            { "name": "children", "optional": true, "type": "React.ReactNode" }
+            { "name": "children", "optional": true, "type": "React.ReactNode" },
+            {
+              "name": "aria-keyshortcuts",
+              "optional": true,
+              "type": "React.AriaAttributes['aria-keyshortcuts']"
+            },
+            {
+              "name": "aria-current",
+              "optional": true,
+              "type": "React.AriaAttributes['aria-current']"
+            }
           ],
           "ref": { "type": "HTMLDivElement" }
         }
@@ -223,11 +233,17 @@
           "refs": ["grid-list#GridListItemOwnProps"]
         }
       ],
-      "text": "type GridListItemProps = GridListItemOwnProps & {\n  className?: string;\n  style?: React.CSSProperties;\n  children?: React.ReactNode;\n};",
+      "text": "type GridListItemProps = GridListItemOwnProps & {\n  className?: string;\n  style?: React.CSSProperties;\n  children?: React.ReactNode;\n  'aria-keyshortcuts'?: React.AriaAttributes['aria-keyshortcuts'];\n  'aria-current'?: React.AriaAttributes['aria-current'];\n};",
       "members": [
         { "name": "className", "optional": true, "type": "string" },
         { "name": "style", "optional": true, "type": "React.CSSProperties" },
-        { "name": "children", "optional": true, "type": "React.ReactNode" }
+        { "name": "children", "optional": true, "type": "React.ReactNode" },
+        {
+          "name": "aria-keyshortcuts",
+          "optional": true,
+          "type": "React.AriaAttributes['aria-keyshortcuts']"
+        },
+        { "name": "aria-current", "optional": true, "type": "React.AriaAttributes['aria-current']" }
       ],
       "refs": ["grid-list#GridListItemOwnProps"]
     },

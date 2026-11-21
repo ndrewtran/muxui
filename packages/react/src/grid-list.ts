@@ -1,10 +1,10 @@
 import React from 'react';
-import type { CSSProperties, ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
+import type { AriaAttributes, CSSProperties, ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
 import { GridListMotion } from './grid-list-motion.mjs';
 import { AriaGridList, AriaGridListItem } from './substrate.ts';
 import type { GridListProps as AriaGridListProps, Key } from 'react-aria-components';
 import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
-import { classNames, accessibleName } from './control-utils.ts';
+import { classNames, accessibleName, withHostAttributes } from './control-utils.ts';
 import { textContent, normalizeItems, keySet, keyList, collectionItem } from './collection-items.ts';
 import type { MuxUICollectionItem, MuxUIItems, MuxUISelection, NormalizedItem } from './collection-items.ts';
 import { GridVirtualizerContext } from './grid-virtualizer-context.ts';
@@ -51,7 +51,14 @@ export type GridListItemOwnProps = {
   disabled?: boolean;
 };
 
-export type GridListItemProps = GridListItemOwnProps & { className?: string; style?: CSSProperties; children?: ReactNode };
+/** GridList.Item passes `aria-keyshortcuts`, `aria-current` and `data-*` attributes to its row, and no other host attribute. */
+export type GridListItemProps = GridListItemOwnProps & {
+  className?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+  'aria-keyshortcuts'?: AriaAttributes['aria-keyshortcuts'];
+  'aria-current'?: AriaAttributes['aria-current'];
+};
 
 // A forwardRef result carries no statics, so the compound states them. GridList is its own root.
 type GridListComponent = ForwardRefExoticComponent<GridListProps & RefAttributes<HTMLDivElement>> & {
@@ -223,16 +230,20 @@ export const GridList: GridListComponent = /*#__PURE__*/ (() => {
         React.createElement(GridListMotion, { rootRef: virtualized ? gapRef : ref, children: gridList })));
   }) as GridListComponent;
   component.displayName = 'GridList';
-  component.Item = React.forwardRef<HTMLDivElement, GridListItemProps>(function GridListItem({ children, id, textValue, disabled = false, className, style }, ref) {
+  component.Item = React.forwardRef<HTMLDivElement, GridListItemProps>(function GridListItem({ children, id, textValue, disabled = false, className, style, ...props }, ref) {
     const context = React.useContext(GridListContext);
     // Conditionals, not || and ??: extraction reads a fallback on an owned prop as an executed default.
     const effectiveDisabled = disabled ? disabled : context.disabled;
+    // Only the two ARIA attributes the type names and data-* attributes reach the row; anything else an untyped caller passes is dropped, as before.
+    const hostAttributes = Object.fromEntries(Object.entries(props).filter(([name]) => name === 'aria-keyshortcuts' || name === 'aria-current' || name.startsWith('data-')));
     return React.createElement(AriaGridListItem, {
       ref, id, style,
       textValue: textValue == null ? (textContent(children) || undefined) : textValue,
       isDisabled: effectiveDisabled,
       ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
       className: classNames('muxui-grid-list__item', className),
+      // React Aria's DOM filter drops both ARIA attributes. Laid under React Aria's DOM props, the row's own attributes win.
+      render: (domProps: object) => React.createElement('div', withHostAttributes(hostAttributes, domProps)),
     }, React.createElement(GridListItemDisabledContext.Provider, { value: effectiveDisabled }, children));
   });
   return component;
