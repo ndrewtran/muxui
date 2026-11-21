@@ -4,25 +4,29 @@ import { Dialog, Popover } from '../../src/overlays.ts';
 
 const h = React.createElement;
 const ROWS = Array.from({ length: 30 }, (_, index) => `Row ${index + 1}`);
+const WORDY = 'Choose what the list shows. The rows can be narrowed by name, owner, status and the date they last changed, and the '
+  + 'choice applies to every list in this workspace until someone changes it again. Saved views keep their own choices, '
+  + 'and a choice made here never changes them.';
 
 /**
  * A sheet for the browser proof. `mode` picks the sheet: `long` scrolls its content and holds a field and a nested
  * Popover, `short` holds one line, `rejected` is long with an owner that keeps it open, and `locked` is long and not
- * dismissable. Each open change is reported through `onChange`.
+ * dismissable. `wordy` gives it a description that wraps over many lines, and `presentation` and `dismissable`
+ * override the sheet's own. Each open change is reported through `onOpenChange`.
  */
-export function DialogSheetFixture({ mode = 'long', open, onOpenChange, defaultOpen }) {
+export function DialogSheetFixture({ mode = 'long', open, onOpenChange, defaultOpen, wordy = false, presentation = 'sheet', dismissable = mode !== 'locked' }) {
   const short = mode === 'short';
   return h('div', { id: 'sheet-scope', 'data-muxui-motion': 'full' },
     h('p', { id: 'page-text' }, 'Page content behind the sheet.'),
     h(Dialog, {
       title: 'Filters',
-      description: short ? undefined : 'Choose what the list shows.',
-      presentation: 'sheet',
+      description: short ? undefined : wordy ? WORDY : 'Choose what the list shows.',
+      presentation,
       trigger: h('button', { type: 'button', id: 'trigger' }, 'Open sheet'),
       open,
       defaultOpen,
       onOpenChange,
-      dismissable: mode !== 'locked',
+      dismissable,
       actions: mode === 'locked' ? h(Button, { slot: 'close', id: 'done' }, 'Done') : undefined,
     }, short
       ? h('p', { id: 'short-body' }, 'One line of content.')

@@ -13,16 +13,18 @@ const MODAL_SETTLED_SCALE = 1;
 const MODAL_Y_VARIABLE = '--muxui-modal-y';
 const MODAL_SCALE_VARIABLE = '--muxui-modal-scale';
 const SHEET_DRAGGING_ATTRIBUTE = 'data-muxui-state-dragging';
-// A drag dismisses a sheet when it is released lower than the smaller of this distance and this share of the sheet's
-// height, or when it is flung down at least the flick distance at the flick speed or faster, in CSS pixels a second
-// over the last 100 ms of the drag.
+// How far the visible viewport is scrolled down the layout viewport, which the stylesheet adds to its height.
+const SHEET_VIEWPORT_TOP_VARIABLE = '--muxui-dialog-viewport-top';
+// A drag dismisses a sheet when the pointer is released further down than the smaller of this distance and this share
+// of the sheet's height from where it was pressed, or when it is flung down at least the flick distance at the flick
+// speed or faster, in CSS pixels a second over the last 100 ms of the drag.
 const SHEET_DISMISS_DISTANCE = 96;
 const SHEET_DISMISS_SHARE = 0.5;
 const SHEET_FLICK_DISTANCE = 16;
 const SHEET_FLICK_SPEED = 800;
 const SHEET_SPEED_WINDOW = 100;
-// A drag starts on the grip, or on the title or description above the content; a control inside them keeps its own press.
-const SHEET_DRAG_ZONES = '.muxui-dialog__grip, .muxui-dialog__title, .muxui-dialog__description';
+// A drag starts on the grip or the title; a control inside the title keeps its own press.
+const SHEET_DRAG_ZONES = '.muxui-dialog__grip, .muxui-dialog__title';
 const SHEET_OWN_PRESS = 'a[href], area[href], button, input, select, textarea, label, summary, [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"])';
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
@@ -135,6 +137,8 @@ export function useModalMotion({ node, isOpen, triggerRef, reducedAttribute = 'd
     return () => {
       animationIdRef.current += 1;
       stopControls(controlsRef.current);
+      // A node let go of while it stays in the page, as when a Dialog becomes a sheet, keeps none of this motion's styles.
+      if (node.isConnected) restoreStyles(node, originalStylesRef.current);
       valuesRef.current = null;
       originalStylesRef.current = null;
       animatedNodeRef.current = null;
@@ -257,11 +261,13 @@ function sheetSpeed(samples) {
  * The pixels and the drag of a sheet. The sheet rests at --muxui-modal-y 0 and slides up from below its box on the
  * modal spring and out on the modal-dismiss composite, without fading; the backdrop fades its scrim colour in CSS.
  * A primary pointer pressed on a drag zone moves it down one for one (never above rest), and the release dismisses it
- * through onDismiss or returns it to rest. Reduced motion places it at once and turns the drag off. `optionsRef`
- * holds the latest triggerRef, draggable, onDismiss, onExitComplete and onReducedChange.
+ * through onDismiss or returns it to rest. A drag the sheet can no longer make, or one whose resting place moves as the
+ * visible viewport changes, ends at rest. Reduced motion places it at once and turns the drag off. `optionsRef` holds
+ * the latest triggerRef, draggable, onDismiss, onExitComplete and onReducedChange.
  */
 function createSheetMotion(node, optionsRef) {
   const view = node.ownerDocument.defaultView;
+  const viewport = view?.visualViewport ?? null;
   let y = null;
   let open = false;
   let exiting = false;
@@ -270,14 +276,28 @@ function createSheetMotion(node, optionsRef) {
   let animationId = 0;
   let drag = null;
   let settleFrame = 0;
+  let placing = false;
 
+  // An overlay opened from inside the sheet, such as a Popover, is placed against its trigger, which moves only with the
+  // sheet. React Aria places its open overlays again on a window resize, so one goes out, once a task, while the sheet
+  // moves and an overlay is rendered after it.
+  const placeOverlays = () => {
+    if (placing || !view || !node.closest('.muxui-dialog__backdrop')?.nextElementSibling) return;
+    placing = true;
+    queueMicrotask(() => {
+      placing = false;
+      view.dispatchEvent(new view.Event('resize'));
+    });
+  };
   const write = (value) => {
     y = Math.max(0, value);
     node.style.setProperty(MODAL_Y_VARIABLE, `${y}px`);
+    placeOverlays();
   };
   const rest = () => {
     y = 0;
     node.style.removeProperty(MODAL_Y_VARIABLE);
+    placeOverlays();
   };
   const stop = () => {
     animationId += 1;
@@ -346,15 +366,16 @@ function createSheetMotion(node, optionsRef) {
     while (drag.samples.length > 2 && event.timeStamp - drag.samples[0].time > SHEET_SPEED_WINDOW) drag.samples.shift();
   };
 
-  // A drag whose release never arrived, as when a mouse button is let go outside the window, returns to rest.
-  const dropStaleDrag = () => {
+  // A drag that ends without a release, such as one whose release never arrived because the mouse button was let go
+  // outside the window, returns to rest.
+  const cancelDrag = () => {
     endDrag();
     move(false);
   };
 
   const onPointerDown = (event) => {
     if (event.isPrimary === false) return;
-    if (drag) dropStaleDrag();
+    if (drag) cancelDrag();
     if (!canDrag() || event.button !== 0 || !sheetDragZone(event.target, node)) return;
     // The press keeps focus, and the selection of a focused field, where they are, and selects no text.
     event.preventDefault();
@@ -371,7 +392,7 @@ function createSheetMotion(node, optionsRef) {
   const onPointerMove = (event) => {
     if (!drag || event.pointerId !== drag.pointerId) return;
     if (event.pointerType === 'mouse' && event.buttons === 0) {
-      dropStaleDrag();
+      cancelDrag();
       return;
     }
     track(event);
@@ -381,11 +402,12 @@ function createSheetMotion(node, optionsRef) {
     if (!drag || event.pointerId !== drag.pointerId) return;
     track(event);
     const speed = sheetSpeed(drag.samples);
+    // The pointer's own travel, not the sheet's place: a press while the sheet slides in starts below rest.
+    const distance = event.clientY - drag.startY;
     endDrag();
-    const offset = y ?? 0;
     const height = node.getBoundingClientRect().height;
-    const dismiss = offset >= Math.min(SHEET_DISMISS_DISTANCE, height * SHEET_DISMISS_SHARE)
-      || (offset >= SHEET_FLICK_DISTANCE && speed >= SHEET_FLICK_SPEED);
+    const dismiss = distance >= Math.min(SHEET_DISMISS_DISTANCE, height * SHEET_DISMISS_SHARE)
+      || (distance >= SHEET_FLICK_DISTANCE && speed >= SHEET_FLICK_SPEED);
     if (!dismiss) {
       move(false);
       return;
@@ -418,6 +440,24 @@ function createSheetMotion(node, optionsRef) {
   ];
   for (const [type, listener] of listeners) node.addEventListener(type, listener);
 
+  // The sheet's bottom edge follows the visible viewport, which an on-screen keyboard shrinks and scrolls; a drag across
+  // such a change would leave the sheet behind the pointer, so it ends. React Aria holds --visual-viewport-height while
+  // the page is pinch-zoomed, so the scroll is held with it and the sheet keeps its place.
+  let placed = null;
+  const onViewportChange = () => {
+    if (viewport.scale > 1) return;
+    const next = `${viewport.offsetTop} ${viewport.height}`;
+    if (next === placed) return;
+    placed = next;
+    node.style.setProperty(SHEET_VIEWPORT_TOP_VARIABLE, `${viewport.offsetTop}px`);
+    if (drag) cancelDrag();
+  };
+  if (viewport) {
+    onViewportChange();
+    viewport.addEventListener('resize', onViewportChange);
+    viewport.addEventListener('scroll', onViewportChange);
+  }
+
   const disconnect = observeReducedMotion(node, optionsRef.current.triggerRef?.current, (value) => {
     reduced = value;
     node.toggleAttribute(DIALOG_REDUCED_ATTRIBUTE, value);
@@ -449,12 +489,21 @@ function createSheetMotion(node, optionsRef) {
       exiting = true;
       move(true);
     },
+    // A drag the sheet can no longer make, as when the Dialog stops being dismissable, returns to rest.
+    refresh() {
+      if (drag && !canDrag()) cancelDrag();
+    },
+    // The panel keeps none of the sheet's styles, so a Dialog that stops being a sheet rests where its stylesheet puts it.
     destroy() {
       cancelSettle();
       endDrag();
       stop();
       for (const [type, listener] of listeners) node.removeEventListener(type, listener);
+      viewport?.removeEventListener('resize', onViewportChange);
+      viewport?.removeEventListener('scroll', onViewportChange);
       disconnect();
+      node.style.removeProperty(MODAL_Y_VARIABLE);
+      node.style.removeProperty(SHEET_VIEWPORT_TOP_VARIABLE);
       node.removeAttribute(DIALOG_REDUCED_ATTRIBUTE);
       optionsRef.current.onReducedChange?.(false);
     },
@@ -478,6 +527,9 @@ function useSheetMotion({ node, isOpen, triggerRef, draggable, onDismiss, onExit
   useIsomorphicLayoutEffect(() => {
     motionRef.current?.setOpen(Boolean(isOpen));
   }, [isOpen, node]);
+  useIsomorphicLayoutEffect(() => {
+    motionRef.current?.refresh();
+  }, [draggable]);
 }
 
 /**

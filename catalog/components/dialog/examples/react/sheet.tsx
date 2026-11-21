@@ -14,7 +14,7 @@ export function DialogSheetExample() {
       trigger={<Button>Language: {language}</Button>}
       actions={<Button slot="close">Done</Button>}
     >
-      {/* A long list scrolls inside the sheet, while the grip, title and close button stay in place. */}
+      {/* A long list scrolls the sheet, while the grip and close button stay at its top and Done at its bottom. */}
       <RadioGroup label="Display language" options={languages.map((name) => ({ value: name, label: name }))} value={language} onChange={setLanguage} />
     </Dialog>
   );

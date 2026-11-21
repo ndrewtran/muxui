@@ -22,9 +22,10 @@ const VIEWPORT = { width: 390, height: 700 };
 function documentHtml(url) {
   const mode = url.searchParams.get('mode') ?? 'long';
   const scheme = url.searchParams.get('scheme') ?? 'light';
-  const body = renderToString(React.createElement(DialogSheetFixture, { mode, open: url.searchParams.get('open') === '1', onOpenChange: () => {} }));
+  const dir = url.searchParams.get('dir') === 'rtl' ? ' dir="rtl"' : '';
+  const body = renderToString(React.createElement(DialogSheetFixture, { mode, open: url.searchParams.get('open') === '1', wordy: url.searchParams.get('wordy') === '1', onOpenChange: () => {} }));
   return pageShell({
-    attributes: `data-muxui-color-scheme="${scheme}"`,
+    attributes: `data-muxui-color-scheme="${scheme}"${dir}`,
     head: '<link rel="stylesheet" href="/packages/react/generated/styles.css">',
     bodyAttributes: 'style="margin:0;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"',
     body: `<div id="root">${body}</div>`,
@@ -54,11 +55,11 @@ const changes = (page) => page.evaluate(() => window.__muxuiSheetChanges ?? []);
 const waitForFocus = (page, id) => page.waitForFunction((target) => document.activeElement?.id === target, id);
 
 // At rest: the panel carries no travel and no drag.
-async function waitForRest(page) {
+async function waitForRest(page, timeout) {
   await page.waitForFunction(() => {
     const panel = document.querySelector('.muxui-dialog');
     return Boolean(panel) && panel.style.getPropertyValue('--muxui-modal-y') === '' && !panel.hasAttribute('data-muxui-state-dragging');
-  });
+  }, undefined, timeout ? { timeout } : undefined);
 }
 
 async function openSheet(page) {
@@ -68,6 +69,36 @@ async function openSheet(page) {
 }
 
 const waitForClosed = (page) => page.locator('.muxui-dialog__backdrop').waitFor({ state: 'detached' });
+
+// Where a part of the sheet is, whether it lies inside the panel's box, and whether a press at its middle reaches it.
+const reach = (page, selector) => page.locator(selector).evaluate((node) => {
+  const rect = node.getBoundingClientRect();
+  const panel = node.closest('.muxui-dialog').getBoundingClientRect();
+  const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  return { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, inPanel: rect.top >= panel.top - 0.5 && rect.bottom <= panel.bottom + 0.5, hit: node.contains(hit) };
+});
+
+// Opens the sheet from its trigger and, two frames into its slide, runs the named step on the page; returns how far
+// below rest the sheet was when the step ran. `press` presses the grip and lets go without moving; `nested` opens the
+// nested Popover.
+const duringEntry = (page, step) => page.evaluate(async (name) => {
+  const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+  document.querySelector('#trigger').click();
+  let panel = null;
+  while (!(panel = document.querySelector('.muxui-dialog'))) await frame();
+  await frame();
+  await frame();
+  const y = Number.parseFloat(panel.style.getPropertyValue('--muxui-modal-y')) || 0;
+  if (name === 'press') {
+    const grip = panel.querySelector('.muxui-dialog__grip');
+    const rect = grip.getBoundingClientRect();
+    const init = { bubbles: true, cancelable: true, composed: true, pointerId: 11, pointerType: 'mouse', isPrimary: true, button: 0, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };
+    grip.dispatchEvent(new PointerEvent('pointerdown', { ...init, buttons: 1 }));
+    grip.dispatchEvent(new PointerEvent('pointerup', { ...init, buttons: 0 }));
+  }
+  if (name === 'nested') document.querySelector('#nested-trigger').click();
+  return y;
+}, step);
 
 // A mouse drag from the middle of `selector` down by `dy`, in steps 25 ms apart and held still before the release, so
 // it reads as slow however busy the runner is.
@@ -163,8 +194,8 @@ for (const engine of browserEngines()) {
       browser = await launchBrowser(engine);
 
       // Opens the fixture page in a context of its own and returns it with the errors it logged.
-      const openPage = async ({ mode = 'long', scheme = 'light', reducedMotion = 'no-preference', forcedColors, hasTouch = false, initScript } = {}) => {
-        const context = await browser.newContext({ viewport: VIEWPORT, reducedMotion, hasTouch, ...(forcedColors && { forcedColors }) });
+      const openPage = async ({ mode = 'long', scheme = 'light', dir = 'ltr', wordy = false, viewport = VIEWPORT, reducedMotion = 'no-preference', forcedColors, hasTouch = false, initScript } = {}) => {
+        const context = await browser.newContext({ viewport, reducedMotion, hasTouch, ...(forcedColors && { forcedColors }) });
         if (initScript) await context.addInitScript(initScript);
         const page = await context.newPage();
         page.setDefaultTimeout(10_000);
@@ -173,7 +204,7 @@ for (const engine of browserEngines()) {
         page.on('console', (message) => {
           if (message.type() === 'error') errors.push(message.text());
         });
-        await page.goto(`${server.url}/dialog-sheet.html?${new URLSearchParams({ mode, scheme })}`, { waitUntil: 'load' });
+        await page.goto(`${server.url}/dialog-sheet.html?${new URLSearchParams({ mode, scheme, dir, ...(wordy && { wordy: '1' }) })}`, { waitUntil: 'load' });
         await page.waitForFunction(() => document.documentElement.dataset.muxuiSheetHydrated === 'true');
         await awaitFontsAndFrames(page);
         return { context, page, errors };
@@ -278,20 +309,29 @@ for (const engine of browserEngines()) {
         assert.ok(ring.shadow !== 'none' || ring.outline !== 'none', `the focused close button shows a ring: ${JSON.stringify(ring)}`);
       }));
 
-      await t.test('the content scrolls on its own, and a drag across the content moves neither the sheet nor its state', () => withPage({}, async (page) => {
+      await t.test('the sheet scrolls as one under its grip and close button, and a drag across the content moves neither the sheet nor its state', () => withPage({}, async (page) => {
         await openSheet(page);
         const touchAction = await page.evaluate(() => Object.fromEntries(['grip', 'title', 'description', 'content']
           .map((part) => [part, getComputedStyle(document.querySelector(`.muxui-dialog__${part}`)).touchAction])));
-        assert.deepEqual(touchAction, { grip: 'pinch-zoom', title: 'pinch-zoom', description: 'pinch-zoom', content: 'auto' }, 'a touch on a drag zone drags the sheet, while the content keeps its touch scrolling');
+        assert.deepEqual(touchAction, { grip: 'pinch-zoom', title: 'pinch-zoom', description: 'auto', content: 'auto' }, 'a touch on the grip or title drags the sheet, while the description and content keep their touch scrolling');
         const before = await readSheet(page);
-        const content = page.locator('.muxui-dialog__content');
-        await content.hover();
+        const close = await reach(page, '.muxui-dialog__close');
+        const titleTop = await page.locator('.muxui-dialog__title').evaluate((node) => node.getBoundingClientRect().top);
+        await page.locator('.muxui-dialog__content').hover();
         await page.mouse.wheel(0, 400);
-        await page.waitForFunction(() => document.querySelector('.muxui-dialog__content').scrollTop > 0);
+        await page.waitForFunction(() => document.querySelector('.muxui-dialog').scrollTop > 0);
         const after = await readSheet(page);
-        assert.deepEqual([after.top, after.y], [before.top, 0], 'scrolling the content leaves the sheet where it is');
-        assert.equal(await page.locator('.muxui-dialog__title').isVisible(), true, 'the title stays in view');
-        await slowDrag(page, '#rows li:nth-child(12)', 160);
+        assert.deepEqual([after.top, after.y], [before.top, 0], 'scrolling leaves the sheet where it is');
+        assert.ok(await page.locator('.muxui-dialog__title').evaluate((node, top) => node.getBoundingClientRect().top < top, titleTop), 'the title scrolls with the content');
+        assert.deepEqual(await reach(page, '.muxui-dialog__close'), close, 'the close button stays at the top, over the grip');
+        assert.equal((await reach(page, '.muxui-dialog__grip')).top, close.top, 'the grip stays at the top too');
+        // A row in the middle of the scrolled sheet.
+        const row = await page.evaluate(() => {
+          const rect = document.querySelector('.muxui-dialog').getBoundingClientRect();
+          const item = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2).closest('li');
+          return [...item.parentElement.children].indexOf(item) + 1;
+        });
+        await slowDrag(page, `#rows li:nth-child(${row})`, 160);
         const dragged = await readSheet(page);
         assert.deepEqual([dragged.top, dragged.y, dragged.dragging], [before.top, 0, false], 'a drag on the content is not a drag of the sheet');
         assert.equal(await page.locator('.muxui-dialog').count(), 1);
@@ -359,6 +399,17 @@ for (const engine of browserEngines()) {
         assert.deepEqual(await changes(page), [true, false], 'a fast 60 pixel flick dismisses the sheet');
       }));
 
+      await t.test('a press on the grip that does not move while the sheet slides in leaves it open', () => withPage({}, async (page) => {
+        const below = await duringEntry(page, 'press');
+        assert.ok(below > 96, `the press came while the sheet was still more than the dismiss distance below rest: ${below}`);
+        await page.waitForFunction(() => {
+          const panel = document.querySelector('.muxui-dialog');
+          return !panel || (panel.style.getPropertyValue('--muxui-modal-y') === '' && !panel.hasAttribute('data-muxui-state-dragging'));
+        });
+        assert.equal(await page.locator('.muxui-dialog').count(), 1, 'the sheet finished its slide and stayed open');
+        assert.deepEqual(await changes(page), [true]);
+      }));
+
       // A real touch, which no page script can fake: the engine pans from any part whose touch-action lets it and then
       // cancels the pointer, so a drag that lasts proves the drag zones keep the gesture.
       await t.test('a touch drag from the grip follows the finger and dismisses, and a touch drag on the content scrolls it', { skip: engine === 'chromium' ? false : 'touch input is sent through the Chrome DevTools Protocol' }, () => withPage({ hasTouch: true }, async (page) => {
@@ -382,7 +433,7 @@ for (const engine of browserEngines()) {
         await openSheet(page);
         const scrolled = await touchDrag('#rows li:nth-child(12)', -160);
         assert.deepEqual([scrolled.y, scrolled.dragging], [0, false], 'a touch drag on the content does not move the sheet');
-        assert.ok(await page.locator('.muxui-dialog__content').evaluate((node) => node.scrollTop > 0), 'the content scrolls under the finger');
+        assert.ok(await page.locator('.muxui-dialog').evaluate((node) => node.scrollTop > 0), 'the sheet scrolls under the finger');
 
         const held = await touchDrag('.muxui-dialog__grip', 150);
         assert.ok(held.dragging && Math.abs(held.y - 150) < 2, `the sheet follows the finger one for one: ${JSON.stringify(held)}`);
@@ -443,37 +494,231 @@ for (const engine of browserEngines()) {
         await waitForFocus(page, 'trigger');
       }));
 
-      await t.test('a smaller visual viewport, as an on-screen keyboard leaves, lifts the sheet above it and caps its height', async () => {
-        // A stand-in for window.visualViewport whose height the test sets, installed before any page script reads it.
+      await t.test('a Popover opened while the sheet slides in follows its trigger to rest', () => withPage({}, async (page) => {
+        const below = await duringEntry(page, 'nested');
+        assert.ok(below > 40, `the Popover opened while the sheet was still sliding: ${below}`);
+        await page.locator('.muxui-popover').waitFor();
+        await waitForRest(page);
+        await awaitFontsAndFrames(page);
+        const gap = await page.evaluate(() => {
+          const trigger = document.querySelector('#nested-trigger').getBoundingClientRect();
+          const popover = document.querySelector('.muxui-popover').getBoundingClientRect();
+          return Math.min(Math.abs(popover.top - trigger.bottom), Math.abs(trigger.top - popover.bottom));
+        });
+        assert.ok(gap < 24, `the Popover sits against its trigger once the sheet rests: ${gap} pixels apart`);
+        // React Aria keeps the press away from the sheet while the Popover is open and closes the Popover on it, so no
+        // drag can move the sheet under an open Popover.
+        const grip = await page.locator('.muxui-dialog__grip').boundingBox();
+        await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2 + 60, { steps: 3 });
+        assert.equal((await readSheet(page)).dragging, false, 'the press on the grip starts no drag while the Popover is open');
+        await page.mouse.up();
+        await page.locator('.muxui-popover').waitFor({ state: 'detached' });
+        await waitForRest(page);
+        assert.equal(await page.locator('.muxui-dialog').count(), 1, 'the press closed only the Popover');
+      }));
+
+      await t.test('in a 320 by 230 viewport a wrapped description scrolls with the content, and the actions and the close button stay in reach', async () => {
+        const small = { width: 320, height: 230 };
+        // The action is the only way out of a sheet that is not dismissable.
+        await withPage({ mode: 'locked', wordy: true, viewport: small }, async (page) => {
+          await openSheet(page);
+          const done = await reach(page, '#done');
+          assert.ok(done.bottom <= small.height + 0.5 && done.inPanel && done.hit, `the action is in view and takes a press: ${JSON.stringify(done)}`);
+          const titleTop = () => page.locator('.muxui-dialog__title').evaluate((node) => node.getBoundingClientRect().top);
+          const before = await titleTop();
+          await page.locator('.muxui-dialog__description').hover();
+          await page.mouse.wheel(0, 120);
+          await page.waitForFunction((top) => document.querySelector('.muxui-dialog__title').getBoundingClientRect().top < top - 20, before, { timeout: 3_000 });
+          assert.deepEqual(await reach(page, '#done'), done, 'the action stays put while the title and description scroll');
+          await page.locator('#done').click();
+          await waitForClosed(page);
+        });
+        await withPage({ wordy: true, viewport: small }, async (page) => {
+          await openSheet(page);
+          const close = await reach(page, '.muxui-dialog__close');
+          assert.ok(close.top >= 0 && close.bottom <= small.height && close.inPanel && close.hit, `the close button is in view and takes a press: ${JSON.stringify(close)}`);
+          await page.locator('.muxui-dialog__description').hover();
+          await page.mouse.wheel(0, 120);
+          await page.waitForFunction(() => document.querySelector('.muxui-dialog').scrollTop > 0, undefined, { timeout: 3_000 });
+          assert.deepEqual(await reach(page, '.muxui-dialog__close'), close, 'the close button stays put while the header scrolls');
+        });
+      });
+
+      await t.test('a held drag ends at rest when the Dialog stops being dismissable, and a change of presentation leaves no motion behind', () => withPage({}, async (page) => {
+        await openSheet(page);
+        const grip = await page.locator('.muxui-dialog__grip').boundingBox();
+        const x = grip.x + grip.width / 2;
+        const y = grip.y + grip.height / 2;
+        await slowDrag(page, '.muxui-dialog__grip', 120, { release: false });
+        await page.evaluate(() => window.__muxuiSheet.setProps({ dismissable: false }));
+        await page.mouse.move(x, y + 190, { steps: 3 });
+        await waitForRest(page, 3_000).catch(() => {});
+        const held = await readSheet(page);
+        assert.deepEqual([held.y, held.dragging], [0, false], 'the drag ended and the sheet returned to rest');
+        await page.mouse.up();
+        assert.equal(await page.locator('.muxui-dialog').count(), 1);
+        assert.deepEqual(await changes(page), [true]);
+
+        await page.evaluate(() => window.__muxuiSheet.setProps({ dismissable: true }));
+        await page.locator('.muxui-dialog__grip').waitFor();
+        await slowDrag(page, '.muxui-dialog__grip', 130, { release: false });
+        await page.evaluate(() => window.__muxuiSheet.setProps({ presentation: 'center' }));
+        await page.mouse.up();
+        // The centred Dialog's own motion hands the panel back to its stylesheet when it settles.
+        await page.waitForFunction(() => {
+          const panel = document.querySelector('.muxui-dialog');
+          return panel.dataset.muxuiPresentation === 'center' && panel.style.opacity === '';
+        });
+        const centred = await page.evaluate(() => {
+          const panel = document.querySelector('.muxui-dialog');
+          const rect = panel.getBoundingClientRect();
+          return { y: panel.style.getPropertyValue('--muxui-modal-y'), middle: rect.top + rect.height / 2 };
+        });
+        assert.ok(centred.y === '' && Math.abs(centred.middle - VIEWPORT.height / 2) < 1, `the Dialog settles in the middle: ${JSON.stringify(centred)}`);
+
+        // Back to a sheet while the centred Dialog is still fading in, the sheet keeps none of that fade.
+        await page.keyboard.press('Escape');
+        await waitForClosed(page);
+        await page.evaluate(async () => {
+          const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+          document.querySelector('#trigger').click();
+          while (!document.querySelector('.muxui-dialog')) await frame();
+          await frame();
+          window.__muxuiSheet.setProps({ presentation: 'sheet' });
+        });
+        await waitForRest(page);
+        const sheet = await page.evaluate(() => {
+          const panel = document.querySelector('.muxui-dialog');
+          return { opacity: getComputedStyle(panel).opacity, scale: panel.style.getPropertyValue('--muxui-modal-scale'), bottom: Math.round(panel.getBoundingClientRect().bottom) };
+        });
+        assert.deepEqual(sheet, { opacity: '1', scale: '', bottom: VIEWPORT.height }, 'the sheet rests opaque on the bottom edge');
+      }));
+
+      await t.test('a smaller or scrolled visual viewport, as an on-screen keyboard leaves, lifts the sheet onto its bottom edge, and a change during a drag ends the drag', async () => {
+        // A stand-in for window.visualViewport whose height and scroll the test sets, installed before any page script reads it.
         const initScript = () => {
           const viewport = new EventTarget();
           let height = null;
+          let offsetTop = 0;
+          let scale = 1;
           Object.defineProperties(viewport, {
             width: { get: () => document.documentElement.clientWidth },
             height: { get: () => height ?? document.documentElement.clientHeight },
-            offsetTop: { get: () => 0 },
+            offsetTop: { get: () => offsetTop },
             offsetLeft: { get: () => 0 },
-            pageTop: { get: () => 0 },
+            pageTop: { get: () => offsetTop },
             pageLeft: { get: () => 0 },
-            scale: { get: () => 1 },
+            scale: { get: () => scale },
           });
           Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => viewport });
-          window.__muxuiSetViewportHeight = (value) => {
-            height = value;
+          window.__muxuiSetViewport = (next) => {
+            height = next.height ?? null;
+            offsetTop = next.offsetTop ?? 0;
+            scale = next.scale ?? 1;
             viewport.dispatchEvent(new Event('resize'));
+            viewport.dispatchEvent(new Event('scroll'));
           };
         };
         await withPage({ initScript }, async (page) => {
+          const bottomAt = async (value) => {
+            await page.waitForFunction((target) => Math.abs(document.querySelector('.muxui-dialog').getBoundingClientRect().bottom - target) < 1, value, { timeout: 3_000 }).catch(() => {});
+            const { bottom } = await readSheet(page);
+            assert.ok(Math.abs(bottom - value) < 1, `the sheet rests on the visible viewport's bottom edge at ${value}: ${bottom}`);
+          };
           await openSheet(page);
-          await page.evaluate(() => window.__muxuiSetViewportHeight(400));
-          await page.waitForFunction(() => Math.abs(document.querySelector('.muxui-dialog').getBoundingClientRect().bottom - 400) < 1);
+          await page.evaluate(() => window.__muxuiSetViewport({ height: 400 }));
+          await bottomAt(400);
           const lifted = await readSheet(page);
           assert.ok(lifted.top >= 0 && lifted.height <= 400 - 20, `the sheet fits above the keyboard: ${JSON.stringify(lifted)}`);
           assert.equal(await page.locator('.muxui-dialog__title').isVisible(), true);
-          await page.evaluate(() => window.__muxuiSetViewportHeight(null));
-          await page.waitForFunction((bottom) => Math.abs(document.querySelector('.muxui-dialog').getBoundingClientRect().bottom - bottom) < 1, VIEWPORT.height);
+          // The visible viewport scrolled 90 pixels down the page, as a keyboard can leave it: the sheet rests on its bottom edge.
+          await page.evaluate(() => window.__muxuiSetViewport({ height: 400, offsetTop: 90 }));
+          await bottomAt(490);
+          assert.ok((await readSheet(page)).top >= 90, 'the sheet stays inside the visible viewport');
+          await page.evaluate(() => window.__muxuiSetViewport({}));
+          await bottomAt(VIEWPORT.height);
+          // Pinch-zoomed and panned down the page: React Aria holds the viewport height while zoomed, so the sheet holds its place.
+          await page.evaluate(() => window.__muxuiSetViewport({ height: 350, offsetTop: 300, scale: 2 }));
+          await awaitFontsAndFrames(page);
+          await bottomAt(VIEWPORT.height);
+          await page.evaluate(() => window.__muxuiSetViewport({}));
+
+          // The keyboard comes up during a drag: the drag ends and the sheet settles above the keyboard, so it never trails the pointer.
+          await slowDrag(page, '.muxui-dialog__grip', 80, { release: false });
+          await page.evaluate(() => window.__muxuiSetViewport({ height: 400 }));
+          await waitForRest(page, 3_000).catch(() => {});
+          const ended = await readSheet(page);
+          assert.deepEqual([ended.y, ended.dragging], [0, false], 'the change ended the drag and the sheet settled');
+          await bottomAt(400);
+          await page.mouse.move(VIEWPORT.width / 2, VIEWPORT.height - 10, { steps: 3 });
+          const after = await readSheet(page);
+          assert.deepEqual([after.y, after.dragging], [0, false], 'the pointer no longer moves the sheet');
+          await page.mouse.up();
+          assert.equal(await page.locator('.muxui-dialog').count(), 1);
+          assert.deepEqual(await changes(page), [true]);
         });
       });
+
+      await t.test('a resize of the window during a drag ends the drag, and the sheet settles on the new bottom edge', () => withPage({}, async (page) => {
+        await openSheet(page);
+        await slowDrag(page, '.muxui-dialog__grip', 80, { release: false });
+        await page.setViewportSize({ width: VIEWPORT.width, height: 400 });
+        await waitForRest(page, 3_000).catch(() => {});
+        const ended = await readSheet(page);
+        assert.deepEqual([ended.y, ended.dragging], [0, false], 'the resize ended the drag and the sheet settled');
+        await page.waitForFunction(() => Math.abs(document.querySelector('.muxui-dialog').getBoundingClientRect().bottom - 400) < 1, undefined, { timeout: 3_000 });
+        await page.mouse.move(VIEWPORT.width / 2, 390, { steps: 3 });
+        assert.equal((await readSheet(page)).dragging, false, 'the pointer no longer moves the sheet');
+        await page.mouse.up();
+        assert.equal(await page.locator('.muxui-dialog').count(), 1);
+        assert.deepEqual(await changes(page), [true]);
+      }));
+
+      for (const dir of ['ltr', 'rtl']) {
+        await t.test(`in ${dir}, the close button is a 44 pixel target at the logical end, clear of the title, and each safe-area inset pads its own side`, () => withPage({ dir }, async (page) => {
+          await openSheet(page);
+          const geometry = () => page.evaluate(() => {
+            const panel = document.querySelector('.muxui-dialog');
+            const close = panel.querySelector('.muxui-dialog__close').getBoundingClientRect();
+            const title = panel.querySelector('.muxui-dialog__title');
+            const range = document.createRange();
+            range.selectNodeContents(title);
+            const text = range.getBoundingClientRect();
+            const box = panel.getBoundingClientRect();
+            const side = (node, name) => Number.parseFloat(getComputedStyle(node).getPropertyValue(`padding-${name}`));
+            return {
+              close: { width: close.width, height: close.height, left: close.left - box.left, right: box.right - close.right },
+              overlaps: close.left < text.right && close.right > text.left && close.top < text.bottom && close.bottom > text.top,
+              middle: box.width / 2,
+              // How far the title's text box sits from each side of the panel.
+              titleLeft: side(panel, 'left') + side(title, 'left'),
+              titleRight: side(panel, 'right') + side(title, 'right'),
+            };
+          });
+          const plain = await geometry();
+          assert.deepEqual([Math.round(plain.close.width), Math.round(plain.close.height)], [44, 44], 'the close button is a 44 by 44 target');
+          const end = dir === 'rtl' ? plain.close.left : plain.close.right;
+          assert.ok(end < plain.middle - 22, `the close button sits at the logical end: ${JSON.stringify(plain.close)}`);
+          assert.equal(plain.overlaps, false, 'the close button leaves the title clear');
+          // Chromium alone can stand in safe-area insets: a 60 pixel inset on the left, as on a phone held sideways, and a home indicator.
+          if (engine !== 'chromium') return;
+          await (await page.context().newCDPSession(page)).send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 0, right: 0, bottom: 34, left: 60 } });
+          const inset = await geometry();
+          assert.ok(inset.titleLeft >= 60 && inset.titleRight < 60, `the left inset pads the left and only the left: ${inset.titleLeft} left, ${inset.titleRight} right`);
+          assert.equal(inset.overlaps, false, 'the close button still leaves the title clear');
+          if (dir === 'rtl') assert.ok(inset.close.left >= 60, `the close button clears the left inset: ${inset.close.left}`);
+          const bottom = await page.evaluate(() => {
+            const panel = document.querySelector('.muxui-dialog');
+            panel.scrollTop = panel.scrollHeight;
+            for (const node of panel.querySelectorAll('.muxui-dialog__content')) node.scrollTop = node.scrollHeight;
+            const last = document.querySelector('#rows li:last-child').getBoundingClientRect();
+            return panel.getBoundingClientRect().bottom - last.bottom;
+          });
+          assert.ok(bottom >= 34, `the bottom inset pads the end of the sheet: ${bottom}`);
+        }));
+      }
 
       // No engine here can set env(safe-area-inset-*), so this proves only that the shipped stylesheet declares them.
       await t.test('the shipped stylesheet bounds the sheet by the visual viewport and pads it by every safe-area inset', () => withPage({}, async (page) => {
@@ -567,7 +812,7 @@ for (const engine of browserEngines()) {
         assert.ok(ring.style !== 'none' && ring.width >= 2, `the focused close button shows a system outline: ${JSON.stringify(ring)}`);
       }));
 
-      await t.test('reduced motion places the sheet at once with no grip and no fade, and turns the drag off', () => withPage({ reducedMotion: 'reduce' }, async (page) => {
+      await t.test('reduced motion places the sheet at once with no grip bar and no fade, and turns the drag off', () => withPage({ reducedMotion: 'reduce' }, async (page) => {
         await page.locator('#trigger').click();
         await page.locator('.muxui-dialog').waitFor();
         const placed = await page.evaluate(() => {
@@ -576,11 +821,11 @@ for (const engine of browserEngines()) {
           return {
             y: panel.style.getPropertyValue('--muxui-modal-y'),
             reduced: panel.hasAttribute('data-muxui-dialog-reduced'),
-            grip: getComputedStyle(panel.querySelector('.muxui-dialog__grip')).display,
+            grip: getComputedStyle(panel.querySelector('.muxui-dialog__grip'), '::before').display,
             transition: getComputedStyle(backdrop).transitionDuration,
           };
         });
-        assert.deepEqual(placed, { y: '', reduced: true, grip: 'none', transition: '0s' }, 'the sheet is at rest at once, with no grip and no backdrop fade');
+        assert.deepEqual(placed, { y: '', reduced: true, grip: 'none', transition: '0s' }, 'the sheet is at rest at once, with no grip bar and no backdrop fade');
         await slowDrag(page, '.muxui-dialog__title', 200);
         const sheet = await readSheet(page);
         assert.deepEqual([sheet.y, sheet.dragging], [0, false], 'the title does not drag the sheet');
@@ -597,7 +842,7 @@ for (const engine of browserEngines()) {
         await waitForRest(page);
         await page.mouse.up();
         assert.equal(await page.locator('.muxui-dialog').count(), 1, 'the release after the reduction does not dismiss');
-        assert.equal(await page.locator('.muxui-dialog__grip').evaluate((node) => getComputedStyle(node).display), 'none', 'the grip goes with the drag');
+        assert.equal(await page.locator('.muxui-dialog__grip').evaluate((node) => getComputedStyle(node, '::before').display), 'none', 'the grip bar goes with the drag');
         assert.deepEqual(await changes(page), [true]);
       }));
     } finally {
