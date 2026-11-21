@@ -1,0 +1,242 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "skeleton",
+  "sources": { "skeleton": "packages/react/src/supplemental/skeleton.ts" },
+  "exports": [
+    {
+      "name": "Skeleton",
+      "entry": ".",
+      "module": "skeleton",
+      "kind": "component",
+      "parts": [
+        {
+          "member": "Root",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "label",
+              "optional": true,
+              "type": "string",
+              "doc": "The loading status assistive technology reads for the whole group, such as Loading comments."
+            }
+          ],
+          "ref": { "type": "HTMLDivElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLDivElement>",
+              "omit": ["label", "role", "dangerouslySetInnerHTML"]
+            }
+          ]
+        },
+        {
+          "member": "Line",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "width",
+              "optional": true,
+              "type": "string | number",
+              "doc": "The line's length: a CSS length or percentage, or a number of pixels."
+            }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLSpanElement>",
+              "omit": ["width", "children", "dangerouslySetInnerHTML"]
+            }
+          ]
+        },
+        {
+          "member": "Circle",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "size",
+              "optional": true,
+              "type": "SkeletonCircleSize",
+              "values": ["sm", "md", "lg"],
+              "refs": ["skeleton#SkeletonCircleSize"],
+              "doc": "The circle's size, matching an Avatar of the same size."
+            }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLSpanElement>",
+              "omit": ["size", "children", "dangerouslySetInnerHTML"]
+            }
+          ]
+        },
+        {
+          "member": "Block",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "width",
+              "optional": true,
+              "type": "string | number",
+              "doc": "The block's width: a CSS length or percentage, or a number of pixels."
+            },
+            {
+              "name": "height",
+              "optional": true,
+              "type": "string | number",
+              "doc": "The block's height: a CSS length, or a number of pixels. It takes the place of the aspect ratio."
+            },
+            {
+              "name": "aspectRatio",
+              "optional": true,
+              "type": "string | number",
+              "doc": "The block's width-to-height ratio, such as 16 / 9, used when no height is given."
+            }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLSpanElement>",
+              "omit": ["width", "height", "aspectRatio", "children", "dangerouslySetInnerHTML"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "skeleton#ShapeProps",
+      "name": "ShapeProps",
+      "module": "skeleton",
+      "typeParameters": [
+        { "name": "Own" }
+      ],
+      "text": "type ShapeProps<Own> = Own & Omit<React.HTMLAttributes<HTMLSpanElement>, keyof Own | 'children' | 'dangerouslySetInnerHTML'>;"
+    },
+    {
+      "id": "skeleton#SkeletonBlockOwnProps",
+      "name": "SkeletonBlockOwnProps",
+      "module": "skeleton",
+      "text": "type SkeletonBlockOwnProps = {\n  width?: string | number;\n  height?: string | number;\n  aspectRatio?: string | number;\n};",
+      "members": [
+        {
+          "name": "width",
+          "optional": true,
+          "type": "string | number",
+          "doc": "The block's width: a CSS length or percentage, or a number of pixels."
+        },
+        {
+          "name": "height",
+          "optional": true,
+          "type": "string | number",
+          "doc": "The block's height: a CSS length, or a number of pixels. It takes the place of the aspect ratio."
+        },
+        {
+          "name": "aspectRatio",
+          "optional": true,
+          "type": "string | number",
+          "doc": "The block's width-to-height ratio, such as 16 / 9, used when no height is given."
+        }
+      ]
+    },
+    {
+      "id": "skeleton#SkeletonBlockProps",
+      "name": "SkeletonBlockProps",
+      "module": "skeleton",
+      "public": [
+        { "entry": ".", "name": "SkeletonBlockProps" }
+      ],
+      "owner": "skeleton",
+      "text": "type SkeletonBlockProps = ShapeProps<SkeletonBlockOwnProps>;",
+      "refs": ["skeleton#ShapeProps", "skeleton#SkeletonBlockOwnProps"]
+    },
+    {
+      "id": "skeleton#SkeletonCircleOwnProps",
+      "name": "SkeletonCircleOwnProps",
+      "module": "skeleton",
+      "text": "type SkeletonCircleOwnProps = {\n  size?: SkeletonCircleSize;\n};",
+      "members": [
+        {
+          "name": "size",
+          "optional": true,
+          "type": "SkeletonCircleSize",
+          "values": ["sm", "md", "lg"],
+          "refs": ["skeleton#SkeletonCircleSize"],
+          "doc": "The circle's size, matching an Avatar of the same size."
+        }
+      ],
+      "refs": ["skeleton#SkeletonCircleSize"]
+    },
+    {
+      "id": "skeleton#SkeletonCircleProps",
+      "name": "SkeletonCircleProps",
+      "module": "skeleton",
+      "public": [
+        { "entry": ".", "name": "SkeletonCircleProps" }
+      ],
+      "owner": "skeleton",
+      "text": "type SkeletonCircleProps = ShapeProps<SkeletonCircleOwnProps>;",
+      "refs": ["skeleton#ShapeProps", "skeleton#SkeletonCircleOwnProps"]
+    },
+    {
+      "id": "skeleton#SkeletonCircleSize",
+      "name": "SkeletonCircleSize",
+      "module": "skeleton",
+      "public": [
+        { "entry": ".", "name": "SkeletonCircleSize" }
+      ],
+      "owner": "skeleton",
+      "text": "type SkeletonCircleSize = 'sm' | 'md' | 'lg';",
+      "values": ["sm", "md", "lg"]
+    },
+    {
+      "id": "skeleton#SkeletonLineOwnProps",
+      "name": "SkeletonLineOwnProps",
+      "module": "skeleton",
+      "text": "type SkeletonLineOwnProps = {\n  width?: string | number;\n};",
+      "members": [
+        {
+          "name": "width",
+          "optional": true,
+          "type": "string | number",
+          "doc": "The line's length: a CSS length or percentage, or a number of pixels."
+        }
+      ]
+    },
+    {
+      "id": "skeleton#SkeletonLineProps",
+      "name": "SkeletonLineProps",
+      "module": "skeleton",
+      "public": [
+        { "entry": ".", "name": "SkeletonLineProps" }
+      ],
+      "owner": "skeleton",
+      "text": "type SkeletonLineProps = ShapeProps<SkeletonLineOwnProps>;",
+      "refs": ["skeleton#ShapeProps", "skeleton#SkeletonLineOwnProps"]
+    },
+    {
+      "id": "skeleton#SkeletonOwnProps",
+      "name": "SkeletonOwnProps",
+      "module": "skeleton",
+      "text": "type SkeletonOwnProps = {\n  label?: string;\n};",
+      "members": [
+        {
+          "name": "label",
+          "optional": true,
+          "type": "string",
+          "doc": "The loading status assistive technology reads for the whole group, such as Loading comments."
+        }
+      ]
+    },
+    {
+      "id": "skeleton#SkeletonRootProps",
+      "name": "SkeletonRootProps",
+      "module": "skeleton",
+      "public": [
+        { "entry": ".", "name": "SkeletonRootProps" }
+      ],
+      "owner": "skeleton",
+      "text": "type SkeletonRootProps = SkeletonOwnProps & Omit<React.HTMLAttributes<HTMLDivElement>, keyof SkeletonOwnProps | 'role' | 'dangerouslySetInnerHTML'>;",
+      "refs": ["skeleton#SkeletonOwnProps"]
+    }
+  ]
+}

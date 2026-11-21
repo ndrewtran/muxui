@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:skeleton-usage",
+  "kind": "guide",
+  "name": "Skeleton usage",
+  "summary": "Use Skeleton through the Mux UI React binding.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "skeleton",
+    "loading",
+    "placeholder",
+    "react"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/skeleton-usage.md"
+}

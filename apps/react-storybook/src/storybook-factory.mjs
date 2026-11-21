@@ -1533,6 +1533,15 @@ Object.assign(ADAPTERS, {
     );
   },
   Sidebar: (args) => e(SidebarPreview, args),
+  // Root owns the label; the adapter lays out every shape inside it, as a loading post: a circle and a name, two lines and media.
+  Skeleton: (args) => e(MuxUI.Skeleton.Root, { ...args, style: { display: 'grid', gap: '0.75rem', maxInlineSize: '24rem', ...args.style } },
+    e('div', { style: { display: 'flex', alignItems: 'center', gap: '0.75rem' } },
+      e(MuxUI.Skeleton.Circle, { size: 'sm' }),
+      e(MuxUI.Skeleton.Line, { width: '40%' }),
+    ),
+    e('div', null, e(MuxUI.Skeleton.Line), e(MuxUI.Skeleton.Line, { width: '72%' })),
+    e(MuxUI.Skeleton.Block, { aspectRatio: '16 / 9' }),
+  ),
   SwitchField: (args) => e(MuxUI.SwitchField.Root, { ...args },
     e(MuxUI.SwitchField.Button, { disabled: args.disabled }, 'Notifications', e(MuxUI.SwitchField.Thumb)),
     e(MuxUI.SwitchField.Description, null, 'Send product updates by email.'),
@@ -2969,6 +2978,8 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   Resizable: '.muxui-resizable__handle',
   SelectNative: '.muxui-select-native',
   Sidebar: '.muxui-sidebar__mobile-trigger',
+  // Skeleton is passive: the proof finds the group, and there is nothing to press.
+  Skeleton: '.muxui-skeleton',
   SwitchField: '.muxui-switch-field__button',
   TagSelect: '.muxui-tag-select__input',
   Text: '.muxui-text',

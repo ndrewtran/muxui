@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:skeleton-basic-react",
+  "kind": "example",
+  "name": "Basic React Skeleton",
+  "summary": "Hold the place of a loading post with a circle, lines and a media block under one loading status.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:skeleton#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/skeleton/examples/react/basic.tsx"
+}

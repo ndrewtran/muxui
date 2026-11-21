@@ -108,7 +108,14 @@ test('the Events section lists a part\'s events under its owner, and says when o
 });
 
 test('every family Docs page runs the continuous reference sections in order, projected from the catalog', async () => {
-  const guideIds = new Set(canonicalCatalog.listArtifacts({ kind: 'guide', platform: 'web.react', detail: 'brief', limit: 100 }).data.items.map(({ id }) => id));
+  // Every page of the guide listing: one page holds at most 100.
+  const guideIds = new Set();
+  for (let cursor; ;) {
+    const { data, meta } = canonicalCatalog.listArtifacts({ kind: 'guide', platform: 'web.react', detail: 'brief', limit: 100, ...(cursor === undefined ? {} : { cursor }) });
+    for (const { id } of data.items) guideIds.add(id);
+    if (!meta.truncated) break;
+    cursor = meta.nextCursor;
+  }
   // Every Block story with the canonical variant source it renders.
   const blockStories = manifest.pageIndex.filter(({ family }) => manifest.patterns.some((pattern) => pattern.family === family)).flatMap(({ stories }) => stories);
   const all = await families();

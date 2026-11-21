@@ -261,7 +261,7 @@ test('the anchors of a page are unique, and every family page shows its owner\'s
 		for (const type of api.types) assert.ok(type.imports.length > 0 && type.imports.every((line) => line.startsWith('import type { ')), `${slug} ${type.name}`);
 		types += api.types.length;
 	}
-	assert.equal(types, 294, 'the 325 exported types less the 24 shared and 7 package-level');
+	assert.equal(types, 299, 'the 330 exported types less the 24 shared and 7 package-level');
 });
 
 test('the package exports page lists every entry of the export map, the package-level exports and the shared types with their reasons', () => {

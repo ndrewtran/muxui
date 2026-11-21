@@ -1194,7 +1194,7 @@ test('MuxUI styles bind states and public theme hooks', async () => {
   // quadratically over the large generated stylesheet.
   const infiniteAnimationRules = [...css.matchAll(/[^{}]+\{([^{}]*)\}/gu)].filter(([, body]) => /animation:[^;]*infinite/u.test(body)).map(([rule]) => rule);
   assert.ok(infiniteAnimationRules.length > 0, 'current union retains the explicit indeterminate progress behavior');
-  assert.ok(infiniteAnimationRules.every((rule) => /\.muxui-(?:progress-(?:bar|circle)|button__spinner)/u.test(rule)), 'continuous animation is restricted to indeterminate progress and pending button spinners');
+  assert.ok(infiniteAnimationRules.every((rule) => /\.muxui-(?:progress-(?:bar|circle)|button__spinner|skeleton__band)/u.test(rule)), 'continuous animation is restricted to indeterminate progress, pending button spinners and the Skeleton sweep');
   assert.match(css, /\.muxui-button__spinner\s*\{[\s\S]*animation: muxui-button-spinner-rotate var\(--muxui-semantic-motion-progress-spin-duration\) var\(--muxui-semantic-motion-constant-easing\) infinite;/u);
   assert.match(css, /\.muxui-button__spinner-arc\s*\{[\s\S]*animation: muxui-button-spinner-dash var\(--muxui-semantic-motion-progress-sweep-duration\) var\(--muxui-semantic-motion-progress-easing\) infinite;/u);
 

@@ -1,0 +1,163 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/skeleton.ts",
+  "component": "muxui:component:skeleton",
+  "binding": "web.react",
+  "export": "Skeleton",
+  "api": {
+    "props": [
+      "label"
+    ],
+    "events": [],
+    "defaults": {
+      "label": "Loading"
+    },
+    "propDetails": {
+      "label": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The loading status assistive technology reads for the whole group, such as Loading comments."
+      }
+    },
+    "eventDetails": {},
+    "types": {},
+    "partApis": {
+      "line": {
+        "member": "Line",
+        "props": [
+          "width"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "width": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "string"
+                },
+                {
+                  "kind": "number"
+                }
+              ]
+            },
+            "required": false,
+            "description": "The line's length: a CSS length or percentage, or a number of pixels."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      },
+      "circle": {
+        "member": "Circle",
+        "props": [
+          "size"
+        ],
+        "events": [],
+        "defaults": {
+          "size": "md"
+        },
+        "propDetails": {
+          "size": {
+            "type": {
+              "kind": "reference",
+              "name": "SkeletonCircleSize"
+            },
+            "required": false,
+            "enum": [
+              "sm",
+              "md",
+              "lg"
+            ],
+            "description": "The circle's size, matching an Avatar of the same size."
+          }
+        },
+        "eventDetails": {},
+        "types": {
+          "SkeletonCircleSize": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "literal",
+                  "value": "sm"
+                },
+                {
+                  "kind": "literal",
+                  "value": "md"
+                },
+                {
+                  "kind": "literal",
+                  "value": "lg"
+                }
+              ]
+            },
+            "description": "The sizes of a Skeleton.Circle, the same as Avatar's."
+          }
+        }
+      },
+      "block": {
+        "member": "Block",
+        "props": [
+          "width",
+          "height",
+          "aspectRatio"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "width": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "string"
+                },
+                {
+                  "kind": "number"
+                }
+              ]
+            },
+            "required": false,
+            "description": "The block's width: a CSS length or percentage, or a number of pixels."
+          },
+          "height": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "string"
+                },
+                {
+                  "kind": "number"
+                }
+              ]
+            },
+            "required": false,
+            "description": "The block's height: a CSS length, or a number of pixels. It takes the place of the aspect ratio."
+          },
+          "aspectRatio": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "string"
+                },
+                {
+                  "kind": "number"
+                }
+              ]
+            },
+            "required": false,
+            "description": "The block's width-to-height ratio, such as 16 / 9, used when no height is given."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      }
+    }
+  }
+}
