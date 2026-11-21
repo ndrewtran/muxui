@@ -622,14 +622,17 @@ for (const engine of browserEngines()) {
         return { resting, hidden };
       };
 
-      await t.test('the Input draws no native cancel button beside ClearButton', async () => {
+      // Firefox draws no native cancel button on a search input, so there is nothing to hide or keep there.
+      const cancelSkip = engine === 'firefox' && 'Firefox draws no native cancel button on a search input';
+
+      await t.test('the Input draws no native cancel button beside ClearButton', { skip: cancelSkip }, async () => {
         await tab.locator('#palette-clear').waitFor({ state: 'attached' });
         const { resting, hidden } = await cancelShots(tab, input);
         assert.ok(await tab.locator('#palette-clear').isVisible(), 'ClearButton shows with a query');
         assert.ok(resting.equals(hidden), 'the Input draws no native cancel button');
       });
 
-      await t.test('the Input keeps the native cancel button without ClearButton', async () => {
+      await t.test('the Input keeps the native cancel button without ClearButton', { skip: cancelSkip }, async () => {
         const page = await browser.newPage({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
         page.on('pageerror', (error) => errors.push(error.message));
         await page.goto(`${url}/command-palette-list.html?noclear`, { waitUntil: 'load' });
