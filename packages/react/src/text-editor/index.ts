@@ -7,7 +7,8 @@ import { closeHistory, isHistoryTransaction } from '@tiptap/pm/history';
 import { Fragment, Slice } from '@tiptap/pm/model';
 import type { Mark, Node as ProseMirrorNode, ResolvedPos, Schema } from '@tiptap/pm/model';
 import { AllSelection, Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
-import type { EditorState, Transaction } from '@tiptap/pm/state';
+import type { EditorState, SelectionBookmark, Transaction } from '@tiptap/pm/state';
+import type { Mappable } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
@@ -590,12 +591,45 @@ function relink(tr: Transaction, link: LinkRange, href: string): boolean {
 }
 
 /**
- * Where the link command left the caret after a label it inserted, with the label's link and the marks it held there for
- * typing. linkTypingBoundary keeps each one where the edits move it and holds those marks again when an undo or redo brings
- * the caret back there, also where the label joined a link to the same address.
+ * The caret the link command leaves after a label it inserted, with the marks it holds there for typing, which leave out the
+ * label's link. Undo history keeps a selection's bookmark from the start of each change and from each undo, and resolves it
+ * in the document it restores, so an undo or redo that brings this caret back brings back its marks too, which
+ * linkTypingBoundary holds again. Any edit maps it to a plain caret.
  */
-type LabelEnd = { readonly pos: number; readonly link: Mark; readonly marks: readonly Mark[] };
-const labelEnds = new PluginKey<readonly LabelEnd[]>('muxuiLinkTypingBoundary');
+class HeldMarksSelection extends TextSelection {
+  readonly held: readonly Mark[];
+
+  constructor($pos: ResolvedPos, held: readonly Mark[]) {
+    super($pos);
+    this.held = held;
+  }
+
+  override getBookmark(): HeldMarksBookmark {
+    return new HeldMarksBookmark(this.head, this.held);
+  }
+}
+
+/** The bookmark of a HeldMarksSelection, shaped as the text bookmark it stands in for, with the caret's held marks. */
+class HeldMarksBookmark implements SelectionBookmark {
+  readonly anchor: number;
+  readonly head: number;
+  readonly held: readonly Mark[];
+
+  constructor(pos: number, held: readonly Mark[]) {
+    this.anchor = pos;
+    this.head = pos;
+    this.held = held;
+  }
+
+  map(mapping: Mappable): HeldMarksBookmark {
+    return new HeldMarksBookmark(mapping.map(this.head), this.held);
+  }
+
+  resolve(doc: ProseMirrorNode): Selection {
+    const $pos = doc.resolve(this.head);
+    return $pos.parent.inlineContent ? new HeldMarksSelection($pos, this.held) : Selection.near($pos);
+  }
+}
 
 /**
  * Puts `text`, linked to `href`, in place of the selected text, of the whole link at a caret in one, or at a caret, with the
@@ -620,11 +654,10 @@ function insertLink(tr: Transaction, href: string, text: string, link: LinkRange
   const marks = mark.addToSet(inherited.filter((other) => $from.parent.type.allowsMarkType(other.type)));
   const steps = tr.steps.length;
   tr.replaceWith(from, to, schema.text(text.replace(/\r\n|\r|\n/gu, ' '), marks));
-  tr.setSelection(TextSelection.create(tr.doc, tr.mapping.slice(steps).map(to, 1)));
-  // The link mark is inclusive, so without this the text typed straight after the new link would extend it.
+  // The link mark is inclusive, so without these held marks the text typed straight after the new link would extend it.
   const held = mark.removeFromSet(marks);
+  tr.setSelection(new HeldMarksSelection(tr.doc.resolve(tr.mapping.slice(steps).map(to, 1)), held));
   tr.setStoredMarks(held);
-  tr.setMeta(labelEnds, { pos: tr.selection.from, link: mark, marks: held } satisfies LabelEnd);
   tr.scrollIntoView();
   return true;
 }
@@ -1214,37 +1247,23 @@ const EXTERNAL_VALUE = 'muxuiExternalValue';
 /**
  * Holds the marks for typing without a link in two places where the next typed text would otherwise extend one. A caret at
  * the start of a block takes the marks of the text after it, so text typed before a link that starts a paragraph would join
- * it, though the start of a link is outside it everywhere else. And an undo or redo brings back the document and the caret
- * but not the marks held for typing, so text typed at the end of a label the link command inserted would extend its link.
+ * it, though the start of a link is outside it everywhere else. And an undo or redo brings back the caret after a label the
+ * link command inserted but not the marks held for typing there, so it holds the ones that caret carries.
  */
 function linkTypingBoundary() {
   return Extension.create({
     name: 'muxuiLinkTypingBoundary',
     addProseMirrorPlugins() {
-      return [new Plugin<readonly LabelEnd[]>({
-        key: labelEnds,
-        state: {
-          init: () => [],
-          // Each label end keeps to the right of an insertion at it, so the undo that takes its label out moves it to
-          // where the label was, and the redo that brings the label back moves it after the label again.
-          apply(tr, ends) {
-            const mapped = tr.docChanged ? ends.map((end) => ({ ...end, pos: tr.mapping.map(end.pos, 1) })) : ends;
-            const added: LabelEnd | undefined = tr.getMeta(labelEnds);
-            return added ? [...mapped.filter(({ pos }) => pos !== added.pos), added] : mapped;
-          },
-        },
-        appendTransaction(transactions, _previous, state) {
+      return [new Plugin({
+        key: new PluginKey('muxuiLinkTypingBoundary'),
+        appendTransaction(_transactions, _previous, state) {
           const type = state.schema.marks.link;
           const { selection, storedMarks } = state;
           if (!type || storedMarks || !selection.empty) return null;
+          if (selection instanceof HeldMarksSelection) return state.tr.setStoredMarks(selection.held);
           const { $from } = selection;
           const marks = $from.marks();
-          const link = type.isInSet(marks);
-          if (!link) return null;
-          if ($from.parentOffset === 0) return state.tr.setStoredMarks(type.removeFromSet(marks));
-          if (!transactions.some((transaction) => isHistoryTransaction(transaction))) return null;
-          const end = labelEnds.getState(state)?.find(({ pos, link: label }) => pos === selection.from && label.eq(link));
-          return end ? state.tr.setStoredMarks(end.marks) : null;
+          return $from.parentOffset === 0 && type.isInSet(marks) ? state.tr.setStoredMarks(type.removeFromSet(marks)) : null;
         },
       })];
     },

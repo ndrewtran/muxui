@@ -16,13 +16,19 @@ import { createRoot } from 'react-dom/client';
 import { TextEditor } from '/src/text-editor/index.ts';
 
 const h = React.createElement;
-const { spacer = 0, ...props } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
+const { spacer = 0, controlled = false, ...props } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
 window.__ready = 0;
 window.__changes = 0;
 window.__handle = React.createRef();
+// With controlled, an owner keeps each value the editor reports, and window.__replaceValue sets one of its own.
+function Owner({ defaultValue, ...rest }) {
+  const [value, setValue] = React.useState(defaultValue);
+  window.__replaceValue = setValue;
+  return h(TextEditor, { ...rest, value, onChange: (next) => { window.__changes += 1; setValue(next); } });
+}
 createRoot(document.getElementById('root')).render(h('main', null,
   spacer ? h('div', { style: { height: spacer }, 'aria-hidden': 'true' }) : null,
-  h(TextEditor, { ref: window.__handle, label: 'Reply', toolbar: false, onReady: () => { window.__ready += 1; }, onChange: () => { window.__changes += 1; }, ...props }),
+  h(controlled ? Owner : TextEditor, { ref: window.__handle, label: 'Reply', toolbar: false, onReady: () => { window.__ready += 1; }, onChange: () => { window.__changes += 1; }, ...props }),
   h('div', { style: { height: 3000 }, 'aria-hidden': 'true' })));
 `;
 
@@ -90,6 +96,15 @@ const endInView = (tab) => tab.locator('.ProseMirror').evaluate((node) => {
   const view = node.getBoundingClientRect();
   return character.height > 0 && character.top >= view.top - 1 && character.bottom <= view.bottom + 1;
 });
+
+// A document of one paragraph, a link for it, the first paragraph's DOM nodes, and a focused caret at a document position.
+const paragraphOf = (content) => ({ type: 'doc', content: [{ type: 'paragraph', content }] });
+const linkA = { type: 'link', attrs: { href: 'https://a.example/' } };
+const children = (tab) => tab.locator('.ProseMirror p').first().evaluate((node) => [...node.childNodes].map((child) => [child.nodeName, child.textContent]));
+const caretAt = (tab, position) => tab.evaluate((at) => {
+  window.__handle.current.focus({ preventScroll: true });
+  document.querySelector('.ProseMirror').editor.commands.setTextSelection(at);
+}, position);
 
 // Lines of one paragraph, apart by hard breaks, so each is one line of the content's own height.
 async function typeLines(tab, count) {
@@ -187,8 +202,45 @@ for (const engine of browserEngines()) {
       await frames(tab);
       await tab.keyboard.type('x');
       await frames(tab);
-      const children = await tab.locator('.ProseMirror p').first().evaluate((node) => [...node.childNodes].map((child) => [child.nodeName, child.textContent]));
-      assert.deepEqual(children, [['#text', 'x'], ['A', 'lead'], ['#text', ' rest']]);
+      assert.deepEqual(await children(tab), [['#text', 'x'], ['A', 'lead'], ['#text', ' rest']]);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test(`TextEditor types into a link again after a new label for it is undone by keyboard in ${engine}`, { timeout: 120_000 }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage({ viewport: { width: 800, height: 600 } });
+      await open(tab, { defaultValue: paragraphOf([{ type: 'text', text: 'see ' }, { type: 'text', text: 'docs', marks: [linkA] }, { type: 'text', text: ' end' }]) });
+      // At the end of the link, a new label in place of the whole link, at the same address.
+      await caretAt(tab, 9);
+      assert.equal(await tab.evaluate(() => window.__handle.current.execute({ type: 'link', href: 'https://a.example/', text: 'guide' })), true);
+      await frames(tab);
+      await tab.keyboard.press('ControlOrMeta+z');
+      await tab.keyboard.type('!');
+      await frames(tab);
+      assert.deepEqual(await children(tab), [['#text', 'see '], ['A', 'docs!'], ['#text', ' end']], 'typed text extends the restored link, as before the label');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test(`TextEditor keeps text typed after a label unlinked when a new controlled value is undone by keyboard in ${engine}`, { timeout: 120_000 }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage({ viewport: { width: 800, height: 600 } });
+      await open(tab, { controlled: true, defaultValue: paragraphOf([{ type: 'text', text: 'abcd' }]) });
+      await caretAt(tab, 3);
+      assert.equal(await tab.evaluate(() => window.__handle.current.execute({ type: 'link', href: 'https://a.example/', text: 'new' })), true);
+      await frames(tab);
+      await tab.evaluate((value) => window.__replaceValue(value), paragraphOf([{ type: 'text', text: 'other' }]));
+      await frames(tab);
+      assert.equal(await tab.locator('.ProseMirror').textContent(), 'other', 'the owner replaced the document');
+      await tab.keyboard.press('ControlOrMeta+z');
+      await tab.keyboard.type('!');
+      await frames(tab);
+      assert.deepEqual(await children(tab), [['#text', 'ab'], ['A', 'new'], ['#text', '!cd']], 'typed text after the label is not linked');
     } finally {
       await browser.close();
     }

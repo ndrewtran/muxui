@@ -546,15 +546,15 @@ test('TextEditor advanced controls expose the color dialog and durable image URL
 // ProseMirror reads Mod as Meta where the platform Node reports is Apple's, and as Ctrl elsewhere.
 const modKey = /Mac|iP(hone|[oa]d)/u.test(globalThis.navigator?.platform ?? '') ? { metaKey: true } : { ctrlKey: true };
 
-// Mounts a TextEditor and returns its parts, with `at(text)`, the document position where `text` starts.
-async function mountEditor(props) {
+// Mounts a TextEditor, or `Component` around one, and returns its parts, with `at(text)`, the position where `text` starts.
+async function mountEditor(props, Component = TextEditor) {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
   // jsdom has no layout, so give ProseMirror's coordinate lookups empty rectangles.
   dom.window.Range.prototype.getClientRects = () => [];
   dom.window.Range.prototype.getBoundingClientRect = () => ({ left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 });
   const root = createRoot(document.querySelector('#root'));
-  const render = (next) => act(async () => root.render(React.createElement(TextEditor, { 'aria-label': 'Draft', ...props, ...next })));
+  const render = (next) => act(async () => root.render(React.createElement(Component, { 'aria-label': 'Draft', ...props, ...next })));
   await render();
   const pm = document.querySelector('.ProseMirror');
   const { editor } = pm;
@@ -719,10 +719,10 @@ const paragraph = (...content) => ({ type: 'paragraph', ...(content.length ? { c
 const linkMark = (href) => ({ type: 'link', attrs: { href } });
 
 // mountEditor with the handle: `execute` returns what the command returned, and `json` is the portable document.
-async function mountCommandEditor(props) {
+async function mountCommandEditor(props, Component) {
   const handle = React.createRef();
   const changes = [];
-  const t = await mountEditor({ ref: handle, toolbar: false, onChange: (value) => changes.push(value), ...props });
+  const t = await mountEditor({ ref: handle, toolbar: false, onChange: (value) => changes.push(value), ...props }, Component);
   return {
     ...t,
     changes,
@@ -1130,6 +1130,39 @@ test('TextEditor link with text, undone and redone, leaves the next typed text u
     await t.type('!');
     assert.deepEqual(t.content(), [text('see '), text('new', [linkMark(linkA)]), text('!'), text('docs', [linkMark(linkA)]), text('more', [linkMark(linkB)]), text(' end')], 'after a redo of a label that joined a link, typed text is not linked');
   });
+});
+
+test('TextEditor link with text in place of a whole link, undone, leaves typing at the restored link end extending it', async () => {
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at('docs') + 4);
+    assert.equal(await t.execute({ type: 'link', href: linkA, text: 'guide' }), true);
+    await t.undo();
+    await t.type('!');
+    assert.deepEqual(t.content().slice(0, 2), [text('see '), text('docs!', [linkMark(linkA)])], 'typed text joins the restored link, as before the label');
+  });
+});
+
+// The owner of a controlled editor: it keeps each value the editor reports, and `owner.current(value)` sets one of its own.
+function ControlledOwner({ initialValue, owner, onChange, ...props }) {
+  const [value, setValue] = React.useState(initialValue);
+  owner.current = setValue;
+  return React.createElement(TextEditor, { ...props, value, onChange: (next) => { setValue(next); onChange?.(next); } });
+}
+
+test('TextEditor link with text, then a new controlled value undone, leaves the next typed text unlinked', async () => {
+  const owner = { current: null };
+  const t = await mountCommandEditor({ initialValue: { type: 'doc', content: [paragraph(text('abcd'))] }, owner }, ControlledOwner);
+  try {
+    await t.select(t.at('abcd') + 2);
+    assert.equal(await t.execute({ type: 'link', href: linkC, text: 'new' }), true);
+    await act(async () => owner.current({ type: 'doc', content: [paragraph(text('other'))] }));
+    assert.deepEqual(t.content(), [text('other')], 'the owner replaced the document');
+    await t.undo();
+    await t.type('!');
+    assert.deepEqual(t.content(), [text('ab'), text('new', [linkMark(linkC)]), text('!cd')], 'typed text after the label is not linked');
+  } finally {
+    await t.close();
+  }
 });
 
 test('TextEditor link with text in place of a whole link keeps the marks held at the caret', async () => {
