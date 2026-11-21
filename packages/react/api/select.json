@@ -47,7 +47,7 @@
       "offset": 8,
       "crossOffset": 0,
       "shouldFlip": true,
-      "containerPadding": 12,
+      "containerPadding": 0,
       "modal": true
     },
     "propDetails": {

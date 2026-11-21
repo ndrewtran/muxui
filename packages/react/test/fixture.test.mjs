@@ -884,7 +884,7 @@ test('catalog defaults and props agree with the renderer for every generator-gua
   assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, offset: 9 }), ['offset: catalog 9, behaves 8']);
   assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, crossOffset: 1 }), ['crossOffset: catalog 1, behaves 0']);
   assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, shouldFlip: false }), ['shouldFlip: catalog false, behaves true']);
-  assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, containerPadding: 13 }), ['containerPadding: catalog 13, behaves 12']);
+  assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, containerPadding: 13 }), ['containerPadding: catalog 13, behaves 0']);
   assert.deepEqual(await behaviourMismatches('Select', { ...select.defaults, modal: false }), ['modal: catalog false, behaves true']);
   for (const [key, value, rendered] of [['defaultOpen', true, false], ['disabled', true, false], ['readOnly', true, false], ['required', true, false], ['invalid', true, false]]) {
     assert.deepEqual(defaultMismatches(renderToString(minimalRenders.Select()), { ...select.defaults, [key]: value }), [`${key}: catalog ${value}, rendered ${rendered}`], key);

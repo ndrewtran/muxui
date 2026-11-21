@@ -1775,9 +1775,12 @@
   color: var(--muxui-semantic-color-neutral-50);
 }
 
+/* React Aria sets --trigger-width to the trigger's width and places the popup at the trigger's start edge. Border-box
+   sizing keeps the whole popup, border included, at least that wide and flush with the trigger. */
 .muxui-select__popup {
+  box-sizing: border-box;
   padding: var(--muxui-semantic-layout-inset-tight);
-  min-width: var(--anchor-width, 10rem);
+  min-width: var(--trigger-width);
   max-height: 17.5rem;
   overflow-y: auto;
   overflow-x: hidden;
@@ -2898,12 +2901,22 @@
   transform: rotate(90deg);
 }
 
-/* RAC state attributes are mirrored by the wrappers for deterministic styling. */
+/* RAC state attributes are mirrored by the wrappers for deterministic styling. A disabled Select option is dimmed and
+   unfilled, as a disabled ComboBox, ListBox or Menu item is, so it never looks like the highlighted option. Coming later
+   at the same specificity, it also replaces the shared disabled fill in base.css. */
 .muxui-select__option[aria-disabled='true'] {
-  background-color: var(--muxui-semantic-surface-hover);
+  opacity: 0.45;
+  background-color: transparent;
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+/* Forced colours paint every option in system colours, where dimming would only lower their contrast. */
+@media (forced-colors: active) {
+  .muxui-select__option[aria-disabled='true'] {
+    opacity: 1;
+  }
 }
 
 /* A disabled ComboBox option is dimmed and unfilled, as a disabled ListBox or Menu item is, so it never looks like
