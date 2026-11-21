@@ -35,6 +35,7 @@ import {
   NumberField,
   ProgressBar,
   Popover,
+  type PopoverPropsWithout,
   PreviewTrigger,
   RadioField,
   RadioGroup,
@@ -546,6 +547,21 @@ void unnamedPopover;
 // @ts-expect-error A Popover without a trigger requires an anchorRef.
 const unanchoredPopover = <Popover aria-label="Add link" open>Content</Popover>;
 void unanchoredPopover;
+// A wrapper that names its Popover itself forwards the rest through PopoverPropsWithout, which keeps the trigger and
+// anchorRef arms apart where TypeScript's Omit merges them, so the rest still holds one or the other.
+function NamedPopover({ name, ...props }: PopoverPropsWithout<'aria-label' | 'aria-labelledby'> & { name: string }) {
+  return <Popover aria-label={name} {...props} />;
+}
+const namedPopovers = (
+  <>
+    <NamedPopover name="Details" trigger={<button type="button">Details</button>}>Popover content</NamedPopover>
+    <NamedPopover name="Add link" anchorRef={createRef<HTMLDivElement>()} open>Popover content</NamedPopover>
+  </>
+);
+void namedPopovers;
+// @ts-expect-error The wrapper keeps the requirement: without a trigger it needs an anchorRef.
+const unanchoredNamedPopover = <NamedPopover name="Add link" open>Content</NamedPopover>;
+void unanchoredNamedPopover;
 // @ts-expect-error An initial focus target is an HTML element that can take focus, not any element.
 const elementFocusPopover = <Popover aria-label="Add link" anchorRef={createRef<HTMLDivElement>()} initialFocusRef={createRef<Element>()}>Content</Popover>;
 void elementFocusPopover;

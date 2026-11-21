@@ -195,9 +195,9 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
     await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'full'));
     await page.waitForFunction(() => [...document.querySelectorAll('.muxui-menu__popup')].every((node) => !node.hasAttribute('data-muxui-motion-reduced')));
     await waitForMenuOverlay(page, 'Two', { aligned: true, identity: true });
-    // A 300 ms budget here was missed on loaded CI runners: it times three round trips to the browser as well as the
-    // settle. The travel it interrupts is stretched to 3 s, so a 1 s budget leaves room for a busy runner and still
-    // fails an overlay that keeps travelling instead of settling.
+    // Reduced motion turned on mid-travel settles the overlay at once, in a few milliseconds locally. The budget also times
+    // three round trips to the browser, which loaded CI runners took past 300 ms, so it is 1 s; the travel it interrupts
+    // is stretched to 3 s, so an overlay that keeps travelling instead of settling still arrives well past the budget.
     const setTravel = (duration) => page.evaluate((value) => {
       document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', value);
       document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-spring-visual-duration', value);

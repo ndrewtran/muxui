@@ -750,19 +750,66 @@ function PopoverSurface({ modal, initialFocusRef, returnFocusRef, children, onPo
 }
 
 /**
- * The element a Popover's anchorRef or boundaryRef holds, if it is in the document. The ref is read after every render
- * of the Popover, open or closed, so an element that mounts, is replaced or leaves the document is picked up then, in the
- * same commit; React Aria measures its anchor only when the element it is given changes. The state it sets is guarded,
- * so a render that finds the same element costs no further render.
+ * The element a Popover's boundaryRef holds, if it is in the document. The ref is read after every render of the
+ * Popover, open or closed, and again once the commit has attached every ref, so an element that mounts after the
+ * Popover in the same commit, is replaced or leaves the document is picked up then. The state it sets is guarded, so a
+ * check that finds the same element costs no further render.
  */
 function useConnectedElement(ref: RefObject<Element | null> | undefined) {
   const [element, setElement] = React.useState<Element | null>(null);
-  useIsomorphicLayoutEffect(() => {
+  const check = () => {
     const node = ref?.current ?? null;
     const next = node?.isConnected ? node : null;
     setElement((current) => current === next ? current : next);
-  });
+  };
+  useIsomorphicLayoutEffect(check);
+  React.useEffect(check);
   return element;
+}
+
+// A ref whose current is the element `ref` holds while that element is in the document, read each time it is read.
+function connectedRef(ref: RefObject<Element | null>): RefObject<Element | null> {
+  return {
+    get current() {
+      const node = ref.current;
+      return node?.isConnected ? node : null;
+    },
+  };
+}
+
+// Where layout puts an element: its box in the viewport with the scroll of every element around it added back, the
+// page's included, so scrolling any of them leaves it the same.
+function layoutPlace(element: Element) {
+  let { top, left } = element.getBoundingClientRect();
+  for (let node = element.parentElement; node; node = node.parentElement) {
+    top += node.scrollTop;
+    left += node.scrollLeft;
+  }
+  return `${Math.round(top)} ${Math.round(left)}`;
+}
+
+/**
+ * The ref React Aria places a Popover against for its anchorRef. Its current reads anchorRef whenever React Aria
+ * measures, and holds the element only while it is in the document, so a measurement while the anchor is gone, on a
+ * resize say, finds none and the Popover stays where it was last placed. The anchor is checked after every render of
+ * the Popover and again once the commit has attached every ref, so one that mounts after the Popover in the same commit
+ * is found then. A new ref is made for each anchor element, so React Aria measures and observes a replaced one, and,
+ * while the Popover is open, for an anchor that layout has moved since the last check: React Aria measures it again as
+ * it starts observing the new ref's element, which reports its size at once unless it has none. A move is seen when the
+ * Popover renders, not while it does not. A scroll is not a move here, so a modal Popover stays where it is while its
+ * anchor scrolls, and React Aria closes a non-modal one.
+ */
+function useAnchorRef(anchorRef: RefObject<Element | null> | undefined, open: boolean) {
+  const [anchor, setAnchor] = React.useState<{ element: Element | null; place: string }>({ element: null, place: '' });
+  const check = () => {
+    const node = anchorRef?.current ?? null;
+    const element = node?.isConnected ? node : null;
+    const place = element && open ? layoutPlace(element) : '';
+    setAnchor((current) => (current.element === element && current.place === place ? current : { element, place }));
+  };
+  useIsomorphicLayoutEffect(check);
+  React.useEffect(check);
+  return React.useMemo(() => (anchorRef ? connectedRef(anchorRef) : undefined), [anchorRef, anchor]);
 }
 
 interface PopupContentProps {
@@ -786,13 +833,28 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
   const dialogContext = React.useContext(AriaDialogContext);
   const popoverContext = React.useContext(AriaPopoverContext);
   // A Popover without a trigger clears the trigger React Aria would provide, and its anchor stands in for it here.
-  const triggerRef = (popoverContext && 'triggerRef' in popoverContext ? popoverContext.triggerRef : undefined) ?? anchorRef;
-  const open = React.useContext(AriaOverlayTriggerStateContext)?.isOpen === true;
+  const contextTriggerRef = popoverContext && 'triggerRef' in popoverContext ? popoverContext.triggerRef : undefined;
+  const triggerRef = contextTriggerRef ?? anchorRef;
+  // React Aria also closes a dismissable non-modal Popover when focus leaves it. Without a trigger, focus that leaves for
+  // the anchor, for an element inside it, or for one around it is let be, as a press on the anchor is: such a press moves
+  // focus to the anchor, or, in WebKit, to the nearest focusable element around it. A press elsewhere still closes it as
+  // an outside press. A modal Popover keeps focus inside and leaves its page inert, so a press where its anchor is lands
+  // on the page and closes it.
+  const closesFor = !modal && !contextTriggerRef && anchorRef ? (element: Element) => {
+    const anchor = anchorRef.current;
+    return !anchor || !(anchor.contains(element) || element.contains(anchor));
+  } : undefined;
+  // A Popover open as it mounts opens one commit later, once the overlays that mount with it have run their effects: an
+  // enclosing modal opened by the same update, such as a sheet, then registers first, so the Popover is the topmost
+  // overlay and the one that hides the rest, as when it opens inside an open sheet. Only the popup waits; its trigger
+  // reports the open state at once.
+  const overlayState = React.useContext(AriaOverlayTriggerStateContext);
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  const popupState = React.useMemo(() => (overlayState?.isOpen && !mounted ? { ...overlayState, isOpen: false } : overlayState), [overlayState, mounted]);
+  const open = popupState?.isOpen === true;
   const presetScope = usePresetScope(triggerRef, colorScheme !== undefined && open);
-  // React Aria places the Popover against the element in this ref, a new ref for each anchor element, so a replaced
-  // anchor places it again; while the anchor is out of the document the Popover stays where it was last placed.
-  const anchor = useConnectedElement(anchorRef);
-  const anchorElementRef = React.useMemo(() => (anchorRef ? { current: anchor } : undefined), [anchorRef, anchor]);
+  const anchorElementRef = useAnchorRef(anchorRef, open);
   // Without a connected boundary element, the viewport bounds the Popover.
   const boundary = useConnectedElement(boundaryRef) ?? undefined;
   const positionerRef = React.useRef<HTMLElement | null>(null);
@@ -817,7 +879,7 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
       onDismissOutside?.();
     },
   });
-  return React.createElement(PopoverMotion, {
+  return React.createElement(AriaOverlayTriggerStateContext.Provider, { value: popupState }, React.createElement(PopoverMotion, {
     ...props,
     ref: setRef,
     triggerRef: anchorElementRef,
@@ -833,7 +895,7 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
     ...(colorScheme !== undefined && { 'data-muxui-color-scheme': colorScheme, 'data-muxui-theme': presetScope.theme, 'data-muxui-contrast': presetScope.contrast }),
     className: 'muxui-popover__positioner',
     isKeyboardDismissDisabled: !dismissable,
-    shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
+    shouldCloseOnInteractOutside: dismissable ? closesFor : () => false,
   }, React.createElement(PopoverSurface, {
     modal,
     initialFocusRef,
@@ -846,7 +908,7 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
     className: classNames('muxui-popover', className),
-  }, React.createElement(AriaButtonContext.Provider, { value: buttonSlots }, children)));
+  }, React.createElement(AriaButtonContext.Provider, { value: buttonSlots }, children))));
 });
 
 /**
@@ -899,6 +961,18 @@ export type PopoverProps = Omit<PopoverOwnProps, 'trigger'> & {
   /** The element that takes focus when the Popover closes or unmounts and the element focused when it opened cannot take focus back: it has left the document, is hidden or disabled, or focus was on the document body. It applies only when focus has been inside the Popover and would otherwise stay on the document body. */
   returnFocusRef?: RefObject<HTMLElement | null>;
 } & PopoverArms & OverlayAccessibleName;
+
+// Omit for each member of a union apart: a mapped type over the keys of a type parameter maps a union member by member,
+// and keeps each property's optional and readonly modifiers.
+type OmitFromEach<Props, Keys extends PropertyKey> = { [Key in keyof Props as Exclude<Key, Keys>]: Props[Key] };
+
+/**
+ * PopoverProps without the props named in Keys, for a component that wraps Popover and sets those props itself, such as
+ * its accessible name: `PopoverPropsWithout<'aria-label' | 'aria-labelledby'>`. It leaves them out of each arm of
+ * PopoverProps apart, where TypeScript's Omit merges the arms, so what is left still holds a trigger or, without one,
+ * an anchorRef.
+ */
+export type PopoverPropsWithout<Keys extends PropertyKey> = OmitFromEach<PopoverProps, Keys>;
 
 // What a Popover without a trigger gives React Aria in place of DialogTrigger's popover context: the same trigger name,
 // and no trigger element, overlay id or label of its own, so none from an enclosing trigger reaches it.

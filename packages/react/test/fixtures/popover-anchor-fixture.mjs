@@ -5,6 +5,15 @@ import { Dialog, Popover } from '../../src/overlays.ts';
 const h = React.createElement;
 const LINES = Array.from({ length: 24 }, (_, index) => `Line ${index + 1}`);
 
+// An anchor that unmounts through its own state, so the Popover placed against it does not render then.
+function AnchorIsland({ anchorRef }) {
+  const [shown, setShown] = React.useState(true);
+  React.useEffect(() => {
+    window.__popoverAnchor.removeIsland = () => setShown(false);
+  }, []);
+  return shown ? h('span', { id: 'island', ref: anchorRef, style: { display: 'inline-block', marginInlineStart: 120 } }, 'Island anchor') : null;
+}
+
 /**
  * A Popover opened from code, for the browser proof. It has no trigger: the Link tool calls `onOpenChange(true)`, and
  * the Popover is placed against the element `anchor` names. In the `frame` layout a narrow frame that scrolls sits in a
@@ -12,12 +21,18 @@ const LINES = Array.from({ length: 24 }, (_, index) => `Line ${index + 1}`);
  * `sheet` layout the toolbar and the Popover are inside a Dialog presented as a sheet, whose panel can be the boundary.
  *
  * - `open` and `onOpenChange` control the Popover; `uncontrolled` gives it `defaultOpen` instead.
- * - `anchor`: the Link tool (`link`), the toolbar (`row`), an element further down (`second`), or none (`none`).
+ * - `anchor`: the Link tool (`link`), the toolbar (`row`), an element further down (`second`), one that unmounts through
+ *   its own state (`island`, see window.__popoverAnchor.removeIsland), or none (`none`).
  * - `boundary`: the frame (`frame`), the whole page (`page`), the sheet's panel (`sheet`), or none (`none`).
  * - `opener`: the Link tool is shown, `hidden`, `disabled`, or `removed`.
  * - `initialFocus` and `returnFocus` pass the address field and the editor; `autoFocusField` sets the field's autoFocus,
- *   and `fieldDisabled` disables it.
- * - `mounted: false` removes the Popover; `sheetOpen` and `onSheetOpenChange` control the sheet.
+ *   and `fieldDisabled` disables it; `tall` adds a notes field, so the Popover is taller than a short frame.
+ * - `withTrigger` gives the Popover a trigger of its own, `#trigger`, beside its anchor.
+ * - `frameHeight` sets the frame's height in pixels.
+ * - `late`: the Popover is rendered before its anchor, `#late`, and both mount in one commit once it is true;
+ *   `lateAnchor: false` leaves the anchor out.
+ * - `mounted: false` removes the Popover; `sheetOpen` and `onSheetOpenChange` control the sheet, and `#reply-with-link`
+ *   on the page opens the sheet and the Popover in one press.
  * Every other prop (`modal`, `placement`, `colorScheme`, `dismissable`) passes to the Popover.
  */
 export function PopoverAnchorFixture({
@@ -34,6 +49,11 @@ export function PopoverAnchorFixture({
   returnFocus = false,
   autoFocusField = false,
   fieldDisabled = false,
+  tall = false,
+  withTrigger = false,
+  frameHeight = 520,
+  late = false,
+  lateAnchor = true,
   mounted = true,
   sheetOpen = false,
   onSheetOpenChange,
@@ -41,6 +61,7 @@ export function PopoverAnchorFixture({
   ...popoverProps
 }) {
   const anchorRef = React.useRef(null);
+  const lateRef = React.useRef(null);
   const frameRef = React.useRef(null);
   const pageRef = React.useRef(null);
   const sheetRef = React.useRef(null);
@@ -63,24 +84,31 @@ export function PopoverAnchorFixture({
     }, 'Link'));
   const editor = h('textarea', { id: `${prefix}editor`, ref: editorRef, 'aria-label': 'Body', rows: 3 });
   const second = h('p', null, h('span', { id: `${prefix}second`, ref: anchored('second') }, 'Second anchor'));
+  const island = anchor === 'island' ? h(AnchorIsland, { anchorRef }) : null;
   const lines = h('ul', { id: `${prefix}lines` }, LINES.map((line) => h('li', { key: line }, line)));
-  const popover = mounted ? h(Popover, {
+  const popoverOf = (ref) => h(Popover, {
     'aria-label': 'Add link',
-    anchorRef,
+    anchorRef: ref,
     boundaryRef,
     initialFocusRef: initialFocus ? fieldRef : undefined,
     returnFocusRef: returnFocus ? editorRef : undefined,
     placement: 'bottom-start',
+    ...(withTrigger && { trigger: h('button', { type: 'button', id: 'trigger' }, 'Open') }),
     ...(uncontrolled ? { defaultOpen } : { open }),
     onOpenChange,
     ...popoverProps,
   }, h('div', { style: { width: 240 } },
     h('label', { htmlFor: 'address', style: { display: 'block' } }, 'Address'),
     h('input', { id: 'address', ref: fieldRef, autoFocus: autoFocusField || undefined, disabled: fieldDisabled || undefined }),
-    h(Button, { slot: 'close', id: 'done' }, 'Done'))) : null;
+    tall ? h('textarea', { id: 'notes', 'aria-label': 'Notes', rows: 8, style: { display: 'block' } }) : null,
+    h(Button, { slot: 'close', id: 'done' }, 'Done')));
+  const popover = mounted && !late ? popoverOf(anchorRef) : null;
+  // The Popover first, so it renders and runs its effects before its anchor's ref is attached.
+  const lateBlock = late ? h('div', { id: 'late-block' }, popoverOf(lateRef), lateAnchor ? h('span', { id: 'late', ref: lateRef }, 'Late anchor') : null) : null;
 
   if (sheet) {
     return h('div', { id: 'page', ref: pageRef, 'data-muxui-motion': 'full' },
+      h('button', { type: 'button', id: 'reply-with-link', onClick: () => { onSheetOpenChange?.(true); onOpenChange?.(true); } }, 'Reply with link'),
       h(Dialog, {
         ref: sheetRef,
         title: 'Reply',
@@ -95,9 +123,9 @@ export function PopoverAnchorFixture({
       id: 'frame',
       ref: frameRef,
       tabIndex: -1,
-      style: { position: 'absolute', insetInlineStart: 40, insetBlockStart: 40, width: 300, height: 520, overflow: 'auto', boxSizing: 'border-box', border: '1px solid' },
+      style: { position: 'absolute', insetInlineStart: 40, insetBlockStart: 40, width: 300, height: frameHeight, overflow: 'auto', boxSizing: 'border-box', border: '1px solid' },
       ...frameScope,
-    }, toolbar, editor, second, lines),
+    }, toolbar, island, lateBlock, editor, second, lines),
     h('button', { type: 'button', id: 'outside', style: { position: 'absolute', insetInlineStart: 600, insetBlockStart: 40 } }, 'Outside'),
     popover);
 }

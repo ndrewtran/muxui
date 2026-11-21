@@ -7,12 +7,16 @@ import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startSer
 
 // Cross-engine proof of a Popover opened from code, without a trigger. Server markup holds none of it, and one open from
 // the start opens after hydration, named and placed against its anchor. Its owner hears Escape, an outside press and
-// the close slot; a press on its anchor is not an outside press. A collision boundary keeps it inside an element where
-// the viewport alone would let it overflow, in either direction, and a replaced or removed boundary or anchor is picked
-// up while it is open. An initial focus target takes focus in one move, and a return target takes focus when the opener
-// is gone. Reduced motion and the colour scheme scope are read from its anchor; forced colours paint it in system
-// colours (emulated in Chromium only). Inside a sheet on a phone-sized viewport, it opens from its tool after the sheet
-// rests and while the sheet slides in, stays inside the sheet's panel, keeps its field focused, and closes first.
+// the close slot; a press on its anchor is not an outside press, nor, non-modal, is the focus that press moves, while a
+// modal one closes on a press where its anchor is. A collision boundary keeps it inside an element where the viewport
+// alone would let it overflow, in either direction, and scrolls what does not fit; a replaced or removed boundary or
+// anchor is picked up while it is open. It follows an anchor that layout moves or that mounts after it, and stays put
+// when an anchor of its own unmounts and the window resizes. An initial focus target takes focus in one move, and a
+// return target takes focus when the opener is gone. Reduced motion and the colour scheme scope are read from its
+// anchor; forced colours paint it in system colours (emulated in Chromium only). Inside a sheet on a phone-sized
+// viewport, it opens from its tool after the sheet rests, keeps its distance from its anchor on every frame while the
+// sheet slides in, and opened in the same update as the sheet it is on top of it; it stays inside the sheet's panel,
+// keeps its field focused, hides the sheet from the accessibility tree, and closes first.
 // Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const WIDE = { width: 900, height: 700 };
@@ -49,6 +53,10 @@ const frames = (page, count = 2) => page.evaluate((total) => new Promise((resolv
   step();
 }), count);
 const popover = (page) => page.locator('.muxui-popover');
+// The names of the dialogs the accessibility tree holds: those outside every inert or aria-hidden subtree.
+const exposedDialogs = (page) => page.evaluate(() => [...document.querySelectorAll('[role="dialog"]')]
+  .filter((node) => !node.closest('[inert], [aria-hidden="true"]'))
+  .map((node) => node.getAttribute('aria-label') ?? document.getElementById(node.getAttribute('aria-labelledby') ?? '')?.textContent ?? ''));
 
 // Waits until the Popover has finished its entry motion, so its box is where React Aria placed it.
 const settled = (page) => page.waitForFunction(() => {
@@ -93,11 +101,19 @@ const insideOf = (page, selector, inset) => page.evaluate(({ target, padding }) 
   return rect.left >= box.left + padding - 1 && rect.right <= box.right - padding + 1 && rect.top >= box.top + padding - 1 && rect.bottom <= box.bottom - padding + 1;
 }, { target: selector, padding: inset });
 
-// The panel of the sheet at rest: no travel and no drag.
-const waitForSheetRest = (page) => page.waitForFunction(() => {
-  const panel = document.querySelector('.muxui-dialog');
-  return Boolean(panel) && panel.style.getPropertyValue('--muxui-modal-y') === '' && !panel.hasAttribute('data-muxui-state-dragging');
-});
+// The panel of the sheet at rest: it has not moved for five frames.
+const waitForSheetRest = (page) => page.evaluate(() => new Promise((resolve) => {
+  let still = 0;
+  let last = null;
+  const step = () => {
+    const top = document.querySelector('.muxui-dialog')?.getBoundingClientRect().top ?? null;
+    still = top !== null && top === last ? still + 1 : 0;
+    last = top;
+    if (still >= 5) resolve();
+    else requestAnimationFrame(step);
+  };
+  step();
+}));
 
 for (const engine of browserEngines()) {
   test(`a Popover opened from code is placed against its anchor, stays inside its boundary, and moves focus as told in ${engine}`, { timeout: 300_000 }, async (t) => {
@@ -187,6 +203,25 @@ for (const engine of browserEngines()) {
         assert.deepEqual((await changes(page)).filter((change) => change === false).length, 2, 'the outside press and Escape each asked to close it');
       }));
 
+      await t.test('non-modal, a press on its anchor with focus in its field leaves it open; modal, a press where its anchor is lands on the inert page and closes it', async () => {
+        await withPage({ props: { modal: false } }, async (page) => {
+          await openFromTool(page);
+          await page.locator('#address').focus();
+          await popover(page).evaluate((node) => { node.dataset.probe = 'first'; });
+          await page.locator('#link').click();
+          await frames(page, 3);
+          assert.equal(await page.locator('.muxui-popover[data-probe="first"]').count(), 1, 'the same Popover stays open');
+          assert.equal((await changes(page)).includes(false), false, 'nothing asked to close it');
+        });
+        await withPage({}, async (page) => {
+          await openFromTool(page);
+          const link = await rectOf(page, '#link');
+          await page.mouse.click((link.left + link.right) / 2, (link.top + link.bottom) / 2);
+          await popover(page).waitFor({ state: 'detached' });
+          assert.deepEqual(await changes(page), [true, false]);
+        });
+      });
+
       for (const dir of ['ltr', 'rtl']) {
         await t.test(`in ${dir}, a boundary keeps it inside the frame, where the viewport alone lets it overflow the frame's edge`, async () => {
           const overflowEdge = (surface, frame) => (dir === 'rtl' ? frame.left - surface.left : surface.right - frame.right);
@@ -204,6 +239,18 @@ for (const engine of browserEngines()) {
           });
         });
       }
+
+      await t.test('in a boundary too short for its content, the surface stays inside the boundary and scrolls the rest', () => withPage({ props: { boundary: 'frame', frameHeight: 150, tall: true } }, async (page) => {
+        await openFromTool(page);
+        await settled(page);
+        assert.equal(await insideOf(page, '#frame', 12), true, 'the surface stays containerPadding inside the boundary');
+        const { scrollHeight, clientHeight } = await popover(page).evaluate((node) => ({ scrollHeight: node.scrollHeight, clientHeight: node.clientHeight }));
+        assert.ok(scrollHeight > clientHeight + 20, `what does not fit scrolls inside the surface: ${scrollHeight} in ${clientHeight}`);
+        await page.locator('#done').focus();
+        await frames(page, 2);
+        const [done, surface] = [await rectOf(page, '#done'), await rectOf(page, '.muxui-popover')];
+        assert.ok(done.top >= surface.top - 1 && done.bottom <= surface.bottom + 1, 'its last control scrolls into view inside it');
+      }));
 
       await t.test('a boundary flips it to the side with room, where the viewport alone keeps it on the placed side', async () => {
         await withPage({ props: { toolbarAt: 'bottom' } }, async (page) => {
@@ -241,6 +288,52 @@ for (const engine of browserEngines()) {
         assert.deepEqual(await changes(page), [], 'it stayed open throughout');
       }));
 
+      await t.test('with a trigger and an anchor of its own, it stays where it was when that anchor unmounts and the window then resizes', () => withPage({ props: { withTrigger: true, anchor: 'island' } }, async (page) => {
+        await page.locator('#trigger').click();
+        await popover(page).waitFor();
+        await settled(page);
+        const [anchor, surface] = [await rectOf(page, '#island'), await rectOf(page, '.muxui-popover')];
+        assert.ok(surface.top - anchor.bottom > 4 && surface.top - anchor.bottom < 12, 'it opens against its anchor, not its trigger');
+        const placed = await placedAt(page);
+        await page.evaluate(() => window.__popoverAnchor.removeIsland());
+        await page.waitForFunction(() => !document.querySelector('#island'));
+        await page.setViewportSize({ width: 860, height: 660 });
+        await frames(page, 4);
+        assert.deepEqual(await placedAt(page), placed, 'it stays where it was last placed');
+      }));
+
+      await t.test('rendered before its anchor, it opens against that anchor when both mount together, and against one that mounts after it while it is open', async () => {
+        const placedBelowLate = async (page) => {
+          await settled(page);
+          const [anchor, surface] = [await rectOf(page, '#late'), await rectOf(page, '.muxui-popover')];
+          assert.ok(surface.top - anchor.bottom > 4 && surface.top - anchor.bottom < 12, `it opens below its anchor: ${surface.top - anchor.bottom}`);
+          assert.ok(Math.abs(surface.left - anchor.left) < 2, 'bottom-start lines up the start edges');
+        };
+        await withPage({ props: { mounted: false, uncontrolled: true, defaultOpen: true } }, async (page) => {
+          await setProps(page, { late: true });
+          await popover(page).waitFor();
+          await placedBelowLate(page);
+        });
+        await withPage({ props: { mounted: false, uncontrolled: true, defaultOpen: true } }, async (page) => {
+          await setProps(page, { late: true, lateAnchor: false });
+          await popover(page).waitFor();
+          await setProps(page, { lateAnchor: true });
+          await page.locator('#late').waitFor();
+          await placedBelowLate(page);
+        });
+      });
+
+      await t.test('an anchor that layout moves while it is open takes the Popover along', () => withPage({}, async (page) => {
+        await openFromTool(page);
+        await settled(page);
+        await setProps(page, { toolbarAt: 'bottom' });
+        await page.waitForFunction(() => {
+          const link = document.querySelector('#link').getBoundingClientRect();
+          const gap = document.querySelector('.muxui-popover').getBoundingClientRect().top - link.bottom;
+          return link.top > 400 && gap > 4 && gap < 12;
+        }, undefined, { timeout: 2000 });
+      }));
+
       await t.test('a replaced anchor places it again; while its anchor is gone it stays where it was, named, and still closes', () => withPage({}, async (page) => {
         await openFromTool(page);
         await setProps(page, { anchor: 'second' });
@@ -265,6 +358,9 @@ for (const engine of browserEngines()) {
           await page.locator('#frame').evaluate((node) => { node.scrollTop = 300; });
           await frames(page, 3);
           assert.deepEqual(await placedAt(page), before, 'a modal Popover is not placed again while its anchor scrolls');
+          await setProps(page, {});
+          await frames(page, 3);
+          assert.deepEqual(await placedAt(page), before, 'nor when it renders after the scroll');
           assert.equal(await page.evaluate(() => document.querySelector('.muxui-popover').contains(document.activeElement)), true, 'focus stays inside');
           await page.keyboard.press('Escape');
           assert.equal(await focusAfterClose(page, 'link'), 'link');
@@ -424,6 +520,7 @@ for (const engine of browserEngines()) {
         await popover(page).waitFor();
         await keepsFieldFocus(page);
         assert.deepEqual(await focusLog(page), ['address']);
+        assert.deepEqual(await exposedDialogs(page), ['Add link'], 'the sheet under it is out of the accessibility tree');
         await settled(page);
         assert.ok(await sitsAgainstToolbar(page) < 24, 'it sits against the toolbar');
         assert.equal(await insideOf(page, '.muxui-dialog', 12), true, 'it stays inside the sheet\'s panel');
@@ -435,28 +532,59 @@ for (const engine of browserEngines()) {
         await page.waitForFunction(() => document.activeElement?.id === 'sheet-trigger');
       }));
 
-      // This case needs the sheet to place the overlays opened inside it again while it moves.
-      await t.test('opened from code while the sheet slides in, it follows its anchor to rest inside the sheet and keeps its field focused', () => withPage({ viewport: PHONE, props: sheetProps }, async (page) => {
-        const below = await page.evaluate(async () => {
+      await t.test('opened from code while the sheet slides in, it keeps its distance from its anchor on every frame to rest inside the sheet, and keeps its field focused', () => withPage({ viewport: PHONE, props: sheetProps }, async (page) => {
+        const { travel, gaps } = await page.evaluate(async () => {
           const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
           document.querySelector('#sheet-trigger').click();
           let panel = null;
           while (!(panel = document.querySelector('.muxui-dialog'))) await frame();
           await frame();
-          await frame();
-          const y = Number.parseFloat(panel.style.getPropertyValue('--muxui-modal-y')) || 0;
+          const openedAt = panel.getBoundingClientRect().top;
           window.__popoverAnchor.setOpen(true);
-          return y;
+          // On each frame until the panel stops: how far below the toolbar React Aria's placement puts the Popover, its
+          // own entry motion aside.
+          const found = [];
+          let last = null;
+          let still = 0;
+          while (still < 5) {
+            await frame();
+            const top = panel.getBoundingClientRect().top;
+            still = top === last ? still + 1 : 0;
+            last = top;
+            const positioner = document.querySelector('.muxui-popover__positioner');
+            if (!positioner) continue;
+            const translate = getComputedStyle(positioner).translate;
+            const motion = translate === 'none' ? 0 : Number.parseFloat(translate.split(' ')[1] ?? '0') || 0;
+            found.push(positioner.getBoundingClientRect().top - motion - document.querySelector('#sheet-toolbar').getBoundingClientRect().bottom);
+          }
+          return { travel: openedAt - last, gaps: found };
         });
-        assert.ok(below > 40, `the Popover opened while the sheet was still sliding: ${below}`);
-        await popover(page).waitFor();
-        await waitForSheetRest(page);
+        assert.ok(travel > 40, `the Popover opened while the sheet was still ${travel} pixels from rest`);
+        const rest = gaps.at(-1);
+        assert.ok(gaps.length > 5 && gaps.every((gap) => Math.abs(gap - rest) < 2), `it kept its distance from the toolbar on every frame: ${gaps.map(Math.round).join(', ')}`);
         await settled(page);
-        await awaitFontsAndFrames(page);
         assert.ok(await sitsAgainstToolbar(page) < 24, `it sits against the toolbar once the sheet rests: ${await sitsAgainstToolbar(page)} pixels apart`);
         assert.equal(await insideOf(page, '.muxui-dialog', 12), true, 'it stays inside the sheet\'s panel');
         await keepsFieldFocus(page);
       }));
+
+      await t.test('opened in the same update as its sheet, by one press or from code, it takes focus, it alone is in the accessibility tree, and Escape closes it before the sheet', async () => {
+        for (const how of ['press', 'code']) {
+          await withPage({ viewport: PHONE, props: sheetProps }, async (page) => {
+            if (how === 'press') await page.locator('#reply-with-link').click();
+            else await page.evaluate(() => { window.__popoverAnchor.setSheetOpen(true); window.__popoverAnchor.setOpen(true); });
+            await popover(page).waitFor();
+            await keepsFieldFocus(page);
+            assert.deepEqual(await exposedDialogs(page), ['Add link'], `${how}: the Popover is in the accessibility tree and the sheet under it is not`);
+            await page.keyboard.press('Escape');
+            await popover(page).waitFor({ state: 'detached' });
+            assert.equal(await page.locator('.muxui-dialog').count(), 1, `${how}: the first Escape closes only the Popover`);
+            await page.waitForFunction(() => document.querySelector('.muxui-dialog')?.contains(document.activeElement));
+            await page.keyboard.press('Escape');
+            await page.locator('.muxui-dialog__backdrop').waitFor({ state: 'detached' });
+          });
+        }
+      });
 
       await t.test('in a sheet, a tool disabled while its Popover is open hands focus to the return target inside the sheet', () => withPage({ viewport: PHONE, props: sheetProps }, async (page) => {
         await page.locator('#sheet-trigger').click();
