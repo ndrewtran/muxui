@@ -92,6 +92,8 @@ export const ComboBox: ForwardRefExoticComponent<ComboBoxProps & RefAttributes<H
       if (bothControlled && next === '' && selectedId !== null) onSelect?.(undefined);
     };
     // defaultItems lets React Aria filter options by the typed text; items would mean consumer-filtered.
+    // The list is at least as wide as the field, so zero container padding keeps a full-width field's list aligned
+    // at the viewport edge instead of pushed past it; the position hook still keeps the list on screen.
     return React.createElement(AriaComboBox<NormalizedItem>, { ...props, ref, defaultItems: normalized, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: handleInput, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid ? invalid : undefined, name, className: classNames('muxui-combo-box', className), ...{ 'data-muxui-size': resolvedSize }, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
       label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
       React.createElement(AriaGroup, { className: 'muxui-combo-box__control' },
@@ -100,7 +102,7 @@ export const ComboBox: ForwardRefExoticComponent<ComboBoxProps & RefAttributes<H
           React.createElement(ChevronDownIcon, { className: 'muxui-combo-box__arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
       description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
       errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null,
-      React.createElement(PopoverMotion, { className: 'muxui-combo-box__popover', ...{ 'data-muxui-size': resolvedSize } }, React.createElement(AriaListBox<NormalizedItem>, { items: normalized, className: 'muxui-combo-box__list', ...{ 'data-muxui-size': resolvedSize }, children: (item: NormalizedItem) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined, 'aria-disabled': item.disabled || undefined }, className: 'muxui-combo-box__option' }, item.label) })),
+      React.createElement(PopoverMotion, { containerPadding: 0, className: 'muxui-combo-box__popover', ...{ 'data-muxui-size': resolvedSize } }, React.createElement(AriaListBox<NormalizedItem>, { items: normalized, className: 'muxui-combo-box__list', ...{ 'data-muxui-size': resolvedSize }, children: (item: NormalizedItem) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, isDisabled: item.disabled, ...{ 'data-muxui-state-disabled': item.disabled || undefined, 'aria-disabled': item.disabled || undefined }, className: 'muxui-combo-box__option' }, item.label) })),
     );
   });
   component.displayName = 'ComboBox';
