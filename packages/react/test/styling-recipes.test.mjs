@@ -469,7 +469,7 @@ test('a missing state step names the reason that holds: no boolean state, none t
   assert.equal(note('activity'), 'No state step: Activity\'s Basic example shows none of its boolean states (focused) on a documented hook inside its root, and none is one a recipe sets by hand (disabled, read-only, required, invalid, selected, expanded, open).');
   assert.equal(note('alert-dialog'), 'No state step: open, disabled are declared, but no Mux rule selects them on a hook of AlertDialog, so the recipe has no hook to put them on.');
   assert.equal(note('virtualizer'), 'No state step: disabled is declared and selected on .muxui-virtualizer__item, but the Basic example does not render that hook.');
-  assert.equal(note('menu'), 'No state step: disabled is declared and selected on .muxui-menu__item. The Basic example renders .muxui-menu__item, but Menu\'s root renders no element in that example, so the generator cannot show that it is inside the root.');
+  assert.equal(note('menu'), 'No state step: disabled, selected are declared and selected on .muxui-menu__item. The Basic example renders .muxui-menu__item, but Menu\'s root renders no element in that example, so the generator cannot show that it is inside the root.');
   assert.ok(note('dialog').startsWith(noRule('open', 'is')));
   // Every state a note names is one the catalog declares and a hook can carry as a boolean attribute, and a hook it says the example
   // renders (or does not) is one jsdom finds (or does not) in the Basic example. The old sentence, "declares no state", is gone.
@@ -497,7 +497,7 @@ test('a hook the example renders outside the root element is outside it, not unp
   const basic = observations.find(({ family, source }) => family === 'menu' && source.endsWith('/basic.tsx'));
   const beside = observations.map((observation) => (observation === basic ? { ...observation, html: `<div class="muxui-menu__root"></div>${basic.html}` } : observation));
   const styling = stylingOf('menu', { observations: beside });
-  assert.deepEqual(notesOf('menu', 'No state step', styling), ['No state step: disabled is declared and selected on .muxui-menu__item. The Basic example renders .muxui-menu__item, but it is outside Menu\'s root element.']);
+  assert.deepEqual(notesOf('menu', 'No state step', styling), ['No state step: disabled, selected are declared and selected on .muxui-menu__item. The Basic example renders .muxui-menu__item, but it is outside Menu\'s root element.']);
 });
 
 test('a missing token step says what the rules that read the roles do on the Basic example: they match nothing it renders, or they match and cannot be shown to win', async () => {

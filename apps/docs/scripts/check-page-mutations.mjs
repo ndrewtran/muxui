@@ -942,7 +942,7 @@ const mutations = [
       detach(row);
     },
   })),
-  ...[['menu', 'selected'], ['form', 'invalid'], ['slider', 'selected'], ['input', 'empty'], ['payment-input', 'empty'], ['select-native', 'empty'], ['text-area', 'empty'], ['color-slider', 'invalid'], ['color-slider', 'required'], ['disclosure', 'pending'], ['markdown', 'current'], ['markdown', 'disabled'], ['slider', 'invalid'], ['slider', 'required']].map(([slug, state]) => ({
+  ...[['form', 'invalid'], ['slider', 'selected'], ['input', 'empty'], ['payment-input', 'empty'], ['select-native', 'empty'], ['text-area', 'empty'], ['color-slider', 'invalid'], ['color-slider', 'required'], ['disclosure', 'pending'], ['markdown', 'current'], ['markdown', 'disabled'], ['slider', 'invalid'], ['slider', 'required']].map(([slug, state]) => ({
     label: `a no-emitted-hook disposition is omitted: ${slug}:${state}`, slug, expect: ['omits its no-emitted-hook disposition'],
     change: (root) => {
       const row = elements(stylingOf(root)).find((node) => node.tagName === 'tr' && textContent(node.childNodes.find((cell) => cell.tagName === 'th') ?? {}).trim() === `data-muxui-state-${state}`);

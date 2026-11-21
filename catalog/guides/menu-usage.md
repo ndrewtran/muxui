@@ -15,6 +15,15 @@ Use the Mux UI Menu contract and provide an accessible name.
 
 The Menu for secondary commands example puts the main action beside the menu and groups the rest in named sections. The Nested React Menu example adds one Share submenu.
 
+## Checked options
+
+- Set `selectionMode` to `single` when the menu chooses one option of several, such as a text style, and to `multiple` for settings that are each on or off. Each item exposes whether it is checked to assistive technology.
+- A checked item shows a check mark, and every item keeps the space for one so the labels align. Pressing a checked option of a `single` menu keeps it checked, and a `single` menu takes at most one checked ID.
+- Checked is not current. Mark the item for the page or view people are on with `aria-current`, and keep checking for a choice they make.
+- A checkable item still closes the menu by `shouldCloseOnSelect`; set it to `false` to let people check several settings in one visit.
+
+The Menu with checkable items and shortcuts example checks one text style at a time.
+
 ## Shortcuts
 
 - Show an item's keyboard shortcut with Menu.Shortcut at the end of the item. Its key caps are decoration hidden from assistive technology, so state the same shortcut on the item with `aria-keyshortcuts`.

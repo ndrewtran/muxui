@@ -10,6 +10,7 @@ import type {
   RefObject,
 } from 'react';
 import { flushSync } from 'react-dom';
+import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import { MenuMotion } from './menu-motion.mjs';
 import { MenuSection as AriaMenuSection, MenuTrigger as AriaMenuTrigger, SubmenuTrigger as AriaSubmenuTrigger, Separator as AriaSeparator, Header as AriaHeader, PopoverContext, RootMenuTriggerStateContext, useSlottedContext } from 'react-aria-components';
 import { AriaMenu, AriaMenuItem } from './substrate.ts';
@@ -24,8 +25,8 @@ import { createFocusManager } from 'react-aria/private/focus/FocusScope';
 import { PopoverMotion } from './popover-motion.mjs';
 import type { ButtonActivationEvent } from './button.ts';
 import { classNames, accessibleName, withHostAttributes } from './control-utils.ts';
-import { textContent, normalizeItems, collectionItem } from './collection-items.ts';
-import type { MuxUICollectionItem, MuxUIItems, NormalizedItem } from './collection-items.ts';
+import { textContent, normalizeItems, collectionItem, keySet, keyList } from './collection-items.ts';
+import type { MuxUICollectionItem, MuxUIItems, MuxUISelection, NormalizedItem } from './collection-items.ts';
 import { CollectionTrigger } from './collection-trigger.ts';
 import type { MuxUIAriaAccessibleName } from './fields.ts';
 import type { MuxUIPlacement } from './overlays.ts';
@@ -96,6 +97,14 @@ export type MenuListOwnProps = {
   onAction?: (item?: MuxUICollectionItem) => void;
   /** Called with the same item as `onAction`, right after it. */
   onSelect?: (item?: MuxUICollectionItem) => void;
+  /** Whether the items can be checked. `single` makes them radio items, one checked at a time, and pressing the checked item keeps it checked; `multiple` makes them checkbox items, each pressed on and off. Each item of a checkable list shows a check mark while it is checked. Left unset, the items are plain actions. */
+  selectionMode?: 'none' | 'single' | 'multiple';
+  /** The checked item ids when the caller controls them, or `'all'`. */
+  selectedIds?: MuxUISelection;
+  /** The ids checked at first when the list controls them itself, or `'all'`. */
+  defaultSelectedIds?: MuxUISelection;
+  /** Called with the checked item ids, or `'all'`, when an item is checked or unchecked. It is not called while the list is disabled. */
+  onSelectionChange?: (ids: MuxUISelection) => void;
 };
 
 export type MenuProps = MenuListOwnProps & { children?: ReactNode; className?: string } & MuxUIAriaAccessibleName;
@@ -164,7 +173,37 @@ interface MenuContextValue {
   shouldCloseOnSelect?: boolean | undefined;
   onAction?: ((item?: MuxUICollectionItem) => void) | undefined;
   onSelect?: ((item?: MuxUICollectionItem) => void) | undefined;
+  // The checked ids of each uncontrolled list under a Menu.Root, by the list's path. A list in a popup unmounts while the
+  // menu is closed, so its selection is kept here, which the root holds for as long as it is mounted.
+  selections?: Map<string, Set<string> | 'all'> | undefined;
 }
+
+// A single-selection list checks at most one radio item.
+function assertSingleSelection(ids: MuxUISelection | undefined, name: string) {
+  if (ids === 'all' || (ids !== undefined && ids.length > 1)) throw new TypeError(`Menu.List ${name} of a single-selection list takes at most one id, not 'all' or several`);
+}
+
+// The first enabled Menu.Item among a list's children, past sections and fragments, which a list made single keeps
+// checked when every item was. A Menu.Submenu is no candidate, since its item opens the submenu and its popup holds
+// another list.
+function firstCheckable(children: ReactNode): string | undefined {
+  for (const node of React.Children.toArray(children)) {
+    if (!React.isValidElement<{ id?: unknown; disabled?: boolean; children?: ReactNode }>(node) || node.type === MenuSubmenu) continue;
+    if (node.type === Menu.Item) {
+      if (!node.props.disabled) return String(node.props.id);
+      continue;
+    }
+    const found = firstCheckable(node.props.children);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+// A list's path under its Menu.Root names the list itself, not its options: the root's list is `root`, and a submenu's
+// list is its parent list's path and the id of the item that opens the submenu. MenuListPathContext holds the path of
+// the list around a part, and MenuSubmenuContext the id of the submenu item whose popup holds it.
+const MenuListPathContext = React.createContext('');
+const MenuSubmenuContext = React.createContext<string | undefined>(undefined);
 
 const useMenuLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
@@ -204,7 +243,9 @@ function MenuSubmenu({ children, delay = 200 }: MenuSubmenuProps): ReactElement 
   if (!Number.isFinite(delay) || delay < 0) throw new TypeError('Menu.Submenu delay must be a nonnegative finite number');
   const pair = React.Children.toArray(children);
   if (pair.length !== 2 || !pair.every(React.isValidElement)) throw new TypeError('Menu.Submenu requires an item and a popup');
-  return React.createElement(AriaSubmenuTrigger, { delay, children: pair });
+  // React Aria renders the popup, the second child, in the parent list's tree, so the item's id reaches the list inside it.
+  const item = pair[0] as ReactElement<{ id?: unknown }>;
+  return React.createElement(AriaSubmenuTrigger, { delay, children: [item, React.createElement(MenuSubmenuContext.Provider, { value: String(item.props.id) }, pair[1])] });
 }
 
 export const Menu: MenuComponent = /*#__PURE__*/ (() => {
@@ -223,7 +264,8 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       if (open === undefined) setInternalOpen(next);
       onOpenChange?.(next);
     };
-    const context: MenuContextValue = { disabled, shouldCloseOnSelect, onAction, onSelect };
+    const selections = React.useRef(new Map<string, Set<string> | 'all'>());
+    const context: MenuContextValue = { disabled, shouldCloseOnSelect, onAction, onSelect, selections: selections.current };
     return React.createElement(MenuContext.Provider, { value: context },
       React.createElement(AriaMenuTrigger, {
         isOpen: currentOpen,
@@ -249,13 +291,37 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       React.createElement(MenuAnchorContext.Provider, { value: anchorRef ?? null }, children));
   });
 
-  const MenuList = React.forwardRef<HTMLDivElement, MenuListInnerProps>(function MenuList({ items, children, disabled = false, shouldCloseOnSelect, onAction, onSelect, className, standalone = false, ...props }, ref) {
+  const MenuList = React.forwardRef<HTMLDivElement, MenuListInnerProps>(function MenuList({ items, children, disabled = false, shouldCloseOnSelect, onAction, onSelect, selectionMode, selectedIds, defaultSelectedIds, onSelectionChange, className, standalone = false, ...props }, ref) {
     const context = React.useContext(MenuContext);
     const effectiveDisabled = context.disabled || disabled;
     // normalizeItems takes no items as an empty list, so an omitted list has no default here to state.
     const normalized = normalizeItems(items);
     const hasChildren = children !== undefined && children !== null;
     const disabledKeys = new Set(normalized.filter((item) => effectiveDisabled || item.disabled).map((item) => item.id));
+    if (selectionMode === 'single') {
+      assertSingleSelection(selectedIds, 'selectedIds');
+      assertSingleSelection(defaultSelectedIds, 'defaultSelectedIds');
+    }
+    // An uncontrolled checkable list under a Menu.Root keeps its checked ids in the root, by its path, so a popup that
+    // closes and opens again shows them. The list reads defaultSelectedIds once, when it first mounts, and from then on
+    // gives React Aria its checked ids as a controlled list. Made single, it keeps the item checked earliest, or its first
+    // enabled item when every item was checked.
+    const parentPath = React.useContext(MenuListPathContext);
+    const submenu = React.useContext(MenuSubmenuContext);
+    // Each id is encoded, so an id that holds a slash never names a list nested deeper.
+    const path = submenu === undefined ? 'root' : `${parentPath}/${encodeURIComponent(submenu)}`;
+    const store = selectedIds === undefined && selectionMode !== undefined && selectionMode !== 'none' ? context.selections : undefined;
+    const [, refresh] = React.useReducer((count: number) => count + 1, 0);
+    let stored = store?.get(path);
+    if (store !== undefined) {
+      if (stored === undefined) stored = keySet(defaultSelectedIds) ?? new Set<string>();
+      if (selectionMode === 'single' && (stored === 'all' || stored.size > 1)) {
+        const first = stored !== 'all' ? [...stored][0] : effectiveDisabled ? undefined : hasChildren ? firstCheckable(children) : normalized.find((item) => !item.disabled)?.id;
+        stored = new Set(first === undefined ? [] : [first]);
+      }
+      store.set(path, stored);
+    }
+    const selectedKeys = store === undefined ? keySet(selectedIds) : stored;
     // Tab leaves an open menu, as it does for a menu button. Only the root list handles it, since a submenu's Tab bubbles
     // to it through the React tree.
     const popover = React.useContext(PopoverContext) as AriaPopoverProps | null;
@@ -284,6 +350,17 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       }) : undefined,
       items: hasChildren ? undefined : normalized,
       disabledKeys,
+      // Checked items are React Aria's selection. A radio list keeps its checked item when it is pressed again.
+      selectionMode, disallowEmptySelection: selectionMode === 'single',
+      selectedKeys, defaultSelectedKeys: store === undefined ? keySet(defaultSelectedIds) : undefined,
+      onSelectionChange: (keys) => {
+        if (effectiveDisabled) return;
+        if (store !== undefined) {
+          store.set(path, keys === 'all' ? 'all' : new Set([...keys].map(String)));
+          refresh();
+        }
+        onSelectionChange?.(keyList(keys));
+      },
       // A conditional, not ??: extraction reads a fallback on an owned prop as an executed default, and the root's setting is the next fallback.
       shouldCloseOnSelect: shouldCloseOnSelect == null ? (context.shouldCloseOnSelect ?? true) : shouldCloseOnSelect,
       onAction: (key: Key) => {
@@ -301,7 +378,7 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       children: hasChildren ? children : (item: NormalizedItem) => React.createElement(MenuItem, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label),
     });
     return React.createElement(MenuContext.Provider, { value: { ...context, disabled: effectiveDisabled } },
-      React.createElement(MenuMotion, { rootRef: ref, children: menu }));
+      React.createElement(MenuListPathContext.Provider, { value: path }, React.createElement(MenuMotion, { rootRef: ref, children: menu })));
   });
 
   const MenuItem = React.forwardRef<HTMLDivElement, MenuItemProps>(function MenuItem({ children, id, textValue, disabled = false, className, onAction, shouldCloseOnSelect, ...props }, ref) {
@@ -322,7 +399,13 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
       ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
       className: classNames('muxui-menu__item', className),
       render: (domProps: object) => React.createElement(itemElement, withHostAttributes(hostAttributes, domProps)),
-    }, children);
+      // An item of a checkable list leads with a slot for its check mark, empty while unchecked, so the labels stay
+      // aligned. The mark is decoration: the item's role and aria-checked state carry it.
+      children: ({ selectionMode, isSelected }: { selectionMode: 'none' | 'single' | 'multiple'; isSelected: boolean }) => selectionMode === 'none' ? children : React.createElement(React.Fragment, null,
+        React.createElement('span', { className: 'muxui-menu__item-indicator', 'aria-hidden': 'true' },
+          isSelected ? React.createElement(CheckIcon, { className: 'muxui-menu__item-check', 'aria-hidden': 'true', focusable: 'false', size: 16 }) : null),
+        children),
+    });
   });
 
   const MenuSection = React.forwardRef<HTMLElement, MenuSectionProps>(function MenuSection({ children, title, className, ...props }, ref) {

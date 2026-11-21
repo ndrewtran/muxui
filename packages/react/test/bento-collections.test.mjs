@@ -178,6 +178,23 @@ test('Menu.Popup reads the popover context through its own slot', () => {
   assert.equal(sentPlacement({ [DEFAULT_SLOT]: top, sub: nested }, {}), 'bottom start');
 });
 
+// A single-selection list checks at most one radio item, so more than one id, or 'all', is refused for its
+// controlled and its default selection, in the list in a popup as in the standalone Menu.
+test('a single-selection Menu refuses more than one checked id', () => {
+  const items = [h(Menu.Item, { key: 'a', id: 'a' }, 'A'), h(Menu.Item, { key: 'b', id: 'b' }, 'B')];
+  for (const ids of [['a', 'b'], 'all']) {
+    for (const prop of ['selectedIds', 'defaultSelectedIds']) {
+      assert.throws(() => renderToString(h(Menu, { 'aria-label': 'Style', selectionMode: 'single', [prop]: ids }, items)), /single.*one/u, `${prop} ${JSON.stringify(ids)}`);
+    }
+  }
+  for (const prop of ['selectedIds', 'defaultSelectedIds']) {
+    const html = renderToString(h(Menu, { 'aria-label': 'Style', selectionMode: 'single', [prop]: ['a'] }, items));
+    assert.equal(html.match(/aria-checked="true"/gu)?.length, 1, prop);
+  }
+  // A multiple-selection list takes any ids.
+  assert.match(renderToString(h(Menu, { 'aria-label': 'View', selectionMode: 'multiple', selectedIds: 'all' }, items)), /aria-checked="true"[^]*aria-checked="true"/u);
+});
+
 // Menu.Shortcut shows its children when it has no keys to show, including an empty list.
 test('Menu.Shortcut falls back to its children without keys', () => {
   for (const keys of [undefined, []]) assert.match(renderToString(h(Menu.Shortcut, { keys }, 'Ctrl S')), />Ctrl S</u, JSON.stringify(keys));
