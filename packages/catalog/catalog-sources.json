@@ -1863,6 +1863,10 @@
     {
       "family": "example",
       "path": "catalog/components/combo-box/examples/react/sections.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/menu/examples/react/checkable.example.json"
     }
   ]
 }

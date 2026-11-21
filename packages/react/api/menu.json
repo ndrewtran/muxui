@@ -438,11 +438,15 @@
         "props": [
           "items",
           "disabled",
-          "shouldCloseOnSelect"
+          "shouldCloseOnSelect",
+          "selectionMode",
+          "selectedIds",
+          "defaultSelectedIds"
         ],
         "events": [
           "action",
-          "select"
+          "select",
+          "selectionChange"
         ],
         "defaults": {
           "disabled": false
@@ -469,6 +473,48 @@
             },
             "required": false,
             "description": "Whether choosing an item closes the menu, in place of the root's setting. A Menu.Item can still set its own."
+          },
+          "selectionMode": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "literal",
+                  "value": "none"
+                },
+                {
+                  "kind": "literal",
+                  "value": "single"
+                },
+                {
+                  "kind": "literal",
+                  "value": "multiple"
+                }
+              ]
+            },
+            "required": false,
+            "enum": [
+              "none",
+              "single",
+              "multiple"
+            ],
+            "description": "Whether the items can be checked. `single` makes them radio items, one checked at a time, and pressing the checked item keeps it checked; `multiple` makes them checkbox items, each pressed on and off. Each item of a checkable list shows a check mark while it is checked. Left unset, the items are plain actions."
+          },
+          "selectedIds": {
+            "type": {
+              "kind": "reference",
+              "name": "MuxUISelection"
+            },
+            "required": false,
+            "description": "The checked item ids when the caller controls them, or `'all'`."
+          },
+          "defaultSelectedIds": {
+            "type": {
+              "kind": "reference",
+              "name": "MuxUISelection"
+            },
+            "required": false,
+            "description": "The ids checked at first when the list controls them itself, or `'all'`."
           }
         },
         "eventDetails": {
@@ -513,6 +559,27 @@
             },
             "required": false,
             "description": "Called with the same item as `onAction`, right after it."
+          },
+          "selectionChange": {
+            "prop": "onSelectionChange",
+            "type": {
+              "kind": "function",
+              "parameters": [
+                {
+                  "name": "ids",
+                  "type": {
+                    "kind": "reference",
+                    "name": "MuxUISelection"
+                  },
+                  "required": true
+                }
+              ],
+              "returns": {
+                "kind": "void"
+              }
+            },
+            "required": false,
+            "description": "Called with the checked item ids, or `'all'`, when an item is checked or unchecked. It is not called while the list is disabled."
           }
         },
         "types": {
@@ -591,6 +658,24 @@
                 ]
               },
               "readonly": false
+            }
+          },
+          "MuxUISelection": {
+            "type": {
+              "kind": "union",
+              "members": [
+                {
+                  "kind": "array",
+                  "element": {
+                    "kind": "string"
+                  },
+                  "readonly": false
+                },
+                {
+                  "kind": "literal",
+                  "value": "all"
+                }
+              ]
             }
           }
         }
