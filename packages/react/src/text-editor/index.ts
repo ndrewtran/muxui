@@ -589,8 +589,13 @@ function relink(tr: Transaction, link: LinkRange, href: string): boolean {
   return true;
 }
 
-/** The text nodes the link command inserted with a label, so a redo that brings one back leaves the next typed text unlinked again. */
-const labelledLinkText = new WeakSet<ProseMirrorNode>();
+/**
+ * Where the link command left the caret after a label it inserted, with the label's link and the marks it held there for
+ * typing. linkTypingBoundary keeps each one where the edits move it and holds those marks again when an undo or redo brings
+ * the caret back there, also where the label joined a link to the same address.
+ */
+type LabelEnd = { readonly pos: number; readonly link: Mark; readonly marks: readonly Mark[] };
+const labelEnds = new PluginKey<readonly LabelEnd[]>('muxuiLinkTypingBoundary');
 
 /**
  * Puts `text`, linked to `href`, in place of the selected text, of the whole link at a caret in one, or at a caret, with the
@@ -608,17 +613,18 @@ function insertLink(tr: Transaction, href: string, text: string, link: LinkRange
   const from = link ? link.from : selection.from;
   const to = link ? link.to : selection.to;
   const $from = tr.doc.resolve(from);
-  const inherited = (from === to ? typingMarks(tr) : $from.marksAcross(tr.doc.resolve(to))) ?? [];
+  // Marks held at a caret, such as a bold switched on there, go on the label, also on one in place of a whole link.
+  const inherited = (link ? tr.storedMarks : null) ?? (from === to ? typingMarks(tr) : $from.marksAcross(tr.doc.resolve(to))) ?? [];
   if (!$from.parent.inlineContent || !$from.parent.type.allowsMarkType(type) || inherited.some((mark) => mark.type !== type && mark.type.excludes(type))) return false;
   const mark = type.create({ ...(link?.mark ?? type.isInSet(inherited))?.attrs, href });
   const marks = mark.addToSet(inherited.filter((other) => $from.parent.type.allowsMarkType(other.type)));
-  const inserted = schema.text(text.replace(/\r\n|\r|\n/gu, ' '), marks);
-  labelledLinkText.add(inserted);
   const steps = tr.steps.length;
-  tr.replaceWith(from, to, inserted);
+  tr.replaceWith(from, to, schema.text(text.replace(/\r\n|\r|\n/gu, ' '), marks));
   tr.setSelection(TextSelection.create(tr.doc, tr.mapping.slice(steps).map(to, 1)));
   // The link mark is inclusive, so without this the text typed straight after the new link would extend it.
-  tr.setStoredMarks(mark.removeFromSet(marks));
+  const held = mark.removeFromSet(marks);
+  tr.setStoredMarks(held);
+  tr.setMeta(labelEnds, { pos: tr.selection.from, link: mark, marks: held } satisfies LabelEnd);
   tr.scrollIntoView();
   return true;
 }
@@ -678,18 +684,13 @@ function selectedTextblocks({ selection, doc }: EditorState): { node: ProseMirro
 }
 
 /**
- * Sets every selected text block to a heading of `level`, or to a paragraph for null, as the editor's own shortcut does.
- * Where every selected block already is that kind and level it dispatches nothing and returns 'unchanged', so the blocks
- * keep their attributes, such as alignment, no undo step is added, and the editor appends no paragraph after a last heading;
- * the shortcut there turns a heading back into a paragraph and lifts a list item's paragraph out of its list.
+ * Whether every selected text block already is a heading of `level`, or a paragraph for null. A heading or paragraph command
+ * there is a complete no-op, so the blocks keep their attributes, such as alignment, and nothing focuses, changes, or adds
+ * an undo step; the editor's own commands there would lift a list item's paragraph out of its list.
  */
-function setBlock(editor: Editor, chain: ChainedCommands, level: number | null): boolean | 'unchanged' {
-  if (level !== null && (!Number.isInteger(level) || level < 1 || level > 6)) return false;
-  if (typeof (level === null ? chain.setParagraph : chain.setHeading) !== 'function') return false;
-  const blocks = selectedTextblocks(editor.state);
-  const matches = (node: ProseMirrorNode) => (level === null ? node.type.name === 'paragraph' : node.type.name === 'heading' && node.attrs.level === level);
-  if (blocks.length > 0 && blocks.every(({ node }) => matches(node))) return 'unchanged';
-  return level === null ? chain.setParagraph().run() : chain.setHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run();
+function blocksAre(state: EditorState, level: unknown): boolean {
+  const blocks = selectedTextblocks(state);
+  return blocks.length > 0 && blocks.every(({ node }) => (level === null ? node.type.name === 'paragraph' : node.type.name === 'heading' && node.attrs.level === level));
 }
 
 /** The mark each mark command sets, so a command is refused where its mark cannot go. */
@@ -742,64 +743,72 @@ function run(editor: Editor | null, action: TextEditorCommand, callbacks: Editor
   if (!editor || editor.isDestroyed || !action || typeof action.type !== 'string') return false;
   if (action.type === 'generate') return typeof callbacks.onGenerate === 'function' && callbacks.onGenerate() !== false;
   if (!editor.isEditable) return false;
-  // The character limit refuses a transaction before it reaches the state, so a command that leaves the state as it was did not
-  // apply. A command that changes the document is one undo step of its own: it opens a history event of its own, and closes
-  // it after, so the typing that follows is another.
-  const before = editor.state;
-  const applied = (result: boolean) => {
-    if (!result || editor.state === before) return false;
-    if (editor.state.doc !== before.doc && !editor.isDestroyed) editor.view.dispatch(closeHistory(editor.state.tr));
-    return true;
-  };
   const mark = COMMAND_MARKS[action.type];
   // A mark that cannot go on the selection is refused before anything is dispatched; one that is on can always come off.
   if (mark !== undefined && !(action.type === 'link' && action.text !== undefined) && !editor.isActive(mark) && !markApplies(editor.state, mark)) return false;
-  const chain = editor.chain().focus().command(({ tr }) => {
-    closeHistory(tr);
+  // Settled before the chain, whose focus books a focus a frame later as soon as it is chained, even if the chain never runs.
+  if ((action.type === 'paragraph' || action.type === 'heading') && blocksAre(editor.state, action.type === 'heading' ? action.level : null)) return true;
+  // The character limit refuses a transaction before it reaches the state, so a command that leaves the state as it was did
+  // not apply. One that changes the document is one undo step of its own: it opens a history event of its own and closes it
+  // after, so the typing that follows is another. One that leaves the document as it was, also through steps that change
+  // nothing, such as an alignment a block already has, stays out of history, so it never splits the typing around it, an
+  // input method's composition included.
+  const before = editor.state;
+  const runs = (commands: ChainedCommands) => {
+    const result = commands.command(({ tr }) => {
+      if (tr.doc.eq(tr.before)) tr.setMeta('addToHistory', false);
+      else closeHistory(tr);
+      return true;
+    }).run();
+    if (!result || editor.state === before) return false;
+    if (!editor.state.doc.eq(before.doc) && !editor.isDestroyed) editor.view.dispatch(closeHistory(editor.state.tr));
     return true;
-  });
+  };
+  const chain = editor.chain().focus();
   const switched = action.type === 'bold' || action.type === 'italic' || action.type === 'underline' || action.type === 'strike' || action.type === 'code' ? action.type : null;
   if (switched !== null) {
     // Over a range a mark switches as its shortcut and the toolbar take it, which count inline code as having every mark. At
     // a caret it switches by the marks typing would take, refused where it cannot go, such as in a code block.
     const { state } = editor;
     const on = state.selection.empty ? readMarks(state)[switched] : editor.isActive(switched);
-    return (on || markApplies(state, switched)) && applied(chain.command(({ tr }) => switchMark(tr, switched, on)).run());
+    return (on || markApplies(state, switched)) && runs(chain.command(({ tr }) => switchMark(tr, switched, on)));
   }
-  if (action.type === 'bulletList') return applied(chain.toggleBulletList().run());
-  if (action.type === 'orderedList') return applied(chain.toggleOrderedList().run());
-  if (action.type === 'blockquote') return applied(chain.toggleBlockquote().run());
-  if (action.type === 'codeBlock') return applied(chain.toggleCodeBlock().run());
-  if (action.type === 'paragraph' || action.type === 'heading') {
-    const result = setBlock(editor, chain, action.type === 'heading' ? action.level : null);
-    return result === 'unchanged' || applied(result);
+  if (action.type === 'bulletList') return runs(chain.toggleBulletList());
+  if (action.type === 'orderedList') return runs(chain.toggleOrderedList());
+  if (action.type === 'blockquote') return runs(chain.toggleBlockquote());
+  if (action.type === 'codeBlock') return runs(chain.toggleCodeBlock());
+  // Set rather than toggled, as the heading shortcut would turn a heading of the same level back into a paragraph.
+  if (action.type === 'paragraph') return typeof chain.setParagraph === 'function' && runs(chain.setParagraph());
+  if (action.type === 'heading') {
+    const { level } = action;
+    return Number.isInteger(level) && level >= 1 && level <= 6 && typeof chain.setHeading === 'function' && runs(chain.setHeading({ level }));
   }
-  if (action.type === 'horizontalRule' && typeof chain.setHorizontalRule === 'function') return applied(chain.setHorizontalRule().run());
+  if (action.type === 'horizontalRule' && typeof chain.setHorizontalRule === 'function') return runs(chain.setHorizontalRule());
   if (action.type === 'text') {
     const { text } = action;
-    return typeof text === 'string' && text !== '' && applied(chain.command(({ tr }) => insertPlainText(tr, text)).run());
+    return typeof text === 'string' && text !== '' && runs(chain.command(({ tr }) => insertPlainText(tr, text)));
   }
-  if (action.type === 'align' && ALIGNMENTS.has(action.value)) return applied(chain.setTextAlign(action.value).run());
-  if (action.type === 'color' && safeColor(action.value) && typeof chain.setColor === 'function') return applied(chain.setColor(action.value).run());
-  if (action.type === 'fontFamily' && FONT_FAMILIES.has(action.value) && typeof chain.setFontFamily === 'function') return applied(chain.setFontFamily(action.value).run());
-  if (action.type === 'fontSize' && FONT_SIZES.has(action.value) && typeof chain.setFontSize === 'function') return applied(chain.setFontSize(action.value).run());
+  if (action.type === 'align' && ALIGNMENTS.has(action.value)) return runs(chain.setTextAlign(action.value));
+  if (action.type === 'color' && safeColor(action.value) && typeof chain.setColor === 'function') return runs(chain.setColor(action.value));
+  if (action.type === 'fontFamily' && FONT_FAMILIES.has(action.value) && typeof chain.setFontFamily === 'function') return runs(chain.setFontFamily(action.value));
+  if (action.type === 'fontSize' && FONT_SIZES.has(action.value) && typeof chain.setFontSize === 'function') return runs(chain.setFontSize(action.value));
   if (action.type === 'link' && typeof chain.setLink === 'function') {
     const href = safeUrl(action.href, SAFE_LINK_PROTOCOLS);
     const { text } = action;
     if (!href || (text !== undefined && (typeof text !== 'string' || text === ''))) return false;
     const link = caretLink(editor.state);
     // Without text, a selection or a caret outside a link keeps the editor's own link command.
-    if (text === undefined && !link) return applied(chain.setLink({ href }).run());
-    return applied(chain.command(({ tr }) => (text === undefined ? relink(tr, link!, href) : insertLink(tr, href, text, link))).setMeta('preventAutolink', true).run());
+    if (text === undefined && !link) return runs(chain.setLink({ href }));
+    return runs(chain.command(({ tr }) => (text === undefined ? relink(tr, link!, href) : insertLink(tr, href, text, link))).setMeta('preventAutolink', true));
   }
   if (action.type === 'unlink' && typeof chain.unsetLink === 'function') {
-    if (!editor.state.selection.empty) return applied(chain.unsetLink().run());
+    if (!editor.state.selection.empty) return runs(chain.unsetLink());
     const link = caretLink(editor.state);
-    return applied(chain.command(({ tr }) => unlinkCaret(tr, link)).setMeta('preventAutolink', true).run());
+    return runs(chain.command(({ tr }) => unlinkCaret(tr, link)).setMeta('preventAutolink', true));
   }
   if (action.type === 'image') {
     const src = safeUrl(action.src, SAFE_IMAGE_PROTOCOLS);
-    return src ? applied(chain.setImage({ src, ...(typeof action.alt === 'string' ? { alt: action.alt.slice(0, 1_000) } : {}) }).run()) : false;
+    return src ? runs(chain.setImage({ src, ...(typeof action.alt === 'string' ? { alt: action.alt.slice(0, 1_000) } : {}) })) : false;
   }
   return false;
 }
@@ -814,14 +823,27 @@ const sameFormatting = (a: TextEditorFormatting, b: TextEditorFormatting) => a.e
   && a.marks.bold === b.marks.bold && a.marks.italic === b.marks.italic && a.marks.underline === b.marks.underline
   && a.marks.strike === b.marks.strike && a.marks.code === b.marks.code;
 
+/** The marks the next typed text takes at a caret. A block that takes no mark, such as a code block, takes none, whatever a shortcut held. */
+function caretMarks(state: SelectionState): readonly Mark[] {
+  const { parent } = state.selection.$from;
+  return typingMarks(state).filter((mark) => parent.type.allowsMarkType(mark.type));
+}
+
+/**
+ * Whether a toolbar tool shows its mark pressed: at a caret where the formatting report shows it, so never in a block that
+ * takes no mark, and over a range as the tool's command switches it.
+ */
+function markShown(editor: Editor, name: string): boolean {
+  if (!editor.state.selection.empty) return editor.isActive(name);
+  return caretMarks(editor.state).some((mark) => mark.type.name === name);
+}
+
 /** Each mark at the selection: on at a caret where the next typed text takes it, and over a range where all the selected text has it. */
 function readMarks(state: SelectionState): TextEditorFormatting['marks'] {
   const { selection, doc } = state;
   let has: (name: string) => boolean;
   if (selection.empty) {
-    const { parent } = selection.$from;
-    // A block that takes no mark, such as a code block, holds none for typing either, whatever a shortcut held.
-    const marks = typingMarks(state).filter((mark) => parent.type.allowsMarkType(mark.type));
+    const marks = caretMarks(state);
     has = (name) => marks.some((mark) => mark.type.name === name);
   } else {
     const texts: ProseMirrorNode[] = [];
@@ -898,7 +920,7 @@ function Action({ editor, disabled, action, label, icon: Icon, callbacks }: Acti
       ? current.getAttributes('textStyle').fontFamily === action.value
       : action.type === 'fontSize'
         ? current.getAttributes('textStyle').fontSize === action.value
-        : current.isActive(action.type)), false);
+        : COMMAND_MARKS[action.type] === action.type ? markShown(current, action.type) : current.isActive(action.type)), false);
   // Generate with AI is an action, so it carries no pressed state; every other tool toggles formatting.
   const toggle = action.type !== 'generate';
   const buttonProps = {
@@ -1193,24 +1215,36 @@ const EXTERNAL_VALUE = 'muxuiExternalValue';
  * Holds the marks for typing without a link in two places where the next typed text would otherwise extend one. A caret at
  * the start of a block takes the marks of the text after it, so text typed before a link that starts a paragraph would join
  * it, though the start of a link is outside it everywhere else. And an undo or redo brings back the document and the caret
- * but not the marks held for typing, so text typed after a labelled link it brings back would extend that link.
+ * but not the marks held for typing, so text typed at the end of a label the link command inserted would extend its link.
  */
 function linkTypingBoundary() {
   return Extension.create({
     name: 'muxuiLinkTypingBoundary',
     addProseMirrorPlugins() {
-      return [new Plugin({
-        key: new PluginKey('muxuiLinkTypingBoundary'),
+      return [new Plugin<readonly LabelEnd[]>({
+        key: labelEnds,
+        state: {
+          init: () => [],
+          // Each label end keeps to the right of an insertion at it, so the undo that takes its label out moves it to
+          // where the label was, and the redo that brings the label back moves it after the label again.
+          apply(tr, ends) {
+            const mapped = tr.docChanged ? ends.map((end) => ({ ...end, pos: tr.mapping.map(end.pos, 1) })) : ends;
+            const added: LabelEnd | undefined = tr.getMeta(labelEnds);
+            return added ? [...mapped.filter(({ pos }) => pos !== added.pos), added] : mapped;
+          },
+        },
         appendTransaction(transactions, _previous, state) {
           const type = state.schema.marks.link;
           const { selection, storedMarks } = state;
           if (!type || storedMarks || !selection.empty) return null;
           const { $from } = selection;
           const marks = $from.marks();
-          if (!type.isInSet(marks)) return null;
-          const label = $from.nodeBefore;
-          const restored = label !== null && labelledLinkText.has(label) && transactions.some((transaction) => isHistoryTransaction(transaction));
-          return $from.parentOffset === 0 || restored ? state.tr.setStoredMarks(type.removeFromSet(marks)) : null;
+          const link = type.isInSet(marks);
+          if (!link) return null;
+          if ($from.parentOffset === 0) return state.tr.setStoredMarks(type.removeFromSet(marks));
+          if (!transactions.some((transaction) => isHistoryTransaction(transaction))) return null;
+          const end = labelEnds.getState(state)?.find(({ pos, link: label }) => pos === selection.from && label.eq(link));
+          return end ? state.tr.setStoredMarks(end.marks) : null;
         },
       })];
     },

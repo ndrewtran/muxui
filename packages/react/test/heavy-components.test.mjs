@@ -569,7 +569,7 @@ async function mountEditor(props) {
       return position;
     },
     select: (from, to = from) => act(async () => { pm.focus(); editor.commands.setTextSelection({ from, to }); }),
-    shortcut: (key) => act(async () => pm.dispatchEvent(new KeyboardEvent('keydown', { key, ...modKey, bubbles: true, cancelable: true }))),
+    shortcut: (key, init = {}) => act(async () => pm.dispatchEvent(new KeyboardEvent('keydown', { key, ...modKey, ...init, bubbles: true, cancelable: true }))),
     async close() {
       await act(async () => root.unmount());
       // Tiptap destroys the editor after the unmount; the window it reads must still exist.
@@ -1013,6 +1013,21 @@ test('TextEditor typing at the start of a link that starts a paragraph does not 
   });
 });
 
+test('TextEditor keeps a command that leaves the document as it was out of the undo steps of the typing around it', async () => {
+  const centered = { type: 'doc', content: [{ type: 'paragraph', attrs: { textAlign: 'center' }, content: [text('abcd')] }] };
+  await withEditor(centered, async (t) => {
+    await t.select(t.at('abcd') + 2);
+    await t.type('x');
+    // Align to the alignment the paragraph has, and unlink where there is no link: neither changes the document.
+    await t.execute({ type: 'align', value: 'center' });
+    await t.execute({ type: 'unlink' });
+    await t.type('y');
+    assert.equal(t.undoSteps(), 1, 'the typing stays one undo step');
+    await t.undo();
+    assert.deepEqual(t.content(), [text('abcd')]);
+  });
+});
+
 test('TextEditor makes each accepted command its own undo and redo step, apart from the typing after it', async () => {
   const t = await mountCommandEditor({ defaultValue: { type: 'doc', content: [paragraph(text('ab'))] } });
   try {
@@ -1106,6 +1121,25 @@ test('TextEditor link with text, undone and redone, leaves the next typed text u
     await t.type('!');
     assert.deepEqual(t.content().at(-1), text('!'), 'after a redo of the label, typed text is not linked');
   });
+  // A label just before a link to the same address joins that link, so the caret after it is inside one link.
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at('docs'));
+    assert.equal(await t.execute({ type: 'link', href: linkA, text: 'new' }), true);
+    await t.undo();
+    await t.redo();
+    await t.type('!');
+    assert.deepEqual(t.content(), [text('see '), text('new', [linkMark(linkA)]), text('!'), text('docs', [linkMark(linkA)]), text('more', [linkMark(linkB)]), text(' end')], 'after a redo of a label that joined a link, typed text is not linked');
+  });
+});
+
+test('TextEditor link with text in place of a whole link keeps the marks held at the caret', async () => {
+  await withLinkedEditor(async (t) => {
+    await t.select(t.at('docs') + 2);
+    assert.equal(await t.execute({ type: 'bold' }), true, 'bold is held at the caret in the link');
+    assert.equal(await t.execute({ type: 'link', href: linkC, text: 'new' }), true);
+    await t.type('!');
+    assert.deepEqual(t.content().slice(1, 3).map((node) => [node.text, (node.marks ?? []).map((mark) => mark.type)]), [['new', ['link', 'bold']], ['!', ['bold']]], 'the label and the text typed after it are bold');
+  });
 });
 
 // Bold text then inline code, a code block, and a last paragraph.
@@ -1157,6 +1191,30 @@ test('TextEditor switches a mark over a range as its shortcut does, on and then 
     assert.equal(await t.execute({ type: 'bold' }), true);
     assert.deepEqual(t.content(), [text('loud'), text('mono', [{ type: 'code' }])]);
   });
+});
+
+test('TextEditor toolbar shows no mark pressed in a code block, whatever a shortcut or a click holds there', async () => {
+  const reports = [];
+  const t = await mountEditor({ toolbar: 'advanced', defaultValue: codeDocument, onFormattingChange: (formatting) => reports.push(formatting) });
+  try {
+    const toolbar = document.querySelector('[role="toolbar"][aria-label="Formatting"]');
+    const pressed = () => [...toolbar.querySelectorAll('[aria-pressed="true"]')].map((node) => node.getAttribute('aria-label'));
+    // Bold, italic, underline, strike, and inline code: each mark a shortcut holds, and the code block refuses. A fresh caret
+    // holds none, and inline code drops every other mark held, so each shortcut runs on its own.
+    for (const [key, init, mark] of [['b', {}, 'bold'], ['i', {}, 'italic'], ['u', {}, 'underline'], ['s', { shiftKey: true }, 'strike'], ['e', {}, 'code']]) {
+      await t.select(t.at('block') + 2);
+      await t.shortcut(key, init);
+      assert.deepEqual(t.editor.state.storedMarks?.map(({ type }) => type.name), [mark], `the ${mark} shortcut holds ${mark} there`);
+      assert.deepEqual([pressed(), reports.at(-1).marks], [[], noMarks], `and no tool or report shows ${mark}`);
+      const tool = { bold: 'Bold', italic: 'Italic', underline: 'Underline' }[mark];
+      if (tool) {
+        await act(async () => toolbar.querySelector(`[aria-label="${tool}"]`).click());
+        assert.deepEqual(pressed(), [], `nor after a click on ${tool}`);
+      }
+    }
+  } finally {
+    await t.close();
+  }
 });
 
 test('TextEditor reports a mark over a range only where all the selected text has it', async () => {

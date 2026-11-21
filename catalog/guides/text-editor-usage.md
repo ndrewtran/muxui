@@ -27,11 +27,11 @@ The Selection actions React TextEditor example runs a caller-owned edit with a K
 
 - Use `toolbar={false}` with `onFormattingChange` to draw the tools yourself. Each report gives the `marks`, the `link`, the `block` and `headingLevel`, the nearest `list`, and whether a `quote` holds the selection.
 - A report comes once the editor is ready and again whenever the formatting at the selection changes, a caret move alone included.
-- Send each tool's command through the handle's `execute`. Heading and paragraph set the block and leave one that already is it, so a heading tool sends a paragraph to turn its heading off.
-- Each command that changes the document is one undo step of its own. A mark command returns false where the mark cannot go, such as in a code block, and changes nothing there.
-- Over a range, `marks` shows a mark on only where all the selected text has it. The bold, italic, underline, strike, and code commands switch there as their shortcuts do, which count inline code as having the mark, so over bold text and inline code `marks` shows bold off and the bold command takes it off.
+- Send each tool's command through the handle's `execute`. Heading and paragraph set the block and leave one that already is it, without focusing the editor, so a heading tool sends a paragraph to turn its heading off.
+- Each command that changes the document is one undo step of its own, and one that changes nothing splits no undo step. A mark command returns false where the mark cannot go, such as in a code block, and changes nothing there.
+- At a caret, `marks` and the built-in tools show what the next typed text takes, so a block that takes no mark, such as a code block, shows none, even after a shortcut there. Over a range, `marks` shows a mark on only where all the selected text has it. The bold, italic, underline, strike, and code commands switch there as their shortcuts do, which count inline code as having the mark, so over bold text and inline code `marks` shows bold off and the bold command takes it off.
 - At a caret in a link, the link and unlink commands act on the whole link. The caret is in a link where typed text would extend it: at its end, not its start, even where the link starts a paragraph.
-- Given text, the link command inserts it at a caret, or puts it in place of the selection, and the text typed after it is plain.
+- Given text, the link command inserts it at a caret, or puts it in place of the selection, and the text typed after it is not linked, also after an undo and redo of it.
 - Check an address with `normalizeTextEditorUrl` before sending it. The link and image commands refuse exactly what it refuses.
 - Keep the tools one Tab stop with arrow keys between them, as [Toolbar](/components/toolbar/) does, and give each tool a name and its pressed state.
 

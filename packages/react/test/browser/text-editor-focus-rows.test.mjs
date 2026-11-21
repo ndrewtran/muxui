@@ -18,10 +18,11 @@ import { TextEditor } from '/src/text-editor/index.ts';
 const h = React.createElement;
 const { spacer = 0, ...props } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
 window.__ready = 0;
+window.__changes = 0;
 window.__handle = React.createRef();
 createRoot(document.getElementById('root')).render(h('main', null,
   spacer ? h('div', { style: { height: spacer }, 'aria-hidden': 'true' }) : null,
-  h(TextEditor, { ref: window.__handle, label: 'Reply', toolbar: false, onReady: () => { window.__ready += 1; }, ...props }),
+  h(TextEditor, { ref: window.__handle, label: 'Reply', toolbar: false, onReady: () => { window.__ready += 1; }, onChange: () => { window.__changes += 1; }, ...props }),
   h('div', { style: { height: 3000 }, 'aria-hidden': 'true' })));
 `;
 
@@ -188,6 +189,61 @@ for (const engine of browserEngines()) {
       await frames(tab);
       const children = await tab.locator('.ProseMirror p').first().evaluate((node) => [...node.childNodes].map((child) => [child.nodeName, child.textContent]));
       assert.deepEqual(children, [['#text', 'x'], ['A', 'lead'], ['#text', ' rest']]);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test(`TextEditor leaves an unfocused heading alone when the heading command already matches it in ${engine}`, { timeout: 120_000 }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage({ viewport: { width: 800, height: 600 } });
+      await open(tab, { defaultValue: { type: 'doc', content: [{ type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Title' }] }] } });
+      const state = () => tab.evaluate(() => {
+        const content = document.querySelector('.ProseMirror');
+        return { focused: document.activeElement === content, blocks: [...content.children].map((node) => node.nodeName), changes: window.__changes, undo: content.editor.can().undo() };
+      });
+      const before = await state();
+      assert.deepEqual(before, { focused: false, blocks: ['H2'], changes: 0, undo: false });
+      assert.equal(await tab.evaluate(() => window.__handle.current.execute({ type: 'heading', level: 2 })), true);
+      // Past the frame in which a command focuses the editor.
+      await frames(tab);
+      await frames(tab);
+      assert.deepEqual(await state(), before, 'no focus, no appended paragraph, no change, no undo step');
+      // Focused, the command changes nothing either.
+      await tab.evaluate(() => window.__handle.current.focus({ preventScroll: true }));
+      await frames(tab);
+      const focused = await state();
+      assert.equal(focused.focused, true);
+      assert.equal(await tab.evaluate(() => window.__handle.current.execute({ type: 'heading', level: 2 })), true);
+      await frames(tab);
+      await frames(tab);
+      assert.deepEqual(await state(), focused, 'focused, nothing changes and no undo step is added');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test(`TextEditor keeps a composition one undo step around a command that changes nothing in ${engine}`, { timeout: 120_000, skip: engine !== 'chromium' && 'the DevTools protocol drives an input method in Chromium only' }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage({ viewport: { width: 800, height: 600 } });
+      await open(tab, { defaultValue: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'ab' }] }] } });
+      await tab.evaluate(() => window.__handle.current.focus({ preventScroll: true }));
+      await frames(tab);
+      const ime = await tab.context().newCDPSession(tab);
+      const text = () => tab.locator('.ProseMirror').textContent();
+      // A provisional n, a command that changes nothing, then the committed text, as a Japanese input method types 日本.
+      await ime.send('Input.imeSetComposition', { text: 'n', selectionStart: 1, selectionEnd: 1 });
+      await frames(tab);
+      await tab.evaluate(() => window.__handle.current.execute({ type: 'unlink' }));
+      await ime.send('Input.imeSetComposition', { text: '日本', selectionStart: 2, selectionEnd: 2 });
+      await ime.send('Input.insertText', { text: '日本' });
+      await frames(tab);
+      assert.equal(await text(), '日本ab');
+      await tab.keyboard.press('ControlOrMeta+z');
+      await frames(tab);
+      assert.equal(await text(), 'ab', 'one undo takes the whole composition out');
     } finally {
       await browser.close();
     }
