@@ -18,6 +18,8 @@ export interface ModalMotionOptions {
   isOpen: boolean;
   triggerRef?: RefObject<Element | null>;
   reducedAttribute?: string;
+  /** Whether the panel fades as it slides and scales; true unless set. */
+  fade?: boolean;
   onExitComplete?: () => void;
   onReducedChange?: (reduced: boolean) => void;
 }

@@ -37,14 +37,14 @@ function readModalValues(node) {
   };
 }
 
-function modalHiddenValues() {
-  return { opacity: 0, y: MODAL_EXIT_Y, scale: MODAL_INITIAL_SCALE };
+function modalHiddenValues(fade = true) {
+  return { opacity: fade ? 0 : 1, y: MODAL_EXIT_Y, scale: MODAL_INITIAL_SCALE };
 }
 
-function modalTargetValues(isOpen) {
+function modalTargetValues(isOpen, fade) {
   return isOpen
     ? { opacity: 1, y: MODAL_SETTLED_Y, scale: MODAL_SETTLED_SCALE }
-    : modalHiddenValues();
+    : modalHiddenValues(fade);
 }
 
 // The panel runs the modal spring and exits on the modal-dismiss composite; the
@@ -86,8 +86,10 @@ function restoreStyles(node, original) {
  * Own the pixels of a finite modal open/close cycle while RAC retains portal,
  * focus, dismissal, and inertness ownership. Modal-only CSS variables compose
  * the panel's y/scale motion with each surface's existing centering transform.
+ * `fade: false` keeps the panel at full opacity while it slides and scales, for
+ * a panel with a backdrop filter: any fade shows the unfiltered page through it.
  */
-export function useModalMotion({ node, isOpen, triggerRef, reducedAttribute = 'data-muxui-motion-reduced', onExitComplete, onReducedChange }) {
+export function useModalMotion({ node, isOpen, triggerRef, reducedAttribute = 'data-muxui-motion-reduced', fade = true, onExitComplete, onReducedChange }) {
   const isOpenRef = React.useRef(Boolean(isOpen));
   const controlsRef = React.useRef(null);
   const valuesRef = React.useRef(null);
@@ -136,6 +138,7 @@ export function useModalMotion({ node, isOpen, triggerRef, reducedAttribute = 'd
       animationIdRef.current += 1;
       stopControls(controlsRef.current);
       if (!node.isConnected) return;
+      // A reduced close hides the panel at once, so it takes the faded values whether or not the panel fades.
       const target = modalTargetValues(Boolean(isOpenRef.current));
       styleValues(node, target);
       valuesRef.current = target;
@@ -154,8 +157,8 @@ export function useModalMotion({ node, isOpen, triggerRef, reducedAttribute = 'd
     animationIdRef.current = animationId;
     const initialOpen = Boolean(isOpen) && animatedNodeRef.current !== node;
     animatedNodeRef.current = node;
-    const from = initialOpen ? modalHiddenValues() : valuesRef.current ?? readModalValues(node);
-    const to = modalTargetValues(Boolean(isOpen));
+    const from = initialOpen ? modalHiddenValues(fade) : valuesRef.current ?? readModalValues(node);
+    const to = modalTargetValues(Boolean(isOpen), fade);
     const transition = modalTransition(node, triggerRef?.current, Boolean(isOpen));
     let controls = null;
     let active = true;
@@ -201,7 +204,7 @@ export function useModalMotion({ node, isOpen, triggerRef, reducedAttribute = 'd
       stopControls(controls);
       if (phaseRef.current === (isOpen ? 'entry' : 'exit')) phaseRef.current = null;
     };
-  }, [finishExit, isOpen, node, stopControls, triggerRef]);
+  }, [fade, finishExit, isOpen, node, stopControls, triggerRef]);
 
   React.useEffect(() => () => {
     animationIdRef.current += 1;

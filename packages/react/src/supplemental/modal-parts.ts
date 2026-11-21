@@ -23,7 +23,8 @@ export type MotionModalBackdropProps = HTMLAttributes<HTMLDivElement> & {
   isDismissable?: boolean;
   triggerRef?: RefObject<Element | null>;
 };
-export type MotionModalPopupProps = HTMLAttributes<HTMLDivElement> & { isExiting?: boolean };
+// fade: whether the popup fades as it slides and scales; true unless set.
+export type MotionModalPopupProps = HTMLAttributes<HTMLDivElement> & { isExiting?: boolean; fade?: boolean };
 
 // PopoverContext is slotted, and a popover's value carries its trigger: the only member read from it.
 type PopoverTrigger = { triggerRef?: RefObject<Element | null> } | null | undefined;
@@ -83,7 +84,7 @@ function MotionModalBackdrop({ children, className, onOpenChange, triggerRef: pr
 
 export const MotionModalBackdropForwardRef: ForwardRefExoticComponent<MotionModalBackdropProps & RefAttributes<HTMLDivElement>> = /*#__PURE__*/ React.forwardRef(MotionModalBackdrop);
 
-function MotionModalPopup({ children, className, ...props }: MotionModalPopupProps, ref: ForwardedRef<HTMLDivElement>) {
+function MotionModalPopup({ children, className, fade, ...props }: MotionModalPopupProps, ref: ForwardedRef<HTMLDivElement>) {
   const state = React.useContext(OverlayTriggerStateContext);
   const motion = React.useContext(ModalMotionContext);
   const popoverContext = React.useContext(PopoverContext) as PopoverTrigger;
@@ -94,6 +95,7 @@ function MotionModalPopup({ children, className, ...props }: MotionModalPopupPro
     isOpen,
     triggerRef: motion?.triggerRef ?? popoverContext?.triggerRef,
     reducedAttribute: 'data-muxui-motion-reduced',
+    fade,
     onExitComplete: motion?.onExitComplete,
   });
   const setRef = React.useCallback((node: HTMLDivElement | null) => {
