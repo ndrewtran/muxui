@@ -2520,7 +2520,7 @@ test('the On cell of every row is what the document shows: its tags, each carryi
       }
     }
   }
-  assert.equal(cells, 932, 'every row of every table was compared');
+  assert.equal(cells, 936, 'every row of every table was compared');
 });
 
 // The expectation above is derived in the test from the document; these cells are written out, so it cannot drift with the code: a part in a

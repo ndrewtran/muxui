@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:skeleton",
+  "kind": "component",
+  "name": "Skeleton",
+  "summary": "Hold the place of loading content with passive line, circle and block shapes under one loading status.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Holding the place of content that is loading, in the shape and size it will take, so the page does not move when it arrives."
+    ],
+    "avoidWhen": [
+      "Showing how far a task has got; use ProgressBar.",
+      "A short wait inside a control, such as a button that is submitting; use Button.",
+      "Content that is already available, or an empty result; show the content or say that there is none."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "line",
+    "circle",
+    "block"
+  ],
+  "states": [
+    "default"
+  ],
+  "accessibility": {
+    "nameRequired": false,
+    "obligations": [
+      "Skeleton.Root is one status region named by its label, so assistive technology reads one loading status for the whole group.",
+      "Line, Circle and Block are hidden from assistive technology, hold no text and take no focus.",
+      "The sweep is decorative: it is absent under reduced motion and under forced colours, where each shape shows as a GrayText outline."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "behavior": [
+        "Skeleton.Root is a div with the status role. Its label, Loading by default, is visually hidden text inside it, and the caller lays out the shapes inside it with its own markup.",
+        "Line, Circle and Block are span elements, so they are valid inside headings and paragraphs. A Line takes the height of one line of the text around it, with a bar about the height of a capital letter, so real text replaces it without moving the page.",
+        "Circle takes Avatar's sizes (sm, md, lg). Block fills its width at 16 / 9 unless a height or aspect ratio is given.",
+        "The group paints one band over all its own shapes, clipped to their outlines; a nested group paints its own. The band moves by transform alone, starts once the shapes are measured after hydration, follows them as they resize, and stops when the group unmounts.",
+        "Under reduced motion, from the system setting or a data-muxui-motion=\"reduced\" ancestor, the band is removed and the shapes stay still."
+      ],
+      "accessibility": [
+        "Skeleton.Root is one status region named by its label, so assistive technology reads one loading status for the whole group.",
+        "Line, Circle and Block are hidden from assistive technology, hold no text and take no focus.",
+        "The sweep is decorative: it is absent under reduced motion and under forced colours, where each shape shows as a GrayText outline."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.action.neutral-background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.control.size-lg",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.control.size-md",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.control.size-sm",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.progress-easing",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.progress-travel-duration",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.container-radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.pill-radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.radius-xs",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.surface.background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.surface.strong",
+            "requirement": "required"
+          }
+        ]
+      },
+      "runtimeProfiles": {}
+    }
+  }
+}

@@ -199,6 +199,7 @@ const GUIDES = {
   // primary, danger and neutral are the variants of Button, which the guide says the dialog's actions use.
   'alert-dialog': { from: { button: ['primary', 'danger', 'neutral'] } },
   sidebar: {},
+  skeleton: {},
   // The command and hook option fields belong to these declaration types, not the root block.
   'command-palette': { reference: { CommandPaletteCommand: ['subtitle', 'keywords'], UseCommandPaletteOptions: ['onError', 'close'] } },
 };

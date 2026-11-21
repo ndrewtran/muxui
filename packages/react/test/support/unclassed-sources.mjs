@@ -6,7 +6,7 @@
 import ts from 'typescript-6';
 
 /** The internals of an svg, which sit inside a classed svg and so need no class of their own. */
-const svgInternals = new Set(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'g', 'defs', 'use']);
+const svgInternals = new Set(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'g', 'defs', 'use', 'clipPath']);
 
 const isCreator = (text) => /^(?:React\.)?createElement$/u.test(text);
 

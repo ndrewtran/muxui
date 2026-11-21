@@ -1,0 +1,163 @@
+/* Skeleton: passive shapes that hold the place of content, and one sweep per group. The group is the caller's layout box;
+   its label, sweep and clip are out of flow, so a grid or flex layout on the group sees only the caller's children. */
+.muxui-skeleton {
+  position: relative;
+  box-sizing: border-box;
+  min-inline-size: 0;
+}
+
+/* The group and its lines stand in for the caller's text, so they keep the type of the element they sit in instead of
+   taking Mux UI's defaults at a boundary, as Link does. */
+.muxui-skeleton,
+.muxui-skeleton__line {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.muxui-skeleton__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.muxui-skeleton__line,
+.muxui-skeleton__circle,
+.muxui-skeleton__block {
+  display: block;
+  flex: none;
+  box-sizing: border-box;
+  max-inline-size: 100%;
+}
+
+.muxui-skeleton__bar,
+.muxui-skeleton__circle,
+.muxui-skeleton__block {
+  background-color: var(--muxui-semantic-action-neutral-background);
+}
+
+/* A line is one line of the text around it, with no margins, so stacked lines and text replace each other in place;
+   its bar is about the height of a capital letter, centred in that line. */
+.muxui-skeleton__line {
+  display: flex;
+  align-items: center;
+  inline-size: 100%;
+  block-size: 1.5em;
+  block-size: 1lh;
+}
+
+.muxui-skeleton__bar {
+  flex: 1;
+  block-size: 0.7em;
+  block-size: 1cap;
+  border-radius: var(--muxui-semantic-shape-radius-xs);
+}
+
+.muxui-skeleton__circle {
+  inline-size: var(--muxui-semantic-control-size-md);
+  block-size: var(--muxui-semantic-control-size-md);
+  border-radius: var(--muxui-semantic-shape-pill-radius);
+}
+
+.muxui-skeleton__circle[data-muxui-size='sm'] {
+  inline-size: var(--muxui-semantic-control-size-sm);
+  block-size: var(--muxui-semantic-control-size-sm);
+}
+
+.muxui-skeleton__circle[data-muxui-size='lg'] {
+  inline-size: var(--muxui-semantic-control-size-lg);
+  block-size: var(--muxui-semantic-control-size-lg);
+}
+
+.muxui-skeleton__block {
+  inline-size: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--muxui-semantic-shape-container-radius);
+}
+
+/* The sweep covers the group's padding box and is clipped to the shapes, so its one band shows only on them. */
+.muxui-skeleton__sweep {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.muxui-skeleton__clip {
+  position: absolute;
+  overflow: hidden;
+}
+
+/* The band waits beyond the start edge, crosses the group in the travel duration, then rests before the next pass.
+   Only its transform animates. */
+.muxui-skeleton__band {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  inline-size: 40%;
+  background-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--muxui-semantic-surface-background) 70%, transparent), transparent);
+  transform: translateX(-100%);
+  animation: muxui-skeleton-sweep calc(var(--muxui-semantic-motion-progress-travel-duration) * 1.6) var(--muxui-semantic-motion-progress-easing) infinite;
+}
+
+.muxui-skeleton__band:dir(rtl) {
+  animation-name: muxui-skeleton-sweep-rtl;
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-skeleton__band {
+    background-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent), transparent);
+  }
+}
+
+@keyframes muxui-skeleton-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  62.5%,
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@keyframes muxui-skeleton-sweep-rtl {
+  0% {
+    transform: translateX(250%);
+  }
+  62.5%,
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* No travel under reduced motion: the shapes stay, the band does not. */
+@media (prefers-reduced-motion: reduce) {
+  .muxui-skeleton__sweep {
+    display: none;
+  }
+}
+
+:where([data-muxui-motion='reduced']) .muxui-skeleton__sweep {
+  display: none;
+}
+
+/* Forced colours drop token backgrounds, so each shape keeps its box and shows as a GrayText outline, and the band,
+   which would only repaint Canvas, is removed. */
+@media (forced-colors: active) {
+  .muxui-skeleton__bar,
+  .muxui-skeleton__circle,
+  .muxui-skeleton__block {
+    outline: 1px solid GrayText;
+    outline-offset: -1px;
+  }
+
+  .muxui-skeleton__sweep {
+    display: none;
+  }
+}
