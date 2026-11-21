@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:toggle-button-quiet-react",
+  "kind": "example",
+  "name": "Quiet ToggleButton",
+  "summary": "A quiet ToggleButton repeated down a list, with no selected fill and a glyph that changes with the state.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:toggle-button#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/toggle-button/examples/react/quiet.tsx"
+}

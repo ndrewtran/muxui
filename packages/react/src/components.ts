@@ -619,6 +619,17 @@ export interface ToggleButtonOwnProps {
   disabled?: boolean;
   /** The control size. Without one, a ToggleButton in a ToggleButtonGroup takes the group's size, and any other takes md. */
   size?: 'sm' | 'md' | 'lg';
+  /**
+   * How the selected state is drawn. default fills a selected ToggleButton. quiet draws no outline and no selected fill,
+   * for a toggle repeated down a list: its text turns from muted to strong, and the caller changes the glyph or label
+   * with the state. quiet is not available inside a ToggleButtonGroup, which draws its own selected fill.
+   */
+  variant?: 'default' | 'quiet';
+  /**
+   * Keeps focus where it is when a pointer presses the ToggleButton, such as a formatting tool that must leave the text
+   * selection in an editor. The keyboard still focuses and activates it.
+   */
+  preventFocusOnPress?: boolean;
   /** Reports the new selected state. */
   onChange?: (selected: boolean) => void;
   /** Reports an activation of the ToggleButton. */
@@ -637,6 +648,8 @@ export const ToggleButton: ForwardRefExoticComponent<ToggleButtonProps & RefAttr
   defaultSelected = false,
   disabled = false,
   size,
+  variant = 'default',
+  preventFocusOnPress,
   className,
   onChange,
   onActivate,
@@ -645,6 +658,9 @@ export const ToggleButton: ForwardRefExoticComponent<ToggleButtonProps & RefAttr
   const inheritedSize = React.useContext(ToggleButtonSizeContext);
   // A conditional, not ??: extraction reads a fallback on an owned prop as an executed default, and an inherited size is none.
   const resolvedSize = normalizeToggleButtonSize(size == null ? inheritedSize : size);
+  if (variant !== 'default' && variant !== 'quiet') throw new TypeError('ToggleButton variant must be one of: default, quiet');
+  // A group provides its size to every button in it, and paints a moving selected fill that quiet text is not drawn for.
+  if (variant === 'quiet' && inheritedSize !== undefined) throw new TypeError('ToggleButton variant quiet is not available inside a ToggleButtonGroup');
   // React Aria keeps the id (a ToggleButtonGroup's key for the button) and the tab stop itself, so neither is laid under its DOM props.
   const { id: _id, tabIndex: _tabIndex, ...hostAttributes } = props;
   return React.createElement(AriaToggleButton, {
@@ -655,8 +671,9 @@ export const ToggleButton: ForwardRefExoticComponent<ToggleButtonProps & RefAttr
     isSelected: selected,
     defaultSelected,
     isDisabled: disabled,
+    preventFocusOnPress,
     className: classNames(`muxui-toggle-button muxui-toggle-button--${resolvedSize}`, className),
-    ...{ 'data-muxui-size': resolvedSize },
+    ...{ 'data-muxui-size': resolvedSize, 'data-muxui-variant': variant },
     onChange,
     onPress: (event: PressEvent) => onActivate?.(activationEvent(event, event.target as HTMLButtonElement)),
     render: (domProps) => React.createElement('button', withHostAttributes(hostAttributes, domProps)),

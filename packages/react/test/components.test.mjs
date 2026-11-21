@@ -98,6 +98,20 @@ test('R1.1 RAC-backed component slice preserves SSR, hydration, semantics, and i
   }
 });
 
+test('ToggleButton reflects its variant, refuses an unknown one and quiet in a group, and keeps preventFocusOnPress off the element', () => {
+  assert.match(renderToString(React.createElement(ToggleButton, null, 'Bold')), /data-muxui-variant="default"/u);
+  const quiet = renderToString(React.createElement(ToggleButton, { variant: 'quiet', preventFocusOnPress: true, 'aria-label': 'Pin' }, 'P'));
+  assert.match(quiet, /data-muxui-variant="quiet"/u);
+  assert.match(quiet, /aria-pressed="false"/u);
+  assert.doesNotMatch(quiet, /prevent/iu);
+  // An untyped caller can pass anything.
+  assert.throws(() => renderToString(React.createElement(ToggleButton, { variant: 'ghost' }, 'Bold')), /ToggleButton variant must be one of: default, quiet/u);
+  assert.throws(() => renderToString(React.createElement(ToggleButtonGroup, { 'aria-label': 'Formatting' },
+    React.createElement(ToggleButton, { id: 'bold', variant: 'quiet' }, 'Bold'))), /quiet is not available inside a ToggleButtonGroup/u);
+  assert.doesNotThrow(() => renderToString(React.createElement(ToggleButtonGroup, { 'aria-label': 'Formatting' },
+    React.createElement(ToggleButton, { id: 'bold', variant: 'default' }, 'Bold'))));
+});
+
 test('ToggleButton exposes size variants and groups can keep an active selection', async () => {
   for (const size of ['sm', 'md', 'lg']) {
     const markup = renderToString(React.createElement(ToggleButton, { size }, 'Bold'));
