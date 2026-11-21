@@ -736,9 +736,19 @@ async function mountCommandEditor(props) {
     content: (index = 0) => normalizeTextEditorDocument(t.editor.getJSON()).content[index].content,
     selection: () => [t.editor.state.selection.from, t.editor.state.selection.to],
     undoSteps: () => undoDepth(t.editor.state),
-    // Starts a new undo step, so the next command's step is its own.
-    closeHistory: () => t.editor.view.dispatch(closeHistory(t.editor.state.tr)),
     undo: () => act(async () => { t.editor.commands.undo(); }),
+    redo: () => act(async () => { t.editor.commands.redo(); }),
+    // Text typed at the caret the way the browser's input does: with the marks held for typing, or the caret's.
+    type: (value) => act(async () => { t.editor.view.dispatch(t.editor.state.tr.insertText(value)); }),
+    // The links in the editor's own document, before the portable document drops any the rule refuses.
+    links() {
+      const found = [];
+      t.editor.state.doc.descendants((node) => {
+        const link = node.marks.find((mark) => mark.type.name === 'link');
+        if (link) found.push([node.text, link.attrs.href]);
+      });
+      return found;
+    },
   };
 }
 
@@ -820,7 +830,6 @@ test('TextEditor inserts plain text as typing does, and a horizontal rule', asyn
   ] } });
   try {
     await t.select(t.at('loud') + 2);
-    t.closeHistory();
     assert.equal(await t.execute({ type: 'text', text: 'XY' }), true);
     assert.deepEqual(t.content(), [text('one '), text('loXYud', [{ type: 'bold' }])], 'it takes the marks typed text would');
     assert.deepEqual(t.selection(), [t.at('loXYud') + 4, t.at('loXYud') + 4], 'and leaves the caret after it');
@@ -853,14 +862,15 @@ const linkedDocument = { type: 'doc', content: [
   paragraph(text('last')),
 ] };
 const [linkA, linkB, linkC] = ['https://a.example/', 'https://b.example/', 'https://c.example/'];
-async function withLinkedEditor(steps) {
-  const t = await mountCommandEditor({ defaultValue: linkedDocument });
+async function withEditor(defaultValue, steps) {
+  const t = await mountCommandEditor({ defaultValue });
   try {
     await steps(t);
   } finally {
     await t.close();
   }
 }
+const withLinkedEditor = (steps) => withEditor(linkedDocument, steps);
 
 test('TextEditor link and unlink act on the whole link at a caret in one, the link the next typed text would take', async () => {
   // Inside a link, link gives all of it the new address and leaves the caret where it was.
@@ -919,7 +929,6 @@ test('TextEditor link with text inserts or replaces the link text, linked, and t
   await withLinkedEditor(async (t) => {
     const before = t.json();
     await t.select(t.at(' tail') + 5);
-    t.closeHistory();
     assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: ' here' }), true);
     await t.undo();
     assert.deepEqual(t.json(), before);
@@ -958,6 +967,255 @@ test('TextEditor commands that the character limit refuses return false and chan
     assert.equal(await t.execute({ type: 'image', src: 'https://example.com/a.png' }), false, 'an image, which the limit refused while the command still reported true');
     assert.deepEqual([t.json(), t.changes], [before, []]);
     assert.equal(await t.execute({ type: 'text', text: 'x' }), true, 'text that fits applies');
+  } finally {
+    await t.close();
+  }
+});
+
+// A paragraph that starts with a link, where ProseMirror gives a caret at its start the marks of the text after it.
+const leadingLink = { type: 'doc', content: [paragraph(text('lead', [linkMark(linkA)]), text(' rest')), paragraph(text('last'))] };
+
+test('TextEditor reports a caret at the start of a link that starts a paragraph as outside the link', async () => {
+  const reports = [];
+  const t = await mountCommandEditor({ defaultValue: leadingLink, onFormattingChange: (formatting) => reports.push(formatting) });
+  try {
+    assert.equal(reports.at(-1).link, null, 'the first caret, at the start of the link, is outside it');
+    await t.select(t.at('lead') + 2);
+    await t.select(t.at('lead'));
+    assert.equal(reports.at(-1).link, null, 'and so is a caret moved there');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor link and unlink at the start of a link that starts a paragraph leave that link alone', async () => {
+  await withEditor(leadingLink, async (t) => {
+    await t.select(t.at('lead'));
+    assert.equal(await t.execute({ type: 'unlink' }), true);
+    assert.deepEqual(t.content(), leadingLink.content[0].content, 'unlink there leaves the link');
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: 'new ' }), true);
+    assert.deepEqual(t.content(), [text('new ', [linkMark(linkC)]), text('lead', [linkMark(linkA)]), text(' rest')], 'a label goes before the link and leaves its text');
+  });
+});
+
+test('TextEditor typing at the start of a link that starts a paragraph does not extend the link', async () => {
+  await withEditor(leadingLink, async (t) => {
+    await t.select(t.at('lead'));
+    await t.type('x');
+    assert.deepEqual(t.content()[0], text('x'), 'text typed there does not take the link');
+  });
+  // A mark command run there first holds the marks for typing without the link too.
+  await withEditor(leadingLink, async (t) => {
+    assert.deepEqual(t.selection(), [t.at('lead'), t.at('lead')], 'the caret starts there');
+    assert.equal(await t.execute({ type: 'italic' }), true);
+    await t.type('x');
+    assert.deepEqual(t.content()[0], text('x', [{ type: 'italic' }]), 'text typed after italic there takes italic, not the link');
+  });
+});
+
+test('TextEditor makes each accepted command its own undo and redo step, apart from the typing after it', async () => {
+  const t = await mountCommandEditor({ defaultValue: { type: 'doc', content: [paragraph(text('ab'))] } });
+  try {
+    await t.select(t.at('ab') + 2);
+    await t.execute({ type: 'text', text: 'X' });
+    await t.execute({ type: 'text', text: 'Y' });
+    await t.type('z');
+    assert.equal(t.undoSteps(), 3, 'two commands and the typing');
+    await t.undo();
+    assert.deepEqual(t.content(), [text('abXY')], 'undo takes the typing alone');
+    await t.undo();
+    assert.deepEqual(t.content(), [text('abX')], 'then the last command alone');
+    await t.redo();
+    assert.deepEqual(t.content(), [text('abXY')], 'and redo brings that command back alone');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor heading at the current level of a one-heading document dispatches nothing', async () => {
+  // Setting the level again does not let the editor append a paragraph after the heading.
+  await withEditor({ type: 'doc', content: [{ type: 'heading', attrs: { level: 2 }, content: [text('Title')] }] }, async (t) => {
+    const before = [t.json(), t.changes.length, t.undoSteps()];
+    assert.equal(await t.execute({ type: 'heading', level: 2 }), true);
+    assert.deepEqual([t.json(), t.changes.length, t.undoSteps()], before);
+  });
+});
+
+test('TextEditor paragraph over paragraphs in list items dispatches nothing, so they keep their alignment', async () => {
+  const centered = (value) => ({ type: 'listItem', content: [{ type: 'paragraph', attrs: { textAlign: 'center' }, content: [text(value)] }] });
+  await withEditor({ type: 'doc', content: [{ type: 'bulletList', content: [centered('one'), centered('two')] }, paragraph(text('last'))] }, async (t) => {
+    await t.select(t.at('one') + 1, t.at('two') + 1);
+    const before = [t.json(), t.changes.length, t.undoSteps()];
+    assert.equal(await t.execute({ type: 'paragraph' }), true);
+    assert.deepEqual([t.json(), t.changes.length, t.undoSteps()], before);
+  });
+});
+
+test('TextEditor link with text replaces a whole-document selection with the link', async () => {
+  for (const content of [[paragraph(text('only words'))], [paragraph(text('one')), { type: 'heading', attrs: { level: 2 }, content: [text('two')] }, paragraph(text('three'))]]) {
+    const t = await mountCommandEditor({ defaultValue: { type: 'doc', content } });
+    try {
+      await act(async () => { t.pm.focus(); t.editor.commands.selectAll(); });
+      assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: 'all new' }), true, `after Select All in ${content.length} blocks`);
+      assert.deepEqual(t.json().content, [paragraph(text('all new', [linkMark(linkC)]))]);
+    } finally {
+      await t.close();
+    }
+  }
+});
+
+// A link, a bold word, and a last paragraph; `marksOf` names the marks of the text node that is exactly `value`.
+const markedDocument = { type: 'doc', content: [paragraph(text('see '), text('docs', [linkMark(linkA)]), text(' end')), paragraph(text('loud', [{ type: 'bold' }])), paragraph(text('last'))] };
+const marksOf = (t, value) => t.json().content.flatMap(({ content = [] }) => content).find((node) => node.text === value)?.marks?.map(({ type }) => type).sort();
+
+test('TextEditor link at a caret in a link keeps a mark switched on there for the next typed text', async () => {
+  await withEditor(markedDocument, async (t) => {
+    await t.select(t.at('docs') + 2);
+    await t.shortcut('b');
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example' }), true);
+    await t.type('x');
+    assert.deepEqual(marksOf(t, 'x'), ['bold', 'link'], 'a new address keeps the bold switched on at the caret');
+  });
+});
+
+test('TextEditor unlink at a caret keeps a mark switched on there for the next typed text', async () => {
+  await withEditor(markedDocument, async (t) => {
+    await t.select(t.at('docs') + 2);
+    await t.shortcut('b');
+    assert.equal(await t.execute({ type: 'unlink' }), true);
+    await t.type('x');
+    assert.deepEqual(marksOf(t, 'x'), ['bold'], 'unlink keeps it too');
+  });
+});
+
+test('TextEditor text ending in a line break keeps its marks for the next typed text', async () => {
+  await withEditor(markedDocument, async (t) => {
+    await t.select(t.at('loud') + 4);
+    assert.equal(await t.execute({ type: 'text', text: '!\n' }), true);
+    await t.type('y');
+    assert.deepEqual(marksOf(t, 'y'), ['bold'], 'text after a trailing line break stays bold');
+  });
+});
+
+test('TextEditor link with text, undone and redone, leaves the next typed text unlinked as it did at first', async () => {
+  await withEditor(markedDocument, async (t) => {
+    await t.select(t.at(' end') + 4);
+    assert.equal(await t.execute({ type: 'link', href: 'https://c.example', text: ' guide' }), true);
+    await t.undo();
+    await t.redo();
+    await t.type('!');
+    assert.deepEqual(t.content().at(-1), text('!'), 'after a redo of the label, typed text is not linked');
+  });
+});
+
+// Bold text then inline code, a code block, and a last paragraph.
+const codeDocument = { type: 'doc', content: [
+  paragraph(text('loud', [{ type: 'bold' }]), text('mono', [{ type: 'code' }])),
+  { type: 'codeBlock', content: [text('block')] },
+  paragraph(text('last')),
+] };
+const noMarks = { bold: false, italic: false, underline: false, strike: false, code: false };
+
+test('TextEditor refuses a mark where it cannot go, and reports none active there', async () => {
+  const reports = [];
+  const t = await mountCommandEditor({ defaultValue: codeDocument, onFormattingChange: (formatting) => reports.push(formatting) });
+  try {
+    await t.select(t.at('block') + 2);
+    for (const command of [{ type: 'strike' }, { type: 'bold' }, { type: 'link', href: 'https://c.example' }]) {
+      assert.equal(await t.execute(command), false, `${command.type} at a caret in a code block`);
+    }
+    assert.deepEqual([reports.at(-1).marks, reports.at(-1).link], [noMarks, null], 'and nothing reports active there');
+    await t.select(t.at('block') + 1, t.at('block') + 3);
+    assert.equal(await t.execute({ type: 'bold' }), false, 'nor over text in a code block');
+    await t.select(t.at('mono'), t.at('mono') + 4);
+    assert.equal(await t.execute({ type: 'bold' }), false, 'nor over inline code, which takes no other mark');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor switches a mark over a range as its shortcut does, on and then off beside inline code', async () => {
+  const beside = { type: 'doc', content: [paragraph(text('plain'), text('mono', [{ type: 'code' }]))] };
+  const runs = [];
+  for (const send of [(t) => t.execute({ type: 'bold' }), (t) => act(async () => { t.editor.commands.toggleBold(); })]) {
+    await withEditor(beside, async (t) => {
+      await t.select(t.at('plain'), t.at('mono') + 4);
+      const contents = [];
+      for (let index = 0; index < 2; index += 1) {
+        await send(t);
+        contents.push(t.content());
+      }
+      runs.push(contents);
+    });
+  }
+  assert.deepEqual(runs[0], [[text('plain', [{ type: 'bold' }]), text('mono', [{ type: 'code' }])], [text('plain'), text('mono', [{ type: 'code' }])]], 'bold goes on, then comes off');
+  assert.deepEqual(runs[1], runs[0], 'as the bold shortcut switches it');
+  // Over bold text and inline code the formatting shows bold off, as not all the text has it, yet bold comes off, as the
+  // shortcut and the toolbar take it off there.
+  await withEditor(codeDocument, async (t) => {
+    await t.select(t.at('loud'), t.at('mono') + 4);
+    assert.equal(await t.execute({ type: 'bold' }), true);
+    assert.deepEqual(t.content(), [text('loud'), text('mono', [{ type: 'code' }])]);
+  });
+});
+
+test('TextEditor reports a mark over a range only where all the selected text has it', async () => {
+  const reports = [];
+  const t = await mountCommandEditor({ defaultValue: codeDocument, onFormattingChange: (formatting) => reports.push(formatting) });
+  try {
+    await t.select(t.at('loud'), t.at('mono') + 4);
+    assert.deepEqual(reports.at(-1).marks, noMarks, 'bold text and inline code together are neither all bold nor all code');
+    await t.select(t.at('loud'), t.at('loud') + 4);
+    assert.equal(reports.at(-1).marks.bold, true);
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor reports a change that the callback of its first formatting report makes', async () => {
+  const handle = React.createRef();
+  const bold = [];
+  const t = await mountEditor({ ref: handle, toolbar: false, onFormattingChange: (formatting) => {
+    bold.push(formatting.marks.bold);
+    if (bold.length === 1) handle.current.execute({ type: 'bold' });
+  } });
+  try {
+    assert.deepEqual(bold, [false, true], 'a command run in the first report is reported too');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor gives a formatting callback added after mount the formatting at once', async () => {
+  const late = [];
+  const t = await mountEditor({ toolbar: false });
+  try {
+    await t.render({ onFormattingChange: (formatting) => late.push(formatting) });
+    assert.equal(late.length, 1, 'a callback added after mount gets the formatting at once');
+    await t.render({ onFormattingChange: undefined });
+    await t.render({ onFormattingChange: (formatting) => late.push(formatting) });
+    assert.equal(late.length, 2, 'and so does one added again');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor links an address in inserted text only by the rule its commands apply', async () => {
+  const t = await mountCommandEditor({ defaultValue: { type: 'doc', content: [paragraph(text('start'))] } });
+  try {
+    await t.select(t.at('start') + 5);
+    for (const address of ['ftp://files.example.com', 'https://user:secret@example.com', 'tel:+15550100']) {
+      await t.execute({ type: 'text', text: ` ${address} ` });
+    }
+    assert.deepEqual(t.links(), [], 'no automatic link the link command would refuse');
+    for (const address of ['https://example.com', 'www.example.com', 'team@example.com', '192.168.0.1']) {
+      await t.execute({ type: 'text', text: `${address} ` });
+    }
+    assert.deepEqual(t.links(), [
+      ['https://example.com', 'https://example.com'],
+      ['www.example.com', 'http://www.example.com'],
+      ['team@example.com', 'mailto:team@example.com'],
+    ], 'addresses the rule accepts still link, with or without a scheme, and a bare IPv4 address does not, as before');
   } finally {
     await t.close();
   }
@@ -1094,6 +1352,8 @@ test('normalizeTextEditorUrl applies the rule that the link and image commands e
     ['mailto:team@example.com', 'mailto:team@example.com', null],
     [' https://example.com', null, null],
     ['https://example.com\n', null, null],
+    ['https://example.com/a\u0085b', null, null],
+    ['https://example.com/\u009f', null, null],
     ['https://user:secret@example.com', null, null],
     ['mailto:user:secret@example.com', null, null],
     ['javascript:alert(1)', null, null],

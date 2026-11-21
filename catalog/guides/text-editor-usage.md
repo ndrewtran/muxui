@@ -28,7 +28,9 @@ The Selection actions React TextEditor example runs a caller-owned edit with a K
 - Use `toolbar={false}` with `onFormattingChange` to draw the tools yourself. Each report gives the `marks`, the `link`, the `block` and `headingLevel`, the nearest `list`, and whether a `quote` holds the selection.
 - A report comes once the editor is ready and again whenever the formatting at the selection changes, a caret move alone included.
 - Send each tool's command through the handle's `execute`. Heading and paragraph set the block and leave one that already is it, so a heading tool sends a paragraph to turn its heading off.
-- At a caret in a link, the link and unlink commands act on the whole link. The caret is in a link where typed text would extend it: at its end, not its start.
+- Each command that changes the document is one undo step of its own. A mark command returns false where the mark cannot go, such as in a code block, and changes nothing there.
+- Over a range, `marks` shows a mark on only where all the selected text has it. The bold, italic, underline, strike, and code commands switch there as their shortcuts do, which count inline code as having the mark, so over bold text and inline code `marks` shows bold off and the bold command takes it off.
+- At a caret in a link, the link and unlink commands act on the whole link. The caret is in a link where typed text would extend it: at its end, not its start, even where the link starts a paragraph.
 - Given text, the link command inserts it at a caret, or puts it in place of the selection, and the text typed after it is plain.
 - Check an address with `normalizeTextEditorUrl` before sending it. The link and image commands refuse exactly what it refuses.
 - Keep the tools one Tab stop with arrow keys between them, as [Toolbar](/components/toolbar/) does, and give each tool a name and its pressed state.
@@ -54,6 +56,7 @@ The TextEditor for a reply that opens focused example opens a reply this way.
 
 - `limit` counts the characters of the editor's plain text, and the hint under the editor shows how many are left.
 - An edit over the limit is refused. It does not apply, `onChange` does not run, and it adds no undo step.
+- A command the limit refuses changes nothing, and `execute` returns false for it, an image included.
 - Undo and redo are exempt from the limit.
 - A paste is measured after Markdown formatting, so pasting `**bold**` counts the word, not the asterisks. A paste that still does not fit is refused whole and is not shortened.
 - A Markdown shortcut typed by hand is judged one character at a time. Typed exactly at the limit, its closing character is refused, even though the formatted text would fit.

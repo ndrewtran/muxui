@@ -158,6 +158,41 @@ for (const engine of browserEngines()) {
     }
   });
 
+  test(`TextEditor scrolls the caret into view after its text command fills a capped editor in ${engine}`, { timeout: 120_000 }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage({ viewport: { width: 800, height: 900 } });
+      await open(tab, { minRows: 3, maxRows: 3 });
+      await tab.evaluate(() => window.__handle.current.focus({ preventScroll: true }));
+      const lines = Array.from({ length: 40 }, (_, index) => `Line ${index + 1}`).join('\n');
+      assert.equal(await tab.evaluate((value) => window.__handle.current.execute({ type: 'text', text: value }), lines), true);
+      await frames(tab);
+      const measured = await box(tab);
+      assert.ok(measured.scrollTop > 0, 'the content scrolls inside');
+      assert.ok(await endInView(tab), 'to the caret after the last line');
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test(`TextEditor keeps typed text out of a link that starts a paragraph, typed at its start, in ${engine}`, { timeout: 120_000 }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage({ viewport: { width: 800, height: 600 } });
+      const link = { type: 'link', attrs: { href: 'https://a.example/' } };
+      await open(tab, { defaultValue: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'lead', marks: [link] }, { type: 'text', text: ' rest' }] }] } });
+      // Focus puts the caret at the start of the content, where the browser types into the link's own text node.
+      await tab.evaluate(() => window.__handle.current.focus({ preventScroll: true }));
+      await frames(tab);
+      await tab.keyboard.type('x');
+      await frames(tab);
+      const children = await tab.locator('.ProseMirror p').first().evaluate((node) => [...node.childNodes].map((child) => [child.nodeName, child.textContent]));
+      assert.deepEqual(children, [['#text', 'x'], ['A', 'lead'], ['#text', ' rest']]);
+    } finally {
+      await browser.close();
+    }
+  });
+
   test(`TextEditor rows grow with the text, then scroll inside, in the content's own line height in ${engine}`, { timeout: 120_000 }, async () => {
     const browser = await launchBrowser(engine);
     try {
