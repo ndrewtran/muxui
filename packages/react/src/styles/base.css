@@ -1647,11 +1647,14 @@
   transition: width var(--muxui-semantic-motion-progress-update-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
+/* A group is as wide as its content but no wider than its container, so a horizontal group wraps its options
+   and a long label wraps its text instead of overflowing. */
 .muxui-checkbox-group__field {
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-control-gap);
   width: max-content;
+  max-width: 100%;
 }
 
 .muxui-radio-group__field {
@@ -1659,6 +1662,7 @@
   flex-direction: column;
   gap: var(--muxui-semantic-layout-control-gap);
   width: max-content;
+  max-width: 100%;
 }
 
 .muxui-checkbox-group,
@@ -1668,7 +1672,10 @@
   gap: var(--muxui-semantic-layout-control-gap);
 }
 
-.muxui-checkbox-group { width: max-content; }
+.muxui-checkbox-group {
+  width: max-content;
+  max-width: 100%;
+}
 
 .muxui-checkbox-group[data-muxui-state-orientation='horizontal'],
 .muxui-radio-group[data-muxui-state-orientation='horizontal'] {
@@ -1677,12 +1684,8 @@
   gap: var(--muxui-semantic-layout-content-gap);
 }
 
-/* A labelled horizontal group is no wider than its container, so its options wrap instead of overflowing. */
-.muxui-radio-group__field:has(> .muxui-radio-group[data-muxui-state-orientation='horizontal']) {
-  max-width: 100%;
-}
-
 /* Wrapped rows sit as close as the options of a vertical group. */
+.muxui-checkbox-group[data-muxui-state-orientation='horizontal'],
 .muxui-radio-group[data-muxui-state-orientation='horizontal'] {
   row-gap: var(--muxui-semantic-layout-control-gap);
 }
