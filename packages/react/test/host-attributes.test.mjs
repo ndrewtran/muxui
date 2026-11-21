@@ -6,11 +6,13 @@ import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { Button } from '../src/button.ts';
 import { Disclosure, DisclosureGroup, Link, Meter, ToggleButton } from '../src/components.ts';
+import { GridList } from '../src/grid-list.ts';
+import { ListBox } from '../src/list-box.ts';
 import { Menu } from '../src/menu.ts';
 import { ToggleButtonGroup } from '../src/toggle-button-group.ts';
 import { createDom } from './support/dom.mjs';
 
-// The native and ARIA attributes Link, Button, Disclosure, ToggleButton and Menu.Item accept in their types reach the element they render, in
+// The native and ARIA attributes Link, Button, Disclosure, ToggleButton, Menu.Item, ListBox.Item and GridList.Item accept in their types reach the element they render, in
 // server markup and after hydration, including the ones React Aria's own DOM filter leaves out.
 
 const h = React.createElement;
@@ -143,6 +145,38 @@ test('ToggleButton and Menu.Item pass aria-keyshortcuts, aria-current and their 
   }
 });
 
+test('ListBox.Item and GridList.Item pass aria-keyshortcuts, aria-current and data-* attributes to the item in server markup and on the client', async () => {
+  // React Aria's DOM filter keeps data-* attributes but neither ARIA attribute on a list box option, and GridList.Item passed none of the three on.
+  const itemAttributes = { 'aria-keyshortcuts': 'Control+1', 'aria-current': 'page', 'data-testid': 'notes' };
+  const element = h('div', null,
+    h(ListBox, { 'aria-label': 'Pages' }, h(ListBox.Item, { id: 'notes', ...itemAttributes, title: 'Notes page', tabIndex: 5 }, 'Notes')),
+    // GridList.Item's type names only these attributes, so an untyped title stays off the row.
+    h(GridList, { 'aria-label': 'Pages' }, h(GridList.Item, { id: 'notes', ...itemAttributes, title: 'Notes page' }, 'Notes')));
+  const names = Object.keys(itemAttributes);
+  const expectedOption = { ...itemAttributes, title: 'Notes page' };
+  const markup = renderToString(element);
+  assert.deepEqual(pick(serverElement(markup, '.muxui-list-box__item'), [...names, 'title']), expectedOption, 'server ListBox.Item');
+  assert.deepEqual(pick(serverElement(markup, '.muxui-grid-list__item'), names), itemAttributes, 'server GridList.Item');
+  const view = await mount(element);
+  try {
+    const option = view.container.querySelector('.muxui-list-box__item');
+    const row = view.container.querySelector('.muxui-grid-list__item');
+    assert.deepEqual(pick(attributesOf(option), [...names, 'title']), expectedOption, 'client ListBox.Item');
+    assert.deepEqual(pick(attributesOf(row), names), itemAttributes, 'client GridList.Item');
+    // Each collection keys its items by id and moves the tab stop between them itself.
+    assert.notEqual(option.id, 'notes', 'a ListBox.Item keeps its id off the option');
+    assert.notEqual(row.id, 'notes', 'a GridList.Item keeps its id off the row');
+    assert.equal(option.getAttribute('data-key'), 'notes', 'the list box keys the option by its id');
+    assert.equal(row.getAttribute('data-key'), 'notes', 'the grid list keys the row by its id');
+    assert.equal(option.getAttribute('role'), 'option');
+    assert.equal(row.getAttribute('role'), 'row');
+    assert.notEqual(option.getAttribute('tabindex'), '5', 'the list box keeps the option tab stop');
+    assert.equal(row.hasAttribute('title'), false, 'GridList.Item passes no other host attribute');
+  } finally {
+    await view.dispose();
+  }
+});
+
 test('Button, Link and Disclosure leave React Aria behaviour props off their element', () => {
   // TextEditor's bubble menu passes preventFocusOnPress through an untyped spread; React Aria reads such props, the element must not.
   // The list is React Aria's own: the press, hover and focus hook options, the undocumented allowFocusWhenDisabled useButton
@@ -206,6 +240,8 @@ test('server markup with the passed-through attributes hydrates without a mismat
     h(Disclosure, { id: 'details', title: 'Details', 'aria-describedby': 'hint' }, 'Body'),
     h(ToggleButton, shortcutAttributes, 'Bold'),
     h(Menu, { 'aria-label': 'Pages' }, h(Menu.Item, { id: 'notes', ...shortcutAttributes }, 'Notes')),
+    h(ListBox, { 'aria-label': 'Pages' }, h(ListBox.Item, { id: 'notes', ...shortcutAttributes, 'data-testid': 'option' }, 'Notes')),
+    h(GridList, { 'aria-label': 'Pages' }, h(GridList.Item, { id: 'notes', 'aria-keyshortcuts': 'Control+1', 'aria-current': 'page', 'data-testid': 'row' }, 'Notes')),
     h(I18nProvider, { locale: 'de-DE' }, h(Meter, { label: 'Storage', value: 12.5 })));
   const markup = renderToString(element);
   const env = createDom();
@@ -219,6 +255,8 @@ test('server markup with the passed-through attributes hydrates without a mismat
     await act(async () => { root = hydrateRoot(container, element, { onRecoverableError: (error) => errors.push(String(error)) }); });
     assert.deepEqual(errors, [], 'no hydration warning');
     assert.equal(container.querySelector('#details').getAttribute('aria-describedby'), 'hint', 'the Disclosure root takes its other attributes too');
+    assert.equal(container.querySelector('[data-testid="option"]').getAttribute('aria-keyshortcuts'), 'Control+B', 'the hydrated ListBox.Item keeps its attributes');
+    assert.equal(container.querySelector('[data-testid="row"]').getAttribute('aria-current'), 'page', 'the hydrated GridList.Item keeps its attributes');
   } finally {
     console.error = original;
     await act(async () => root?.unmount());

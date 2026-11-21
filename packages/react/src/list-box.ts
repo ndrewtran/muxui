@@ -9,7 +9,7 @@ import type {
   ListBoxProps as AriaListBoxProps,
   ListBoxSectionProps as AriaListBoxSectionProps,
 } from 'react-aria-components';
-import { classNames, accessibleName } from './control-utils.ts';
+import { classNames, accessibleName, withHostAttributes } from './control-utils.ts';
 import { textContent, normalizeItems, keySet, keyList, collectionItem } from './collection-items.ts';
 import type { MuxUICollectionItem, MuxUIItems, MuxUISelection, NormalizedItem } from './collection-items.ts';
 import type { MuxUIAriaAccessibleName } from './fields.ts';
@@ -116,6 +116,10 @@ export const ListBox: ListBoxComponent = /*#__PURE__*/ (() => {
   ListBox.Item = React.forwardRef<HTMLDivElement, ListBoxItemProps>(function ListBoxItem({ children, id, textValue, disabled = false, className, ...props }, ref) {
     const context = React.useContext(ListBoxContext);
     const effectiveDisabled = disabled ? disabled : context.disabled;
+    // The list box moves the tab stop between its options, so the caller's tabIndex is not laid under React Aria's DOM props.
+    const { tabIndex: _tabIndex, ...hostAttributes } = props;
+    // The element React Aria renders: an anchor for an item an untyped caller gives an href, otherwise a div.
+    const itemElement = 'href' in props && props.href ? 'a' : 'div';
     return React.createElement(AriaListBoxItem, {
       ...(props as AriaListBoxItemProps), ref, id,
       // A conditional, not ??: extraction reads a fallback on an owned prop as an executed default, and the item's own text is none.
@@ -123,6 +127,8 @@ export const ListBox: ListBoxComponent = /*#__PURE__*/ (() => {
       isDisabled: effectiveDisabled,
       ...{ 'data-muxui-state-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined },
       className: classNames('muxui-list-box__item', className),
+      // React Aria's DOM filter drops aria-keyshortcuts, aria-current and the other host attributes the type accepts.
+      render: (domProps: object) => React.createElement(itemElement, withHostAttributes(hostAttributes, domProps)),
     }, children);
   });
   return ListBox;
