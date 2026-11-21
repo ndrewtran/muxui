@@ -1791,6 +1791,18 @@
     {
       "family": "example",
       "path": "catalog/components/header-nav/examples/react/background.example.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/skeleton/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/skeleton/examples/react/basic.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/skeleton-usage.json"
     }
   ]
 }

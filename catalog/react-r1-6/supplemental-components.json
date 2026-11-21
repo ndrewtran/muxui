@@ -394,6 +394,19 @@
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
+      "family": "Skeleton",
+      "slug": "skeleton",
+      "examples": [
+        "catalog/components/skeleton/examples/react/basic.tsx"
+      ],
+      "export": {
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/skeleton.ts",
+      "styleSource": "packages/react/src/supplemental/skeleton.css"
+    },
+    {
       "family": "SwitchField",
       "slug": "switch-field",
       "examples": [

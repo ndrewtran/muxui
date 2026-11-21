@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:e193dcd817c813c5c19bfd4bfd96355374e039df3c5c56d229075443b1b91309 -->
+<!-- @generated-content-sha256: sha256:5ed164642e0c4e138a0bb3595f47928696a89a159aac1f47ed2788d776aeeb12 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -207,6 +207,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, disabled, required, invalid, size |
 | Separator | experimental | . | .muxui-separator | orientation |
 | Sidebar | experimental | . | .muxui-sidebar | hideBorder, density; provider: collapsed, defaultCollapsed, shortcut; search: placeholder, value; section: label; nav-item: href, icon, badge, current, items, external, expanded, defaultExpanded; nav-button: icon, label, current; account-card: name, email, avatarSrc, avatarAlt, status; account-menu: items; mobile-trigger: logo; feature-card: title, description, dismissLabel |
+| Skeleton | experimental | . | .muxui-skeleton | label; line: width; circle: size; block: width, height, aspectRatio |
 | Slider | experimental | . | .muxui-slider | label, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
 | Switch | experimental | . | .muxui-switch | label, description, errorMessage, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
 | SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, disabled, invalid, required, readOnly, size; button: disabled |
