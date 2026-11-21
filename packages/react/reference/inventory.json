@@ -54,6 +54,10 @@
         { "name": "AvatarImageProps", "kind": "type", "owner": "avatar", "module": "avatar" },
         { "name": "AvatarRootProps", "kind": "type", "owner": "avatar", "module": "avatar" },
         { "name": "AvatarSize", "kind": "type", "owner": "avatar", "module": "avatar" },
+        { "name": "Badge", "kind": "value", "owner": "badge", "module": "badge" },
+        { "name": "BadgeProps", "kind": "type", "owner": "badge", "module": "badge" },
+        { "name": "BadgeTone", "kind": "type", "owner": "badge", "module": "badge" },
+        { "name": "BadgeVariant", "kind": "type", "owner": "badge", "module": "badge" },
         {
           "name": "BreadcrumbItem",
           "kind": "type",
@@ -1730,6 +1734,7 @@
     "alert-dialog": "alert-dialog.json",
     "autocomplete": "autocomplete.json",
     "avatar": "avatar.json",
+    "badge": "badge.json",
     "breadcrumbs": "breadcrumbs.json",
     "button": "button.json",
     "button-group": "button-group.json",

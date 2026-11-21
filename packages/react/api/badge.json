@@ -1,0 +1,111 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/badge.ts",
+  "component": "muxui:component:badge",
+  "binding": "web.react",
+  "export": "Badge",
+  "api": {
+    "props": [
+      "tone",
+      "variant",
+      "icon",
+      "label"
+    ],
+    "events": [],
+    "defaults": {
+      "tone": "neutral",
+      "variant": "soft"
+    },
+    "propDetails": {
+      "tone": {
+        "type": {
+          "kind": "reference",
+          "name": "BadgeTone"
+        },
+        "required": false,
+        "enum": [
+          "neutral",
+          "brand",
+          "success",
+          "warning",
+          "error"
+        ],
+        "description": "The badge's colour. Its text says what it means; the tone only supports it."
+      },
+      "variant": {
+        "type": {
+          "kind": "reference",
+          "name": "BadgeVariant"
+        },
+        "required": false,
+        "enum": [
+          "soft",
+          "solid"
+        ],
+        "description": "A soft tint, or a solid fill."
+      },
+      "icon": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "A decorative icon before the text, hidden from assistive technology."
+      },
+      "label": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "What assistive technology reads in place of the visible text, when the text is not enough on its own, such as 12 unread for 12."
+      }
+    },
+    "eventDetails": {},
+    "types": {
+      "BadgeTone": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "neutral"
+            },
+            {
+              "kind": "literal",
+              "value": "brand"
+            },
+            {
+              "kind": "literal",
+              "value": "success"
+            },
+            {
+              "kind": "literal",
+              "value": "warning"
+            },
+            {
+              "kind": "literal",
+              "value": "error"
+            }
+          ]
+        },
+        "description": "The tones of a Badge, the same semantic tones as TagGroup's."
+      },
+      "BadgeVariant": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "soft"
+            },
+            {
+              "kind": "literal",
+              "value": "solid"
+            }
+          ]
+        },
+        "description": "How strongly a Badge is filled: a soft tint, or a solid fill for a mark that must stand out, such as a count."
+      }
+    }
+  }
+}
