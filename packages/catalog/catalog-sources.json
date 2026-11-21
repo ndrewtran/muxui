@@ -1843,6 +1843,22 @@
     {
       "family": "guide",
       "path": "catalog/guides/badge-usage.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/banner/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/banner/examples/react/basic.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/banner/examples/react/custom-color.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/banner-usage.json"
     }
   ]
 }

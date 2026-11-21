@@ -1,0 +1,300 @@
+{
+  "schema": "muxui-derived-api-v1",
+  "generatedFrom": "packages/react/src/supplemental/banner.ts",
+  "component": "muxui:component:banner",
+  "binding": "web.react",
+  "export": "Banner",
+  "api": {
+    "props": [
+      "title",
+      "icon",
+      "tone",
+      "emphasis",
+      "customColor",
+      "align",
+      "actions",
+      "link",
+      "dismissible",
+      "dismissed",
+      "defaultDismissed",
+      "dismissLabel",
+      "label",
+      "alert"
+    ],
+    "events": [
+      "dismiss"
+    ],
+    "defaults": {
+      "tone": "neutral",
+      "emphasis": "subtle",
+      "align": "start",
+      "actions": [],
+      "dismissible": false,
+      "defaultDismissed": false,
+      "dismissLabel": "Dismiss notice",
+      "alert": false
+    },
+    "propDetails": {
+      "title": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "A short lead-in shown before the message in the label weight. It names the region when no label is given."
+      },
+      "icon": {
+        "type": {
+          "kind": "host",
+          "name": "React.ReactNode"
+        },
+        "required": false,
+        "description": "A decorative icon before the text, hidden from assistive technology."
+      },
+      "tone": {
+        "type": {
+          "kind": "reference",
+          "name": "BannerTone"
+        },
+        "required": false,
+        "enum": [
+          "neutral",
+          "brand",
+          "success",
+          "warning",
+          "danger"
+        ],
+        "description": "The named colour. A valid customColor takes its place."
+      },
+      "emphasis": {
+        "type": {
+          "kind": "reference",
+          "name": "BannerEmphasis"
+        },
+        "required": false,
+        "enum": [
+          "subtle",
+          "solid"
+        ],
+        "description": "A tint of the colour over the surface, or the colour as a solid fill."
+      },
+      "customColor": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "An opaque colour, as #rgb, #rrggbb or rgb(), in place of the tone. Text and controls on it are white or black, whichever\ncontrasts more. A colour that cannot be read or is not opaque falls back to the tone."
+      },
+      "align": {
+        "type": {
+          "kind": "reference",
+          "name": "BannerAlign"
+        },
+        "required": false,
+        "enum": [
+          "start",
+          "center"
+        ],
+        "description": "Where the icon, text and actions sit: at the start, or centred as a group."
+      },
+      "actions": {
+        "type": {
+          "kind": "array",
+          "element": {
+            "kind": "reference",
+            "name": "BannerAction"
+          },
+          "readonly": true
+        },
+        "required": false,
+        "description": "Up to two action Buttons."
+      },
+      "link": {
+        "type": {
+          "kind": "reference",
+          "name": "BannerLink"
+        },
+        "required": false,
+        "description": "A Link after the actions."
+      },
+      "dismissible": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Shows the dismiss button."
+      },
+      "dismissed": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Banner is dismissed, when the caller controls it. A dismissed Banner renders nothing."
+      },
+      "defaultDismissed": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Whether the Banner starts dismissed, when Banner controls it."
+      },
+      "dismissLabel": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The dismiss button's accessible name."
+      },
+      "label": {
+        "type": {
+          "kind": "string"
+        },
+        "required": false,
+        "description": "The region's accessible name. Without it the title names the region, and without a title it is Notice."
+      },
+      "alert": {
+        "type": {
+          "kind": "boolean"
+        },
+        "required": false,
+        "description": "Announces the Banner as an alert instead of a named region, for a notice that needs attention at once."
+      }
+    },
+    "eventDetails": {
+      "dismiss": {
+        "prop": "onDismiss",
+        "type": {
+          "kind": "function",
+          "parameters": [],
+          "returns": {
+            "kind": "void"
+          }
+        },
+        "required": false,
+        "description": "Reports the dismiss button being pressed. Banner stores nothing."
+      }
+    },
+    "types": {
+      "BannerAction": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "id",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "onAction",
+              "type": {
+                "kind": "function",
+                "parameters": [],
+                "returns": {
+                  "kind": "void"
+                }
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        },
+        "description": "One action Button on a Banner. The first is filled, the second outlined."
+      },
+      "BannerAlign": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "start"
+            },
+            {
+              "kind": "literal",
+              "value": "center"
+            }
+          ]
+        },
+        "description": "Where a Banner's icon, text and actions sit."
+      },
+      "BannerEmphasis": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "subtle"
+            },
+            {
+              "kind": "literal",
+              "value": "solid"
+            }
+          ]
+        },
+        "description": "How strongly a Banner is coloured: a tint of its tone over the surface, or the tone's solid fill."
+      },
+      "BannerLink": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "label",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            },
+            {
+              "name": "href",
+              "type": {
+                "kind": "string"
+              },
+              "required": true,
+              "readonly": false
+            }
+          ]
+        },
+        "description": "The Link on a Banner, after its actions."
+      },
+      "BannerTone": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "neutral"
+            },
+            {
+              "kind": "literal",
+              "value": "brand"
+            },
+            {
+              "kind": "literal",
+              "value": "success"
+            },
+            {
+              "kind": "literal",
+              "value": "warning"
+            },
+            {
+              "kind": "literal",
+              "value": "danger"
+            }
+          ]
+        },
+        "description": "The named colours of a Banner."
+      }
+    }
+  }
+}
