@@ -39,6 +39,21 @@ Place a decorative icon directly in the Button, before or after the label. An sv
 
 The Button keeps its control height for an icon no taller than the control, placed directly beside the label or in a wrapper displayed as flex. In an inline or block wrapper, the icon sits on a line of text, and the space below that line can make the Button taller.
 
+## Corner radius
+
+At the medium and large sizes, a Button takes its corners from the Button radius role, which defaults to the theme's control radius. The small size (`sm`) takes the theme's option radius instead, the radius that list options, rows, fields and small ToggleButtons also use, so setting the Button radius role leaves small Buttons as they are. IconButton follows the same rule.
+
+A theme sets the two roles separately. Changing the option radius also changes the options, rows and fields that share it:
+
+```css
+:root {
+  /* Button and IconButton at the medium and large sizes */
+  --muxui-component-button-radius: 4px;
+  /* Button and IconButton at the small size, with options, rows and fields */
+  --muxui-semantic-shape-option-radius: 4px;
+}
+```
+
 ## Common mistake
 
 Giving every action in a group the `primary` variant. When all of them are primary, none reads as the main action. Keep one `primary` and move the others to `neutral` or `ghost`.
