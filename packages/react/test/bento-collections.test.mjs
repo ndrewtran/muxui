@@ -177,3 +177,9 @@ test('Menu.Popup reads the popover context through its own slot', () => {
   assert.equal(sentPlacement({ [DEFAULT_SLOT]: top, sub: nested }, { slot: 'sub' }), undefined);
   assert.equal(sentPlacement({ [DEFAULT_SLOT]: top, sub: nested }, {}), 'bottom start');
 });
+
+// Menu.Shortcut shows its children when it has no keys to show, including an empty list.
+test('Menu.Shortcut falls back to its children without keys', () => {
+  for (const keys of [undefined, []]) assert.match(renderToString(h(Menu.Shortcut, { keys }, 'Ctrl S')), />Ctrl S</u, JSON.stringify(keys));
+  assert.doesNotMatch(renderToString(h(Menu.Shortcut, { keys: ['Ctrl', 'S'] }, 'fallback')), /fallback/u);
+});

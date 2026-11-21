@@ -18,6 +18,10 @@ Toolbar restyles the Buttons that are its direct children: they lose their fill,
 
 A Toolbar holds commands of equal weight, so give its Buttons no variant. Keep the main action of the surface outside it, as Publish is in that example, so it keeps its emphasis.
 
+## Plain toolbar
+
+Set `variant` to `plain` when the Toolbar sits on a surface that already frames it, such as a panel's header or an editor's top bar. It then draws no fill, border, or padding of its own, and its controls keep their states and focus rings. The keyboard works as in the contained default: one Tab stop, and the arrow keys move between the controls. The Toolbar with a separate action example shows a plain Toolbar inside a framed panel, beside the contained ones.
+
 ## Vertical toolbar
 
 Set `orientation` to `vertical` to stack the controls in a column, each filling the Toolbar's width, with Up and Down moving between them.

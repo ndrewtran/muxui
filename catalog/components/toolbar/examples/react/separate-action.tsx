@@ -20,6 +20,14 @@ export function SeparateActionToolbarExample() {
           <Button>Share</Button>
         </Toolbar>
       </div>
+      {/* Plain: on a surface that already frames it, such as a panel's header, the Toolbar draws no surface of its own. */}
+      <div style={{ border: '1px solid var(--muxui-semantic-border-subtle)', borderRadius: 'var(--muxui-semantic-shape-container-radius)', padding: 'var(--muxui-semantic-layout-inset-tight)' }}>
+        <Toolbar aria-label="Formatting" variant="plain">
+          <ToggleButton>Bold</ToggleButton>
+          <ToggleButton>Italic</ToggleButton>
+          <Button>Clear formatting</Button>
+        </Toolbar>
+      </div>
     </div>
   );
 }

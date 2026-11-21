@@ -154,7 +154,8 @@ const GUIDES = {
   'toggle-button-group': {},
   toolbar: {},
   'list-box': {},
-  menu: {},
+  // aria-keyshortcuts is the native attribute an item forwards to state its shortcut.
+  menu: { native: ['aria-keyshortcuts'] },
   // className and style are the native attributes of the item and the list. The rest are CSS the guide teaches (a responsive column track, a size container, the card's gap and sizing) and the width and height attributes of the Image it names.
   'grid-list': { native: ['className', 'style', 'grid-template-columns', '@container', '@media', 'container-type: inline-size', 'gap', 'width', 'height', 'inline-size: 100%', 'overflow: hidden'] },
   // The two JSX snippets show the grid composition, whose GridList carries its own layout; the rest are CSS (the gap and column tracks, the container and media queries), the browser APIs the column-count advice names, and the GridList's block size.

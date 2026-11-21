@@ -134,6 +134,14 @@ export type MenuSubmenuOwnProps = {
 
 export type MenuSubmenuProps = MenuSubmenuOwnProps & { children: ReactNode };
 
+/** The props Mux UI defines for Menu.Shortcut. Every other attribute of a span passes through to it. */
+export type MenuShortcutOwnProps = {
+  /** The keys of the shortcut, each shown in a kbd element. The children show when there are none. */
+  keys?: readonly string[];
+};
+
+export type MenuShortcutProps = HTMLAttributes<HTMLSpanElement> & MenuShortcutOwnProps;
+
 // A forwardRef result carries no statics, so the compound states them.
 type MenuComponent = ForwardRefExoticComponent<MenuProps & RefAttributes<HTMLDivElement>> & {
   Root: ForwardRefExoticComponent<MenuRootProps & RefAttributes<HTMLDivElement>>;
@@ -145,6 +153,7 @@ type MenuComponent = ForwardRefExoticComponent<MenuProps & RefAttributes<HTMLDiv
   Section: ForwardRefExoticComponent<MenuSectionProps & RefAttributes<HTMLElement>>;
   Header: ForwardRefExoticComponent<HTMLAttributes<HTMLElement> & RefAttributes<HTMLElement>>;
   Separator: ForwardRefExoticComponent<HTMLAttributes<HTMLHRElement> & RefAttributes<HTMLHRElement>>;
+  Shortcut: ForwardRefExoticComponent<MenuShortcutProps & RefAttributes<HTMLSpanElement>>;
 };
 
 // Menu.List takes one prop beyond the public ones: the standalone Menu renders it without the popup class.
@@ -329,6 +338,12 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
     return React.createElement(AriaSeparator, { ...props, ref, elementType: 'hr', className: classNames('muxui-menu__separator', className) });
   });
 
+  // The keys are decoration, hidden from assistive technology: the item states its real shortcut with aria-keyshortcuts.
+  const MenuShortcut = React.forwardRef<HTMLSpanElement, MenuShortcutProps>(function MenuShortcut({ keys, children, className, ...props }, ref) {
+    return React.createElement('span', { ...props, ref, 'aria-hidden': 'true', className: classNames('muxui-menu__shortcut', className) },
+      keys && keys.length > 0 ? keys.map((key) => React.createElement('kbd', { key, className: 'muxui-menu__shortcut-key' }, key)) : children);
+  });
+
   Menu.Root = MenuRoot;
   Menu.Trigger = MenuTrigger;
   Menu.Popup = MenuPopup;
@@ -338,5 +353,6 @@ export const Menu: MenuComponent = /*#__PURE__*/ (() => {
   Menu.Section = MenuSection;
   Menu.Header = MenuHeader;
   Menu.Separator = MenuSeparator;
+  Menu.Shortcut = MenuShortcut;
   return Menu;
 })();

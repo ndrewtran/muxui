@@ -93,7 +93,7 @@ export function substrateWrappers(text) {
 export const reviewedRacImports = Object.freeze([
   'Autocomplete', 'AutocompleteStateContext', 'Breadcrumbs', 'ButtonContext', 'CalendarGrid', 'CalendarGridBody', 'CalendarGridHeader',
   'CalendarHeaderCell', 'CalendarHeading', 'CalendarStateContext', 'Collection', 'ColorAreaContext', 'ColorFieldStateContext', 'ColorPicker',
-  'ColorPickerStateContext', 'ColorSliderStateContext', 'ColorSwatch', 'DEFAULT_SLOT', 'DateFieldContext', 'DatePickerContext',
+  'ColorPickerStateContext', 'ColorSliderStateContext', 'ColorSwatch', 'ComboBoxStateContext', 'DEFAULT_SLOT', 'DateFieldContext', 'DatePickerContext',
   'DateRangePickerContext', 'Dialog', 'DialogContext', 'DialogTrigger',
   'DisclosurePanel', 'FieldError', 'FieldErrorContext', 'FieldInputContext', 'FileTrigger', 'Focusable', 'Form', 'GridLayout', 'Header', 'Heading',
   'I18nProvider', 'InputContext', 'Label', 'ListBoxSection', 'ListLayout', 'MenuSection', 'MenuTrigger', 'OverlayTriggerStateContext',

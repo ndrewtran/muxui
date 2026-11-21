@@ -3,7 +3,7 @@
   "id": "muxui:example:toolbar-separate-action-react",
   "kind": "example",
   "name": "Toolbar with a separate action",
-  "summary": "Place a Button beside the Toolbar, outside its direct-child Button styling, and set the width of a vertical Toolbar on the wrapper around it.",
+  "summary": "Place a Button beside the Toolbar, outside its direct-child Button styling, set the width of a vertical Toolbar on the wrapper around it, and drop the surface of a plain Toolbar inside a framed panel.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:toolbar#web.react",

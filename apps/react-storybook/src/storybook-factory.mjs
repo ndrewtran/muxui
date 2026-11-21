@@ -1202,7 +1202,8 @@ const ADAPTERS = {
   ColorSwatch: (args) => e(MuxUI.ColorSwatch, { ...args, color: ownArg(args, 'color', fallback(args.color, '#ff0000')) }),
   ColorSwatchPicker: (args) => e(MuxUI.ColorSwatchPicker, { ...args, 'aria-label': fallback(args['aria-label'], 'Palette'), items: ownArg(args, 'items', fallback(args.items, [{ id: 'red', color: '#ff0000' }, { id: 'blue', color: '#0000ff' }])) }),
   ColorWheel: (args) => e(MuxUI.ColorWheel, { ...args, 'aria-label': fallback(args['aria-label'], 'Hue'), outerRadius: args.outerRadius ?? 96, innerRadius: args.innerRadius ?? 64, defaultValue: args.value === undefined ? ownArg(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
-  ComboBox: (args) => e(MuxUI.ComboBox, { ...args, label: fallback(args.label, 'Choose a city'), placeholder: fallback(args.placeholder, 'Choose a city'), items: ownArg(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
+  // A ComboBox takes items or sections, not both, so sections leave out the fallback items.
+  ComboBox: (args) => e(MuxUI.ComboBox, { ...args, label: fallback(args.label, 'Choose a city'), placeholder: fallback(args.placeholder, 'Choose a city'), ...(args.sections === undefined ? { items: ownArg(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) } : {}) }),
   GridList: (args) => e(MuxUI.GridList, { ...args, 'aria-label': fallback(args['aria-label'], 'Grid'), items: ownArg(args, 'items', COLLECTION_SAMPLE_ITEMS) }),
   ListBox: (args) => e(MuxUI.ListBox, { ...args, 'aria-label': fallback(args['aria-label'], 'List'), items: ownArg(args, 'items', COLLECTION_SAMPLE_ITEMS) }),
   // The standalone Menu is an action list. Any open-state arg selects the triggered composition, which owns
@@ -2131,11 +2132,16 @@ function anatomyArgsForBinding(record, sourceArgs) {
       e(MuxUI.ListBox.Item, { id: 'one' }, 'One'),
       e(MuxUI.ListBox.Item, { id: 'two' }, 'Two'));
   }
-  // Sections, a separator, and a submenu give the list and the open popup every Menu part. The adapter has no submenu of its own to
+  // Sections give the open list its section and header parts.
+  if (record.family === 'ComboBox') {
+    delete args.items;
+    args.sections = [{ id: 'nearby', title: 'Nearby', items: ['Melbourne'] }, { id: 'other', title: 'Other cities', items: ['Sydney'] }];
+  }
+  // Sections, a separator, a shortcut, and a submenu give the list and the open popup every Menu part. The adapter has no submenu of its own to
   // give the delay control to, so the one built here takes it, and its popup takes the geometry the adapter gives the root's popup.
   if (record.family === 'Menu') {
     args.children = [
-      e(MuxUI.Menu.Section, { key: 'editing', title: 'Editing' }, e(MuxUI.Menu.Item, { id: 'save' }, 'Save')),
+      e(MuxUI.Menu.Section, { key: 'editing', title: 'Editing' }, e(MuxUI.Menu.Item, { id: 'save', textValue: 'Save', 'aria-keyshortcuts': 'Control+S' }, 'Save', e(MuxUI.Menu.Shortcut, { keys: ['Ctrl', 'S'] }))),
       e(MuxUI.Menu.Separator, { key: 'separator' }),
       e(MuxUI.Menu.Item, { key: 'delete', id: 'delete' }, 'Delete'),
       e(MuxUI.Menu.Submenu, { key: 'share', delay: args.delay },

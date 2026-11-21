@@ -14,7 +14,10 @@ export function GroupedMenuExample() {
           <Menu.List aria-label="More actions">
             <Menu.Section>
               <Menu.Header>Edit</Menu.Header>
-              <Menu.Item id="duplicate">Duplicate page</Menu.Item>
+              {/* The key caps are decoration; aria-keyshortcuts states the shortcut, which the application registers. */}
+              <Menu.Item id="duplicate" textValue="Duplicate page" aria-keyshortcuts="Control+D">
+                Duplicate page <Menu.Shortcut keys={['Ctrl', 'D']} />
+              </Menu.Item>
               <Menu.Item id="rename">Rename page</Menu.Item>
             </Menu.Section>
             <Menu.Section>

@@ -733,7 +733,8 @@ test('the Menu Anatomy story offers no items or children control, though the oth
     await withRuntime(async ({ root }) => {
       await act(async () => root.render(anatomy.render({ ...anatomy.args, ...values })));
       await settleRuntime();
-      labels = [...new Set([...document.querySelectorAll('.muxui-menu__item')].map((item) => item.textContent))].sort();
+      // An item's label, without the key caps of its shortcut.
+      labels = [...new Set([...document.querySelectorAll('.muxui-menu__item')].map((item) => [...item.childNodes].filter((node) => node.nodeType === 3).map((node) => node.textContent).join('')))].sort();
     });
     return labels;
   };
@@ -2527,7 +2528,7 @@ test('the On cell of every row is what the document shows: its tags, each carryi
       }
     }
   }
-  assert.equal(cells, 966, 'every row of every table was compared');
+  assert.equal(cells, 971, 'every row of every table was compared');
 });
 
 // The expectation above is derived in the test from the document; these cells are written out, so it cannot drift with the code: a part in a
