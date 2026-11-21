@@ -736,6 +736,12 @@
   color: var(--muxui-field-placeholder-color);
 }
 
+/* Where a ClearButton is the field's clear action, drop the cancel button Chromium and WebKit add to a search input. */
+.muxui-command-palette__search-field:has(.muxui-command-palette__clear-button) .muxui-command-palette__input::-webkit-search-cancel-button {
+  appearance: none;
+  display: none;
+}
+
 .muxui-command-palette__clear-button {
   flex: 0 0 auto;
 }
@@ -817,6 +823,8 @@
   max-height: 30rem;
   flex-direction: column;
   padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-small);
+  /* Keyboard focus scrolls a row only as far as the block padding, so it never meets the list's edge. */
+  scroll-padding-block: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-inset-small);
   outline: none;
   overflow-y: auto;
 }
