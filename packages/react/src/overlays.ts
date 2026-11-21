@@ -33,6 +33,7 @@ import { PopoverMotion } from './popover-motion.mjs';
 import { observeReducedMotion } from './motion.mjs';
 import { observeAncestorAttributes } from './motion-geometry.mjs';
 import { useMotionLayout, useMotionLifecycle } from './motion-components.mjs';
+import { stateAttribute } from './styling-contract.ts';
 import { IconButton } from './supplemental/icon-button.ts';
 import type { ColorMode } from './supplemental/color-mode.ts';
 
@@ -368,6 +369,16 @@ export const FileTrigger: ForwardRefExoticComponent<FileTriggerProps & RefAttrib
 
 FileTrigger.displayName = 'FileTrigger';
 
+// The element focused as an overlay opens, with its ancestors, read while they
+// are still connected.
+function readOpener() {
+  const element = typeof document === 'undefined' ? null : document.activeElement;
+  if (!element || element === element.ownerDocument.body) return null;
+  const ancestors: HTMLElement[] = [];
+  for (let node = element.parentElement; node && node !== element.ownerDocument.body; node = node.parentElement) ancestors.push(node);
+  return { element, ancestors };
+}
+
 // React Aria restores focus to the element focused when an overlay opened, one
 // frame after the overlay unmounts; if that opener has left the DOM, focus
 // falls to the body. Record the opener's ancestors on open, while they are
@@ -375,33 +386,66 @@ FileTrigger.displayName = 'FileTrigger';
 // take focus instead. With none, focus stays on the body. Call this from a
 // component inside the overlay's FocusScope: React runs unmount cleanups
 // parent first, so this frame runs after React Aria's own restore frame.
-function useOpenerFocusFallback() {
-  const [opener] = React.useState(() => {
-    const element = typeof document === 'undefined' ? null : document.activeElement;
-    if (!element || element === element.ownerDocument.body) return null;
-    const ancestors: HTMLElement[] = [];
-    for (let node = element.parentElement; node && node !== element.ownerDocument.body; node = node.parentElement) ancestors.push(node);
-    return { element, ancestors };
-  });
+// Pass `open` from an overlay that can reopen during its exit, while it stays
+// mounted: each opening records its own opener, during render, before anything
+// inside can take focus. Returns the latest opener, or null when the body had
+// focus.
+function useOpenerFocusFallback(open = true) {
+  const [record, setRecord] = React.useState(() => ({ open, opener: readOpener() }));
+  if (record.open !== open) setRecord({ open, opener: open ? readOpener() : record.opener });
+  // The unmount cleanup reads the latest opener; it must not run on a reopen.
+  const latest = React.useRef(record.opener);
   useIsomorphicLayoutEffect(() => {
-    if (!opener) return undefined;
-    return () => {
-      const { element, ancestors } = opener;
-      const ownerDocument = element.ownerDocument;
-      const fallback = () => {
-        // Leave a connected opener, and any focus React Aria or the app placed, alone.
-        const active = ownerDocument.activeElement;
-        if (element.isConnected || (active && active !== ownerDocument.body)) return;
-        ancestors.find((node) => node.isConnected && isFocusable(node))?.focus({ preventScroll: true });
-      };
-      ownerDocument.defaultView?.requestAnimationFrame(() => {
-        // Under a virtual cursor React Aria defers its restore until running
-        // transitions end; queueing here keeps the fallback behind it.
-        if (getInteractionModality() === 'virtual') runAfterTransition(fallback);
-        else fallback();
-      });
+    latest.current = record.opener;
+  });
+  useIsomorphicLayoutEffect(() => () => {
+    const opener = latest.current;
+    if (!opener) return;
+    const { element, ancestors } = opener;
+    const ownerDocument = element.ownerDocument;
+    const fallback = () => {
+      // Leave a connected opener, and any focus React Aria or the app placed, alone.
+      const active = ownerDocument.activeElement;
+      if (element.isConnected || (active && active !== ownerDocument.body)) return;
+      ancestors.find((node) => node.isConnected && isFocusable(node))?.focus({ preventScroll: true });
     };
-  }, [opener]);
+    ownerDocument.defaultView?.requestAnimationFrame(() => {
+      // Under a virtual cursor React Aria defers its restore until running
+      // transitions end; queueing here keeps the fallback behind it.
+      if (getInteractionModality() === 'virtual') runAfterTransition(fallback);
+      else fallback();
+    });
+  }, []);
+  return record.opener?.element ?? null;
+}
+
+// Whether focus can be restored to an element: connected, focusable, visible,
+// not inert, and not inside an overlay that is itself closing.
+function canRestoreFocusTo(element: Element) {
+  return element.isConnected && isFocusable(element) && !element.closest(`[${stateAttribute('exiting')}]`);
+}
+
+// Restores focus as React Aria's FocusScope does: through this cancelable
+// event, so a collection that reuses its DOM nodes can focus its own item
+// instead, and under a virtual cursor only once running transitions end. It
+// acts only if focus has not moved elsewhere meanwhile and the element can
+// still take it, and sends the event only with the focus, so a dropped restore
+// leaves React Aria's on unmount as the only one. Returns what drops a waiting
+// restore.
+function restoreFocusTo(element: Element) {
+  let dropped = false;
+  const ownerDocument = element.ownerDocument;
+  const from = ownerDocument.activeElement;
+  const restore = () => {
+    const active = ownerDocument.activeElement;
+    if (dropped || (active !== from && active !== ownerDocument.body) || !canRestoreFocusTo(element)) return;
+    if (element.dispatchEvent(new CustomEvent('react-aria-focus-scope-restore', { bubbles: true, cancelable: true }))) (element as HTMLElement).focus({ preventScroll: true });
+  };
+  if (getInteractionModality() === 'virtual') runAfterTransition(restore);
+  else restore();
+  return () => {
+    dropped = true;
+  };
 }
 
 interface DialogContentProps {
@@ -662,6 +706,8 @@ function usePresetScope(triggerRef: RefObject<Element | null> | undefined, enabl
 
 interface PopoverSurfaceProps {
   modal: boolean;
+  open: boolean;
+  positionerRef: RefObject<HTMLElement | null>;
   children?: ReactNode;
   onPointerDownCapture: () => void;
   id?: string;
@@ -670,19 +716,60 @@ interface PopoverSurfaceProps {
   className: string;
 }
 
-function PopoverSurface({ modal, children, onPointerDownCapture, ...props }: PopoverSurfaceProps) {
+function PopoverSurface({ modal, open, positionerRef, children, onPointerDownCapture, ...props }: PopoverSurfaceProps) {
   const surfaceRef = React.useRef<HTMLElement>(null);
-  useOpenerFocusFallback();
+  // Only a modal Popover gives focus back as it starts to close, so only it
+  // needs the opener of each opening; a non-modal one keeps its first.
+  const opener = useOpenerFocusFallback(modal ? open : true);
   React.useEffect(() => {
     const surface = surfaceRef.current;
-    if (modal && surface && !surface.contains(surface.ownerDocument.activeElement)) {
-      surface.focus({ preventScroll: true });
+    if (!modal || !surface) return undefined;
+    const ownerDocument = surface.ownerDocument;
+    // Also on a reopen during the exit, which keeps this surface mounted.
+    if (open) {
+      if (!surface.contains(ownerDocument.activeElement)) surface.focus({ preventScroll: true });
+      return undefined;
     }
-  }, [modal]);
+    // Closing has started. Once focus is outside the surface, it turns inert,
+    // so Tab, a pointer and a screen reader cannot reach it again, and a press
+    // on it lands on the positioner, which keeps that press from moving focus
+    // to the body. Focus that cannot go back to the opener stays where it is,
+    // where React Aria's restore on unmount still finds it.
+    const positioner = positionerRef.current;
+    const keepFocus = (event: Event) => event.preventDefault();
+    const seal = () => {
+      surface.inert = true;
+      positioner?.addEventListener('mousedown', keepFocus);
+    };
+    const sealOnLeave = (event: HTMLElementEventMap['focusout']) => {
+      if (!surface.contains(event.relatedTarget as Node | null)) seal();
+    };
+    if (surface.contains(ownerDocument.activeElement)) surface.addEventListener('focusout', sealOnLeave);
+    else seal();
+    // Give focus back now, not when the exit animation ends and React Aria
+    // restores it. A frame later the page is no longer inert and an overlay
+    // opened in the same update has taken focus. Only focus still in the
+    // popover's own element, or lost to the body, moves: focus elsewhere, even
+    // in an overlay opened from inside, stays put.
+    const view = ownerDocument.defaultView;
+    let dropRestore: (() => void) | undefined;
+    const frame = view?.requestAnimationFrame(() => {
+      const active = ownerDocument.activeElement;
+      const inPopover = !active || active === ownerDocument.body || positioner?.contains(active);
+      if (opener && inPopover) dropRestore = restoreFocusTo(opener);
+    });
+    return () => {
+      surface.removeEventListener('focusout', sealOnLeave);
+      positioner?.removeEventListener('mousedown', keepFocus);
+      surface.inert = false;
+      if (frame !== undefined) view?.cancelAnimationFrame(frame);
+      dropRestore?.();
+    };
+  }, [modal, open, opener, positionerRef]);
   // A stable scope releases containment without resetting consumer content.
-  // The enclosing RAC Popover remains the focus-restoration owner.
+  // Containment ends when closing starts, so focus can leave the exiting surface.
   return React.createElement(FocusScope, {
-    contain: modal,
+    contain: modal && open,
     children: React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1, onPointerDownCapture }, children),
   });
 }
@@ -746,6 +833,8 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
   }, React.createElement(PopoverSurface, {
     modal,
+    open,
+    positionerRef,
     // Capture phase: RAC's usePress stops pointerdown propagation.
     onPointerDownCapture: () => {
       pressedInsideRef.current = true;
