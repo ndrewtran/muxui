@@ -1004,7 +1004,8 @@ interface ContentScope extends PresetScope {
   colorScheme: ColorMode;
 }
 
-const SCOPE_ATTRIBUTES = ['data-muxui-color-scheme', ...PRESET_ATTRIBUTES];
+// Written out, not spread from PRESET_ATTRIBUTES: a module does no work at import time.
+const SCOPE_ATTRIBUTES = ['data-muxui-color-scheme', 'data-muxui-theme', 'data-muxui-contrast'] as const;
 
 // A tooltip's surface is the inverse of the scheme around it, where only dark counts as dark, as the stylesheet reads
 // it. Its content is a scope of that inverse scheme, with the preset theme and contrast around the tooltip, because a
