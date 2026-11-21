@@ -1677,9 +1677,21 @@
   gap: var(--muxui-semantic-layout-content-gap);
 }
 
-/* A horizontal group wraps its options, so the group error takes a row of its own. */
+/* A labelled horizontal group is no wider than its container, so its options wrap instead of overflowing. */
+.muxui-radio-group__field:has(> .muxui-radio-group[data-muxui-state-orientation='horizontal']) {
+  max-width: 100%;
+}
+
+/* Wrapped rows sit as close as the options of a vertical group. */
+.muxui-radio-group[data-muxui-state-orientation='horizontal'] {
+  row-gap: var(--muxui-semantic-layout-control-gap);
+}
+
+/* A horizontal group wraps its options, so the group error takes a row of its own. The margin keeps the error
+   as far below the options as the gap between two options, as it was before the rows drew closer. */
 .muxui-radio-group[data-muxui-state-orientation='horizontal'] > .muxui-radio-group__error {
   flex-basis: 100%;
+  margin-block-start: calc(var(--muxui-semantic-layout-content-gap) - var(--muxui-semantic-layout-control-gap));
 }
 
 .muxui-combo-box__control {
