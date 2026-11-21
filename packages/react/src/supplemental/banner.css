@@ -1,0 +1,251 @@
+/* Banner: a page-level notice. Each tone sets two colours, the ground and the foreground, and the tint a subtle Banner lays over
+   the surface. The text, the icon, the Link, the action Buttons and every focus ring draw only those two colours, so each keeps
+   the message's own contrast at rest, hover and press. Only the dismiss icon, which needs 3:1 rather than 4.5:1, sits on a fill
+   mixed from the foreground. */
+.muxui-banner {
+  --muxui-banner-ground: var(--muxui-semantic-surface-background);
+  --muxui-banner-tint: var(--muxui-semantic-action-neutral-background);
+  --muxui-banner-foreground: var(--muxui-semantic-content-default);
+  --muxui-banner-icon: var(--muxui-semantic-content-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-group-gap);
+  padding-block: var(--muxui-semantic-layout-inset-small);
+  padding-inline: var(--muxui-semantic-layout-inset-medium);
+  /* Transparent until forced colours paint it, where it is the Banner's boundary. */
+  border-block: 1px solid transparent;
+  /* The tint is translucent, so it is laid over an opaque ground: the Banner reads the same on any page. */
+  background-color: var(--muxui-banner-ground);
+  background-image: linear-gradient(var(--muxui-banner-tint), var(--muxui-banner-tint));
+  color: var(--muxui-banner-foreground);
+}
+
+/* Every part keeps Mux UI's own box and type instead of the page's. */
+.muxui-banner,
+.muxui-banner__body,
+.muxui-banner__icon,
+.muxui-banner__text,
+.muxui-banner__title,
+.muxui-banner__message,
+.muxui-banner__actions {
+  box-sizing: border-box;
+  margin: 0;
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-s-font-size);
+  line-height: var(--muxui-semantic-typography-supporting-line-height);
+}
+
+.muxui-banner[data-muxui-tone='brand'] {
+  --muxui-banner-tint: var(--muxui-component-taggroup-brand-tint-weak);
+  --muxui-banner-icon: var(--muxui-component-taggroup-brand-foreground);
+}
+
+.muxui-banner[data-muxui-tone='success'] {
+  --muxui-banner-tint: var(--muxui-component-taggroup-success-tint-weak);
+  --muxui-banner-icon: var(--muxui-component-taggroup-success-foreground);
+}
+
+.muxui-banner[data-muxui-tone='warning'] {
+  --muxui-banner-tint: var(--muxui-component-taggroup-warning-tint-weak);
+  --muxui-banner-icon: var(--muxui-component-taggroup-warning-foreground);
+}
+
+.muxui-banner[data-muxui-tone='danger'] {
+  --muxui-banner-tint: var(--muxui-component-taggroup-error-tint-weak);
+  --muxui-banner-icon: var(--muxui-component-taggroup-error-foreground);
+}
+
+/* A custom colour tints at the tag tint strengths, 10% in light and 25% in dark; its icon is the text colour, which always reads. */
+.muxui-banner[data-muxui-tone='custom'] {
+  --muxui-banner-tint: color-mix(in srgb, var(--muxui-banner-custom) 10%, transparent);
+  --muxui-banner-icon: var(--muxui-banner-foreground);
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-banner[data-muxui-tone='custom'] {
+    --muxui-banner-tint: color-mix(in srgb, var(--muxui-banner-custom) 25%, transparent);
+  }
+}
+
+.muxui-banner[data-muxui-emphasis='solid'] {
+  --muxui-banner-ground: var(--muxui-component-taggroup-neutral-selected-background);
+  --muxui-banner-tint: transparent;
+  --muxui-banner-foreground: var(--muxui-component-taggroup-neutral-selected-foreground);
+  --muxui-banner-icon: var(--muxui-banner-foreground);
+}
+
+.muxui-banner[data-muxui-emphasis='solid'][data-muxui-tone='brand'] {
+  --muxui-banner-ground: var(--muxui-component-taggroup-brand-selected-background);
+  --muxui-banner-foreground: var(--muxui-component-taggroup-brand-selected-foreground);
+}
+
+.muxui-banner[data-muxui-emphasis='solid'][data-muxui-tone='success'] {
+  --muxui-banner-ground: var(--muxui-component-taggroup-success-selected-background);
+  --muxui-banner-foreground: var(--muxui-component-taggroup-success-selected-foreground);
+}
+
+.muxui-banner[data-muxui-emphasis='solid'][data-muxui-tone='warning'] {
+  --muxui-banner-ground: var(--muxui-component-taggroup-warning-selected-background);
+  --muxui-banner-foreground: var(--muxui-component-taggroup-warning-selected-foreground);
+}
+
+.muxui-banner[data-muxui-emphasis='solid'][data-muxui-tone='danger'] {
+  --muxui-banner-ground: var(--muxui-component-taggroup-error-selected-background);
+  --muxui-banner-foreground: var(--muxui-component-taggroup-error-selected-foreground);
+}
+
+.muxui-banner[data-muxui-emphasis='solid'][data-muxui-tone='custom'] {
+  --muxui-banner-ground: var(--muxui-banner-custom);
+  --muxui-banner-foreground: var(--muxui-banner-custom-foreground);
+}
+
+/* The icon, the text and the actions wrap as one row; the dismiss button stays at the end. */
+.muxui-banner__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-tight-gap) var(--muxui-semantic-layout-group-gap);
+  min-inline-size: 0;
+}
+
+.muxui-banner[data-muxui-align='center'] .muxui-banner__body {
+  justify-content: center;
+  text-align: center;
+}
+
+.muxui-banner__icon {
+  display: inline-flex;
+  flex: none;
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: var(--muxui-banner-icon);
+}
+
+.muxui-banner__icon svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.muxui-banner__text {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.muxui-banner[data-muxui-align='center'] .muxui-banner__text {
+  flex-grow: 0;
+}
+
+.muxui-banner__title {
+  font-weight: var(--muxui-semantic-typography-label-weight);
+}
+
+.muxui-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-group-gap);
+}
+
+.muxui-banner__dismiss {
+  flex: none;
+}
+
+/* The controls' own recipe, outside forced colours, where they keep their system colours. */
+@media (forced-colors: none) {
+  /* The first action is the foreground filled with the ground as its label. Hover underlines the label; press rings it inside
+     with the ground. */
+  .muxui-banner .muxui-button.muxui-banner__action {
+    --muxui-button-background: var(--muxui-banner-foreground);
+    --muxui-button-background-hover: var(--muxui-banner-foreground);
+    --muxui-button-background-pressed: var(--muxui-banner-foreground);
+    --muxui-button-foreground: var(--muxui-banner-ground);
+    --muxui-button-border: transparent;
+    --muxui-button-shadow: none;
+    text-underline-offset: 0.2em;
+  }
+
+  /* The second action is outlined in the foreground with the foreground as its label; press fills it, as the first. */
+  .muxui-banner .muxui-button.muxui-banner__action + .muxui-banner__action {
+    --muxui-button-background: transparent;
+    --muxui-button-background-hover: transparent;
+    --muxui-button-foreground: var(--muxui-banner-foreground);
+    --muxui-button-border: var(--muxui-banner-foreground);
+  }
+
+  .muxui-banner .muxui-button.muxui-banner__action:is(:hover, [data-muxui-state-hovered]) {
+    text-decoration: underline;
+  }
+
+  .muxui-banner .muxui-button.muxui-banner__action:is(:active, [data-muxui-state-pressed]) {
+    --muxui-button-border: var(--muxui-banner-ground);
+    outline-width: 2px;
+    outline-offset: -3px;
+    text-decoration: underline;
+  }
+
+  .muxui-banner .muxui-button.muxui-banner__action + .muxui-banner__action:is(:active, [data-muxui-state-pressed]) {
+    --muxui-button-background-pressed: var(--muxui-banner-foreground);
+    --muxui-button-foreground: var(--muxui-banner-ground);
+  }
+
+  /* The Link is the foreground, underlined; hover thickens the line and press thickens it more. */
+  .muxui-banner .muxui-banner__actions .muxui-link.muxui-banner__link:not(.muxui-button) {
+    color: var(--muxui-banner-foreground);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+
+  .muxui-banner .muxui-banner__actions .muxui-link.muxui-banner__link:not(.muxui-button):is(:hover, [data-muxui-state-hovered]) {
+    text-decoration-thickness: 2px;
+  }
+
+  .muxui-banner .muxui-banner__actions .muxui-link.muxui-banner__link:not(.muxui-button)[data-muxui-state-pressed] {
+    text-decoration-thickness: 3px;
+  }
+
+  /* The dismiss icon is the foreground; hover and press lay a little of it under the icon, which keeps at least 3:1. */
+  .muxui-banner .muxui-button.muxui-banner__dismiss {
+    --muxui-button-background: transparent;
+    --muxui-button-background-hover: color-mix(in srgb, var(--muxui-banner-foreground) 12%, transparent);
+    --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-banner-foreground) 20%, transparent);
+    --muxui-button-foreground: var(--muxui-banner-foreground);
+    --muxui-button-shadow: none;
+  }
+
+  /* Press wins over hover however the engine reports it: WebKit can show a pointer press through :active alone. */
+  .muxui-banner .muxui-button.muxui-banner__dismiss:is(:active, [data-muxui-state-pressed]) {
+    background-color: var(--muxui-button-background-pressed);
+  }
+
+  /* One ring for every control: a gap of the ground, then the foreground, which stands at the message's contrast on the Banner.
+     The page's focus ring can match a tone's fill. */
+  .muxui-banner .muxui-button:is(.muxui-banner__action, .muxui-banner__dismiss):focus-visible,
+  .muxui-banner .muxui-banner__actions .muxui-link.muxui-banner__link:not(.muxui-button):is(:focus-visible, [data-muxui-state-focus-visible]) {
+    box-shadow:
+      0 0 0 2px var(--muxui-banner-ground),
+      0 0 0 4px var(--muxui-banner-foreground);
+    text-decoration-line: underline;
+  }
+}
+
+/* Forced colours: system colours and a visible boundary. The tone is colour only, so it is gone here; the title and message
+   carry the meaning. */
+@media (forced-colors: active) {
+  .muxui-banner {
+    border-color: CanvasText;
+    background-color: Canvas;
+    background-image: none;
+    color: CanvasText;
+  }
+
+  .muxui-banner__icon {
+    color: CanvasText;
+  }
+
+  .muxui-banner .muxui-banner__actions .muxui-link.muxui-banner__link:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:banner",
+  "kind": "component",
+  "name": "Banner",
+  "summary": "Show a page-level notice with an optional title, icon, actions, link and dismiss button, in a tone or a custom colour.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Telling everyone on a page about something that applies to the whole site or page, such as planned maintenance or a new feature, until it ends or is dismissed."
+    ],
+    "avoidWhen": [
+      "Confirming what a person just did, briefly; use Toast.",
+      "Asking a person to decide before going on; use AlertDialog.",
+      "Feedback on one field or one part of a form; show it beside that field."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "icon",
+    "title",
+    "message",
+    "actions",
+    "action",
+    "link",
+    "dismiss"
+  ],
+  "states": [
+    "default",
+    "dismissed"
+  ],
+  "accessibility": {
+    "nameRequired": false,
+    "obligations": [
+      "Banner is a region named by its label, by its title when there is no label, or Notice; with alert it is an alert instead, for a notice that needs attention at once.",
+      "The icon is decorative and hidden from assistive technology, so the title or message says what the notice is about, including what its tone shows.",
+      "The action Buttons, the Link and the dismiss button are native controls in reading order, operated by keyboard, and the dismiss button is named by its dismiss label.",
+      "On the default theme, text and labels on every tone and emphasis, and on any opaque custom colour, measure at least 4.5:1 at rest, hover and press in light and dark, and the dismiss icon and the focus ring at least 3:1.",
+      "Under forced colours the Banner shows a CanvasText boundary on Canvas, and its controls take system colours."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "behavior": [
+        "Banner is a section with the region role, or the alert role with alert. The children are the message, after the title, and the icon comes first.",
+        "Up to two actions render as small Buttons, the first filled and the second outlined, followed by the Link. A third action is an error.",
+        "The dismiss button shows with dismissible. Dismissal is controlled by dismissed or kept by Banner from defaultDismissed; pressing the button calls onDismiss, and a dismissed Banner renders nothing. Banner stores nothing and moves no focus: the application decides where focus goes and whether the dismissal is remembered.",
+        "Each tone sets a ground and a foreground. Subtle lays the tone's tint over the surface under the default text colour; solid fills with the tone and uses its foreground. The action Buttons, the Link, the dismiss icon and the focus ring draw only those two colours, so they keep the message's contrast in every state.",
+        "A customColor of #rgb, #rrggbb or an opaque rgb() takes the place of the tone, with white or black text, whichever contrasts more. Any other value, including a translucent colour, falls back to the tone.",
+        "Nothing on the Banner animates; under reduced motion its controls change state without a transition."
+      ],
+      "accessibility": [
+        "Banner is a region named by its label, by its title when there is no label, or Notice; with alert it is an alert instead, for a notice that needs attention at once.",
+        "The icon is decorative and hidden from assistive technology, so the title or message says what the notice is about, including what its tone shows.",
+        "The action Buttons, the Link and the dismiss button are native controls in reading order, operated by keyboard, and the dismiss button is named by its dismiss label.",
+        "On the default theme, text and labels on every tone and emphasis, and on any opaque custom colour, measure at least 4.5:1 at rest, hover and press in light and dark, and the dismiss icon and the focus ring at least 3:1.",
+        "Under forced colours the Banner shows a CanvasText boundary on Canvas, and its controls take system colours."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "component.taggroup.brand-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.brand-selected-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.brand-selected-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.brand-tint-weak",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.error-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.error-selected-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.error-selected-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.error-tint-weak",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.neutral-selected-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.neutral-selected-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.success-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.success-selected-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.success-selected-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.success-tint-weak",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.warning-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.warning-selected-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.warning-selected-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.warning-tint-weak",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.secondary",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.group-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-medium",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-small",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.tight-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.surface.background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.label-weight",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.supporting-line-height",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-font-family",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-s-font-size",
+            "requirement": "required"
+          }
+        ]
+      },
+      "runtimeProfiles": {}
+    }
+  }
+}

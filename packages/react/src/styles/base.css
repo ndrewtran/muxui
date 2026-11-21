@@ -1251,6 +1251,7 @@
    zero specificity, so a consumer's rule on the shapes wins. */
 :where(
   .muxui-alert-dialog__close-icon,
+  .muxui-banner__dismiss-icon,
   .muxui-command-palette__chip-remove-icon,
   .muxui-command-palette__close-icon,
   .muxui-dialog__close-icon,

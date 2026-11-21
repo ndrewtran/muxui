@@ -1437,6 +1437,16 @@ Object.assign(ADAPTERS, {
   ),
   // Badge owns its tone, variant and label; the adapter gives it an icon and a short role as its text.
   Badge: ({ children, ...args }) => e(MuxUI.Badge, { ...args, icon: args.icon ?? e(SidebarSpecimenIcon) }, fallback(children, 'Moderator')),
+  // The message is the children. The adapter always shows the dismiss button and gives the notice an icon, a title, an action
+  // when none is passed and a link, so every part renders.
+  Banner: ({ actions, ...args }) => e(MuxUI.Banner, {
+    ...args,
+    title: fallback(args.title, 'Planned maintenance'),
+    icon: fallback(args.icon, e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }, e('circle', { cx: 12, cy: 12, r: 10 }), e('path', { d: 'M12 16v-4M12 8h.01' }))),
+    actions: actions?.length ? actions : [{ id: 'schedule', label: 'See the schedule', onAction: () => {} }],
+    link: fallback(args.link, { label: 'Status page', href: '#status' }),
+    dismissible: true,
+  }, 'The site is read-only on Saturday from 02:00 to 04:00 UTC.'),
   ButtonGroup: (args) => e(MuxUI.ButtonGroup, { ...args },
     e(MuxUI.Button, { disabled: args.disabled }, 'Primary'),
     e(MuxUI.Button, { disabled: args.disabled, variant: 'neutral' }, 'Secondary'),
@@ -2970,6 +2980,8 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   Avatar: '.muxui-avatar',
   // Badge is passive: the proof finds it, and there is nothing to press.
   Badge: '.muxui-badge',
+  // An action, which does nothing: the dismiss button would remove the Banner under the proof.
+  Banner: '.muxui-banner__action',
   ButtonGroup: '.muxui-button-group button',
   Card: '.muxui-card',
   CodeBlock: '.muxui-code-block__copy',

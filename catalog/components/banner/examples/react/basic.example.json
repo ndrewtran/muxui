@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:banner-basic-react",
+  "kind": "example",
+  "name": "Basic React Banner",
+  "summary": "Announce planned maintenance in a subtle Banner with a title, an icon, an action, a link and a dismiss button.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:banner#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/banner/examples/react/basic.tsx"
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:banner-usage",
+  "kind": "guide",
+  "name": "Banner usage",
+  "summary": "Use Banner through the Mux UI React binding.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "banner",
+    "notice",
+    "announcement",
+    "react"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/banner-usage.md"
+}

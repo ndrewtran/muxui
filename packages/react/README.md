@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:fd694bea2042023b1b715428256a8590b7b6e3f5d49ae18d073788dfb4c101c7 -->
+<!-- @generated-content-sha256: sha256:537ab42db10bbea85ab859206e6576f80ee14dc62f304d4491c9b219fe6609f8 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -147,6 +147,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Autocomplete | experimental | . | .muxui-autocomplete | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, items, placeholder |
 | Avatar | experimental | . | .muxui-avatar | size |
 | Badge | experimental | . | .muxui-badge | tone, variant, icon, label |
+| Banner | experimental | . | .muxui-banner | title, icon, tone, emphasis, customColor, align, actions, link, dismissible, dismissed, defaultDismissed, dismissLabel, label, alert |
 | Breadcrumbs | experimental | . | .muxui-breadcrumbs | items |
 | Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, size |
 | ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, role |

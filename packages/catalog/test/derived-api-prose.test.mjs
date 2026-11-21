@@ -200,6 +200,8 @@ const GUIDES = {
   'header-nav': { native: ['display: none'] },
   // primary, danger and neutral are the variants of Button, which the guide says the dialog's actions use.
   'alert-dialog': { from: { button: ['primary', 'danger', 'neutral'] } },
+  // #rgb, #rrggbb and rgb() are the CSS colour forms a customColor may take.
+  banner: { native: ['#rgb', '#rrggbb', 'rgb()'] },
   // Sidebar's widths and its ground and edge are public custom properties, which no derived block records, as NumberField's
   // width is; the test after this one checks each is read in Sidebar's stylesheet.
   sidebar: { native: SIDEBAR_CUSTOM_PROPERTIES },

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:banner-custom-color-react",
+  "kind": "example",
+  "name": "Custom colour React Banner",
+  "summary": "Fill a Banner with a custom colour, with its dismissal kept by the caller.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:banner#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/banner/examples/react/custom-color.tsx"
+}

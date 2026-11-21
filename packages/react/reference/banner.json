@@ -1,0 +1,332 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "banner",
+  "sources": { "banner": "packages/react/src/supplemental/banner.ts" },
+  "exports": [
+    {
+      "name": "Banner",
+      "entry": ".",
+      "module": "banner",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "title",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "A short lead-in shown before the message in the label weight. It names the region when no label is given."
+            },
+            {
+              "name": "icon",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "A decorative icon before the text, hidden from assistive technology."
+            },
+            {
+              "name": "tone",
+              "optional": true,
+              "type": "BannerTone",
+              "values": ["neutral", "brand", "success", "warning", "danger"],
+              "refs": ["banner#BannerTone"],
+              "doc": "The named colour. A valid customColor takes its place."
+            },
+            {
+              "name": "emphasis",
+              "optional": true,
+              "type": "BannerEmphasis",
+              "values": ["subtle", "solid"],
+              "refs": ["banner#BannerEmphasis"],
+              "doc": "A tint of the colour over the surface, or the colour as a solid fill."
+            },
+            {
+              "name": "customColor",
+              "optional": true,
+              "type": "string",
+              "doc": "An opaque colour, as #rgb, #rrggbb or rgb(), in place of the tone. Text and controls on it are white or black, whichever\ncontrasts more. A colour that cannot be read or is not opaque falls back to the tone."
+            },
+            {
+              "name": "align",
+              "optional": true,
+              "type": "BannerAlign",
+              "values": ["start", "center"],
+              "refs": ["banner#BannerAlign"],
+              "doc": "Where the icon, text and actions sit: at the start, or centred as a group."
+            },
+            {
+              "name": "actions",
+              "optional": true,
+              "type": "readonly BannerAction[]",
+              "refs": ["banner#BannerAction"],
+              "doc": "Up to two action Buttons."
+            },
+            {
+              "name": "link",
+              "optional": true,
+              "type": "BannerLink",
+              "refs": ["banner#BannerLink"],
+              "doc": "A Link after the actions."
+            },
+            {
+              "name": "dismissible",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Shows the dismiss button."
+            },
+            {
+              "name": "dismissed",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Banner is dismissed, when the caller controls it. A dismissed Banner renders nothing."
+            },
+            {
+              "name": "defaultDismissed",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Whether the Banner starts dismissed, when Banner controls it."
+            },
+            {
+              "name": "onDismiss",
+              "optional": true,
+              "type": "() => void",
+              "doc": "Reports the dismiss button being pressed. Banner stores nothing."
+            },
+            {
+              "name": "dismissLabel",
+              "optional": true,
+              "type": "string",
+              "doc": "The dismiss button's accessible name."
+            },
+            {
+              "name": "label",
+              "optional": true,
+              "type": "string",
+              "doc": "The region's accessible name. Without it the title names the region, and without a title it is Notice."
+            },
+            {
+              "name": "alert",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Announces the Banner as an alert instead of a named region, for a notice that needs attention at once."
+            }
+          ],
+          "ref": { "type": "HTMLElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLElement>",
+              "omit": [
+                "title",
+                "icon",
+                "tone",
+                "emphasis",
+                "customColor",
+                "align",
+                "actions",
+                "link",
+                "dismissible",
+                "dismissed",
+                "defaultDismissed",
+                "onDismiss",
+                "dismissLabel",
+                "label",
+                "alert",
+                "role",
+                "dangerouslySetInnerHTML"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "banner#BannerAction",
+      "name": "BannerAction",
+      "module": "banner",
+      "public": [
+        { "entry": ".", "name": "BannerAction" }
+      ],
+      "owner": "banner",
+      "text": "type BannerAction = {\n  id: string;\n  label: string;\n  onAction: () => void;\n};",
+      "members": [
+        { "name": "id", "type": "string" },
+        { "name": "label", "type": "string" },
+        { "name": "onAction", "type": "() => void" }
+      ]
+    },
+    {
+      "id": "banner#BannerAlign",
+      "name": "BannerAlign",
+      "module": "banner",
+      "public": [
+        { "entry": ".", "name": "BannerAlign" }
+      ],
+      "owner": "banner",
+      "text": "type BannerAlign = 'start' | 'center';",
+      "values": ["start", "center"]
+    },
+    {
+      "id": "banner#BannerEmphasis",
+      "name": "BannerEmphasis",
+      "module": "banner",
+      "public": [
+        { "entry": ".", "name": "BannerEmphasis" }
+      ],
+      "owner": "banner",
+      "text": "type BannerEmphasis = 'subtle' | 'solid';",
+      "values": ["subtle", "solid"]
+    },
+    {
+      "id": "banner#BannerLink",
+      "name": "BannerLink",
+      "module": "banner",
+      "public": [
+        { "entry": ".", "name": "BannerLink" }
+      ],
+      "owner": "banner",
+      "text": "type BannerLink = {\n  label: string;\n  href: string;\n};",
+      "members": [
+        { "name": "label", "type": "string" },
+        { "name": "href", "type": "string" }
+      ]
+    },
+    {
+      "id": "banner#BannerOwnProps",
+      "name": "BannerOwnProps",
+      "module": "banner",
+      "text": "type BannerOwnProps = {\n  title?: React.ReactNode;\n  icon?: React.ReactNode;\n  tone?: BannerTone;\n  emphasis?: BannerEmphasis;\n  customColor?: string;\n  align?: BannerAlign;\n  actions?: readonly BannerAction[];\n  link?: BannerLink;\n  dismissible?: boolean;\n  dismissed?: boolean;\n  defaultDismissed?: boolean;\n  onDismiss?: () => void;\n  dismissLabel?: string;\n  label?: string;\n  alert?: boolean;\n};",
+      "members": [
+        {
+          "name": "title",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "A short lead-in shown before the message in the label weight. It names the region when no label is given."
+        },
+        {
+          "name": "icon",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "A decorative icon before the text, hidden from assistive technology."
+        },
+        {
+          "name": "tone",
+          "optional": true,
+          "type": "BannerTone",
+          "values": ["neutral", "brand", "success", "warning", "danger"],
+          "refs": ["banner#BannerTone"],
+          "doc": "The named colour. A valid customColor takes its place."
+        },
+        {
+          "name": "emphasis",
+          "optional": true,
+          "type": "BannerEmphasis",
+          "values": ["subtle", "solid"],
+          "refs": ["banner#BannerEmphasis"],
+          "doc": "A tint of the colour over the surface, or the colour as a solid fill."
+        },
+        {
+          "name": "customColor",
+          "optional": true,
+          "type": "string",
+          "doc": "An opaque colour, as #rgb, #rrggbb or rgb(), in place of the tone. Text and controls on it are white or black, whichever\ncontrasts more. A colour that cannot be read or is not opaque falls back to the tone."
+        },
+        {
+          "name": "align",
+          "optional": true,
+          "type": "BannerAlign",
+          "values": ["start", "center"],
+          "refs": ["banner#BannerAlign"],
+          "doc": "Where the icon, text and actions sit: at the start, or centred as a group."
+        },
+        {
+          "name": "actions",
+          "optional": true,
+          "type": "readonly BannerAction[]",
+          "refs": ["banner#BannerAction"],
+          "doc": "Up to two action Buttons."
+        },
+        {
+          "name": "link",
+          "optional": true,
+          "type": "BannerLink",
+          "refs": ["banner#BannerLink"],
+          "doc": "A Link after the actions."
+        },
+        {
+          "name": "dismissible",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Shows the dismiss button."
+        },
+        {
+          "name": "dismissed",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Banner is dismissed, when the caller controls it. A dismissed Banner renders nothing."
+        },
+        {
+          "name": "defaultDismissed",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Whether the Banner starts dismissed, when Banner controls it."
+        },
+        {
+          "name": "onDismiss",
+          "optional": true,
+          "type": "() => void",
+          "doc": "Reports the dismiss button being pressed. Banner stores nothing."
+        },
+        {
+          "name": "dismissLabel",
+          "optional": true,
+          "type": "string",
+          "doc": "The dismiss button's accessible name."
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "type": "string",
+          "doc": "The region's accessible name. Without it the title names the region, and without a title it is Notice."
+        },
+        {
+          "name": "alert",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Announces the Banner as an alert instead of a named region, for a notice that needs attention at once."
+        }
+      ],
+      "refs": [
+        "banner#BannerTone",
+        "banner#BannerEmphasis",
+        "banner#BannerAlign",
+        "banner#BannerAction",
+        "banner#BannerLink"
+      ]
+    },
+    {
+      "id": "banner#BannerProps",
+      "name": "BannerProps",
+      "module": "banner",
+      "public": [
+        { "entry": ".", "name": "BannerProps" }
+      ],
+      "owner": "banner",
+      "text": "type BannerProps = BannerOwnProps & Omit<React.HTMLAttributes<HTMLElement>, keyof BannerOwnProps | 'role' | 'dangerouslySetInnerHTML'>;",
+      "refs": ["banner#BannerOwnProps"]
+    },
+    {
+      "id": "banner#BannerTone",
+      "name": "BannerTone",
+      "module": "banner",
+      "public": [
+        { "entry": ".", "name": "BannerTone" }
+      ],
+      "owner": "banner",
+      "text": "type BannerTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';",
+      "values": ["neutral", "brand", "success", "warning", "danger"]
+    }
+  ]
+}
