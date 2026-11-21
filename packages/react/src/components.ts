@@ -15,11 +15,11 @@ import { Breadcrumbs as AriaBreadcrumbs, DisclosurePanel as AriaDisclosurePanel,
 import { AriaBreadcrumb, AriaCheckbox, AriaDisclosure, AriaDisclosureGroup, AriaGroup, AriaLink, AriaToggleButton, AriaButton } from './substrate.ts';
 import type { CheckboxProps as AriaCheckboxProps, LinkProps as AriaLinkProps, PressEvent, ToggleButtonProps as AriaToggleButtonProps } from 'react-aria-components';
 import type { ButtonPointerType } from './button.ts';
-import { withHostAttributes } from './button.ts';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
 import { MotionHeight, useDisclosureIconMotion } from './motion-components.mjs';
+import { withHostAttributes } from './control-utils.ts';
 
 function classNames(base: string, className?: string) {
   return [base, className].filter(Boolean).join(' ');
@@ -645,9 +645,11 @@ export const ToggleButton: ForwardRefExoticComponent<ToggleButtonProps & RefAttr
   const inheritedSize = React.useContext(ToggleButtonSizeContext);
   // A conditional, not ??: extraction reads a fallback on an owned prop as an executed default, and an inherited size is none.
   const resolvedSize = normalizeToggleButtonSize(size == null ? inheritedSize : size);
+  // React Aria keeps the id (a ToggleButtonGroup's key for the button) and the tab stop itself, so neither is laid under its DOM props.
+  const { id: _id, tabIndex: _tabIndex, ...hostAttributes } = props;
   return React.createElement(AriaToggleButton, {
-    // React Aria passes the native attributes it does not own through to the <button>; its pointer
-    // handler types name another element where React's name HTMLButtonElement.
+    // React Aria reads the attributes it owns from these props; its pointer handler types name another
+    // element where React's name HTMLButtonElement.
     ...(props as AriaToggleButtonProps),
     ref,
     isSelected: selected,
@@ -657,6 +659,7 @@ export const ToggleButton: ForwardRefExoticComponent<ToggleButtonProps & RefAttr
     ...{ 'data-muxui-size': resolvedSize },
     onChange,
     onPress: (event: PressEvent) => onActivate?.(activationEvent(event, event.target as HTMLButtonElement)),
+    render: (domProps) => React.createElement('button', withHostAttributes(hostAttributes, domProps)),
   }, children);
 });
 

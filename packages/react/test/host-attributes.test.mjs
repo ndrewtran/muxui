@@ -5,10 +5,12 @@ import { I18nProvider } from 'react-aria-components';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { Button } from '../src/button.ts';
-import { Disclosure, DisclosureGroup, Link, Meter } from '../src/components.ts';
+import { Disclosure, DisclosureGroup, Link, Meter, ToggleButton } from '../src/components.ts';
+import { Menu } from '../src/menu.ts';
+import { ToggleButtonGroup } from '../src/toggle-button-group.ts';
 import { createDom } from './support/dom.mjs';
 
-// The native and ARIA attributes Link, Button and Disclosure accept in their types reach the element they render, in
+// The native and ARIA attributes Link, Button, Disclosure, ToggleButton and Menu.Item accept in their types reach the element they render, in
 // server markup and after hydration, including the ones React Aria's own DOM filter leaves out.
 
 const h = React.createElement;
@@ -110,6 +112,37 @@ test('Button passes title and tabIndex to its button', () => {
   assert.deepEqual(pick(button, ['title', 'tabindex']), { title: 'Saves the draft', tabindex: '-1' });
 });
 
+const shortcutAttributes = { 'aria-keyshortcuts': 'Control+B', 'aria-current': 'true', 'aria-roledescription': 'format', title: 'Bold' };
+const expectedShortcut = { 'aria-keyshortcuts': 'Control+B', 'aria-current': 'true', 'aria-roledescription': 'format', title: 'Bold' };
+const attributesOf = (node) => Object.fromEntries([...node.attributes].map((attribute) => [attribute.name, attribute.value]));
+
+test('ToggleButton and Menu.Item pass aria-keyshortcuts, aria-current and their other attributes to the element in server markup and on the client', async () => {
+  // React Aria's DOM filter keeps neither attribute on a menu item, nor aria-keyshortcuts or a title on a toggle button.
+  const element = h('div', null,
+    h(ToggleButton, { ...shortcutAttributes, className: 'lone' }, 'Bold'),
+    h(ToggleButtonGroup, { 'aria-label': 'Format' }, h(ToggleButton, { id: 'bold', ...shortcutAttributes, className: 'grouped' }, 'Bold')),
+    h(Menu, { 'aria-label': 'Pages' }, h(Menu.Item, { id: 'notes', ...shortcutAttributes, 'aria-current': 'page' }, 'Notes')));
+  const expectedItem = { ...expectedShortcut, 'aria-current': 'page' };
+  const names = Object.keys(expectedShortcut);
+  const markup = renderToString(element);
+  assert.deepEqual(pick(serverElement(markup, '.lone'), names), expectedShortcut, 'server ToggleButton');
+  assert.deepEqual(pick(serverElement(markup, '.grouped'), names), expectedShortcut, 'server ToggleButton in a group');
+  assert.deepEqual(pick(serverElement(markup, '.muxui-menu__item'), names), expectedItem, 'server Menu.Item');
+  const view = await mount(element);
+  try {
+    const grouped = view.container.querySelector('.grouped');
+    const item = view.container.querySelector('.muxui-menu__item');
+    assert.deepEqual(pick(attributesOf(view.container.querySelector('.lone')), names), expectedShortcut, 'client ToggleButton');
+    assert.deepEqual(pick(attributesOf(grouped), names), expectedShortcut, 'client ToggleButton in a group');
+    assert.deepEqual(pick(attributesOf(item), names), expectedItem, 'client Menu.Item');
+    // The group keys its buttons by id and the menu keys its items by id; neither id becomes the element's.
+    assert.equal(grouped.hasAttribute('id'), false, 'a grouped ToggleButton keeps its id off the button');
+    assert.notEqual(item.id, 'notes', 'a Menu.Item keeps its id off the item');
+  } finally {
+    await view.dispose();
+  }
+});
+
 test('Button, Link and Disclosure leave React Aria behaviour props off their element', () => {
   // TextEditor's bubble menu passes preventFocusOnPress through an untyped spread; React Aria reads such props, the element must not.
   // The list is React Aria's own: the press, hover and focus hook options, the undocumented allowFocusWhenDisabled useButton
@@ -171,6 +204,8 @@ test('server markup with the passed-through attributes hydrates without a mismat
     h(Link, { title: 'Unavailable' }, 'Nowhere'),
     h(Button, { title: 'Saves the draft' }, 'Save'),
     h(Disclosure, { id: 'details', title: 'Details', 'aria-describedby': 'hint' }, 'Body'),
+    h(ToggleButton, shortcutAttributes, 'Bold'),
+    h(Menu, { 'aria-label': 'Pages' }, h(Menu.Item, { id: 'notes', ...shortcutAttributes }, 'Notes')),
     h(I18nProvider, { locale: 'de-DE' }, h(Meter, { label: 'Storage', value: 12.5 })));
   const markup = renderToString(element);
   const env = createDom();
