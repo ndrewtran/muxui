@@ -1435,6 +1435,8 @@ Object.assign(ADAPTERS, {
     e(MuxUI.Avatar.Image, { src: src || undefined, srcSet, alt: alt ?? 'Workspace avatar', onLoad, onError }),
     e(MuxUI.Avatar.Fallback, null, fallback(children, 'WS')),
   ),
+  // Badge owns its tone, variant and label; the adapter gives it an icon and a short role as its text.
+  Badge: ({ children, ...args }) => e(MuxUI.Badge, { ...args, icon: args.icon ?? e(SidebarSpecimenIcon) }, fallback(children, 'Moderator')),
   ButtonGroup: (args) => e(MuxUI.ButtonGroup, { ...args },
     e(MuxUI.Button, { disabled: args.disabled }, 'Primary'),
     e(MuxUI.Button, { disabled: args.disabled, variant: 'neutral' }, 'Secondary'),
@@ -2966,6 +2968,8 @@ BROWSER_PROOF_PLANS.HeaderNav = headerNavBrowserProof;
 const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   AlertDialog: '.muxui-alert-dialog__trigger',
   Avatar: '.muxui-avatar',
+  // Badge is passive: the proof finds it, and there is nothing to press.
+  Badge: '.muxui-badge',
   ButtonGroup: '.muxui-button-group button',
   Card: '.muxui-card',
   CodeBlock: '.muxui-code-block__copy',

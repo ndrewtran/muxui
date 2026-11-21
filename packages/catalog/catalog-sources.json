@@ -1827,6 +1827,22 @@
     {
       "family": "example",
       "path": "catalog/components/sidebar/examples/react/row-actions.example.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/badge/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/badge/examples/react/basic.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/badge/examples/react/count.example.json"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/badge-usage.json"
     }
   ]
 }

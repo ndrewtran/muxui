@@ -1,0 +1,128 @@
+{
+  "schema": "muxui-declaration-reference-v1",
+  "owner": "badge",
+  "sources": { "badge": "packages/react/src/supplemental/badge.ts" },
+  "exports": [
+    {
+      "name": "Badge",
+      "entry": ".",
+      "module": "badge",
+      "kind": "component",
+      "parts": [
+        {
+          "member": null,
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "tone",
+              "optional": true,
+              "type": "BadgeTone",
+              "values": ["neutral", "brand", "success", "warning", "error"],
+              "refs": ["badge#BadgeTone"],
+              "doc": "The badge's colour. Its text says what it means; the tone only supports it."
+            },
+            {
+              "name": "variant",
+              "optional": true,
+              "type": "BadgeVariant",
+              "values": ["soft", "solid"],
+              "refs": ["badge#BadgeVariant"],
+              "doc": "A soft tint, or a solid fill."
+            },
+            {
+              "name": "icon",
+              "optional": true,
+              "type": "React.ReactNode",
+              "doc": "A decorative icon before the text, hidden from assistive technology."
+            },
+            {
+              "name": "label",
+              "optional": true,
+              "type": "string",
+              "doc": "What assistive technology reads in place of the visible text, when the text is not enough on its own, such as 12 unread for 12."
+            }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            {
+              "type": "React.HTMLAttributes<HTMLSpanElement>",
+              "omit": ["tone", "variant", "icon", "label", "role", "tabIndex", "dangerouslySetInnerHTML"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "id": "badge#BadgeOwnProps",
+      "name": "BadgeOwnProps",
+      "module": "badge",
+      "text": "type BadgeOwnProps = {\n  tone?: BadgeTone;\n  variant?: BadgeVariant;\n  icon?: React.ReactNode;\n  label?: string;\n};",
+      "members": [
+        {
+          "name": "tone",
+          "optional": true,
+          "type": "BadgeTone",
+          "values": ["neutral", "brand", "success", "warning", "error"],
+          "refs": ["badge#BadgeTone"],
+          "doc": "The badge's colour. Its text says what it means; the tone only supports it."
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "type": "BadgeVariant",
+          "values": ["soft", "solid"],
+          "refs": ["badge#BadgeVariant"],
+          "doc": "A soft tint, or a solid fill."
+        },
+        {
+          "name": "icon",
+          "optional": true,
+          "type": "React.ReactNode",
+          "doc": "A decorative icon before the text, hidden from assistive technology."
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "type": "string",
+          "doc": "What assistive technology reads in place of the visible text, when the text is not enough on its own, such as 12 unread for 12."
+        }
+      ],
+      "refs": ["badge#BadgeTone", "badge#BadgeVariant"]
+    },
+    {
+      "id": "badge#BadgeProps",
+      "name": "BadgeProps",
+      "module": "badge",
+      "public": [
+        { "entry": ".", "name": "BadgeProps" }
+      ],
+      "owner": "badge",
+      "text": "type BadgeProps = BadgeOwnProps & Omit<React.HTMLAttributes<HTMLSpanElement>, keyof BadgeOwnProps | 'role' | 'tabIndex' | 'dangerouslySetInnerHTML'>;",
+      "refs": ["badge#BadgeOwnProps"]
+    },
+    {
+      "id": "badge#BadgeTone",
+      "name": "BadgeTone",
+      "module": "badge",
+      "public": [
+        { "entry": ".", "name": "BadgeTone" }
+      ],
+      "owner": "badge",
+      "text": "type BadgeTone = 'neutral' | 'brand' | 'success' | 'warning' | 'error';",
+      "values": ["neutral", "brand", "success", "warning", "error"]
+    },
+    {
+      "id": "badge#BadgeVariant",
+      "name": "BadgeVariant",
+      "module": "badge",
+      "public": [
+        { "entry": ".", "name": "BadgeVariant" }
+      ],
+      "owner": "badge",
+      "text": "type BadgeVariant = 'soft' | 'solid';",
+      "values": ["soft", "solid"]
+    }
+  ]
+}

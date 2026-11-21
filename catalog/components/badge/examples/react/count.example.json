@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:badge-count-react",
+  "kind": "example",
+  "name": "Badge count on a link",
+  "summary": "Show an unread count on a link, with the count read as part of the link's name.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:badge#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/badge/examples/react/count.tsx"
+}

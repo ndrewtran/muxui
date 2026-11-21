@@ -1,0 +1,169 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:badge",
+  "kind": "component",
+  "name": "Badge",
+  "summary": "Mark a role, a flag or a count with a small passive label.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Marking an item with a short role, flag or count that the user reads and does not act on."
+    ],
+    "avoidWhen": [
+      "A set of labels the user selects or removes; use TagGroup.",
+      "A notice about the whole page; use Toast.",
+      "An action or a link; use Button."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "icon",
+    "text"
+  ],
+  "states": [
+    "default"
+  ],
+  "accessibility": {
+    "nameRequired": false,
+    "obligations": [
+      "A Badge is passive text: it has no role, takes no focus stop and does nothing when pressed.",
+      "Its visible text says what it means; the tone never carries meaning alone, and under forced colours every badge is CanvasText with a CanvasText edge.",
+      "When the visible text is not enough, such as a bare count, label gives the words assistive technology reads in its place; inside a link they become part of the link's name.",
+      "The icon is decorative and hidden from assistive technology, so a badge whose only content is an icon needs a label."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "behavior": [
+        "Badge is a span with no role. It passes its native span attributes on, except role and tabIndex, so it never becomes a focus stop or a control.",
+        "tone is neutral, brand, success, warning or error, the semantic tones of TagGroup, and variant is soft or solid; another value throws a TypeError.",
+        "Soft paints the tone's weak tint and the soft tag's text and solid the selected tag's fill and text from TagGroup's tone tokens, so a theme that changes those tones changes Badge too.",
+        "With a label, the visible text is hidden from assistive technology and the label is read in its place, as visually hidden text inside the badge.",
+        "The text keeps to one line and ends in an ellipsis when the badge is narrower than it; numbers use tabular figures."
+      ],
+      "accessibility": [
+        "A Badge is passive text: it has no role, takes no focus stop and does nothing when pressed.",
+        "Its visible text says what it means; the tone never carries meaning alone, and under forced colours every badge is CanvasText with a CanvasText edge.",
+        "When the visible text is not enough, such as a bare count, label gives the words assistive technology reads in its place; inside a link they become part of the link's name.",
+        "The icon is decorative and hidden from assistive technology, so a badge whose only content is an icon needs a label."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "component.taggroup.brand-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.brand-selected-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.brand-selected-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.brand-tint-weak",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.error-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.error-selected-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.error-selected-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.error-tint-weak",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.neutral-selected-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.neutral-selected-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.success-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.success-selected-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.success-selected-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.success-tint-weak",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.tag-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.tag-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.warning-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.warning-selected-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.warning-selected-foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.taggroup.warning-tint-weak",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.dense-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-tight",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.radius-xs",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.badge-size",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.compact-line-height",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.label-font-family",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.label-weight",
+            "requirement": "required"
+          }
+        ]
+      },
+      "runtimeProfiles": {}
+    }
+  }
+}

@@ -1,0 +1,99 @@
+/* Badge: a small passive label. Its tones are TagGroup's semantic tones, painted from TagGroup's tone tokens: soft is the tone's
+   weak tint and the soft tag's text, solid is the selected tag's fill and text, so both keep TagGroup's contrast in either scheme. */
+.muxui-badge {
+  --muxui-badge-text: var(--muxui-component-taggroup-tag-foreground);
+  --muxui-badge-fill: var(--muxui-component-taggroup-tag-background);
+  --muxui-badge-solid-fill: var(--muxui-component-taggroup-neutral-selected-background);
+  --muxui-badge-solid-text: var(--muxui-component-taggroup-neutral-selected-foreground);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-dense-gap);
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  padding-inline: var(--muxui-semantic-layout-inset-tight);
+  /* A transparent edge keeps the box the same size, and forced colours draw it, so the badge keeps its outline there. */
+  border: 1px solid transparent;
+  border-radius: var(--muxui-semantic-shape-radius-xs);
+  background-color: var(--muxui-badge-fill);
+  color: var(--muxui-badge-text);
+  font-family: var(--muxui-semantic-typography-label-font-family);
+  font-size: var(--muxui-semantic-typography-badge-size);
+  font-weight: var(--muxui-semantic-typography-label-weight);
+  line-height: var(--muxui-semantic-typography-compact-line-height);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.muxui-badge[data-muxui-variant='solid'] {
+  background-color: var(--muxui-badge-solid-fill);
+  color: var(--muxui-badge-solid-text);
+}
+
+.muxui-badge[data-muxui-tone='brand'] {
+  --muxui-badge-text: var(--muxui-component-taggroup-brand-foreground);
+  --muxui-badge-fill: var(--muxui-component-taggroup-brand-tint-weak);
+  --muxui-badge-solid-fill: var(--muxui-component-taggroup-brand-selected-background);
+  --muxui-badge-solid-text: var(--muxui-component-taggroup-brand-selected-foreground);
+}
+
+.muxui-badge[data-muxui-tone='success'] {
+  --muxui-badge-text: var(--muxui-component-taggroup-success-foreground);
+  --muxui-badge-fill: var(--muxui-component-taggroup-success-tint-weak);
+  --muxui-badge-solid-fill: var(--muxui-component-taggroup-success-selected-background);
+  --muxui-badge-solid-text: var(--muxui-component-taggroup-success-selected-foreground);
+}
+
+.muxui-badge[data-muxui-tone='warning'] {
+  --muxui-badge-text: var(--muxui-component-taggroup-warning-foreground);
+  --muxui-badge-fill: var(--muxui-component-taggroup-warning-tint-weak);
+  --muxui-badge-solid-fill: var(--muxui-component-taggroup-warning-selected-background);
+  --muxui-badge-solid-text: var(--muxui-component-taggroup-warning-selected-foreground);
+}
+
+.muxui-badge[data-muxui-tone='error'] {
+  --muxui-badge-text: var(--muxui-component-taggroup-error-foreground);
+  --muxui-badge-fill: var(--muxui-component-taggroup-error-tint-weak);
+  --muxui-badge-solid-fill: var(--muxui-component-taggroup-error-selected-background);
+  --muxui-badge-solid-text: var(--muxui-component-taggroup-error-selected-foreground);
+}
+
+.muxui-badge__icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.muxui-badge__icon > svg {
+  inline-size: 1.1em;
+  block-size: 1.1em;
+}
+
+/* The whole font of the badge, so a host's element-type font shorthand cannot reset the text's weight or tabular figures. */
+.muxui-badge__text {
+  font: inherit;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The label is read by assistive technology in place of the visible text, and never shown. */
+.muxui-badge__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Forced colours replace the fills with Canvas, so the edge drawn in CanvasText keeps the badge's outline, solid or soft. */
+@media (forced-colors: active) {
+  .muxui-badge {
+    border-color: CanvasText;
+    color: CanvasText;
+  }
+}

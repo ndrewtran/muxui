@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:badge-basic-react",
+  "kind": "example",
+  "name": "Basic React Badge",
+  "summary": "Mark roles and flags with soft and solid badges in each tone.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:badge#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/badge/examples/react/basic.tsx"
+}

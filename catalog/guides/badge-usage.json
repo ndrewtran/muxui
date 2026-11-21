@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:badge-usage",
+  "kind": "guide",
+  "name": "Badge usage",
+  "summary": "Use Badge through the Mux UI React binding.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "badge",
+    "label",
+    "count",
+    "react"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/badge-usage.md"
+}
