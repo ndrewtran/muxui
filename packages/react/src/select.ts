@@ -176,8 +176,9 @@ interface SelectContextValue {
 const SelectContext = React.createContext<SelectContextValue>({ disabled: false });
 
 // The geometry a Select falls back to. A parameter default and the geometry helper's fallback both read this record,
-// so the default a block states is the one that runs.
-const SELECT_GEOMETRY = Object.freeze({ placement: 'bottom-start', offset: 8, crossOffset: 0, shouldFlip: true, containerPadding: 12 } as const);
+// so the default a block states is the one that runs. The popup is at least as wide as its trigger, so zero container
+// padding keeps a full-width trigger's popup aligned at the viewport edge instead of pushed past it.
+const SELECT_GEOMETRY = Object.freeze({ placement: 'bottom-start', offset: 8, crossOffset: 0, shouldFlip: true, containerPadding: 0 } as const);
 
 function selectChildrenProvideLabel(children: ReactNode): boolean {
   return React.Children.toArray(children).some((child) => React.isValidElement<{ children?: ReactNode }>(child)
