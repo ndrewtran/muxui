@@ -323,8 +323,9 @@ const CommandPaletteBackdrop = /*#__PURE__*/ React.forwardRef<HTMLDivElement, Co
   return h(MotionModalBackdropForwardRef, { ...props, ref, triggerRef, isOpen: open, onOpenChange: setOpen, isDismissable: dismissable, className: cx('muxui-command-palette__backdrop', !scrim && 'muxui-command-palette__backdrop--transparent', className) });
 });
 const CommandPalettePopup = /*#__PURE__*/ React.forwardRef<HTMLElement, CommandPalettePopupProps>(function CommandPalettePopup({ translucent = false, className, children, ...props }, ref) {
-  // className reaches the dialog inside the popup, so the translucent modifier is the popup's own prop.
-  return h(MotionModalPopupForwardRef, { className: cx('muxui-command-palette__popup', translucent && 'muxui-command-palette__popup--translucent') }, h(AriaDialog, { ...(props as AriaDialogProps), ref, className: cx('muxui-command-palette__dialog', className) }, children));
+  // className reaches the dialog inside the popup, so the translucent modifier is the popup's own prop. A translucent
+  // popup opens and closes at full opacity: a fade would show the page through it unblurred.
+  return h(MotionModalPopupForwardRef, { className: cx('muxui-command-palette__popup', translucent && 'muxui-command-palette__popup--translucent'), fade: !translucent }, h(AriaDialog, { ...(props as AriaDialogProps), ref, className: cx('muxui-command-palette__dialog', className) }, children));
 });
 const CommandPaletteTitle = /*#__PURE__*/ React.forwardRef<HTMLHeadingElement, CommandPaletteTitleProps>(function CommandPaletteTitle({ className, ...props }, ref) {
   return h(AriaHeading, { ...props, ref, slot: 'title', className: cx('muxui-command-palette__title', className) });

@@ -650,6 +650,18 @@
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 44%, transparent);
 }
 
+/* The popup's backdrop filter samples none of the page while the backdrop is below full opacity or animates it, so
+   this backdrop keeps full opacity and fades its scrim colour instead, with the same timing. Under reduced motion the
+   scrim stays, as the opacity does. */
+.muxui-command-palette__backdrop:has(> .muxui-command-palette__popup--translucent) {
+  transition-property: background-color;
+}
+
+.muxui-command-palette__backdrop:has(> .muxui-command-palette__popup--translucent):is([data-muxui-state-entering], [data-muxui-state-exiting]):not([data-muxui-dialog-reduced]) {
+  opacity: 1;
+  background-color: transparent;
+}
+
 .muxui-command-palette__dialog {
   display: flex;
   min-height: 0;

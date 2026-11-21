@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // CommandPalette.Trigger draws Button's keyboard focus ring, never for the first pointer
@@ -643,6 +644,213 @@ for (const engine of browserEngines()) {
         const { resting, hidden } = await cancelShots(page, field);
         assert.ok(!resting.equals(hidden), 'the Input draws the native cancel button');
         await page.close();
+      });
+      assert.deepEqual(errors, []);
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
+// A translucent Popup blurs the page behind it through its backdrop filter, which samples none of the page while the
+// Popup or the Backdrop is below full opacity, or the Backdrop animates its opacity: a fade would show the page sharp.
+// So a translucent palette opens and closes at full opacity, its Popup sliding and scaling and its scrim fading its
+// colour, while an opaque palette and AlertDialog still fade. Headless WebKit and Firefox draw no blur, so only
+// Chromium compares the pixels.
+const motionEntry = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { AlertDialog } from '/src/supplemental/alert-dialog.ts';
+import { CommandPalette } from '/src/supplemental/command-palette.ts';
+
+const h = React.createElement;
+// ?translucent and ?scrim set those props on the palette; ?alert renders an AlertDialog in its place.
+const params = new URLSearchParams(location.search);
+createRoot(document.getElementById('root')).render(params.has('alert')
+  ? h(AlertDialog.Root, null,
+    h(AlertDialog.Trigger, { id: 'motion-trigger' }, 'Delete'),
+    h(AlertDialog.Backdrop, null, h(AlertDialog.Popup, null, h(AlertDialog.Content, null,
+      h(AlertDialog.Title, null, 'Delete item'),
+      h(AlertDialog.Actions, null, h(AlertDialog.Close, null, 'Cancel'))))))
+  : h(CommandPalette.Root, null,
+    h(CommandPalette.Trigger, { id: 'motion-trigger' }, 'Commands'),
+    h(CommandPalette.Backdrop, { scrim: params.has('scrim') }, h(CommandPalette.Popup, { translucent: params.has('translucent') },
+      h(CommandPalette.Title, null, 'Commands'),
+      // An empty stretch of the Popup, where only the page behind it shows.
+      h('div', { id: 'motion-glass', style: { height: '240px' } })))));
+`;
+
+// Sharp stripes, which the translucent Popup's blur turns into an even grey.
+const motionPage = pageShell({
+  attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"',
+  head: '<link rel="stylesheet" href="/generated/styles.css">',
+  bodyAttributes: 'style="margin: 0; min-height: 100vh; background: repeating-linear-gradient(90deg, #000 0 6px, #fff 6px 12px)"',
+  body: '<div id="root"></div>',
+  entry: '/command-palette-motion-entry.mjs',
+});
+
+// The modal motion, slowed so each open and close spans many frames and screenshots.
+const SLOWED = '1500ms';
+const modalParts = {
+  backdrop: '.muxui-command-palette__backdrop, .muxui-alert-dialog__backdrop',
+  popup: '.muxui-command-palette__popup, .muxui-alert-dialog__popup',
+};
+
+// Serialized into the page by recordFrames, so it must stay self-contained.
+function sampleModal(parts) {
+  const backdrop = document.querySelector(parts.backdrop);
+  const popup = document.querySelector(parts.popup);
+  if (!backdrop || !popup) return null;
+  const backdropStyle = getComputedStyle(backdrop);
+  const popupStyle = getComputedStyle(popup);
+  // The alpha of the computed scrim colour: the value after the slash of color() and the like, or rgba()'s fourth.
+  const color = backdropStyle.backgroundColor;
+  const alpha = /\/\s*([\d.]+)\s*\)$/u.exec(color)?.[1] ?? /^rgba\((?:[^,]+,){3}\s*([\d.]+)\)$/u.exec(color)?.[1] ?? '1';
+  return {
+    backdrop: Number(backdropStyle.opacity),
+    fading: backdrop.getAnimations().some((animation) => animation.transitionProperty === 'opacity'),
+    scrim: Number(alpha),
+    popup: Number(popupStyle.opacity),
+    y: Number.parseFloat(popupStyle.getPropertyValue('--muxui-modal-y')) || 0,
+    scale: Number.parseFloat(popupStyle.getPropertyValue('--muxui-modal-scale')) || 1,
+  };
+}
+
+// Whether the open modal has settled: the Popup at rest and the Backdrop's transitions done. Serialized like sampleModal.
+function modalSettled(parts) {
+  const backdrop = document.querySelector(parts.backdrop);
+  const popup = document.querySelector(parts.popup);
+  if (!backdrop || !popup || backdrop.hasAttribute('data-muxui-state-entering')) return false;
+  if (backdrop.getAnimations().some((animation) => animation.playState === 'running')) return false;
+  const style = getComputedStyle(popup);
+  return Number(style.opacity) === 1
+    && Math.abs(Number.parseFloat(style.getPropertyValue('--muxui-modal-y')) || 0) < 0.01
+    && Math.abs((Number.parseFloat(style.getPropertyValue('--muxui-modal-scale')) || 1) - 1) < 0.0001;
+}
+
+// The mean change in luminance between neighbouring pixels of each PNG: about 42 for the bare stripes, near 0 once blurred.
+function sharpness(images) {
+  return Promise.all(images.map(async (base64) => {
+    const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${base64}`)).blob());
+    const context = new OffscreenCanvas(bitmap.width, bitmap.height).getContext('2d');
+    context.drawImage(bitmap, 0, 0);
+    const { data, width } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    const luminance = (pixel) => (0.2126 * data[pixel * 4]) + (0.7152 * data[(pixel * 4) + 1]) + (0.0722 * data[(pixel * 4) + 2]);
+    let sum = 0;
+    let count = 0;
+    for (let pixel = 0; (pixel + 1) * 4 < data.length; pixel += 1) {
+      if (pixel % width === width - 1) continue;
+      sum += Math.abs(luminance(pixel) - luminance(pixel + 1));
+      count += 1;
+    }
+    return sum / count;
+  }));
+}
+
+for (const engine of browserEngines()) {
+  test(`CommandPalette translucent Popup keeps the page behind it blurred while it opens and closes in ${engine}`, { timeout: 120_000 }, async (t) => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/alert-dialog.ts', 'src/supplemental/command-palette.ts'],
+      pages: { '/command-palette-motion.html': motionPage },
+      modules: { '/command-palette-motion-entry.mjs': motionEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      const errors = [];
+      const open = async (query) => {
+        const page = await browser.newPage({ viewport: { width: 900, height: 700 }, locale: 'en-US', reducedMotion: 'no-preference' });
+        page.on('pageerror', (error) => errors.push(error.message));
+        await page.goto(`${url}/command-palette-motion.html?${query}`, { waitUntil: 'load' });
+        await page.locator('#motion-trigger').waitFor();
+        await awaitFontsAndFrames(page);
+        await page.evaluate((duration) => {
+          for (const token of ['enter-duration', 'transition-spring-duration', 'dismiss-transition-duration']) {
+            document.documentElement.style.setProperty(`--muxui-semantic-motion-modal-${token}`, duration);
+          }
+        }, SLOWED);
+        return page;
+      };
+      // The frames from the Trigger press until the modal settles and from Escape until it leaves, and the frame at rest.
+      const cycle = async (page) => {
+        const opening = await recordFrames(page, sampleModal, modalParts);
+        await page.locator('#motion-trigger').click();
+        await page.waitForFunction(modalSettled, modalParts);
+        const opened = await opening.stop();
+        const rest = await page.evaluate(sampleModal, modalParts);
+        const closing = await recordFrames(page, sampleModal, modalParts);
+        await page.keyboard.press('Escape');
+        await page.locator(modalParts.popup).waitFor({ state: 'detached' });
+        return { opened, closed: await closing.stop(), rest };
+      };
+
+      await t.test('the Popup and Backdrop keep full opacity while the Popup slides and scales and the scrim fades', async () => {
+        for (const query of ['translucent&scrim', 'translucent']) {
+          const page = await open(query);
+          const { opened, closed, rest } = await cycle(page);
+          for (const [phase, frames] of [['open', opened], ['close', closed]]) {
+            const label = `${query}, ${phase}`;
+            assert.ok(frames.length > 5, `${label}: frames were recorded`);
+            const faded = frames.filter(({ popup, backdrop, fading }) => popup !== 1 || backdrop !== 1 || fading);
+            assert.deepEqual(faded.slice(0, 3), [], `${label}: ${faded.length} of ${frames.length} frames fade the Popup or Backdrop`);
+            assert.ok(frames.some(({ y, scale }) => y < 0 && y > -8 && scale > 0.97 && scale < 1), `${label}: the Popup slides and scales`);
+            if (rest.scrim > 0) assert.ok(frames.some(({ scrim }) => scrim > 0 && scrim < rest.scrim), `${label}: the scrim fades its colour`);
+            else assert.ok(query === 'translucent' && frames.every(({ scrim }) => scrim === 0), `${label}: no scrim shows`);
+          }
+          await page.close();
+        }
+      });
+
+      await t.test('the page seen through the Popup is never sharper than at rest', { skip: engine !== 'chromium' && `headless ${engine} draws no backdrop blur` }, async () => {
+        for (const query of ['translucent&scrim', 'translucent']) {
+          const page = await open(query);
+          const trigger = page.locator('#motion-trigger');
+          const popup = page.locator(modalParts.popup);
+          await trigger.click();
+          await page.waitForFunction(modalSettled, modalParts);
+          // A stretch well inside the empty part of the Popup at rest stays inside it while it slides and scales.
+          const box = await page.locator('#motion-glass').boundingBox();
+          const clip = { x: Math.round(box.x + 32), y: Math.round(box.y + 32), width: Math.round(box.width - 64), height: Math.round(box.height - 64) };
+          const shot = async () => (await page.screenshot({ clip })).toString('base64');
+          const atRest = await shot();
+          await page.keyboard.press('Escape');
+          await popup.waitFor({ state: 'detached' });
+          const [rest, bare] = await page.evaluate(sharpness, [atRest, await shot()]);
+          assert.ok(rest < bare / 20, `${query}: the Popup blurs the stripes at rest, ${rest} against ${bare} bare`);
+
+          // Shots of the Popup through the open and the close, each kept only if the Popup was still there after it.
+          const shots = [];
+          const take = async () => {
+            const image = await shot();
+            if (await popup.count() > 0) shots.push(image);
+          };
+          await trigger.click();
+          for (let index = 0; index < 200 && !(await page.evaluate(modalSettled, modalParts)); index += 1) await take();
+          const opening = shots.length;
+          await page.keyboard.press('Escape');
+          for (let index = 0; index < 200 && await popup.count() > 0; index += 1) await take();
+          const values = await page.evaluate(sharpness, shots);
+          assert.ok(opening > 5 && values.length - opening > 5, `${query}: shots were taken through the open (${opening}) and the close (${values.length - opening})`);
+          // The bare stripes read about 42, and a fade lets them through at several units.
+          const sharper = values.map((value, index) => ({ phase: index < opening ? 'open' : 'close', value })).filter(({ value }) => value > rest + 1);
+          assert.deepEqual(sharper.slice(0, 3), [], `${query}: ${sharper.length} of ${values.length} shots are sharper than at rest (${rest})`);
+          await page.close();
+        }
+      });
+
+      await t.test('an opaque palette and AlertDialog still fade their Backdrop and Popup', async () => {
+        for (const query of ['scrim', 'alert']) {
+          const page = await open(query);
+          const { opened, closed, rest } = await cycle(page);
+          for (const [phase, frames] of [['open', opened], ['close', closed]]) {
+            const label = `${query}, ${phase}`;
+            assert.ok(frames.some(({ backdrop, fading }) => fading && backdrop > 0 && backdrop < 1), `${label}: the Backdrop fades its opacity`);
+            assert.ok(frames.some(({ popup }) => popup > 0 && popup < 1), `${label}: the Popup fades`);
+            assert.ok(rest.scrim > 0 && frames.every(({ scrim }) => scrim === rest.scrim), `${label}: the scrim keeps its colour`);
+          }
+          await page.close();
+        }
       });
       assert.deepEqual(errors, []);
     } finally {
