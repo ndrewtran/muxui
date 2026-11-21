@@ -310,6 +310,8 @@ for (const engine of browserEngines()) {
         assert.equal((await state()).exiting, true, 'the first Popover is still in its exit');
         assert.equal((await state('Swap')).exiting, true);
         assert.ok(!(await tab.evaluate(() => window.focusLog)).includes('open-swap'), 'the button that opened the second Popover never takes focus');
+        await settled();
+        assert.equal(await settled('Swap'), 'trigger', 'once both have gone, focus is on the first Popover\'s trigger');
       });
 
       await scenario('a Popover dismissed during the exit of the Menu that opened it does not focus the dismissed item', async () => {
@@ -323,6 +325,8 @@ for (const engine of browserEngines()) {
         assert.equal(await tab.locator('.muxui-menu__popup[data-muxui-state-exiting]').count(), 1, 'the Menu is still in its exit');
         assert.equal((await state('Swap')).exiting, true);
         assert.ok(!(await tab.evaluate(() => window.focusLog)).includes('menu'), 'the dismissed Menu item never takes focus');
+        await tab.locator('.muxui-menu__popup').waitFor({ state: 'detached' });
+        assert.equal(await settled('Swap'), 'actions-trigger', 'once both have gone, focus is on the Menu\'s trigger');
       });
 
       await scenario('a trigger the closing action hides gets a single focus restore', async () => {

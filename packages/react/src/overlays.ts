@@ -718,7 +718,9 @@ interface PopoverSurfaceProps {
 
 function PopoverSurface({ modal, open, positionerRef, children, onPointerDownCapture, ...props }: PopoverSurfaceProps) {
   const surfaceRef = React.useRef<HTMLElement>(null);
-  const opener = useOpenerFocusFallback(open);
+  // Only a modal Popover gives focus back as it starts to close, so only it
+  // needs the opener of each opening; a non-modal one keeps its first.
+  const opener = useOpenerFocusFallback(modal ? open : true);
   React.useEffect(() => {
     const surface = surfaceRef.current;
     if (!modal || !surface) return undefined;
@@ -728,18 +730,27 @@ function PopoverSurface({ modal, open, positionerRef, children, onPointerDownCap
       if (!surface.contains(ownerDocument.activeElement)) surface.focus({ preventScroll: true });
       return undefined;
     }
-    // The exiting surface is inert, so a press inside it lands on the
-    // positioner rather than on the page beneath; keep that press from moving
-    // focus to the body.
+    // Closing has started. Once focus is outside the surface, it turns inert,
+    // so Tab, a pointer and a screen reader cannot reach it again, and a press
+    // on it lands on the positioner, which keeps that press from moving focus
+    // to the body. Focus that cannot go back to the opener stays where it is,
+    // where React Aria's restore on unmount still finds it.
     const positioner = positionerRef.current;
     const keepFocus = (event: Event) => event.preventDefault();
-    positioner?.addEventListener('mousedown', keepFocus);
-    // Closing has started: give focus back now, not when the exit animation
-    // ends and React Aria restores it. A frame later the page is no longer
-    // inert and an overlay opened in the same update has taken focus. Only
-    // focus still in the popover's own element, or lost to the body, moves:
-    // focus elsewhere, even in an overlay opened from inside, stays put. An
-    // opener that cannot take focus is left to React Aria's restore on unmount.
+    const seal = () => {
+      surface.inert = true;
+      positioner?.addEventListener('mousedown', keepFocus);
+    };
+    const sealOnLeave = (event: HTMLElementEventMap['focusout']) => {
+      if (!surface.contains(event.relatedTarget as Node | null)) seal();
+    };
+    if (surface.contains(ownerDocument.activeElement)) surface.addEventListener('focusout', sealOnLeave);
+    else seal();
+    // Give focus back now, not when the exit animation ends and React Aria
+    // restores it. A frame later the page is no longer inert and an overlay
+    // opened in the same update has taken focus. Only focus still in the
+    // popover's own element, or lost to the body, moves: focus elsewhere, even
+    // in an overlay opened from inside, stays put.
     const view = ownerDocument.defaultView;
     let dropRestore: (() => void) | undefined;
     const frame = view?.requestAnimationFrame(() => {
@@ -748,17 +759,18 @@ function PopoverSurface({ modal, open, positionerRef, children, onPointerDownCap
       if (opener && inPopover) dropRestore = restoreFocusTo(opener);
     });
     return () => {
+      surface.removeEventListener('focusout', sealOnLeave);
       positioner?.removeEventListener('mousedown', keepFocus);
+      surface.inert = false;
       if (frame !== undefined) view?.cancelAnimationFrame(frame);
       dropRestore?.();
     };
   }, [modal, open, opener, positionerRef]);
   // A stable scope releases containment without resetting consumer content.
-  // When closing starts, containment ends so focus can leave, and the surface
-  // turns inert so Tab, a pointer and a screen reader cannot reach it again.
+  // Containment ends when closing starts, so focus can leave the exiting surface.
   return React.createElement(FocusScope, {
     contain: modal && open,
-    children: React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1, inert: (modal && !open) || undefined, onPointerDownCapture }, children),
+    children: React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1, onPointerDownCapture }, children),
   });
 }
 
