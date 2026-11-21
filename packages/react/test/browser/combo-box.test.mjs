@@ -50,6 +50,10 @@ const entry = `import React from 'react';
   createRoot(document.getElementById('root')).render(h(cases[name]));
   document.documentElement.dataset.ready = name;`;
 
+// The scrolling test runs in every engine named; the others, and the shared Chrome, only when Chromium is among them.
+const engines = browserEngines();
+const chromiumSkip = !engines.includes('chromium') && 'runs in Chromium only, which MUXUI_BROWSER_ENGINES leaves out';
+
 let server;
 let browser;
 before(async () => {
@@ -61,14 +65,14 @@ before(async () => {
     },
     modules: { '/combo-box-entry.mjs': entry },
   });
-  browser = await launchBrowser();
+  if (!chromiumSkip) browser = await launchBrowser();
 });
 after(async () => {
   await browser?.close();
   await server?.close();
 });
 
-test('real browser ComboBox reports a cleared selection and submits an empty value', { timeout: 90_000 }, async () => {
+test('real browser ComboBox reports a cleared selection and submits an empty value', { timeout: 90_000, skip: chromiumSkip }, async () => {
   const { url } = server;
   const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
   try {
@@ -137,7 +141,7 @@ test('real browser ComboBox reports a cleared selection and submits an empty val
   }
 });
 
-test('real browser ComboBox opens its list at the field\'s width and draws each option by its real state', { timeout: 90_000 }, async () => {
+test('real browser ComboBox opens its list at the field\'s width and draws each option by its real state', { timeout: 90_000, skip: chromiumSkip }, async () => {
   const { url } = server;
   const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
   try {
@@ -212,7 +216,7 @@ test('real browser ComboBox opens its list at the field\'s width and draws each 
 // React Aria keeps the focused option in view by scrolling the list, and scrolls the page when the list cannot
 // scroll, which closes the list. A tall viewport leaves the list its 17.5rem cap; a short one leaves it only the space
 // React Aria reports below the field.
-for (const engine of browserEngines()) {
+for (const engine of engines) {
   test(`real browser ComboBox scrolls its list, not the page, to keep the focused option in view in ${engine}`, { timeout: 120_000 }, async (t) => {
     const { url } = server;
     // Chromium runs in the file's browser; another engine gets its own.
