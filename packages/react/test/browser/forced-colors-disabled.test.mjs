@@ -8,7 +8,7 @@ import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startSer
 // selected rule paints the Highlight pair, and takes GrayText in the rest. Each disabled item is read where its text
 // paints, since a descendant with its own colour does not inherit the item's. An enabled selected Table row, underline
 // Tab, GridList item and Tree item takes the Highlight pair in either scheme, whatever fill its family uses outside
-// forced colours. Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs) that can emulate forced colours.
+// forced colours, and a disabled one there keeps GrayText. Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs) that can emulate forced colours.
 
 const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
@@ -190,7 +190,7 @@ for (const engine of browserEngines()) {
       await page.goto(`${server.url}/forced-colors.html?case=chosen`, { waitUntil: 'load' });
       await page.waitForFunction(() => document.documentElement.dataset.ready === 'chosen');
       await awaitFontsAndFrames(page);
-      const [highlight, highlightText] = await page.evaluate(() => ['Highlight', 'HighlightText'].map((value) => {
+      const [highlight, highlightText, grayText] = await page.evaluate(() => ['Highlight', 'HighlightText', 'GrayText'].map((value) => {
         const probe = document.body.appendChild(document.createElement('span'));
         probe.style.backgroundColor = value;
         const color = getComputedStyle(probe).backgroundColor;
@@ -208,6 +208,8 @@ for (const engine of browserEngines()) {
           assert.deepEqual([selected.selected, other.selected], [true, false], `${scheme} ${family}: the first item is selected`);
           assert.deepEqual([selected.background, selected.text], [highlight, highlightText], `${scheme} ${family}: the selected item is HighlightText on Highlight`);
           assert.notEqual(other.background, highlight, `${scheme} ${family}: an unselected item has no Highlight fill`);
+          // The second item is disabled, and a scheme's own item colours do not paint over GrayText.
+          assert.deepEqual([other.disabled, other.text], [true, grayText], `${scheme} ${family}: the disabled item's text is GrayText`);
         }
       }
     } finally {
