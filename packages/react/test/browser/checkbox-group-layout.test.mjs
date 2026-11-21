@@ -6,7 +6,8 @@ import { Checkbox } from '../../src/components.ts';
 import { CheckboxGroup } from '../../src/fields.ts';
 import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
 
-// Layout only, so the page is server-rendered and never hydrates.
+// Layout only, so the page is server-rendered and never hydrates. A horizontal group's description and error each take
+// a row of their own below the options.
 const six = ['One', 'Two', 'Three', 'Four', 'Five', 'Six'];
 const two = six.slice(0, 2);
 const long = ['A long option label that cannot fit on one line in a narrow column', 'Short'];
@@ -21,7 +22,9 @@ function documentHtml() {
     column('long-labelled', '200px', long, { label: 'Long labelled' }),
     column('long-unlabelled', '200px', long, { 'aria-label': 'Long unlabelled' }),
     column('fits', '600px', two, { label: 'Fits', orientation: 'horizontal' }),
-    column('vertical', '600px', two, { label: 'Vertical' })));
+    column('vertical', '600px', two, { label: 'Vertical' }),
+    column('described', '200px', six, { label: 'Described', orientation: 'horizontal', description: 'Pick any', errorMessage: 'Pick one', invalid: true }),
+    column('described-fits', '600px', two, { label: 'Fits', orientation: 'horizontal', description: 'Pick any', errorMessage: 'Pick one', invalid: true })));
   return pageShell({
     attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"',
     head: '<link rel="stylesheet" href="/generated/styles.css"><style>main { display: flex; flex-direction: column; gap: 32px; }</style>',
@@ -44,6 +47,7 @@ function measure(page, id) {
       group: box(column.querySelector('.muxui-checkbox-group')),
       boxes: [...column.querySelectorAll('.muxui-checkbox')].map(box),
       indicators: [...column.querySelectorAll('.muxui-checkbox__indicator')].map((node) => node.getBoundingClientRect().width),
+      notes: [...column.querySelectorAll('.muxui-field-description, .muxui-field-error')].map(box),
     };
   });
 }
@@ -85,6 +89,26 @@ for (const engine of browserEngines()) {
         const previousRow = boxes.filter((box) => box.top < rowStarts[0].top - 1);
         const rowGap = rowStarts[0].top - Math.max(...previousRow.map((box) => box.bottom));
         assert.ok(Math.abs(rowGap - verticalGap) < 0.5, `${id}: wrapped rows are ${rowGap}px apart, the ${verticalGap}px a vertical group puts between options`);
+      }
+
+      // A wrapped or one-row horizontal group puts its description and error each on a row of its own below the options,
+      // starting at the group's edge, and the options do not move. A group with neither gains no row.
+      assert.ok(Math.abs(fits.group.bottom - Math.max(...fits.boxes.map((box) => box.bottom))) < 0.5, 'a group without a description or error ends at its options');
+      for (const id of ['described', 'described-fits']) {
+        const measured = await measure(page, id);
+        assertInside(id, measured);
+        assert.equal(measured.notes.length, 2, `${id}: the description and the error render`);
+        const optionsBottom = Math.max(...measured.boxes.map((box) => box.bottom));
+        const [description, error] = measured.notes;
+        for (const [part, note] of [['description', description], ['error', error]]) {
+          assert.ok(Math.abs(note.left - measured.group.left) < 0.5, `${id}: the ${part} starts at the group's edge, not beside an option (left ${note.left})`);
+          assert.ok(note.top >= optionsBottom - 0.5, `${id}: the ${part} sits below the options`);
+        }
+        assert.ok(error.top >= description.bottom - 0.5, `${id}: the error sits below the description`);
+      }
+      const described = (await measure(page, 'described-fits')).boxes;
+      for (const [index, box] of fits.boxes.entries()) {
+        for (const edge of ['left', 'right', 'top', 'bottom']) assert.ok(Math.abs(described[index][edge] - box[edge]) < 0.5, `a description and an error do not move option ${index + 1} (${edge})`);
       }
 
       for (const id of ['long-labelled', 'long-unlabelled']) {

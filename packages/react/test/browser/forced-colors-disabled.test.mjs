@@ -6,12 +6,13 @@ import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startSer
 // raise it, and its text takes the system GrayText colour, so it still reads as disabled beside an enabled item. An
 // enabled item keeps its colour. A disabled item that is selected keeps its selected colours in the families whose
 // selected rule paints the Highlight pair, and takes GrayText in the rest. Each disabled item is read where its text
-// paints, since a descendant with its own colour does not inherit the item's.
-// Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs) that can emulate forced colours.
+// paints, since a descendant with its own colour does not inherit the item's. An enabled selected Table row, underline
+// Tab, GridList item and Tree item takes the Highlight pair in either scheme, whatever fill its family uses outside
+// forced colours. Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs) that can emulate forced colours.
 
 const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
-  import { ColorArea, ColorSlider, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, Select, Slider, Table, Tabs, Tree } from '/src/collections.mjs';
+  import { ColorArea, ColorSlider, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, Select, Slider, Table, Tabs, Tree, Virtualizer } from '/src/collections.mjs';
   import '/generated/styles.css';
   const h = React.createElement;
   const items = [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two', disabled: true }];
@@ -24,6 +25,7 @@ const entry = `import React from 'react';
       h(Table, { 'aria-label': 'Table', columns, rows }),
       h(Tree, { 'aria-label': 'Tree', items }),
       h(Tabs, { 'aria-label': 'Tabs', items }),
+      h(Virtualizer, { 'aria-label': 'Rows', items, height: 80, itemHeight: 32 }),
       h(RadioGroup, { label: 'Radio', options: [{ value: 'one', label: 'One' }, { value: 'two', label: 'Two', disabled: true }] }),
       h(Slider, { label: 'Slider', disabled: true }),
       h(ColorArea, { label: 'Area', defaultValue: '#f00', disabled: true }),
@@ -38,6 +40,12 @@ const entry = `import React from 'react';
       h(Tree, { 'aria-label': 'Tree', items, disabled: true, selectionMode: 'single', defaultSelectedIds: ['one'] }),
       h(Tabs, { 'aria-label': 'Tabs', items, disabled: true, variant: 'underline' }),
       h(RadioGroup, { label: 'Radio', disabled: true, defaultValue: 'one', options: [{ value: 'one', label: 'One' }, { value: 'two', label: 'Two' }] })),
+    // Enabled collections whose first item is selected, in each scheme.
+    chosen: () => h('div', null, ...['light', 'dark'].map((scheme) => h('section', { key: scheme, 'data-muxui-color-scheme': scheme },
+      h(Table, { 'aria-label': 'Table', columns, rows, selectionMode: 'single', defaultSelectedIds: ['one'] }),
+      h(Tabs, { 'aria-label': 'Tabs', items, variant: 'underline' }),
+      h(GridList, { 'aria-label': 'Grid', items, selectionMode: 'single', defaultSelectedIds: ['one'] }),
+      h(Tree, { 'aria-label': 'Tree', items, selectionMode: 'single', defaultSelectedIds: ['one'] })))),
     menu: () => h(Menu.Root, { defaultOpen: true },
       h(Menu.Trigger, null, 'Actions'),
       h(Menu.Popup, null, h(Menu.List, { 'aria-label': 'Actions', items }))),
@@ -68,7 +76,9 @@ const read = (page, selector) => page.locator(selector).evaluateAll((nodes) => n
   const text = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, { acceptNode: (child) => (child.data.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP) }).nextNode();
   return {
     disabled: node.hasAttribute('data-muxui-state-disabled') || node.getAttribute('aria-disabled') === 'true',
+    selected: node.hasAttribute('data-muxui-state-selected') || node.getAttribute('aria-selected') === 'true',
     opacity: Number(getComputedStyle(node).opacity),
+    background: getComputedStyle(node).backgroundColor,
     text: text ? getComputedStyle(text.parentElement).color : undefined,
   };
 }));
@@ -117,6 +127,7 @@ for (const engine of browserEngines()) {
       await pair('Table', '.muxui-table__row');
       await pair('Tree', '.muxui-tree__item');
       await pair('Tabs', '.muxui-tabs__tab');
+      await pair('Virtualizer', '.muxui-virtualizer__item');
       await pair('RadioGroup', '.muxui-radio-group__radio');
       // Swatches carry no text, so only their opacity says anything.
       await pair('ColorSwatchPicker', '.muxui-color-swatch-picker__item', { textColor: false });
@@ -165,6 +176,39 @@ for (const engine of browserEngines()) {
         const marked = await page.locator(`.muxui-${part}__option`).nth(1).getAttribute('aria-selected');
         assert.deepEqual([selected.disabled, marked, selected.opacity], [true, 'true', 1], `${family}: the selected disabled option is undimmed`);
         assert.equal(selected.text, grayText, `${family}: the selected disabled option's text is GrayText`);
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test(`selected collection items take the Highlight pair under forced colours in ${engine}`, { skip: engine === 'webkit' && 'WebKit has no forced-colors mode' }, async () => {
+    const browser = await launchBrowser(engine);
+    const page = await browser.newPage({ reducedMotion: 'reduce' });
+    try {
+      await page.emulateMedia({ forcedColors: 'active' });
+      await page.goto(`${server.url}/forced-colors.html?case=chosen`, { waitUntil: 'load' });
+      await page.waitForFunction(() => document.documentElement.dataset.ready === 'chosen');
+      await awaitFontsAndFrames(page);
+      const [highlight, highlightText] = await page.evaluate(() => ['Highlight', 'HighlightText'].map((value) => {
+        const probe = document.body.appendChild(document.createElement('span'));
+        probe.style.backgroundColor = value;
+        const color = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return color;
+      }));
+      for (const scheme of ['light', 'dark']) {
+        for (const [family, selector] of [
+          ['Table', '.muxui-table__row'],
+          ['Tabs', '.muxui-tabs__tab'],
+          ['GridList', '.muxui-grid-list__item'],
+          ['Tree', '.muxui-tree__item'],
+        ]) {
+          const [selected, other] = await read(page, `[data-muxui-color-scheme='${scheme}'] ${selector}`);
+          assert.deepEqual([selected.selected, other.selected], [true, false], `${scheme} ${family}: the first item is selected`);
+          assert.deepEqual([selected.background, selected.text], [highlight, highlightText], `${scheme} ${family}: the selected item is HighlightText on Highlight`);
+          assert.notEqual(other.background, highlight, `${scheme} ${family}: an unselected item has no Highlight fill`);
+        }
       }
     } finally {
       await browser.close();

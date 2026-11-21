@@ -5,7 +5,8 @@ import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startSer
 
 // A standalone ToggleButton shows a pressed fill while a pointer holds it, apart from rest, hover and selected, in both
 // schemes; a grouped one keeps the group's paint. The quiet variant draws no outline and no selected fill, its selected
-// text is a real luminance step stronger than its rest text, and under forced colours it uses system colours.
+// text is a real luminance step stronger than its rest text. Under forced colours both variants use system colours: a
+// selected one is HighlightText on Highlight, a disabled one GrayText at full opacity, and keyboard focus a Highlight outline.
 // preventFocusOnPress leaves focus and the text selection in an editor on a pointer press, and the keyboard still
 // focuses the tool. Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
@@ -21,6 +22,7 @@ const pin = () => h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 
 const scheme = (name) => h('section', { key: name, id: name, 'data-muxui-color-scheme': name },
   h(ToggleButton, { id: name + '-off' }, 'Bold'),
   h(ToggleButton, { id: name + '-on', defaultSelected: true }, 'Bold'),
+  h(ToggleButton, { id: name + '-disabled', disabled: true }, 'Bold'),
   h(ToggleButton, { id: name + '-quiet-off', variant: 'quiet', 'aria-label': 'Pin' }, pin()),
   h(ToggleButton, { id: name + '-quiet-on', variant: 'quiet', defaultSelected: true, 'aria-label': 'Pin' }, pin()),
   h(ToggleButton, { id: name + '-quiet-disabled', variant: 'quiet', disabled: true, 'aria-label': 'Pin' }, pin()),
@@ -191,7 +193,7 @@ for (const engine of browserEngines()) {
     }
   });
 
-  test(`A quiet ToggleButton uses system colours under forced colours, in ${engine}`, { timeout: 120_000 }, async (t) => {
+  test(`A default or quiet ToggleButton uses system colours under forced colours, in ${engine}`, { timeout: 120_000 }, async (t) => {
     const { tab, errors, close } = await openPage(engine);
     try {
       await tab.emulateMedia({ forcedColors: 'active' });
@@ -212,18 +214,28 @@ for (const engine of browserEngines()) {
         return { background: style.backgroundColor, color: style.color, outline: style.outlineColor, opacity: style.opacity };
       });
       for (const scheme of ['light', 'dark']) {
-        const off = await read(`${scheme}-quiet-off`);
-        assert.deepEqual([off.color, off.outline], [system.ButtonText, system.ButtonText], `${scheme} quiet text and edge are ButtonText`);
-        const on = await read(`${scheme}-quiet-on`);
-        assert.deepEqual([on.background, on.color], [system.Highlight, system.HighlightText], `${scheme} quiet selected is Highlight`);
-        const disabled = await read(`${scheme}-quiet-disabled`);
-        assert.deepEqual([disabled.color, disabled.outline, disabled.opacity], [system.GrayText, system.GrayText, '1'], `${scheme} quiet disabled is GrayText at full opacity`);
+        for (const variant of ['', 'quiet-']) {
+          const name = `${scheme} ${variant || 'default-'}`;
+          const off = await read(`${scheme}-${variant}off`);
+          assert.deepEqual([off.color, off.outline], [system.ButtonText, system.ButtonText], `${name}text and edge are ButtonText`);
+          const on = await read(`${scheme}-${variant}on`);
+          assert.deepEqual([on.background, on.color], [system.Highlight, system.HighlightText], `${name}selected is Highlight`);
+          const disabled = await read(`${scheme}-${variant}disabled`);
+          assert.deepEqual([disabled.color, disabled.outline, disabled.opacity], [system.GrayText, system.GrayText, '1'], `${name}disabled is GrayText at full opacity`);
+        }
       }
+      const focusRing = (id) => tab.locator(`#${id}`).evaluate((element) => ({ active: document.activeElement === element, outline: getComputedStyle(element).outlineColor, width: getComputedStyle(element).outlineWidth }));
+      // Keyboard focus, unselected and selected, then the quiet one. The first button is reached from the second, since
+      // Shift+Tab from the first leaves the page.
+      await tab.locator('#light-on').focus();
+      await tab.keyboard.press('Shift+Tab');
+      assert.deepEqual(await focusRing('light-off'), { active: true, outline: system.Highlight, width: '2px' }, 'the default focus outline is Highlight');
+      await tab.keyboard.press('Tab');
+      assert.deepEqual(await focusRing('light-on'), { active: true, outline: system.Highlight, width: '2px' }, 'the selected default focus outline is Highlight');
       await tab.locator('#light-quiet-off').focus();
       await tab.keyboard.press('Shift+Tab');
       await tab.keyboard.press('Tab');
-      const focused = await tab.locator('#light-quiet-off').evaluate((element) => ({ active: document.activeElement === element, outline: getComputedStyle(element).outlineColor, width: getComputedStyle(element).outlineWidth }));
-      assert.deepEqual(focused, { active: true, outline: system.Highlight, width: '2px' }, 'the quiet focus outline is Highlight');
+      assert.deepEqual(await focusRing('light-quiet-off'), { active: true, outline: system.Highlight, width: '2px' }, 'the quiet focus outline is Highlight');
       assert.deepEqual(errors, []);
     } finally {
       await close();

@@ -208,8 +208,10 @@
   isolation: isolate;
 }
 
+/* :is() rather than :where(), so the square joins outrank a small IconButton's own corner rule; the outer corners
+   below still win on source order. */
 .muxui-button-group.muxui-button-group--attached
-  > :where(.muxui-button, .muxui-icon-button, .muxui-toggle-button) {
+  > :is(.muxui-button, .muxui-icon-button, .muxui-toggle-button) {
   position: relative;
   border-radius: 0;
 }

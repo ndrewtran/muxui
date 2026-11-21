@@ -143,8 +143,8 @@ async function assertPendingThenSettled(tab, errors) {
 
 // Button reads three component roles: the primary variant's background and foreground, and the corner radius of a
 // Button or IconButton at the md and lg sizes. Four things keep their own corner geometry and do not follow the radius
-// role: the sm size (option radius), the controls of an attached ButtonGroup (outer corners at the control radius, joins
-// square), Toolbar buttons and the Lightbox close control. A scheme scope assigns distinct values and the computed style
+// role: the sm size (option radius), the controls of an attached ButtonGroup at every size (outer corners at the control
+// radius, joins square), Toolbar buttons and the Lightbox close control. A scheme scope assigns distinct values and the computed style
 // must follow, in each scheme. A stylesheet with the three reads removed, leaving their fallbacks, must fail the checks.
 const generatedStyles = await readFile(resolve(import.meta.dirname, '../../generated/styles.css'), 'utf8');
 const roleVariants = ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'];
@@ -164,12 +164,18 @@ function roleControls(scope) {
     h(Button, { id: `${scope}-group-${orientation}-${size}-0`, size }, 'One'),
     h(IconButton, { id: `${scope}-group-${orientation}-${size}-1`, size, 'aria-label': 'Add' }, '+'),
     h(Button, { id: `${scope}-group-${orientation}-${size}-2`, size }, 'Three'))));
+  // IconButtons at both ends, whose own sm corner rule outranks the group's square joins.
+  const ends = ['horizontal', 'vertical'].flatMap((orientation) => roleSizes.map((size) => h(ButtonGroup, { key: `ends-${orientation}-${size}`, attached: true, orientation, 'aria-label': 'Group' },
+    h(IconButton, { id: `${scope}-ends-${orientation}-${size}-0`, size, 'aria-label': 'Add' }, '+'),
+    h(Button, { id: `${scope}-ends-${orientation}-${size}-1`, size }, 'Two'),
+    h(IconButton, { id: `${scope}-ends-${orientation}-${size}-2`, size, 'aria-label': 'Remove' }, '-'))));
   return [
     ...roleVariants.flatMap((variant) => roleSizes.flatMap((size) => [
       h(Button, { key: `button-${variant}-${size}`, id: `${scope}-button-${variant}-${size}`, variant, size }, 'Save'),
       h(IconButton, { key: `icon-${variant}-${size}`, id: `${scope}-icon-${variant}-${size}`, variant, size, 'aria-label': 'Add' }, '+'),
     ])),
     ...attached,
+    ...ends,
     h(Toolbar, { key: 'toolbar', 'aria-label': 'Tools' }, h(Button, { id: `${scope}-toolbar` }, 'Cut')),
     h(LightboxClose, { key: 'lightbox', id: `${scope}-lightbox` }),
   ];
@@ -232,11 +238,13 @@ function observeRoles({ variants, sizes, assigned, semantic }) {
   const vertical = { first: [control, control, '0px', '0px'], middle: geometry.middle, last: ['0px', '0px', control, control] };
   for (const [orientation, expected] of [['horizontal', geometry], ['vertical', vertical]]) {
     for (const size of sizes) {
-      ['first', 'middle', 'last'].forEach((position, index) => {
-        const name = `${orientation}-${size}-${index}`;
-        check(corners(`assigned-group-${name}`) === corners(`plain-group-${name}`), `attached corners ignore the role ${name}`);
-        if (size !== 'sm') check(corners(`plain-group-${name}`) === expected[position].join(' '), `attached geometry ${name}`);
-      });
+      for (const group of ['group', 'ends']) {
+        ['first', 'middle', 'last'].forEach((position, index) => {
+          const name = `${orientation}-${size}-${index}`;
+          check(corners(`assigned-${group}-${name}`) === corners(`plain-${group}-${name}`), `attached corners ignore the role ${group} ${name}`);
+          check(corners(`plain-${group}-${name}`) === expected[position].join(' '), `attached geometry ${group} ${name}`);
+        });
+      }
     }
   }
   check(read('assigned-toolbar').radius === read('plain-toolbar').radius, 'toolbar radius ignores the role');

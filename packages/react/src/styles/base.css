@@ -1691,9 +1691,10 @@
   row-gap: var(--muxui-semantic-layout-control-gap);
 }
 
-/* A horizontal group wraps its options, so the group error takes a row of its own. The margin keeps the error
-   as far below the options as the gap between two options, as it was before the rows drew closer. */
-.muxui-radio-group[data-muxui-state-orientation='horizontal'] > .muxui-radio-group__error {
+/* A horizontal group wraps its options, so the group error, and a CheckboxGroup's description, takes a row of its own.
+   The margin keeps it as far below the options as the gap between two options, as it was before the rows drew closer. */
+.muxui-radio-group[data-muxui-state-orientation='horizontal'] > .muxui-radio-group__error,
+.muxui-checkbox-group[data-muxui-state-orientation='horizontal'] > :is(.muxui-field-description, .muxui-field-error) {
   flex-basis: 100%;
   margin-block-start: calc(var(--muxui-semantic-layout-content-gap) - var(--muxui-semantic-layout-control-gap));
 }
