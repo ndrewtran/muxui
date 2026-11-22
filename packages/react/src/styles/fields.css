@@ -714,7 +714,9 @@
   }
 }
 
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+/* A theme preset scope without a scheme of its own is light, so these dark field colours stop there too: the field's
+   placeholder follows the preset's role and would be drawn on the dark surface. */
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme], [data-muxui-theme]) {
   :scope .muxui-search-field .muxui-field-input:not(:hover, :focus, [data-muxui-state-focused], [data-muxui-state-open], [data-muxui-state-disabled], [data-muxui-state-invalid]),
   :scope .muxui-autocomplete__search:not([data-muxui-state-disabled], [data-muxui-state-invalid]) .muxui-field-input:not(:hover, :focus, [data-muxui-state-focused], [data-muxui-state-open], [data-muxui-state-disabled], [data-muxui-state-invalid]),
   :scope .muxui-color-field .muxui-field-input:not(:hover, :focus, [data-muxui-state-focused], [data-muxui-state-open], [data-muxui-state-disabled], [data-muxui-state-invalid]) {

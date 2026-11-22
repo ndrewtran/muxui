@@ -37,7 +37,7 @@ const families = {
   sidebar: h('div', { style: { width: '16rem' } }, h(M.Sidebar.Root, { 'aria-label': 'Workspace' }, h(M.Sidebar.Header, null, h(M.Sidebar.Search)))),
 };
 
-const stylesheet = await readFile(resolve(packageRoot, 'generated/styles.css'), 'utf8');
+const [stylesheet, themes] = await Promise.all(['styles', 'themes'].map((name) => readFile(resolve(packageRoot, `generated/${name}.css`), 'utf8')));
 const body = Object.entries(families).map(([family, element]) => `<div data-family="${family}" style="padding:8px">${renderToString(element)}</div>`).join('');
 const documentFor = (scheme) => `<!doctype html><html data-muxui-color-scheme="${scheme}"><head><meta charset="utf-8"><style>${stylesheet}</style></head>`
   + `<body style="margin:0;background:var(--muxui-semantic-surface-canvas)">${body}</body></html>`;
@@ -81,6 +81,9 @@ function placeholders({ values = false } = {}) {
       kind: own === undefined ? 'value' : 'placeholder',
       color: style.color,
       text: paint([...ground, { color: style.color, opacity: Number(style.opacity) }]),
+      // The colour itself, and the field placeholder role where the element sits, to tell whether it follows the role.
+      painted: paint([{ color: style.color }]),
+      role: paint([{ color: getComputedStyle(element).getPropertyValue('--muxui-semantic-field-placeholder') }]),
       ground: paint(ground),
     });
   };
@@ -96,6 +99,26 @@ function placeholders({ values = false } = {}) {
   }
   return rows;
 }
+
+// Every shipped theme preset, read from the generated theme stylesheet.
+const presets = [...new Set([...themes.matchAll(/\[data-muxui-theme='([a-z-]+)'\]/gu)].map(([, id]) => id))];
+// The families whose placeholder is the field placeholder role; PromptComposer and TokenField keep colours of their own.
+const ownColours = new Set(['prompt-composer', 'token-field']);
+// Each preset four ways, scheme and contrast named on its scope, and once more nested under a dark page without a scheme of
+// its own, where it is light: a variable resolved on the page and not on the preset's scope would keep the page's value.
+const presetScopes = presets.flatMap((preset) => [
+  ...['light', 'dark'].flatMap((scheme) => ['standard', 'more'].map((contrast) => ({
+    name: `${preset} ${scheme} ${contrast}`,
+    attributes: `data-muxui-theme="${preset}" data-muxui-color-scheme="${scheme}"${contrast === 'more' ? ' data-muxui-contrast="more"' : ''}`,
+  }))),
+  { name: `${preset} nested under dark`, attributes: `data-muxui-theme="${preset}"`, nested: true },
+]);
+const presetDocument = () => `<!doctype html><html data-muxui-color-scheme="dark"><head><meta charset="utf-8"><style>${stylesheet}</style><style>${themes}</style></head>`
+  + '<body style="margin:0;background:var(--muxui-semantic-surface-canvas)">'
+  + presetScopes.map(({ name, attributes }) => `<section ${attributes} style="background:var(--muxui-semantic-surface-canvas)">`
+    + Object.entries(families).map(([family, element]) => `<div data-family="${name}|${family}" style="padding:8px">${renderToString(element)}</div>`).join('')
+    + '</section>').join('')
+  + '</body></html>';
 
 /** The rows of `rows` below 4.5:1, labelled for the failure list. */
 const below = (rows, label) => rows.flatMap(({ family, part, kind, text, ground }) => {
@@ -154,6 +177,26 @@ for (const engine of browserEngines()) {
         shortfalls.push(...below(rows, scheme));
       }
       assert.deepEqual([...new Set(shortfalls)], []);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test(`Placeholders follow every theme preset's role and reach 4.5:1 in each scheme and contrast in ${engine}`, { timeout: 180_000 }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage();
+      await tab.setContent(presetDocument());
+      const rows = (await tab.evaluate(placeholders)).map((row) => {
+        const [scope, family] = row.family.split('|');
+        return { ...row, scope, family };
+      });
+      assert.equal(presets.length, 15, 'the shipped presets are found');
+      assert.deepEqual(presetScopes.filter(({ name }) => !rows.some((row) => row.scope === name)).map(({ name }) => name), [], 'every scope shows placeholders');
+      const same = (left, right) => left.r === right.r && left.g === right.g && left.b === right.b;
+      const strays = rows.filter((row) => !ownColours.has(row.family) && !same(row.painted, row.role)).map((row) => `${row.scope} ${row.family} ${row.part}`);
+      assert.deepEqual([...new Set(strays)], [], 'each placeholder takes the field placeholder role of its scope');
+      assert.deepEqual([...new Set(rows.flatMap((row) => below([row], row.scope)))], []);
     } finally {
       await browser.close();
     }
