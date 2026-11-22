@@ -459,7 +459,9 @@
         "to": 10,
         "change": "expectedWithin 12 -> 10",
         "reason": "Restores the limit that pull request 511 raised from 10 to 12 to fit the twelfth place its two new ToggleButton examples caused; a threshold is never changed to fit a failure. Search now keeps only the best-ranked example of each family in place and lists the family's further examples that miss a word of the query after every other result, so the number of examples that match only part of the query no longer moves the pattern; a family's examples that match every word of the query keep their places. Stated before the grouped ranking was measured.",
-        "pullRequests": []
+        "pullRequests": [
+          522
+        ]
       },
       {
         "query": "billing toggle",
@@ -468,7 +470,9 @@
         "to": "The Toggle component, example and guide ids and names outscore the pattern for a component word, so the ToggleButton, ToggleButtonGroup and ColorModeToggle components, their guides and the best-ranked example of each family rank above it. A family's further examples that match only the word toggle follow every other result, so the pattern ranks ninth however many such examples those families have; an example that matched both words would keep its place.",
         "change": "knownWeakness reworded to say which results still outrank the pattern once a family's further examples that miss a query word follow every other result, and that it ranks ninth",
         "reason": "The weakness that remains is stated from the scoring rules and the scores on main before the grouped ranking was measured: three components, two guides and the best-ranked example of each of the three families outscore the pattern.",
-        "pullRequests": []
+        "pullRequests": [
+          522
+        ]
       }
     ]
   },
