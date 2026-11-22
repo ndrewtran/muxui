@@ -194,6 +194,11 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
+/* A disabled ColorField keeps its own placeholder colour, fixed neutral step 60 in both schemes. */
+.muxui-color-field .muxui-field-input:is(:disabled, [data-muxui-state-disabled])::placeholder {
+  color: var(--muxui-semantic-color-neutral-default-60);
+}
+
 .muxui-color-field .muxui-field-input[data-muxui-state-focused] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);

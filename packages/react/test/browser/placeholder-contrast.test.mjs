@@ -37,7 +37,41 @@ const families = {
   sidebar: h('div', { style: { width: '16rem' } }, h(M.Sidebar.Root, { 'aria-label': 'Workspace' }, h(M.Sidebar.Header, null, h(M.Sidebar.Search)))),
 };
 
+// Disabled placeholders are exempt from the contrast rule and keep the colour they had before it: the role each family drew a
+// disabled placeholder in, per scheme. The disabled treatment's opacity is declared elsewhere and comes on top of that colour.
+const disabledFamilies = {
+  'text-field': h(M.TextField, { label: 'Name', placeholder: 'Ada Lovelace', disabled: true }),
+  'text-area': h(M.TextArea.Root, { disabled: true }, h(M.TextArea.Label, null, 'Notes'), h(M.TextArea.TextArea, { rows: 3, placeholder: 'Write a note' })),
+  input: h(M.Input.Root, { disabled: true }, h(M.Input.Label, null, 'Name'), h(M.Input.Input, { placeholder: 'Ada Lovelace' })),
+  'payment-input': h(M.PaymentInput.Root, { disabled: true }, h(M.PaymentInput.Label, null, 'Card number'), h(M.PaymentInput.Group, null, h(M.PaymentInput.Input, { placeholder: '1234 1234 1234 1234' }))),
+  'search-field': h(M.SearchField, { label: 'Search', placeholder: 'Search files', disabled: true }),
+  'number-field': h(M.NumberField, { label: 'Quantity', placeholder: 'Any amount', disabled: true }),
+  'color-field': h(M.ColorField, { label: 'Colour', placeholder: '#000000', disabled: true }),
+  'combo-box': h(M.ComboBox, { label: 'City', items, placeholder: 'Choose a city', disabled: true }),
+  autocomplete: h(M.Autocomplete, { label: 'City', items, placeholder: 'Find a city', disabled: true }),
+  select: h(M.Select, { label: 'City', items, placeholder: 'Choose a city', disabled: true }),
+  'multi-select': h(M.MultiSelect.Root, { label: 'Technologies', items: options, placeholder: 'Choose', disabled: true }, (item) => h(M.MultiSelect.Item, { id: item.id, textValue: item.label }, item.label)),
+  'tag-select': h(M.TagSelect.Root, { label: 'Tags', items: options, placeholder: 'Add a tag', disabled: true }, (item) => item.label),
+  'input-tags': h(M.InputTags.Root, { label: 'Technologies', placeholder: 'Add a tag', disabled: true }),
+  'date-field': h(M.DateField, { label: 'Birthday', disabled: true }),
+  'time-field': h(M.TimeField, { label: 'Start time', disabled: true }),
+  'date-picker': h(M.DatePicker, { label: 'Due date', disabled: true }),
+  'date-range-picker': h(M.DateRangePicker, { label: 'Stay', disabled: true }),
+};
+const neutral50 = '--muxui-semantic-color-neutral-50';
+const fixed60 = '--muxui-semantic-color-neutral-default-60';
+const disabledRoles = {
+  'number-field': { light: '--muxui-semantic-content-muted', dark: fixed60 },
+  'color-field': { light: fixed60, dark: fixed60 },
+  'multi-select': { light: '--muxui-semantic-color-neutral-60', dark: '--muxui-semantic-color-neutral-60' },
+  ...Object.fromEntries(['date-field', 'time-field', 'date-picker', 'date-range-picker'].map((family) => [family, { light: fixed60, dark: fixed60 }])),
+};
+const disabledRole = (family, scheme) => disabledRoles[family]?.[scheme] ?? neutral50;
+
 const [stylesheet, themes] = await Promise.all(['styles', 'themes'].map((name) => readFile(resolve(packageRoot, `generated/${name}.css`), 'utf8')));
+const disabledBody = Object.entries(disabledFamilies).map(([family, element]) => `<div data-family="${family}" style="padding:8px">${renderToString(element)}</div>`).join('');
+const disabledDocument = (scheme) => `<!doctype html><html data-muxui-color-scheme="${scheme}"><head><meta charset="utf-8"><style>${stylesheet}</style></head>`
+  + `<body style="margin:0;background:var(--muxui-semantic-surface-canvas)">${disabledBody}</body></html>`;
 const body = Object.entries(families).map(([family, element]) => `<div data-family="${family}" style="padding:8px">${renderToString(element)}</div>`).join('');
 const documentFor = (scheme) => `<!doctype html><html data-muxui-color-scheme="${scheme}"><head><meta charset="utf-8"><style>${stylesheet}</style></head>`
   + `<body style="margin:0;background:var(--muxui-semantic-surface-canvas)">${body}</body></html>`;
@@ -177,6 +211,42 @@ for (const engine of browserEngines()) {
         shortfalls.push(...below(rows, scheme));
       }
       assert.deepEqual([...new Set(shortfalls)], []);
+    } finally {
+      await browser.close();
+    }
+  });
+
+  test(`Disabled placeholders keep the colour each family drew them in before in both schemes in ${engine}`, { timeout: 120_000 }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage();
+      const changed = [];
+      for (const scheme of ['light', 'dark']) {
+        await tab.setContent(disabledDocument(scheme));
+        const rows = await tab.evaluate(placeholders);
+        assert.deepEqual(Object.keys(disabledFamilies).filter((family) => !rows.some((row) => row.family === family)), [], `${scheme}: every disabled family shows a placeholder`);
+        const expected = await tab.evaluate((names) => {
+          const probe = document.createElement('div');
+          document.body.append(probe);
+          const canvas = document.createElement('canvas');
+          canvas.width = 1;
+          canvas.height = 1;
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          return Object.fromEntries(names.map((name) => {
+            probe.style.color = `var(${name})`;
+            context.clearRect(0, 0, 1, 1);
+            context.fillStyle = getComputedStyle(probe).color;
+            context.fillRect(0, 0, 1, 1);
+            const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+            return [name, { r, g, b }];
+          }));
+        }, [...new Set(Object.keys(disabledFamilies).map((family) => disabledRole(family, scheme)))]);
+        for (const { family, part, painted } of rows) {
+          const want = expected[disabledRole(family, scheme)];
+          if (painted.r !== want.r || painted.g !== want.g || painted.b !== want.b) changed.push(`${scheme} ${family} ${part}: ${JSON.stringify(painted)}, was ${JSON.stringify(want)}`);
+        }
+      }
+      assert.deepEqual([...new Set(changed)], []);
     } finally {
       await browser.close();
     }

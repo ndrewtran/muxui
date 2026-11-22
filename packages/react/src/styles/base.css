@@ -730,6 +730,12 @@
   color: var(--muxui-field-placeholder-color);
 }
 
+/* A disabled placeholder is exempt from the text contrast the role keeps, so a disabled field keeps neutral step 50 for it
+   under its disabled treatment. The few families with a disabled placeholder colour of their own declare it in their section. */
+:is(:disabled, [data-muxui-state-disabled], [aria-disabled='true']) {
+  --muxui-field-placeholder-color: var(--muxui-semantic-color-neutral-50);
+}
+
 .muxui-combo-box__arrow,
 .muxui-select__arrow {
   transition: transform var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
@@ -1195,6 +1201,10 @@
 .muxui-date-segment[data-muxui-state-placeholder] {
   color: var(--muxui-field-placeholder-color);
   font-style: italic;
+}
+
+.muxui-date-segment[data-muxui-state-placeholder][data-muxui-state-disabled] {
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 .muxui-date-segment[data-muxui-state-disabled] {

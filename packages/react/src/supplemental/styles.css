@@ -1758,6 +1758,11 @@ header.muxui-header-nav.muxui-header-nav--background {
   color: var(--muxui-field-placeholder-color);
 }
 
+/* A disabled MultiSelect keeps its own placeholder colour, neutral step 60. */
+.muxui-multi-select__trigger:disabled .muxui-multi-select__value--placeholder {
+  color: var(--muxui-semantic-color-neutral-60);
+}
+
 .muxui-multi-select__value--selected {
   color: var(--muxui-field-color);
   font-weight: var(--muxui-semantic-typography-control-weight);

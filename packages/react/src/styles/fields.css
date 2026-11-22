@@ -220,6 +220,17 @@
   outline: none;
 }
 
+/* A disabled NumberField keeps its own placeholder colour: muted in light, fixed neutral step 60 in dark. */
+.muxui-number-field__control > .muxui-field-input:is(:disabled, [data-muxui-state-disabled])::placeholder {
+  color: var(--muxui-semantic-content-muted);
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-number-field__control > .muxui-field-input:is(:disabled, [data-muxui-state-disabled])::placeholder {
+    color: var(--muxui-semantic-color-neutral-default-60);
+  }
+}
+
 .muxui-number-field__stepper {
   inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
