@@ -7,7 +7,7 @@
 // height barely moves, for the end, and recorded the page up to 3px too tall under load. With motion off the heights are the ones the springs
 // settle on (identical to the layout unit, 1/64px, on every page at every width below), so nothing is lost by not waiting for them.
 
-import { step, stepWithin } from './deadlines.mjs';
+import { deadline, step, stepWithin } from './deadlines.mjs';
 
 export const previewWidths = [320, 360, 390, 430, 600, 768, 900, 1024, 1180, 1280, 1440, 1700, 1920];
 /** Added to what is measured: a sub-pixel difference of another machine's font must not push the page. */
@@ -30,8 +30,10 @@ export async function measureIntrinsicHeights(page) {
 	const heights = { narrow: 0, wide: 0 };
 	for (const width of previewWidths) {
 		await step(`resizing to ${width}px`, page.setViewportSize({ width, height: 900 }));
-		// The page gives up after 15s, but only from an animation frame: this ends the wait when frames stop.
-		const { columns, height } = await step(`settling at ${width}px`, settledLayout(page), settleWithin + stepWithin);
+		// The page gives up after 15s, but only from an animation frame: this ends the wait when frames stop. A failure says what the page was doing.
+		const { columns, height } = await step(`settling at ${width}px`, settledLayout(page), settleWithin + stepWithin).catch(async (error) => {
+			throw new Error(`${error.message}; the page: ${await settling(page)}`, { cause: error });
+		});
 		const key = columns > 1 ? 'wide' : 'narrow';
 		heights[key] = Math.max(heights[key], Math.ceil(height));
 	}
@@ -54,9 +56,15 @@ function settledLayout(page) {
 		let last = read();
 		let since = start;
 		let frames = 0;
+		// What `settling` reports if this never ends: the frames seen and the last readings, as [ms since the start, height, columns].
+		const trace = { start, frames: 0, lastFrame: null, readings: [] };
+		window.__muxuiSettling = trace;
 		const look = () => {
 			const now = performance.now();
 			const seen = read();
+			trace.frames += 1;
+			trace.lastFrame = now;
+			trace.readings = [...trace.readings, [Math.round(now - start), seen.height, seen.columns]].slice(-8);
 			if (seen.columns !== last.columns || seen.height !== last.height) {
 				last = seen;
 				since = now;
@@ -68,4 +76,41 @@ function settledLayout(page) {
 		};
 		requestAnimationFrame(look);
 	}), settleWithin);
+}
+
+/**
+ * What a page whose layout did not settle was doing, as text for the failure: the frames the settle check saw and how long ago the last
+ * came, its last readings, whether frames run now (counted over 500ms), the page's visibility and focus, and its running animations. A page
+ * that does not answer in 5s has a busy main thread or a renderer that has stopped.
+ */
+function settling(page) {
+	const report = page.evaluate(() => new Promise((resolve) => {
+		const trace = window.__muxuiSettling;
+		const now = performance.now();
+		let framesNow = 0;
+		let counting = true;
+		const count = () => {
+			framesNow += 1;
+			if (counting) requestAnimationFrame(count);
+		};
+		requestAnimationFrame(count);
+		setTimeout(() => {
+			counting = false;
+			resolve({
+				settleFrames: trace?.frames ?? null,
+				msSinceStart: trace ? Math.round(now - trace.start) : null,
+				msSinceLastFrame: trace?.lastFrame == null ? null : Math.round(now - trace.lastFrame),
+				readings: trace?.readings ?? null,
+				framesIn500ms: framesNow,
+				visibility: document.visibilityState,
+				focused: document.hasFocus(),
+				animations: document.getAnimations().filter((animation) => animation.playState === 'running').map((animation) => ({
+					name: animation.animationName ?? animation.transitionProperty ?? animation.constructor.name,
+					time: Math.round(Number(animation.currentTime)),
+					target: animation.effect?.target?.className?.toString().slice(0, 60) ?? null,
+				})),
+			});
+		}, 500);
+	}));
+	return deadline('reading the page', report, 5000).then((found) => JSON.stringify(found), (error) => `${error.message} (its main thread is busy or its renderer has stopped)`);
 }
