@@ -185,6 +185,20 @@
               "optional": true,
               "type": "number",
               "doc": "The greatest height of the content, in lines of its text, beyond which it scrolls. It is rounded as minRows is and never less than minRows."
+            },
+            {
+              "name": "preset",
+              "optional": true,
+              "type": "'rich' | 'markdown'",
+              "values": ["rich", "markdown"],
+              "doc": "`rich` holds all the editor's formatting. `markdown` limits it to what Markdown holds: no underline, color, font or\nalignment. They are not in its document, so a paste loses them, their commands return false, and no tool or shortcut\noffers them; the toolbar shows Strikethrough in place of Underline. Only the first mount reads it."
+            },
+            {
+              "name": "markdown",
+              "optional": true,
+              "type": "TextEditorMarkdown",
+              "refs": ["text-editor#TextEditorMarkdown"],
+              "doc": "Makes the value Markdown text, read and reported through this object in place of `value`, `defaultValue` and `onChange`,\nwith the `markdown` preset. Pasted plain text is read as Markdown. Only the first mount reads whether it is set."
             }
           ],
           "ref": {
@@ -672,6 +686,49 @@
       "refs": ["text-editor#TextEditorFontFamily", "text-editor#TextEditorFontSize"]
     },
     {
+      "id": "text-editor#TextEditorMarkdown",
+      "name": "TextEditorMarkdown",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorMarkdown" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorMarkdown = {\n  fromMarkdown: (markdown: string) => TextEditorDocument;\n  toMarkdown: (document: TextEditorDocument) => string;\n  value?: string;\n  defaultValue?: string;\n  onChange?: (markdown: string) => void;\n};",
+      "members": [
+        {
+          "name": "fromMarkdown",
+          "type": "(markdown: string) => TextEditorDocument",
+          "refs": ["text-editor#TextEditorDocument"],
+          "doc": "`fromMarkdown` from `@muxui/react/text-editor/markdown`, which reads the Markdown into the editor."
+        },
+        {
+          "name": "toMarkdown",
+          "type": "(document: TextEditorDocument) => string",
+          "refs": ["text-editor#TextEditorDocument"],
+          "doc": "`toMarkdown` from `@muxui/react/text-editor/markdown`, which writes the editor's content as Markdown."
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "type": "string",
+          "doc": "The Markdown, when the application controls it."
+        },
+        {
+          "name": "defaultValue",
+          "optional": true,
+          "type": "string",
+          "doc": "The first Markdown, when the editor manages its own."
+        },
+        {
+          "name": "onChange",
+          "optional": true,
+          "type": "(markdown: string) => void",
+          "doc": "Called with the Markdown after an edit that changes it. It does not run at mount, for an edit the Markdown cannot show, such as an empty paragraph, or when `value` changes from outside."
+        }
+      ],
+      "refs": ["text-editor#TextEditorDocument"]
+    },
+    {
       "id": "text-editor#TextEditorNode",
       "name": "TextEditorNode",
       "module": "text-editor",
@@ -730,7 +787,7 @@
       "id": "text-editor#TextEditorOwnProps",
       "name": "TextEditorOwnProps",
       "module": "text-editor",
-      "text": "type TextEditorOwnProps = {\n  value?: TextEditorDocument;\n  defaultValue?: TextEditorDocument;\n  onChange?: (value: TextEditorDocument) => void;\n  label?: React.ReactNode;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  placeholder?: string;\n  limit?: number;\n  toolbar?: false | 'simple' | 'advanced' | 'floating';\n  floating?: boolean;\n  bubbleMenu?: boolean;\n  onLinkRequest?: (actions: TextEditorActionCallbacks) => void;\n  onImageRequest?: (actions: { insertImage(src: string, alt?: string): boolean }) => void;\n  onColorRequest?: (actions: { setColor(value: string): boolean }) => void;\n  onGenerate?: () => void;\n  selectionActions?: readonly TextEditorSelectionAction[];\n  selectionInstruction?: boolean;\n  onSelectionRequest?: (request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>;\n  autoFocus?: boolean;\n  onReady?: () => void;\n  onFormattingChange?: (formatting: TextEditorFormatting) => void;\n  minRows?: number;\n  maxRows?: number;\n};",
+      "text": "type TextEditorOwnProps = {\n  value?: TextEditorDocument;\n  defaultValue?: TextEditorDocument;\n  onChange?: (value: TextEditorDocument) => void;\n  label?: React.ReactNode;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  placeholder?: string;\n  limit?: number;\n  toolbar?: false | 'simple' | 'advanced' | 'floating';\n  floating?: boolean;\n  bubbleMenu?: boolean;\n  onLinkRequest?: (actions: TextEditorActionCallbacks) => void;\n  onImageRequest?: (actions: { insertImage(src: string, alt?: string): boolean }) => void;\n  onColorRequest?: (actions: { setColor(value: string): boolean }) => void;\n  onGenerate?: () => void;\n  selectionActions?: readonly TextEditorSelectionAction[];\n  selectionInstruction?: boolean;\n  onSelectionRequest?: (request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>;\n  autoFocus?: boolean;\n  onReady?: () => void;\n  onFormattingChange?: (formatting: TextEditorFormatting) => void;\n  minRows?: number;\n  maxRows?: number;\n  preset?: 'rich' | 'markdown';\n  markdown?: TextEditorMarkdown;\n};",
       "members": [
         {
           "name": "value",
@@ -901,6 +958,20 @@
           "optional": true,
           "type": "number",
           "doc": "The greatest height of the content, in lines of its text, beyond which it scrolls. It is rounded as minRows is and never less than minRows."
+        },
+        {
+          "name": "preset",
+          "optional": true,
+          "type": "'rich' | 'markdown'",
+          "values": ["rich", "markdown"],
+          "doc": "`rich` holds all the editor's formatting. `markdown` limits it to what Markdown holds: no underline, color, font or\nalignment. They are not in its document, so a paste loses them, their commands return false, and no tool or shortcut\noffers them; the toolbar shows Strikethrough in place of Underline. Only the first mount reads it."
+        },
+        {
+          "name": "markdown",
+          "optional": true,
+          "type": "TextEditorMarkdown",
+          "refs": ["text-editor#TextEditorMarkdown"],
+          "doc": "Makes the value Markdown text, read and reported through this object in place of `value`, `defaultValue` and `onChange`,\nwith the `markdown` preset. Pasted plain text is read as Markdown. Only the first mount reads whether it is set."
         }
       ],
       "refs": [
@@ -909,7 +980,8 @@
         "text-editor#TextEditorSelectionAction",
         "text-editor#TextEditorSelectionRequest",
         "text-editor#TextEditorSelectionActions",
-        "text-editor#TextEditorFormatting"
+        "text-editor#TextEditorFormatting",
+        "text-editor#TextEditorMarkdown"
       ]
     },
     {

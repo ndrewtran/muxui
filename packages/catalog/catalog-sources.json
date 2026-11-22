@@ -1875,6 +1875,10 @@
     {
       "family": "example",
       "path": "catalog/components/text-editor/examples/react/reply.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text-editor/examples/react/markdown-value.example.json"
     }
   ]
 }
