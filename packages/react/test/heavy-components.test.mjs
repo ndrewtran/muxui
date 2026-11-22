@@ -1513,6 +1513,46 @@ test('normalizeTextEditorUrl applies the rule that the link and image commands e
   }
 });
 
+test('TextEditor reports no change for the paragraph it adds after a final block, and holds a controlled value without it as it is', async () => {
+  const codeOnly = { type: 'doc', content: [{ type: 'codeBlock', content: [text('x')] }] };
+  const withParagraph = (...content) => ({ type: 'doc', content: [codeOnly.content[0], paragraph(...content)] });
+  const counting = (t) => {
+    const resets = [];
+    t.editor.on('transaction', ({ transaction }) => { if (transaction.getMeta('muxuiExternalValue')) resets.push(transaction); });
+    return resets;
+  };
+  // The first transaction, even one that changes nothing, adds an empty paragraph after a final block that is not one.
+  const t = await mountCommandEditor({ defaultValue: codeOnly });
+  try {
+    await act(async () => { t.pm.focus(); t.editor.view.dispatch(t.editor.state.tr); });
+    assert.deepEqual(t.json(), withParagraph());
+    assert.deepEqual(t.changes, [], 'the editor\'s own paragraph is no edit');
+    await t.select(t.editor.state.doc.content.size - 1);
+    await t.type('y');
+    assert.deepEqual(t.changes, [withParagraph(text('y'))], 'typing in it is');
+  } finally {
+    await t.close();
+  }
+  function Kept(props) {
+    return React.createElement(TextEditor, { ...props, value: codeOnly });
+  }
+  const kept = await mountCommandEditor({}, Kept);
+  try {
+    const resets = counting(kept);
+    await act(async () => { kept.pm.focus(); kept.editor.view.dispatch(kept.editor.state.tr); });
+    await kept.select(kept.editor.state.doc.content.size - 1);
+    const caret = kept.selection();
+    await kept.render();
+    await kept.render();
+    assert.deepEqual(kept.changes, []);
+    assert.deepEqual(resets, [], 'a value without the paragraph is the editor\'s own');
+    assert.deepEqual(kept.selection(), caret, 'the caret stays in the paragraph');
+    assert.equal(kept.undoSteps(), 0);
+  } finally {
+    await kept.close();
+  }
+});
+
 test('TextEditor looks for a user name in a mailto address in linear time, so a megabyte of colons takes no minutes', () => {
   const href = `mailto:${':'.repeat(1_000_000)}`;
   const document = { type: 'doc', content: [paragraph(text('x', [linkMark(href)]))] };

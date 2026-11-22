@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ChangeEvent, ForwardRefExoticComponent, HTMLAttributes, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefAttributes } from 'react';
 import { createPortal } from 'react-dom';
-import { Extension, getText, getTextSerializersFromSchema, isNodeEmpty } from '@tiptap/core';
+import { Extension, InputRule, getText, getTextSerializersFromSchema, isNodeEmpty, nodeInputRule } from '@tiptap/core';
 import type { ChainedCommands, Editor, EditorEvents } from '@tiptap/core';
 import { closeHistory, isHistoryTransaction } from '@tiptap/pm/history';
 import { Fragment, Slice } from '@tiptap/pm/model';
@@ -10,9 +10,10 @@ import { AllSelection, Plugin, PluginKey, Selection, TextSelection } from '@tipt
 import type { EditorState, SelectionBookmark, Transaction } from '@tiptap/pm/state';
 import type { Mappable } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import type { EditorView } from '@tiptap/pm/view';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
-import { Image } from '@tiptap/extension-image';
+import { Image, inputRegex as imageInputRegex } from '@tiptap/extension-image';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { TextStyleKit } from '@tiptap/extension-text-style';
@@ -30,6 +31,7 @@ import LinkIcon from 'lucide-react/dist/esm/icons/link.mjs';
 import List from 'lucide-react/dist/esm/icons/list.mjs';
 import RotateCw from 'lucide-react/dist/esm/icons/rotate-cw.mjs';
 import Sparkles from 'lucide-react/dist/esm/icons/sparkles.mjs';
+import Strikethrough from 'lucide-react/dist/esm/icons/strikethrough.mjs';
 import Type from 'lucide-react/dist/esm/icons/type.mjs';
 import Underline from 'lucide-react/dist/esm/icons/underline.mjs';
 import X from 'lucide-react/dist/esm/icons/x.mjs';
@@ -150,6 +152,22 @@ export type TextEditorSelectionActions = {
   /** Ends the request and hides the bar until the selection changes, keeping any applied edit. */
   close(): void;
 };
+/**
+ * A Markdown value for `markdown`: the text and its callback, with `fromMarkdown` and `toMarkdown` from
+ * `@muxui/react/text-editor/markdown`, which this entry never loads itself.
+ */
+export type TextEditorMarkdown = {
+  /** `fromMarkdown` from `@muxui/react/text-editor/markdown`, which reads the Markdown into the editor. */
+  fromMarkdown: (markdown: string) => TextEditorDocument;
+  /** `toMarkdown` from `@muxui/react/text-editor/markdown`, which writes the editor's content as Markdown. */
+  toMarkdown: (document: TextEditorDocument) => string;
+  /** The Markdown, when the application controls it. */
+  value?: string;
+  /** The first Markdown, when the editor manages its own. */
+  defaultValue?: string;
+  /** Called with the Markdown after an edit that changes it. It does not run at mount, for an edit the Markdown cannot show, such as an empty paragraph, or when `value` changes from outside. */
+  onChange?: (markdown: string) => void;
+};
 
 /**
  * The props Mux UI defines for TextEditor; the catalog's web.react API is derived from this
@@ -213,6 +231,17 @@ type TextEditorOwnProps = {
   minRows?: number;
   /** The greatest height of the content, in lines of its text, beyond which it scrolls. It is rounded as minRows is and never less than minRows. */
   maxRows?: number;
+  /**
+   * `rich` holds all the editor's formatting. `markdown` limits it to what Markdown holds: no underline, color, font or
+   * alignment. They are not in its document, so a paste loses them, their commands return false, and no tool or shortcut
+   * offers them; the toolbar shows Strikethrough in place of Underline. Only the first mount reads it.
+   */
+  preset?: 'rich' | 'markdown';
+  /**
+   * Makes the value Markdown text, read and reported through this object in place of `value`, `defaultValue` and `onChange`,
+   * with the `markdown` preset. Pasted plain text is read as Markdown. Only the first mount reads whether it is set.
+   */
+  markdown?: TextEditorMarkdown;
 };
 
 export type TextEditorProps = Omit<HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange' | 'autoFocus'> & TextEditorOwnProps;
@@ -328,8 +357,10 @@ function safeMarks(value: unknown, strict = false): TextEditorMark[] | null | un
   return result.length ? result : undefined;
 }
 
+// Text is never empty, as the editor's schema holds no empty text, so a document with empty text fails the check and
+// cleaning drops it.
 function safeTextNode(value: Candidate, depth: number, strict: boolean, marksAllowed = true): TextEditorTextNode | TextEditorPlainTextNode | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || value.type !== 'text' || typeof value.text !== 'string' || (strict && !hasOnlyKeys(value, new Set(['type', 'text', 'marks'])))) return null;
+  if (!value || typeof value !== 'object' || Array.isArray(value) || value.type !== 'text' || typeof value.text !== 'string' || value.text === '' || (strict && !hasOnlyKeys(value, new Set(['type', 'text', 'marks'])))) return null;
   if (!marksAllowed && value.marks !== undefined) return strict ? null : { type: 'text', text: value.text };
   if (value.marks !== undefined && !Array.isArray(value.marks)) return null;
   const marks = safeMarks(value.marks, strict);
@@ -377,11 +408,10 @@ function safeNode(value: Candidate, context = 'block', depth = 0, strict = false
       || (!strict && !hasOnlyKeys(value.attrs, new Set(['src', 'alt', 'title', 'width', 'height'])))
       || (value.attrs.alt !== undefined && (value.attrs.alt === null ? strict : typeof value.attrs.alt !== 'string'))) return null;
     const src = normalizeAddress(value.attrs?.src, 'image');
-    if (!src) return null;
-    return {
-      type: 'image',
-      attrs: { src, ...(typeof value.attrs?.alt === 'string' ? { alt: value.attrs.alt.slice(0, 1_000) } : {}) },
-    };
+    const alt = typeof value.attrs?.alt === 'string' ? value.attrs.alt.slice(0, 1_000) : undefined;
+    if (src) return { type: 'image', attrs: { src, ...(alt !== undefined ? { alt } : {}) } };
+    // Cleaned, an image whose address the rule refuses leaves its description, as a pasted one does.
+    return strict || !alt ? null : { type: 'paragraph', content: [{ type: 'text', text: alt }] };
   }
   if (strict && !hasOnlyKeys(value, new Set(['type', 'attrs', 'content']))) return null;
   if (value.type === 'heading') {
@@ -476,6 +506,92 @@ export function normalizeTextEditorDocument(value: unknown): TextEditorDocument 
  */
 export function normalizeTextEditorUrl(value: string, kind: 'link' | 'image'): string | null {
   return normalizeAddress(value, kind);
+}
+
+const mapItems = <T, U>([first, ...rest]: readonly [T, ...T[]], map: (item: T) => U): [U, ...U[]] => [map(first), ...rest.map(map)];
+
+/**
+ * A normalized document as the Markdown preset holds it: underline, color, fonts and alignment taken off, and a numbered
+ * list's letter or roman numbering with them.
+ */
+function markdownDocument(document: TextEditorDocument): TextEditorDocument {
+  const inline = (content: readonly TextEditorInlineNode[]) => content.map((node): TextEditorInlineNode => {
+    if (node.type !== 'text') return node;
+    const marks = (node.marks ?? []).filter((mark) => mark.type !== 'underline' && mark.type !== 'textStyle');
+    return marks.length ? { type: 'text', text: node.text, marks } : { type: 'text', text: node.text };
+  });
+  const item = ({ content: [first, ...rest] }: TextEditorListItemNode): TextEditorListItemNode => ({ type: 'listItem', content: [paragraph(first), ...rest.map(block)] });
+  const paragraph = (node: TextEditorParagraphNode): TextEditorParagraphNode => (node.content ? { type: 'paragraph', content: inline(node.content) } : { type: 'paragraph' });
+  const block = (node: TextEditorBlockNode): TextEditorBlockNode => {
+    switch (node.type) {
+      case 'paragraph': return paragraph(node);
+      case 'heading': return { type: 'heading', attrs: { level: node.attrs.level }, ...(node.content ? { content: inline(node.content) } : {}) };
+      case 'blockquote': return { type: 'blockquote', content: mapItems(node.content, block) };
+      case 'bulletList': return { type: 'bulletList', content: mapItems(node.content, item) };
+      case 'orderedList': return { type: 'orderedList', ...(node.attrs?.start !== undefined ? { attrs: { start: node.attrs.start } } : {}), content: mapItems(node.content, item) };
+      default: return node;
+    }
+  };
+  return { type: 'doc', content: mapItems(document.content, block) };
+}
+
+/** The content with each numbered list's numbering type cleared, or the same content when none has one. */
+function withoutListTypes(content: Fragment): Fragment {
+  const nodes: ProseMirrorNode[] = [];
+  let changed = false;
+  content.forEach((node) => {
+    const inner = withoutListTypes(node.content);
+    const typed = node.type.name === 'orderedList' && node.attrs.type !== null && node.attrs.type !== undefined;
+    const kept = inner === node.content && !typed ? node : node.type.create(typed ? { ...node.attrs, type: null } : node.attrs, inner, node.marks);
+    if (kept !== node) changed = true;
+    nodes.push(kept);
+  });
+  return changed ? Fragment.fromArray(nodes) : content;
+}
+
+/**
+ * The Markdown preset's own rules. The underline and alignment shortcuts are taken and do nothing, so the browser underlines
+ * nothing and the keys reach no browser command, as they reach none in the rich preset. A pasted numbered list loses its
+ * letter or roman numbering. With the converters of the Markdown value mode, pasted plain text is read as Markdown, and text
+ * pasted as plain text (with Shift) stays a paragraph per line, as ProseMirror reads it.
+ */
+function markdownRules(converters: { readonly current: TextEditorMarkdown | undefined } | null) {
+  return Extension.create({
+    name: 'muxuiMarkdown',
+    addKeyboardShortcuts() {
+      const taken = () => true;
+      return { 'Mod-u': taken, 'Mod-Shift-l': taken, 'Mod-Shift-e': taken, 'Mod-Shift-r': taken, 'Mod-Shift-j': taken };
+    },
+    addProseMirrorPlugins() {
+      return [new Plugin({
+        key: new PluginKey('muxuiMarkdown'),
+        props: {
+          transformPasted: (slice) => {
+            const content = withoutListTypes(slice.content);
+            return content === slice.content ? slice : new Slice(content, slice.openStart, slice.openEnd);
+          },
+          ...(converters ? {
+            // A paste applies as ProseMirror applies it, marked so the link extension links no bare address it holds: Markdown
+            // reads one as literal text, also where it replaces selected text.
+            handlePaste: (view: EditorView, _event: ClipboardEvent, slice: Slice) => {
+              if (slice.content.size === 0) return false;
+              const single = slice.openStart === 0 && slice.openEnd === 0 && slice.content.childCount === 1 ? slice.content.firstChild : null;
+              const tr = single ? view.state.tr.replaceSelectionWith(single, false) : view.state.tr.replaceSelection(slice);
+              view.dispatch(tr.scrollIntoView().setMeta('paste', true).setMeta('uiEvent', 'paste').setMeta('preventAutolink', true));
+              return true;
+            },
+            clipboardTextParser: (text: string, $context: ResolvedPos, plain: boolean, view: { readonly state: EditorState }) => {
+              const { schema } = view.state;
+              const markdown = converters.current;
+              if (!plain && markdown) return Slice.maxOpen(schema.nodeFromJSON(markdownDocument(normalizeTextEditorDocument(markdown.fromMarkdown(text)))).content);
+              const marks = $context.marks();
+              return Slice.maxOpen(Fragment.fromArray(text.split(/(?:\r\n?|\n)+/u).map((line) => schema.nodes.paragraph.create(null, line ? schema.text(line, marks) : null))));
+            },
+          } : {}),
+        },
+      })];
+    },
+  });
 }
 
 // ProseMirror types attribute values as strings but hands them to setAttribute, which also takes the booleans the ARIA props can carry.
@@ -761,6 +877,8 @@ function run(editor: Editor | null, action: TextEditorCommand, callbacks: Editor
   const mark = COMMAND_MARKS[action.type];
   // A mark that cannot go on the selection is refused before anything is dispatched; one that is on can always come off.
   if (mark !== undefined && !(action.type === 'link' && action.text !== undefined) && !editor.isActive(mark) && !markApplies(editor.state, mark)) return false;
+  // Alignment is no mark, so the Markdown preset, which leaves it out, refuses it here, before the chain books a focus.
+  if (action.type === 'align' && !editor.extensionManager.extensions.some(({ name }) => name === 'textAlign')) return false;
   // Settled before the chain, whose focus books a focus a frame later as soon as it is chained, even if the chain never runs.
   if ((action.type === 'paragraph' || action.type === 'heading') && blocksAre(editor.state, action.type === 'heading' ? action.level : null)) return true;
   // The character limit refuses a transaction before it reaches the state, so a command that leaves the state as it was did
@@ -1001,9 +1119,10 @@ function Separator() {
   return React.createElement('div', { className: 'muxui-text-editor__separator', 'aria-hidden': 'true' });
 }
 
-type ToolbarProps = PickerProps & { variant: false | 'simple' | 'advanced'; floating: boolean };
+type ToolbarProps = PickerProps & { variant: false | 'simple' | 'advanced'; floating: boolean; markdown: boolean };
 
-function Toolbar({ editor, disabled, variant, floating, callbacks }: ToolbarProps) {
+/** The tools the toolbar shows. With the Markdown preset, Strikethrough takes Underline's place and the color, font and alignment tools are left out. */
+function Toolbar({ editor, disabled, variant, floating, callbacks, markdown }: ToolbarProps) {
   const advanced = variant === 'advanced';
   const request = <Actions,>(label: string, callback: ((actions: Actions) => unknown) | undefined, actions: Actions, fallback = () => false, Icon?: LucideIcon) => {
     const buttonProps = {
@@ -1028,25 +1147,31 @@ function Toolbar({ editor, disabled, variant, floating, callbacks }: ToolbarProp
   const fontFamily = useEditorValue(editor, (current) => textStyleValue(current, 'fontFamily', FONT_FAMILIES, 'Inter'), 'Inter');
   const fontSize = useEditorValue(editor, (current) => textStyleValue(current, 'fontSize', FONT_SIZES, '16px'), '16px');
   return React.createElement('div', { role: 'toolbar', 'aria-label': 'Formatting', className },
-    advanced ? React.createElement(React.Fragment, null,
+    advanced && !markdown ? React.createElement(React.Fragment, null,
       React.createElement('select', { className: 'muxui-text-editor__select', disabled, 'aria-label': 'Font family', value: fontFamily, onChange: (event: ChangeEvent<HTMLSelectElement>) => run(editor, { type: 'fontFamily', value: event.target.value as TextEditorFontFamily }) }, [...FONT_FAMILIES].map((value) => React.createElement('option', { key: value, value, className: 'muxui-text-editor__option' }, value === 'Comic Sans MS, Comic Sans' ? 'Comic Sans' : value[0].toUpperCase() + value.slice(1)))),
       React.createElement('select', { className: 'muxui-text-editor__select', disabled, 'aria-label': 'Font size', value: fontSize, onChange: (event: ChangeEvent<HTMLSelectElement>) => run(editor, { type: 'fontSize', value: event.target.value as TextEditorFontSize }) }, [...FONT_SIZES].map((value) => React.createElement('option', { key: value, value, className: 'muxui-text-editor__option' }, value.replace('px', '')))),
       Separator(),
     ) : null,
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'bold' }, label: 'Bold', icon: Bold }),
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'italic' }, label: 'Italic', icon: Italic }),
-    React.createElement(Action, { editor, disabled, callbacks, action: { type: 'underline' }, label: 'Underline', icon: Underline }),
+    markdown
+      ? React.createElement(Action, { editor, disabled, callbacks, action: { type: 'strike' }, label: 'Strikethrough', icon: Strikethrough })
+      : React.createElement(Action, { editor, disabled, callbacks, action: { type: 'underline' }, label: 'Underline', icon: Underline }),
     Separator(),
-    React.createElement(ColorPicker, { editor, disabled, callbacks }),
-    Separator(),
+    markdown ? null : React.createElement(React.Fragment, null,
+      React.createElement(ColorPicker, { editor, disabled, callbacks }),
+      Separator(),
+    ),
     advanced ? React.createElement(React.Fragment, null,
       request('Insert link', callbacks.onLinkRequest, linkActions, promptLink, LinkIcon),
       React.createElement(ImagePicker, { editor, disabled, callbacks }),
       Separator(),
     ) : null,
-    React.createElement(Action, { editor, disabled, callbacks, action: { type: 'align', value: 'left' }, label: 'Align left', icon: AlignLeft }),
-    React.createElement(Action, { editor, disabled, callbacks, action: { type: 'align', value: 'center' }, label: 'Align center', icon: AlignCenter }),
-    React.createElement(Action, { editor, disabled, callbacks, action: { type: 'align', value: 'right' }, label: 'Align right', icon: AlignRight }),
+    markdown ? null : React.createElement(React.Fragment, null,
+      React.createElement(Action, { editor, disabled, callbacks, action: { type: 'align', value: 'left' }, label: 'Align left', icon: AlignLeft }),
+      React.createElement(Action, { editor, disabled, callbacks, action: { type: 'align', value: 'center' }, label: 'Align center', icon: AlignCenter }),
+      React.createElement(Action, { editor, disabled, callbacks, action: { type: 'align', value: 'right' }, label: 'Align right', icon: AlignRight }),
+    ),
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'bulletList' }, label: 'Bullet list', icon: List }),
     advanced ? React.createElement(React.Fragment, null,
       Separator(),
@@ -1055,7 +1180,7 @@ function Toolbar({ editor, disabled, variant, floating, callbacks }: ToolbarProp
   );
 }
 
-function BubbleMenu({ editor, disabled, callbacks }: PickerProps & { editor: Editor }) {
+function BubbleMenu({ editor, disabled, callbacks, markdown }: PickerProps & { editor: Editor; markdown: boolean }) {
   const [hasSelection, setHasSelection] = React.useState(false);
   React.useEffect(() => {
     const update = () => setHasSelection(!editor.state.selection.empty);
@@ -1079,7 +1204,9 @@ function BubbleMenu({ editor, disabled, callbacks }: PickerProps & { editor: Edi
   return React.createElement('div', { className: 'muxui-text-editor__bubble-menu', role: 'toolbar', 'aria-label': 'Selection formatting' },
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'bold' }, label: 'Bold', icon: Bold }),
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'italic' }, label: 'Italic', icon: Italic }),
-    React.createElement(Action, { editor, disabled, callbacks, action: { type: 'underline' }, label: 'Underline', icon: Underline }),
+    markdown
+      ? React.createElement(Action, { editor, disabled, callbacks, action: { type: 'strike' }, label: 'Strikethrough', icon: Strikethrough })
+      : React.createElement(Action, { editor, disabled, callbacks, action: { type: 'underline' }, label: 'Underline', icon: Underline }),
     React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, ...{ 'data-muxui-state-disabled': disabled ? 'true' : undefined }, 'aria-label': 'Insert link', onActivate: requestLink }, React.createElement(LinkIcon, { className: 'muxui-text-editor__icon', size: 16, 'aria-hidden': 'true', focusable: 'false' })),
   );
 }
@@ -1227,6 +1354,19 @@ function fitsLimit(before: ProseMirrorNode, after: ProseMirrorNode, limit: numbe
 const EXTERNAL_VALUE = 'muxuiExternalValue';
 
 /**
+ * Replaces the content with a value from outside, as given. Autolink links no address in it, as the value would then
+ * differ from the content and every later render would apply it again. It is one undo step of its own, closed on both
+ * sides, so the typing just before and after it is undone apart from it.
+ */
+function applyOutsideValue(editor: Editor, document: TextEditorDocument) {
+  editor.chain().setMeta(EXTERNAL_VALUE, true).setMeta('preventAutolink', true).command(({ tr }) => {
+    closeHistory(tr);
+    return true;
+  }).setContent(document, { emitUpdate: false }).run();
+  if (!editor.isDestroyed) editor.view.dispatch(closeHistory(editor.state.tr));
+}
+
+/**
  * Holds the marks for typing without a link in two places where the next typed text would otherwise extend one. A caret at
  * the start of a block takes the marks of the text after it, so text typed before a link that starts a paragraph would join
  * it, though the start of a link is outside it everywhere else. And an undo or redo brings back the caret after a label the
@@ -1248,6 +1388,96 @@ function linkTypingBoundary() {
           return $from.parentOffset === 0 && type.isInSet(marks) ? state.tr.setStoredMarks(type.removeFromSet(marks)) : null;
         },
       })];
+    },
+  });
+}
+
+/**
+ * Undo and redo bring back a document as it was, so autolink, which reads each changed range again, links nothing in what
+ * they bring back. Without this, redoing a value from outside would link an address in it that the value left unlinked.
+ */
+function historyAsItWas() {
+  return Extension.create({
+    name: 'muxuiHistoryAsItWas',
+    dispatchTransaction({ transaction, next }) {
+      if (isHistoryTransaction(transaction)) transaction.setMeta('preventAutolink', true);
+      next(transaction);
+    },
+  });
+}
+
+/**
+ * Holds what a paste or a drop brings in to the address rule, on the slice the editor is about to insert: a link or an
+ * image keeps its address in the normalized form, or, where the rule refuses the address, a link leaves its text and an
+ * image its description.
+ */
+function pastedAddresses() {
+  return Extension.create({
+    name: 'muxuiPastedAddresses',
+    addProseMirrorPlugins() {
+      return [new Plugin({
+        key: new PluginKey('muxuiPastedAddresses'),
+        props: { transformPasted: (slice) => new Slice(heldAddresses(slice.content), slice.openStart, slice.openEnd) },
+      })];
+    },
+  });
+}
+
+/**
+ * The content with each link and image address held to the address rule, as `pastedAddresses` holds a paste. Content
+ * with nothing to change is returned as it is, so a slice keeps its open edges, such as a list item cut before its first
+ * paragraph.
+ */
+function heldAddresses(content: Fragment): Fragment {
+  const nodes: ProseMirrorNode[] = [];
+  let changed = false;
+  content.forEach((node) => {
+    const held = heldAddress(node);
+    if (held !== node) changed = true;
+    if (held) nodes.push(held);
+  });
+  return changed ? Fragment.fromArray(nodes) : content;
+}
+
+/** The node with its addresses held to the rule: itself where nothing changes, or null where a refused image goes. */
+function heldAddress(node: ProseMirrorNode): ProseMirrorNode | null {
+  const { schema } = node.type;
+  if (node.type === schema.nodes.image) {
+    const src = normalizeAddress(node.attrs.src, 'image');
+    if (src !== null) return src === node.attrs.src ? node : node.type.create({ ...node.attrs, src }, null, node.marks);
+    const alt = typeof node.attrs.alt === 'string' ? node.attrs.alt.slice(0, 1_000) : '';
+    return alt ? schema.nodes.paragraph.create(null, schema.text(alt)) : null;
+  }
+  const link = node.isText ? schema.marks.link?.isInSet(node.marks) : undefined;
+  if (link) {
+    const href = normalizeAddress(link.attrs.href, 'link');
+    if (href === null) return node.mark(link.removeFromSet(node.marks));
+    return href === link.attrs.href ? node : node.mark(link.type.create({ ...link.attrs, href }).addToSet(node.marks));
+  }
+  if (node.isLeaf) return node;
+  const inner = heldAddresses(node.content);
+  if (inner === node.content) return node;
+  // A block whose only content was an image that went keeps what its kind needs, such as an empty paragraph in a quote.
+  return inner.childCount > 0 ? node.copy(inner) : node.type.createAndFill(node.attrs, null, node.marks);
+}
+
+/**
+ * The image node. It reads every image in HTML, a `data:` one included, with its address held to the rule, so that a
+ * pasted image whose address the rule refuses reaches `pastedAddresses` and leaves its description. Its
+ * `![description](address)` input rule leaves a refused address as the text typed.
+ */
+function editorImage() {
+  return Image.extend({
+    parseHTML() {
+      return [{ tag: 'img[src]' }];
+    },
+    addAttributes() {
+      const attributes = this.parent?.() ?? {};
+      return { ...attributes, src: { ...attributes.src, parseHTML: (element: HTMLElement) => normalizeAddress(element.getAttribute('src'), 'image') } };
+    },
+    addInputRules() {
+      const rule = nodeInputRule({ find: imageInputRegex, type: this.type, getAttributes: ([, , alt, src, title]) => ({ src: normalizeAddress(src, 'image'), alt, title }) });
+      return [new InputRule({ find: rule.find, handler: (props) => (normalizeAddress(props.match[3], 'image') === null ? null : rule.handler(props)) })];
     },
   });
 }
@@ -1298,7 +1528,9 @@ function buildEdit(editor: Editor, { from, to }: TextRange, mode: 'replace' | 'i
   const transaction = closeHistory(state.tr);
   let range: TextRange;
   try {
-    const blocks = isText ? null : Fragment.fromJSON(schema, normalizeTextEditorDocument(content).content);
+    // The Markdown preset, whose schema has no underline, takes a document without what it leaves out.
+    const normalized = isText ? null : normalizeTextEditorDocument(content);
+    const blocks = normalized === null ? null : Fragment.fromJSON(schema, (schema.marks.underline ? normalized : markdownDocument(normalized)).content);
     // Plain text takes the formatting at the start of the selection, wherever it is inserted.
     const marks = isText ? transaction.doc.resolve(from).marksAcross(transaction.doc.resolve(to)) ?? [] : null;
     if (mode === 'replace') {
@@ -1894,6 +2126,45 @@ function CharactersLeft({ editor, limit }: { editor: Editor | null; limit: numbe
   return `${left} ${left === 1 ? 'character' : 'characters'} left`;
 }
 
+/**
+ * Whether two documents are the same value: equal as the editor's schema builds them, which orders marks, joins text with
+ * the same marks and fills in the attributes a document leaves out, or apart only by the empty paragraph the editor adds
+ * after a final block that is not a paragraph, so the caret can go below it. The editor adds it with its first
+ * transaction, an edit of nobody's, so a document with it and one without it are the same value.
+ */
+function sameValue(schema: Schema, a: TextEditorDocument, b: TextEditorDocument): boolean {
+  const blocks = (document: TextEditorDocument) => {
+    const { content } = schema.nodeFromJSON(document);
+    const last = content.lastChild;
+    const before = content.childCount > 1 ? content.child(content.childCount - 2) : null;
+    return last && before && before.type.name !== 'paragraph' && last.eq(schema.nodes.paragraph.create()) ? content.cut(0, content.size - last.nodeSize) : content;
+  };
+  return blocks(a).eq(blocks(b));
+}
+
+/** What the Markdown value mode keeps between renders. */
+type MarkdownMemory = {
+  /** The Markdown of each document the editor has held, and the Markdown it writes once read back, found when first needed. */
+  readonly written: WeakMap<ProseMirrorNode, { readonly markdown: string; reread?: string }>;
+  /** The last value from outside that differed from the editor's, the document it reads as, and the Markdown that writes. */
+  outside: { readonly markdown: string; readonly document: TextEditorDocument; readonly reread: string } | null;
+  /** The Markdown last reported or taken from outside, from which `onChange` reports a change. */
+  reported: string;
+};
+
+/** The document Markdown reads as, held as the Markdown preset holds it. */
+const readMarkdown = (converters: TextEditorMarkdown, text: string) => markdownDocument(normalizeTextEditorDocument(converters.fromMarkdown(text)));
+
+/** The Markdown of a document the editor holds, written once for it. */
+function writtenMarkdown(memory: MarkdownMemory, converters: TextEditorMarkdown, doc: ProseMirrorNode) {
+  let written = memory.written.get(doc);
+  if (written === undefined) {
+    written = { markdown: converters.toMarkdown(normalizeTextEditorDocument(doc.toJSON())) };
+    memory.written.set(doc, written);
+  }
+  return written;
+}
+
 // The published type of the component: `Root` is a writable self-alias, as before the move.
 type TextEditorComponent = ForwardRefExoticComponent<TextEditorProps & RefAttributes<TextEditorHandle>> & { Root: TextEditorComponent };
 
@@ -1903,7 +2174,7 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   value, defaultValue, onChange, disabled = false, invalid = false, placeholder = '', limit,
   toolbar = 'simple', floating = false, bubbleMenu = false, onLinkRequest, onImageRequest, onColorRequest, onGenerate,
   selectionActions, selectionInstruction = true, onSelectionRequest,
-  autoFocus = false, onReady, onFormattingChange, minRows, maxRows,
+  autoFocus = false, onReady, onFormattingChange, minRows, maxRows, preset = 'rich', markdown,
   label, description, errorMessage, required = false, readOnly = false,
   id, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, 'aria-describedby': ariaDescribedby,
   'aria-errormessage': ariaErrormessage, 'aria-invalid': ariaInvalid, 'aria-required': ariaRequired,
@@ -1912,6 +2183,17 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   // An omitted value is normalized like any other, so the editor never holds the shared `emptyDocument` itself.
   const initialValue = defaultValue === undefined ? emptyDocument : defaultValue;
   const initial = React.useMemo(() => normalizeTextEditorDocument(initialValue), [initialValue]);
+  // Tiptap keeps the schema it was created with, so the first mount settles the preset and the Markdown value mode, which
+  // starts from the document its Markdown reads as and counts the Markdown of that document as reported.
+  const [mode] = React.useState(() => {
+    if (markdown === undefined) return { markdownPreset: preset === 'markdown', markdown: null };
+    const document = readMarkdown(markdown, markdown.value ?? markdown.defaultValue ?? '');
+    return { markdownPreset: true, markdown: { document, written: markdown.toMarkdown(document) } };
+  });
+  const { markdownPreset } = mode;
+  const markdownRef = React.useRef(markdown);
+  const markdownMemory = React.useRef<MarkdownMemory>({ written: new WeakMap(), outside: null, reported: mode.markdown?.written ?? '' });
+  const held = (document: TextEditorDocument) => (markdownPreset ? markdownDocument(document) : document);
   const characterLimit = typeof limit === 'number' && Number.isFinite(limit) && limit >= 0 ? Math.floor(limit) : undefined;
   const generatedId = React.useId().replace(/[^A-Za-z0-9_-]/gu, '') || 'muxui-text-editor';
   const contentId = id ?? `muxui-text-editor-${generatedId}`;
@@ -1921,13 +2203,16 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   const controlledValueRef = React.useRef(value);
   const composingRef = React.useRef(false);
   const [, requestControlledReconciliation] = React.useReducer((revision) => revision + 1, 0);
-  const initialContent = value === undefined ? initial : normalizeTextEditorDocument(value);
+  const initialContent = mode.markdown ? mode.markdown.document : held(value === undefined ? initial : normalizeTextEditorDocument(value));
+  // The document last reported or taken from outside, from which `onChange` reports a change.
+  const reportedDocument = React.useRef(initialContent);
   const onChangeRef = React.useRef(onChange);
   const limitRef = React.useRef(limit);
   const placeholderRef = React.useRef(placeholder);
   const callbacksRef = React.useRef({ onGenerate, onLinkRequest, onImageRequest, onColorRequest });
   const lifecycleRef = React.useRef({ autoFocus, onReady, onFormattingChange });
   controlledValueRef.current = value;
+  markdownRef.current = markdown;
   onChangeRef.current = onChange;
   limitRef.current = characterLimit;
   placeholderRef.current = placeholder;
@@ -1955,11 +2240,14 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
     content: initialContent,
     editable: !disabled && !readOnly,
     editorProps: { attributes: editorAttributes },
+    // In the value mode pasted text is read as Markdown, which the paste rules would read a second time.
+    enablePasteRules: mode.markdown === null,
     extensions: [
-      StarterKit.configure({ link: { openOnClick: false, shouldAutoLink: autoLinkable } }),
-      TextStyleKit,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Image,
+      // In the value mode a paste is read as Markdown, so an address pasted over selected text takes its place, as text.
+      StarterKit.configure({ link: { openOnClick: false, shouldAutoLink: autoLinkable, linkOnPaste: mode.markdown === null }, ...(markdownPreset ? { underline: false } : {}) }),
+      ...(markdownPreset ? [markdownRules(mode.markdown ? markdownRef : null)] : [TextStyleKit, TextAlign.configure({ types: ['heading', 'paragraph'] })]),
+      editorImage(),
+      pastedAddresses(),
       // Tiptap keeps the extensions it was created with, so both read the latest placeholder through a ref. The view
       // redraws them when useEditor re-applies the options after each render.
       Placeholder.configure({ placeholder: () => placeholderRef.current }),
@@ -1967,10 +2255,27 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
       selectionRangePainter().extension,
       characterLimitFilter(limitRef),
       linkTypingBoundary(),
+      historyAsItWas(),
     ],
     onUpdate: ({ editor: instance }) => {
+      if (mode.markdown) {
+        // The value mode reports the Markdown when it changes, so an edit Markdown cannot show, such as an empty paragraph, is not reported.
+        const converters = markdownRef.current;
+        if (converters === undefined) return;
+        const next = writtenMarkdown(markdownMemory.current, converters, instance.state.doc).markdown;
+        if (next !== markdownMemory.current.reported) {
+          markdownMemory.current.reported = next;
+          converters.onChange?.(next);
+        }
+        if (converters.value !== undefined) requestControlledReconciliation();
+        return;
+      }
       const next = normalizeTextEditorDocument(instance.getJSON());
-      onChangeRef.current?.(next);
+      // A document that differs from the last one only as the editor holds it, or by the paragraph the editor adds after a
+      // final block, is no edit, so it is not reported.
+      const previous = reportedDocument.current;
+      reportedDocument.current = next;
+      if (JSON.stringify(next) === JSON.stringify(previous) || !sameValue(instance.schema, next, previous)) onChangeRef.current?.(next);
       if (controlledValueRef.current !== undefined) requestControlledReconciliation();
     },
   });
@@ -2029,14 +2334,35 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   });
 
   const syncControlledValue = React.useCallback(() => {
-    const external = controlledValueRef.current;
-    if (!editor || external === undefined || composingRef.current) return;
-    const next = normalizeTextEditorDocument(external);
-    const current = normalizeTextEditorDocument(editor.getJSON());
-    if (JSON.stringify(next) !== JSON.stringify(current)) {
-      editor.chain().setMeta(EXTERNAL_VALUE, true).setContent(next, { emitUpdate: false }).run();
+    if (!editor || composingRef.current) return;
+    if (mode.markdown) {
+      // The value mode compares Markdown, so a document Markdown cannot tell apart, such as one with an empty paragraph the
+      // caret is in, stays as it is. Markdown that reads as the editor's own, such as `__b__` for `**b**`, changes nothing either.
+      const converters = markdownRef.current;
+      const external = converters?.value;
+      if (converters === undefined || external === undefined) return;
+      const memory = markdownMemory.current;
+      const written = writtenMarkdown(memory, converters, editor.state.doc);
+      if (external === written.markdown) return;
+      if (memory.outside?.markdown !== external) {
+        const document = readMarkdown(converters, external);
+        memory.outside = { markdown: external, document, reread: converters.toMarkdown(document) };
+      }
+      written.reread ??= converters.toMarkdown(readMarkdown(converters, written.markdown));
+      if (memory.outside.reread === written.reread) return;
+      applyOutsideValue(editor, memory.outside.document);
+      memory.reported = writtenMarkdown(memory, converters, editor.state.doc).markdown;
+      return;
     }
-  }, [editor]);
+    const external = controlledValueRef.current;
+    if (external === undefined) return;
+    const next = held(normalizeTextEditorDocument(external));
+    // A value that the editor holds as its content, with or without the paragraph it adds after a final block, changes nothing.
+    if (!sameValue(editor.schema, next, normalizeTextEditorDocument(editor.getJSON()))) {
+      applyOutsideValue(editor, next);
+      reportedDocument.current = next;
+    }
+  }, [editor, mode]);
 
   React.useEffect(() => {
     syncControlledValue();
@@ -2106,8 +2432,8 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
     style: rowStyle,
     'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-read-only': readOnly ? readOnly : undefined, 'data-muxui-state-required': required ? required : undefined, 'data-muxui-state-invalid': (invalid ? invalid : errorMessage !== undefined) || undefined,
   }, label !== undefined ? React.createElement('label', { id: labelId, htmlFor: contentId, className: 'muxui-text-editor__label' }, label) : null,
-  toolbar ? React.createElement(Toolbar, { editor, disabled: disabled ? disabled : readOnly, variant, floating: isFloating, callbacks }) : null,
-  editor && bubbleMenu ? React.createElement(BubbleMenu, { editor, disabled: disabled ? disabled : readOnly, callbacks }) : null,
+  toolbar ? React.createElement(Toolbar, { editor, disabled: disabled ? disabled : readOnly, variant, floating: isFloating, callbacks, markdown: markdownPreset }) : null,
+  editor && bubbleMenu ? React.createElement(BubbleMenu, { editor, disabled: disabled ? disabled : readOnly, callbacks, markdown: markdownPreset }) : null,
   React.createElement('div', { className: 'muxui-text-editor__content' },
     editor ? React.createElement(EditorContent, { editor, className: 'muxui-text-editor__surface' }) : null,
     editor && typeof onSelectionRequest === 'function'
