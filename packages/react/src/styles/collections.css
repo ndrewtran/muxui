@@ -194,8 +194,9 @@
     box-shadow var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
 }
 
-.muxui-color-field .muxui-field-input::placeholder {
-  color: var(--muxui-semantic-content-faint);
+/* A disabled ColorField keeps its own placeholder colour, fixed neutral step 60 in both schemes. */
+.muxui-color-field .muxui-field-input:is(:disabled, [data-muxui-state-disabled])::placeholder {
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 .muxui-color-field .muxui-field-input[data-muxui-state-focused] {
@@ -3435,12 +3436,6 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field .muxui-field-input::placeholder {
-    color: var(--muxui-semantic-color-neutral-default-60);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-select:not([data-muxui-state-disabled], [data-muxui-state-invalid]) > .muxui-select__trigger:not(:hover, :focus, :focus-visible, [data-muxui-state-focus-visible], [data-muxui-state-open], [data-muxui-state-disabled], [data-muxui-state-invalid]),
   :scope .muxui-combo-box:not([data-muxui-state-disabled], [data-muxui-state-invalid]) .muxui-combo-box__control:not(:hover, :focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
   :scope .muxui-combo-box__control:not(:hover, :focus-within, [data-muxui-state-disabled], [data-muxui-state-invalid]),
@@ -3573,10 +3568,10 @@
   }
 }
 
-/* Enabled placeholder text needs the local neutral-60 contrast correction;
+/* Enabled placeholder text takes the field placeholder role, as every field's placeholder does;
    disabled controls retain neutral-50 plus disabled treatment. */
 .muxui-select:not([data-muxui-state-disabled], [aria-disabled='true']) .muxui-select__value[data-muxui-state-placeholder] {
-  color: var(--muxui-semantic-color-neutral-60);
+  color: var(--muxui-field-placeholder-color);
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {

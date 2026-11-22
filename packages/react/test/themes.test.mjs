@@ -268,8 +268,9 @@ const over = (foreground, background) => [0, 1, 2].map((channel) => foreground[c
 const toHex = (color) => `#${color.slice(0, 3).map((channel) => Math.round(channel * 255).toString(16).padStart(2, '0')).join('')}`;
 
 // Readable text roles and the grounds they sit on, each ground listed bottom layer first and composited over the page.
-// content-faint and content-secondary are left out: they colour placeholders, separators, disabled controls and
-// non-text marks, which APCA does not hold to the body-text mark.
+// content-faint and content-secondary are left out: they colour separators, disabled controls and non-text marks,
+// which APCA does not hold to the body-text mark. Placeholders take field-placeholder, held to WCAG 4.5:1 per family
+// in test/browser/placeholder-contrast.test.mjs.
 const TEXT_CHECKS = [
   {
     text: ['semantic-content-default', 'semantic-content-muted', 'semantic-field-label', 'semantic-content-link'],

@@ -220,8 +220,15 @@
   outline: none;
 }
 
-.muxui-number-field__control > .muxui-field-input::placeholder {
+/* A disabled NumberField keeps its own placeholder colour: muted in light, fixed neutral step 60 in dark. */
+.muxui-number-field__control > .muxui-field-input:is(:disabled, [data-muxui-state-disabled])::placeholder {
   color: var(--muxui-semantic-content-muted);
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-number-field__control > .muxui-field-input:is(:disabled, [data-muxui-state-disabled])::placeholder {
+    color: var(--muxui-semantic-color-neutral-default-60);
+  }
 }
 
 .muxui-number-field__stepper {
@@ -718,7 +725,9 @@
   }
 }
 
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+/* A theme preset scope without a scheme of its own is light, so these dark field colours stop there too: the field's
+   placeholder follows the preset's role and would be drawn on the dark surface. */
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme], [data-muxui-theme]) {
   :scope .muxui-search-field .muxui-field-input:not(:hover, :focus, [data-muxui-state-focused], [data-muxui-state-open], [data-muxui-state-disabled], [data-muxui-state-invalid]),
   :scope .muxui-autocomplete__search:not([data-muxui-state-disabled], [data-muxui-state-invalid]) .muxui-field-input:not(:hover, :focus, [data-muxui-state-focused], [data-muxui-state-open], [data-muxui-state-disabled], [data-muxui-state-invalid]),
   :scope .muxui-color-field .muxui-field-input:not(:hover, :focus, [data-muxui-state-focused], [data-muxui-state-open], [data-muxui-state-disabled], [data-muxui-state-invalid]) {
@@ -755,12 +764,6 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-field-input::placeholder {
-    color: var(--muxui-semantic-color-neutral-default-60);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
     .muxui-date-input,
     .muxui-number-field__control > .muxui-field-input
@@ -782,9 +785,15 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-date-segment[data-muxui-state-type='literal'],
-  :scope .muxui-date-segment[data-muxui-state-placeholder] {
+  :scope .muxui-date-segment[data-muxui-state-type='literal'] {
     color: var(--muxui-semantic-color-neutral-default-60);
+  }
+}
+
+/* The dark segment colour above would otherwise reach a placeholder segment. */
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-date-segment[data-muxui-state-placeholder] {
+    color: var(--muxui-field-placeholder-color);
   }
 }
 
@@ -798,12 +807,6 @@
     ) .muxui-date-segment[data-muxui-state-focused] {
       color: var(--muxui-semantic-content-on-solid);
     }
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-number-field__control > .muxui-field-input::placeholder {
-    color: var(--muxui-semantic-color-neutral-default-60);
   }
 }
 

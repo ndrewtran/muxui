@@ -710,9 +710,14 @@
   background-color: var(--muxui-semantic-color-neutral-10);
 }
 
-.muxui-command-palette__popup--translucent .muxui-command-palette__search-field,
 .muxui-command-palette__popup--translucent .muxui-command-palette__chips {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 24%, transparent);
+}
+
+/* The search row holds the placeholder and the typed query, so it covers enough of the page behind it for both to keep
+   4.5:1 over the darkest and the lightest page a translucent popup can show. */
+.muxui-command-palette__popup--translucent .muxui-command-palette__search-field {
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 80%, transparent);
 }
 
 .muxui-command-palette__search-field--inline {
@@ -1750,6 +1755,11 @@ header.muxui-header-nav.muxui-header-nav--background {
 }
 
 .muxui-multi-select__value--placeholder {
+  color: var(--muxui-field-placeholder-color);
+}
+
+/* A disabled MultiSelect keeps its own placeholder colour, neutral step 60. */
+.muxui-multi-select__trigger:disabled .muxui-multi-select__value--placeholder {
   color: var(--muxui-semantic-color-neutral-60);
 }
 
@@ -2439,7 +2449,7 @@ header.muxui-header-nav.muxui-header-nav--background {
 }
 
 .muxui-sidebar__search-input::placeholder {
-  color: var(--muxui-semantic-color-neutral-70);
+  color: var(--muxui-field-placeholder-color);
 }
 
 .muxui-sidebar__search-input:focus {
@@ -3357,10 +3367,6 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     color: var(--muxui-semantic-color-neutral-60);
   }
 
-  :scope .muxui-sidebar__search-input::placeholder {
-    color: var(--muxui-semantic-color-neutral-40);
-  }
-
   :scope .muxui-sidebar__divider {
     background: var(--muxui-semantic-color-neutral-90);
   }
@@ -4005,7 +4011,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 .muxui-text-area__textarea::placeholder {
-  color: var(--muxui-semantic-color-neutral-50);
+  color: var(--muxui-field-placeholder-color);
 }
 
 .muxui-text-area__textarea:focus,

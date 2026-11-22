@@ -232,13 +232,15 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Mux UI-owned visual parity category hooks. */
+/* Mux UI-owned visual parity category hooks. They resolve semantic roles, so every scope that can change a role binds them
+   again: a theme preset scope too, which keeps its fields on the preset's roles inside a page of another scheme. */
 :root,
 [data-muxui-color-scheme],
 [data-muxui-contrast],
 [data-muxui-motion],
 [data-muxui-density],
-[data-muxui-direction] {
+[data-muxui-direction],
+[data-muxui-theme] {
   --muxui-focus-ring-color: var(--muxui-semantic-focus-neutral-ring);
   --muxui-focus-ring-inner: var(--muxui-semantic-focus-inner);
   --muxui-focus-ring-outer: var(--muxui-semantic-focus-neutral-ring);
@@ -728,6 +730,12 @@
   color: var(--muxui-field-placeholder-color);
 }
 
+/* A disabled placeholder is exempt from the text contrast the role keeps, so a disabled field keeps neutral step 50 for it
+   under its disabled treatment. The few families with a disabled placeholder colour of their own declare it in their section. */
+:is(:disabled, [data-muxui-state-disabled], [aria-disabled='true']) {
+  --muxui-field-placeholder-color: var(--muxui-semantic-color-neutral-50);
+}
+
 .muxui-combo-box__arrow,
 .muxui-select__arrow {
   transition: transform var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
@@ -1191,8 +1199,12 @@
 }
 
 .muxui-date-segment[data-muxui-state-placeholder] {
-  color: var(--muxui-semantic-content-faint);
+  color: var(--muxui-field-placeholder-color);
   font-style: italic;
+}
+
+.muxui-date-segment[data-muxui-state-placeholder][data-muxui-state-disabled] {
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 .muxui-date-segment[data-muxui-state-disabled] {
