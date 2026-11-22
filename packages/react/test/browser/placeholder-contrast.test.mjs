@@ -6,11 +6,12 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import * as M from '../../generated/index.mjs';
 import { contrastRatio } from '../support/contrast.mjs';
-import { browserEngines, launchBrowser, packageRoot } from './harness.mjs';
+import { awaitFontsAndFrames, browserEngines, launchBrowser, packageRoot, pageShell, startServer } from './harness.mjs';
 
 // Enabled placeholder text is text: it reaches 4.5:1 against the field surface it is drawn on, in both schemes of the default theme
-// (WCAG 1.4.3). Disabled fields are exempt and not rendered. Server markup only: an empty field shows its placeholder before
-// hydration, a date or time field its placeholder segments, and a Select or MultiSelect its placeholder value.
+// (WCAG 1.4.3). Disabled fields are exempt and not rendered. The fields are server markup: an empty field shows its placeholder
+// before hydration, a date or time field its placeholder segments, and a Select or MultiSelect its placeholder value. A
+// CommandPalette's search row exists only on the client, so it is rendered on a page of its own.
 const h = React.createElement;
 const items = ['Melbourne', 'Sydney'];
 const options = [{ id: 'react', label: 'React' }, { id: 'css', label: 'CSS' }];
@@ -46,7 +47,7 @@ const documentFor = (scheme) => `<!doctype html><html data-muxui-color-scheme="$
  * colour functions the same way. The surface is every background from the root down to the field, over white; the placeholder adds
  * its colour at its own opacity. A native placeholder is read from `::placeholder`, a placeholder value, segment or token-field prompt from itself.
  */
-function placeholders() {
+function placeholders({ values = false } = {}) {
   const canvas = document.createElement('canvas');
   canvas.width = 1;
   canvas.height = 1;
@@ -73,9 +74,11 @@ function placeholders() {
   const add = (element, style, own) => {
     const ground = surfaces(element);
     rows.push({
-      family: element.closest('[data-family]').dataset.family,
+      // A portaled popup is outside every [data-family] wrapper; its page names the family on the body.
+      family: (element.closest('[data-family]') ?? document.body).dataset.family,
       part: [...element.classList].find((name) => name.startsWith('muxui-')) ?? element.localName,
       own,
+      kind: own === undefined ? 'value' : 'placeholder',
       color: style.color,
       text: paint([...ground, { color: style.color, opacity: Number(style.opacity) }]),
       ground: paint(ground),
@@ -85,12 +88,56 @@ function placeholders() {
     if (element.getClientRects().length === 0) continue;
     add(element, getComputedStyle(element, '::placeholder'), getComputedStyle(element).color);
   }
+  // The typed value of a field, read the same way, where `values` asks for it.
+  if (values) for (const element of document.querySelectorAll('input:not(:placeholder-shown)')) add(element, getComputedStyle(element), undefined);
   for (const element of document.querySelectorAll('[data-muxui-state-placeholder]:not([data-muxui-state-type="literal"]), .muxui-multi-select__value--placeholder, .muxui-token-field__placeholder')) {
     if (element.getClientRects().length === 0 || element.querySelector('[data-muxui-state-placeholder]') || element.textContent.trim() === '') continue;
     add(element, getComputedStyle(element), null);
   }
   return rows;
 }
+
+/** The rows of `rows` below 4.5:1, labelled for the failure list. */
+const below = (rows, label) => rows.flatMap(({ family, part, kind, text, ground }) => {
+  const ratio = contrastRatio(text, ground);
+  return ratio < 4.5 ? [`${label} ${family} ${part}${kind === 'value' ? ' value' : ''}: ${ratio.toFixed(2)}`] : [];
+});
+
+// The client-rendered parts. A translucent CommandPalette shows the page through its search row, so it is measured over the
+// darkest and the lightest page a backdrop can show (a blur of one colour is that colour) as well as over the canvas.
+const clientCases = [
+  { family: 'command-palette', ready: '.muxui-command-palette__input', value: 'Open settings' },
+  { family: 'command-palette-translucent', backdrops: ['canvas', 'black', 'white'], ready: '.muxui-command-palette__input', value: 'Open settings' },
+];
+const clientEntries = ['src/supplemental/command-palette.ts'];
+const clientEntry = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { CommandPalette } from '/src/supplemental/command-palette.ts';
+
+const h = React.createElement;
+const family = new URLSearchParams(location.search).get('family');
+document.body.dataset.family = family;
+const palette = (translucent) => h(CommandPalette.Root, { defaultOpen: true },
+  h(CommandPalette.Trigger, null, 'Commands'),
+  h(CommandPalette.Backdrop, null, h(CommandPalette.Popup, { translucent, 'aria-label': 'Commands' },
+    h(CommandPalette.Content, null,
+      h(CommandPalette.SearchField, null, h(CommandPalette.Input, { 'aria-label': 'Search commands', placeholder: 'Search commands' })),
+      h(CommandPalette.ListBox, null, h(CommandPalette.Item, { id: 'settings', title: 'Open settings', textValue: 'Open settings' }))))));
+const parts = {
+  'command-palette': () => palette(false),
+  'command-palette-translucent': () => palette(true),
+};
+createRoot(document.getElementById('root')).render(parts[family]());
+`;
+const backdrops = { canvas: 'var(--muxui-semantic-surface-canvas)', black: '#000', white: '#fff' };
+const clientPage = (url) => pageShell({
+  attributes: `lang="en" data-muxui-color-scheme="${url.searchParams.get('scheme')}"`,
+  head: '<link rel="stylesheet" href="/generated/styles.css">',
+  bodyAttributes: `style="margin:24px;background:${backdrops[url.searchParams.get('backdrop')]}"`,
+  body: '<div id="root"></div>',
+  entry: '/placeholders-entry.mjs',
+});
 
 for (const engine of browserEngines()) {
   test(`Enabled placeholder text reaches 4.5:1 on its field surface in both schemes in ${engine}`, { timeout: 120_000 }, async () => {
@@ -104,14 +151,47 @@ for (const engine of browserEngines()) {
         assert.deepEqual(Object.keys(families).filter((family) => !rows.some((row) => row.family === family)), [], `${scheme}: every family shows a placeholder`);
         // A native placeholder read back as the field's own colour would mean the engine ignored the pseudo-element.
         assert.deepEqual(rows.filter((row) => row.own !== null && row.own === row.color).map((row) => row.family), [], `${scheme}: placeholder colours are read from ::placeholder`);
-        for (const { family, part, text, ground } of rows) {
-          const ratio = contrastRatio(text, ground);
-          if (ratio < 4.5) shortfalls.push(`${scheme} ${family} ${part}: ${ratio.toFixed(2)}`);
-        }
+        shortfalls.push(...below(rows, scheme));
       }
       assert.deepEqual([...new Set(shortfalls)], []);
     } finally {
       await browser.close();
+    }
+  });
+
+  test(`The placeholders of client-rendered parts reach 4.5:1 on their surface in both schemes in ${engine}`, { timeout: 180_000 }, async () => {
+    const { url, close } = await startServer({ entries: clientEntries, pages: { '/placeholders.html': clientPage }, modules: { '/placeholders-entry.mjs': clientEntry } });
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage({ viewport: { width: 900, height: 700 } });
+      const shortfalls = [];
+      const seen = [];
+      for (const scheme of ['light', 'dark']) {
+        for (const { family, backdrops = ['canvas'], ready, value } of clientCases) {
+          for (const backdrop of backdrops) {
+            await tab.goto(`${url}/placeholders.html?family=${family}&scheme=${scheme}&backdrop=${backdrop}`, { waitUntil: 'load' });
+            await tab.locator(ready).first().waitFor();
+            await awaitFontsAndFrames(tab);
+            const label = `${scheme} over ${backdrop}`;
+            const rows = await tab.evaluate(placeholders);
+            assert.ok(rows.length > 0, `${label}: ${family} shows a placeholder`);
+            seen.push(family);
+            shortfalls.push(...below(rows, label));
+            if (value) {
+              // The typed value in the same row, over the same backdrop, stays readable too.
+              await tab.locator(ready).first().fill(value);
+              const typed = (await tab.evaluate(placeholders, { values: true })).filter((row) => row.kind === 'value');
+              assert.ok(typed.length > 0, `${label}: ${family} shows its value`);
+              shortfalls.push(...below(typed, `${label} value`));
+            }
+          }
+        }
+      }
+      assert.deepEqual(clientCases.map(({ family }) => family).filter((family) => !seen.includes(family)), []);
+      assert.deepEqual([...new Set(shortfalls)], []);
+    } finally {
+      await browser.close();
+      await close();
     }
   });
 }

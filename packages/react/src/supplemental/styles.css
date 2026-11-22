@@ -710,9 +710,14 @@
   background-color: var(--muxui-semantic-color-neutral-10);
 }
 
-.muxui-command-palette__popup--translucent .muxui-command-palette__search-field,
 .muxui-command-palette__popup--translucent .muxui-command-palette__chips {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 24%, transparent);
+}
+
+/* The search row holds the placeholder and the typed query, so it covers enough of the page behind it for both to keep
+   4.5:1 over the darkest and the lightest page a translucent popup can show. */
+.muxui-command-palette__popup--translucent .muxui-command-palette__search-field {
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 80%, transparent);
 }
 
 .muxui-command-palette__search-field--inline {
