@@ -260,6 +260,30 @@ for (const engine of browserEngines()) {
             assert.equal(layout.centred, true, 'the action is centred on the content');
             assert.equal(layout.inside, true, 'the action sits inside the toast');
             assert.ok(layout.ratio >= 4.5, `the action's label reads on its fill at ${layout.ratio.toFixed(2)}:1 ${layout.colors}`);
+
+            // Keyboard focus draws a ring, and a press darkens the fill. The press is released off the action, so it runs nothing.
+            const action = page.locator('.muxui-toast__action');
+            const paint = () => action.evaluate((node) => {
+              const style = getComputedStyle(node);
+              return { fill: style.backgroundColor, ring: style.boxShadow, outline: style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0 };
+            });
+            const rest = await paint();
+            await page.locator('#before').focus();
+            await page.keyboard.press('Tab');
+            await page.keyboard.press('Tab');
+            assert.equal(await action.evaluate((node) => node === document.activeElement && node.hasAttribute('data-muxui-state-focus-visible')), true, 'Tab focuses the action visibly');
+            const focused = await paint();
+            assert.ok(focused.outline || (focused.ring !== 'none' && focused.ring !== rest.ring), `the focused action draws a ring (${focused.ring})`);
+            await page.locator('#before').focus();
+            const box = await action.boundingBox();
+            await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+            await page.mouse.down();
+            await page.waitForFunction(() => document.querySelector('.muxui-toast__action')?.hasAttribute('data-muxui-state-pressed'));
+            const pressed = await paint();
+            await page.mouse.move(AWAY.x, AWAY.y);
+            await page.mouse.up();
+            assert.notEqual(pressed.fill, rest.fill, `a press changes the fill from ${rest.fill}`);
+            assert.deepEqual(await calls(page), [], 'a press released off the action runs nothing');
             assert.deepEqual(errors, [], errors.join('\n'));
           } finally {
             await page.close();
