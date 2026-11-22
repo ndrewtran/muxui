@@ -246,6 +246,43 @@ for (const engine of browserEngines()) {
     }
   });
 
+  test(`TextEditor keeps text typed in a link whole after an undo past a command that changed nothing, by keyboard, in ${engine}`, { timeout: 120_000 }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage({ viewport: { width: 800, height: 600 } });
+      // An undo step from the caret after a label: an alignment, or linked text pasted there, which the undo then takes back
+      // only in part. Then text across or at the label's end replaced by the same text, which stays out of history.
+      const routes = [
+        { step: () => window.__handle.current.execute({ type: 'align', value: 'center' }), from: 6, to: 10, same: 'newdocs', rest: 'docs' },
+        { step: () => document.querySelector('.ProseMirror').editor.view.pasteHTML('<a href="https://a.example/">do</a>'), from: 7, to: 9, same: 'newdodocs', rest: 'ddocs' },
+      ];
+      for (const { step, from, to, same, rest } of routes) {
+        await open(tab, { defaultValue: paragraphOf([{ type: 'text', text: 'see ' }, { type: 'text', text: 'docs', marks: [linkA] }, { type: 'text', text: ' end' }]) });
+        // A label just before the link, at its address, joins it.
+        await caretAt(tab, 5);
+        assert.equal(await tab.evaluate(() => window.__handle.current.execute({ type: 'link', href: 'https://a.example/', text: 'new' })), true);
+        await frames(tab);
+        assert.equal(await tab.evaluate(step), true);
+        await frames(tab);
+        const text = await tab.evaluate((range) => document.querySelector('.ProseMirror').editor.state.doc.textBetween(range.from, range.to), { from, to });
+        await tab.evaluate((range) => document.querySelector('.ProseMirror').editor.commands.setTextSelection(range), { from, to });
+        assert.equal(await tab.evaluate((value) => window.__handle.current.execute({ type: 'text', text: value }), text), true);
+        await frames(tab);
+        assert.deepEqual(await children(tab), [['#text', 'see '], ['A', same], ['#text', ' end']], 'the document is as it was');
+        await tab.keyboard.press('ControlOrMeta+z');
+        await tab.keyboard.type('!');
+        await frames(tab);
+        // Either the caret after the label comes back holding its marks, or a caret elsewhere types as any caret there does.
+        const typed = await children(tab);
+        const atLabel = [['#text', 'see '], ['A', 'new'], ['#text', '!'], ['A', rest], ['#text', ' end']];
+        const inOneLink = typed.length === 3 && typed[1][0] === 'A' && typed[1][1].includes('!');
+        assert.ok(inOneLink || JSON.stringify(typed) === JSON.stringify(atLabel), `typed text splits the link away from the label: ${JSON.stringify(typed)}`);
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+
   test(`TextEditor leaves an unfocused heading alone when the heading command already matches it in ${engine}`, { timeout: 120_000 }, async () => {
     const browser = await launchBrowser(engine);
     try {

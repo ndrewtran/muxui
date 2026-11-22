@@ -617,7 +617,7 @@ function relink(tr: Transaction, link: LinkRange, href: string): boolean {
  * The caret the link command leaves after a label it inserted, with the marks it holds there for typing, which leave out the
  * label's link. Undo history keeps a selection's bookmark from the start of each change and from each undo, and resolves it
  * in the document it restores, so an undo or redo that brings this caret back brings back its marks too, which
- * linkTypingBoundary holds again. Any edit maps it to a plain caret.
+ * linkTypingBoundary holds again. Any edit maps it to a plain caret, and its bookmark keeps the marks only where they were held.
  */
 class HeldMarksSelection extends TextSelection {
   readonly held: readonly Mark[];
@@ -632,25 +632,33 @@ class HeldMarksSelection extends TextSelection {
   }
 }
 
-/** The bookmark of a HeldMarksSelection, shaped as the text bookmark it stands in for, with the caret's held marks. */
+/**
+ * The bookmark of a HeldMarksSelection, shaped as the text bookmark it stands in for, with the caret's held marks, or null
+ * once they are dropped. History maps it through the steps it keeps out of undo, such as text replaced by the same text, and
+ * through what an undo takes back only in part. The marks hold only between the two characters they were taken between: a
+ * mapping that replaces the text across the caret, or leaves content at it, maps the caret's two sides apart, which drops
+ * them, and the caret comes back plain, as any caret there.
+ */
 class HeldMarksBookmark implements SelectionBookmark {
   readonly anchor: number;
   readonly head: number;
-  readonly held: readonly Mark[];
+  readonly held: readonly Mark[] | null;
 
-  constructor(pos: number, held: readonly Mark[]) {
+  constructor(pos: number, held: readonly Mark[] | null) {
     this.anchor = pos;
     this.head = pos;
     this.held = held;
   }
 
   map(mapping: Mappable): HeldMarksBookmark {
-    return new HeldMarksBookmark(mapping.map(this.head), this.held);
+    const pos = mapping.map(this.head);
+    return new HeldMarksBookmark(pos, mapping.map(this.head, -1) === pos ? this.held : null);
   }
 
   resolve(doc: ProseMirrorNode): Selection {
     const $pos = doc.resolve(this.head);
-    return $pos.parent.inlineContent ? new HeldMarksSelection($pos, this.held) : Selection.near($pos);
+    if (!$pos.parent.inlineContent) return Selection.near($pos);
+    return this.held ? new HeldMarksSelection($pos, this.held) : new TextSelection($pos);
   }
 }
 

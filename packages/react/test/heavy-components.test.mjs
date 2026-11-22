@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { isDeepStrictEqual } from 'node:util';
 import React from 'react';
 import { act } from 'react';
 import { flushSync } from 'react-dom';
@@ -1171,6 +1172,130 @@ test('TextEditor link with text in place of a whole link, undone, leaves typing 
     await t.undo();
     await t.type('!');
     assert.deepEqual(t.content().slice(0, 2), [text('see '), text('docs!', [linkMark(linkA)])], 'typed text joins the restored link, as before the label');
+  });
+});
+
+// The first paragraph of markedDocument after a label that joined the link to the same address, with `!` typed straight after it.
+const typedAfterLabel = [text('see '), text('new', [linkMark(linkA)]), text('!'), text('docs', [linkMark(linkA)]), text(' end')];
+// Or with `!` typed as any caret inside that one link types: into the link.
+const typedInOneLink = (content) => content.length === 3 && content[1].text.includes('!') && content[1].marks?.[0]?.type === 'link';
+
+test('TextEditor link with text, through undo and redo steps in a row, leaves the next typed text after the label unlinked', async () => {
+  await withEditor(markedDocument, async (t) => {
+    await t.select(t.at('docs'));
+    assert.equal(await t.execute({ type: 'link', href: linkA, text: 'new' }), true);
+    const label = t.selection()[0];
+    assert.equal(await t.execute({ type: 'align', value: 'center' }), true);
+    // The alignment and the label undone, both redone, then the alignment undone again, back to the caret after the label.
+    for (const step of ['undo', 'undo', 'redo', 'redo', 'undo']) await t[step]();
+    assert.deepEqual(t.selection(), [label, label]);
+    await t.type('!');
+    assert.deepEqual(t.content(), typedAfterLabel);
+  });
+});
+
+test('TextEditor link with text, then a deletion from the caret after it undone, leaves the next typed text unlinked', async () => {
+  // Backspace and Delete at that caret, and a deletion across it, each also followed by a command that leaves the document as
+  // it was, which the undo maps the caret through.
+  for (const [key, offset, size] of [['Backspace', -1, 1], ['Delete', 0, 1], ['A deletion across it', -1, 2]]) {
+    for (const between of [false, true]) {
+      await withEditor(markedDocument, async (t) => {
+        await t.select(t.at('docs'));
+        assert.equal(await t.execute({ type: 'link', href: linkA, text: 'new' }), true);
+        const label = t.selection()[0];
+        await act(async () => { t.editor.view.dispatch(t.editor.state.tr.delete(label + offset, label + offset + size)); });
+        if (between) {
+          await t.select(t.at('last'), t.at('last') + 4);
+          assert.equal(await t.execute({ type: 'text', text: 'last' }), true);
+        }
+        await t.undo();
+        await t.type('!');
+        assert.deepEqual(t.content(), typedAfterLabel, `${key}${between ? ' and a command that changed nothing' : ''}`);
+      });
+    }
+  }
+});
+
+test('TextEditor undo and redo past a command that left the document as it was keep the caret after a label holding its marks', async () => {
+  // Text replaced by the same text elsewhere, or ending or starting at the caret after the label, leaves that caret in place.
+  const sameText = {
+    elsewhere: (t) => [t.at('last'), t.at('last') + 4, 'last'],
+    'ending at the caret': (t, label) => [label - 3, label, 'new'],
+    'starting at the caret': (t, label) => [label, label + 4, 'docs'],
+  };
+  for (const [name, range] of Object.entries(sameText)) {
+    await withEditor(markedDocument, async (t) => {
+      await t.select(t.at('docs'));
+      assert.equal(await t.execute({ type: 'link', href: linkA, text: 'new' }), true);
+      const label = t.selection()[0];
+      assert.equal(await t.execute({ type: 'align', value: 'center' }), true);
+      const [from, to, value] = range(t, label);
+      await t.select(from, to);
+      assert.equal(await t.execute({ type: 'text', text: value }), true);
+      assert.deepEqual(t.content(), [text('see '), text('newdocs', [linkMark(linkA)]), text(' end')], `${name}: the document is as it was`);
+      await t.undo();
+      await t.type('!');
+      assert.deepEqual(t.content(), typedAfterLabel, name);
+    });
+  }
+  // Typing from that caret as the undo step, which puts text exactly at it, then text replaced by the same text elsewhere.
+  await withEditor(markedDocument, async (t) => {
+    await t.select(t.at('docs'));
+    assert.equal(await t.execute({ type: 'link', href: linkA, text: 'new' }), true);
+    await t.type('x');
+    await t.select(t.at('last'), t.at('last') + 4);
+    assert.equal(await t.execute({ type: 'text', text: 'last' }), true);
+    await t.undo();
+    await t.type('!');
+    assert.deepEqual(t.content(), typedAfterLabel, 'after typing is undone');
+  });
+  // A redo too: the label undone, text replaced by the same text elsewhere, then the label redone.
+  await withEditor(markedDocument, async (t) => {
+    await t.select(t.at('docs'));
+    assert.equal(await t.execute({ type: 'link', href: linkA, text: 'new' }), true);
+    await t.undo();
+    await t.select(t.at('last'), t.at('last') + 4);
+    assert.equal(await t.execute({ type: 'text', text: 'last' }), true);
+    await t.redo();
+    await t.type('!');
+    assert.deepEqual(t.content(), typedAfterLabel, 'after the redo');
+  });
+});
+
+test('TextEditor undo after a command that left the document as it was holds no label marks away from the label', async () => {
+  await withEditor(markedDocument, async (t) => {
+    // A label just before a link to the same address joins it, and the caret after the label holds the marks without it.
+    await t.select(t.at('docs'));
+    assert.equal(await t.execute({ type: 'link', href: linkA, text: 'new' }), true);
+    const label = t.selection()[0];
+    // An undo step that starts at that caret, and then text replaced by the same text, which stays out of history.
+    assert.equal(await t.execute({ type: 'align', value: 'center' }), true);
+    await t.select(label - 2, label + 2);
+    assert.equal(await t.execute({ type: 'text', text: 'ewdo' }), true);
+    assert.deepEqual(t.content(), [text('see '), text('newdocs', [linkMark(linkA)]), text(' end')], 'the document is as it was');
+    await t.undo();
+    await t.type('!');
+    assert.ok(typedInOneLink(t.content()) || isDeepStrictEqual(t.content(), typedAfterLabel), `typed text splits the link away from the label: ${JSON.stringify(t.content())}`);
+  });
+});
+
+test('TextEditor undo of a paste at the caret after a label, past a command that left the document as it was, holds no label marks away from it', async () => {
+  await withEditor(markedDocument, async (t) => {
+    await t.select(t.at('docs'));
+    assert.equal(await t.execute({ type: 'link', href: linkA, text: 'new' }), true);
+    const label = t.selection()[0];
+    // Linked text pasted at that caret, an undo step that starts there, then text across the label's end replaced by the
+    // same text, which stays out of history. The undo then takes back only part of the paste.
+    await act(async () => { t.editor.view.pasteHTML(`<a href="${linkA}">do</a>`, new window.Event('paste')); });
+    assert.deepEqual(t.content(), [text('see '), text('newdodocs', [linkMark(linkA)]), text(' end')], 'the paste joins the link');
+    await t.select(label - 1, label + 1);
+    assert.equal(await t.execute({ type: 'text', text: 'wd' }), true);
+    assert.deepEqual(t.content(), [text('see '), text('newdodocs', [linkMark(linkA)]), text(' end')], 'the document is as it was');
+    await t.undo();
+    await t.type('!');
+    // Either the caret after the label comes back with its marks, or a caret elsewhere types as any caret there does.
+    const atLabel = [text('see '), text('new', [linkMark(linkA)]), text('!'), text('ddocs', [linkMark(linkA)]), text(' end')];
+    assert.ok(typedInOneLink(t.content()) || isDeepStrictEqual(t.content(), atLabel), `typed text splits the link away from the label: ${JSON.stringify(t.content())}`);
   });
 });
 
