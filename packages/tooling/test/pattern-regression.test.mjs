@@ -29,6 +29,9 @@ function searchAll(target, query) {
 /** The 1-based place of `id` in `items`, or 0 when it is missing. */
 const placeOf = (items, id) => items.findIndex((item) => item.id === id) + 1;
 
+/** `items` in score order alone, ties by id: the ranking before a family's examples were grouped. */
+const byScore = (items) => [...items].sort((left, right) => right.score - left.score || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+
 // Every block holds the thresholds in the working tree (E-BL1-11). A pull request may change a limit or a budget in
 // pattern-regression-thresholds.json, and these tests follow it.
 test('E-BL1-11: the shipped patterns hold the regression thresholds', () => {
@@ -97,9 +100,17 @@ test('a query naming an example keeps it where its score ranks it', () => {
   // place its score gives it, second, instead of following the other results as a further Menu example.
   const id = 'muxui:example:menu-grouped-react';
   const items = searchAll(api, id);
-  const byScore = [...items].sort((left, right) => right.score - left.score || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
-  assert.equal(placeOf(byScore, id), 2);
-  assert.ok(placeOf(items, id) >= 1 && placeOf(items, id) <= placeOf(byScore, id), `${id} ranks at ${placeOf(items, id)}`);
+  assert.equal(placeOf(byScore(items), id), 2);
+  assert.ok(placeOf(items, id) >= 1 && placeOf(items, id) <= placeOf(byScore(items), id), `${id} ranks at ${placeOf(items, id)}`);
+  // Each of these queries names the Quiet example, by every word of its name or of its id slug, and adds the word
+  // basic, which the example misses and the basic ToggleButton example matches. The Quiet example still keeps the
+  // place its score gives it instead of following the other results as a further ToggleButton example.
+  const quiet = 'muxui:example:toggle-button-quiet-react';
+  for (const [query, place] of [['Basic Quiet ToggleButton React', 3], ['toggle-button-quiet-react basic', 4]]) {
+    const named = searchAll(api, query);
+    assert.equal(placeOf(byScore(named), quiet), place, `score place for "${query}"`);
+    assert.equal(placeOf(named, quiet), place, query);
+  }
 });
 
 // An example that matches every word of the query answers the whole query, so it keeps the place its score gives it,
@@ -108,8 +119,8 @@ test('a query naming an example keeps it where its score ranks it', () => {
 test('an example that matches every query word keeps its place', () => {
   const sidebarExamples = (items) => items.filter(({ id }) => id.startsWith('muxui:example:sidebar-'));
   const items = searchAll(api, 'react sidebar');
-  const byScore = [...items].sort((left, right) => right.score - left.score || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
-  const places = sidebarExamples(byScore).map(({ id }) => placeOf(byScore, id));
+  const scored = byScore(items);
+  const places = sidebarExamples(scored).map(({ id }) => placeOf(scored, id));
   assert.deepEqual(places, places.map((_, index) => index + 1));
   assert.deepEqual(sidebarExamples(items).map(({ id }) => placeOf(items, id)), places);
   assert.ok(sidebarExamples(api.searchArtifacts({ query: 'sidebar', limit: 5 }).data.items).length >= 4);
