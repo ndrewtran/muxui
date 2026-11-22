@@ -304,8 +304,18 @@
   --muxui-dialog-viewport-top: initial;
 }
 /* MuxUI component source: popover.css */
+/* React Aria caps the positioner's height at the room its boundary leaves, containerPadding from its edges, and the
+   Popover caps its width the same way (see PopupContent); the surface keeps to that box, its text wraps, and it scrolls
+   what does not fit. */
+.muxui-popover__positioner {
+  display: flex;
+  flex-direction: column;
+}
+
 .muxui-popover {
   position: relative;
+  min-block-size: 0;
+  overflow: auto;
   padding: var(--muxui-semantic-layout-inset-small);
   max-width: 20rem;
   border-radius: var(--muxui-semantic-control-radius);

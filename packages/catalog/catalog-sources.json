@@ -1867,6 +1867,22 @@
     {
       "family": "example",
       "path": "catalog/components/dialog/examples/react/sheet.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/popover/examples/react/boundary.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/popover/examples/react/initial-focus.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/popover/examples/react/open-from-code.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/popover/examples/react/return-focus.example.json"
     }
   ]
 }

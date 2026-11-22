@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:b4312f119d81239ee6339f72876a79e2b4e051c9dfdc58f316942b757bc9eb95 -->
+<!-- @generated-content-sha256: sha256:38da44fed91124972e89495023aa96ecf5d6030647348864befb3c6e34dd25bb -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -424,21 +424,34 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `c
 
 ### Popover
 
-- A Popover renders in a portal and is positioned against its trigger.
+- A Popover renders in a portal and is positioned against its trigger, or against anchorRef.
 - Closing returns focus to the element that was focused when the Popover opened.
 - If the element that opened the Popover has left the DOM when the Popover closes or unmounts, focus moves to the nearest ancestor recorded at opening that is still connected and focusable.
 - That move happens only when focus would otherwise be on the document body, and with no such ancestor focus stays there.
+- returnFocusRef names an element that takes focus before any such ancestor when the element focused at opening cannot take focus back, because it has left the DOM, is hidden or disabled, or focus was on the document body when the Popover opened.
+- returnFocusRef applies only when focus has been inside the Popover and would otherwise be on the document body, and an element that cannot take focus then is passed over.
 - When overlays are stacked, Escape closes the topmost one.
-- trigger is required and must be a focusable React element.
+- A Popover open as it mounts inside a Dialog or Popover that mounts in the same update, such as a sheet opened with it, opens one commit later, so that overlay registers first: the Popover is then the topmost overlay, hides that overlay from assistive technology, and closes first on Escape.
+- Any other Popover open as it mounts opens in the commit that renders it, so its content is in the document when the effects around it run.
+- A Popover that opens in the same commit as a popup that is not around it, such as a menu opened by the same press, can leave both inert until one of them closes, as in earlier versions; it opens on top when it opens from the menu item's action or one commit after the other popup.
+- trigger, when given, must be a focusable React element.
+- Without a trigger, anchorRef is required: only open or defaultOpen opens the Popover, and anchorRef places it.
+- Without a trigger, the anchor stands in for it: the Popover reads reduced motion and a color scheme's preset theme and contrast from the anchor's surroundings, and a press on the anchor is not an outside press, nor, in non-modal mode, is the move of focus such a press makes to the anchor or to an element around it. A modal Popover leaves its page inert, so a press where its anchor is closes it as any outside press does.
 - Pressing the trigger toggles the Popover.
 - Open state is controlled with open and onOpenChange, or starts from defaultOpen when uncontrolled.
 - placement accepts top, bottom, start, end, top-start, top-end, bottom-start, bottom-end, start-top, start-bottom, end-top, and end-bottom.
 - start and end resolve through the current locale direction.
 - An unsupported placement, a non-finite offset or crossOffset, a non-boolean shouldFlip, or a negative or non-finite containerPadding throws a TypeError.
 - anchorRef positions the Popover against another DOM element, while the trigger still opens it and keeps its accessibility relationships.
+- anchorRef is read whenever the Popover is placed, and checked after each render of the Popover and again once its refs are attached: a replaced anchor, or one that layout has moved while the Popover is open, places it again at that check, and while no anchor is in the document the Popover stays where it was last placed.
+- A modal Popover is not placed again while its anchor scrolls; a non-modal one closes when an ancestor of its anchor scrolls.
+- boundaryRef names an element whose box bounds the Popover in place of the viewport: the Popover flips, shifts and caps its width and height to stay inside it, containerPadding from its edges.
+- boundaryRef is read after each render of the Popover and again once its refs are attached, and without an element in the document there the viewport bounds it.
+- The surface keeps to the width and height its boundary leaves it, containerPadding from the boundary's edges, and on a start or end placement to the width beside its anchor on the side it opens on: its text wraps, and it scrolls what does not fit.
 - With modal set to false, the Popover is non-blocking: it has no focus containment, outside-content exclusion, or scroll locking.
 - Changing modal while open keeps the existing content, uncontrolled values, and child state.
 - Entering modal mode focuses the dialog surface when focus is outside it.
+- initialFocusRef names an element inside the Popover that takes focus as it opens, in one move and in place of the dialog surface, in modal and non-modal mode; an element that cannot take focus then is passed over.
 - Keep the muxui-popover__positioner and muxui-popover selectors, and the data-muxui-state-placement and transition state attributes.
 - data-muxui-modal on the positioner exposes the modal setting for consumer styling.
 - colorScheme makes the open Popover a scope of that color scheme: data-muxui-color-scheme is set on the positioner that wraps the surface, so tokens and Mux UI components inside resolve as they do on a page of that scheme, whatever the page uses.

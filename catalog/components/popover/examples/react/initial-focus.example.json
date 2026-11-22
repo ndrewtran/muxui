@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:popover-initial-focus-react",
+  "kind": "example",
+  "name": "Popover initial focus",
+  "summary": "Move focus straight to the field a Popover holds when it opens, with initialFocusRef.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:popover#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 7
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/popover/examples/react/initial-focus.tsx"
+}
