@@ -10,8 +10,9 @@ import { awaitFontsAndFrames, browserEngines, launchBrowser, packageRoot, pageSh
 
 // Enabled placeholder text is text: it reaches 4.5:1 against the field surface it is drawn on, in both schemes of the default theme
 // (WCAG 1.4.3). Disabled fields are exempt and not rendered. The fields are server markup: an empty field shows its placeholder
-// before hydration, a date or time field its placeholder segments, and a Select or MultiSelect its placeholder value. A
-// CommandPalette's search row exists only on the client, so it is rendered on a page of its own.
+// before hydration, a date or time field its placeholder segments, and a Select or MultiSelect its placeholder value. The parts
+// that exist only on the client (a CommandPalette's search row, a TextEditor's document and selection bar, a MultiSelect's
+// search) are rendered on a page of their own.
 const h = React.createElement;
 const items = ['Melbourne', 'Sydney'];
 const options = [{ id: 'react', label: 'React' }, { id: 'css', label: 'CSS' }];
@@ -35,6 +36,8 @@ const families = {
   'date-picker': h(M.DatePicker, { label: 'Due date' }),
   'date-range-picker': h(M.DateRangePicker, { label: 'Stay' }),
   sidebar: h('div', { style: { width: '16rem' } }, h(M.Sidebar.Root, { 'aria-label': 'Workspace' }, h(M.Sidebar.Header, null, h(M.Sidebar.Search)))),
+  // PromptComposer keeps a placeholder colour of its own; only its ratio is held here.
+  'prompt-composer': h(M.PromptComposer, { inputProps: { placeholder: 'Ask anything' } }),
 };
 
 // Disabled placeholders are exempt from the contrast rule and keep the colour they had before it: the role each family drew a
@@ -126,6 +129,7 @@ function placeholders({ values = false } = {}) {
     add(element, getComputedStyle(element, '::placeholder'), getComputedStyle(element).color);
   }
   // The typed value of a field, read the same way, where `values` asks for it.
+  for (const element of document.querySelectorAll('.ProseMirror p.is-editor-empty:first-child')) add(element, getComputedStyle(element, '::before'), null);
   if (values) for (const element of document.querySelectorAll('input:not(:placeholder-shown)')) add(element, getComputedStyle(element), undefined);
   for (const element of document.querySelectorAll('[data-muxui-state-placeholder]:not([data-muxui-state-type="literal"]), .muxui-multi-select__value--placeholder, .muxui-token-field__placeholder')) {
     if (element.getClientRects().length === 0 || element.querySelector('[data-muxui-state-placeholder]') || element.textContent.trim() === '') continue;
@@ -165,12 +169,17 @@ const below = (rows, label) => rows.flatMap(({ family, part, kind, text, ground 
 const clientCases = [
   { family: 'command-palette', ready: '.muxui-command-palette__input', value: 'Open settings' },
   { family: 'command-palette-translucent', backdrops: ['canvas', 'black', 'white'], ready: '.muxui-command-palette__input', value: 'Open settings' },
+  { family: 'text-editor', ready: '.ProseMirror p.is-editor-empty' },
+  { family: 'text-editor-selection', loaded: '.ProseMirror p', ready: '.muxui-text-editor__selection-input' },
+  { family: 'multi-select-search', open: '.muxui-multi-select__trigger', ready: '.muxui-multi-select__search-input' },
 ];
-const clientEntries = ['src/supplemental/command-palette.ts'];
+const clientEntries = ['src/supplemental/command-palette.ts', 'src/text-editor/index.ts', 'src/supplemental/multi-select.ts'];
 const clientEntry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { CommandPalette } from '/src/supplemental/command-palette.ts';
+import { MultiSelect } from '/src/supplemental/multi-select.ts';
+import { TextEditor } from '/src/text-editor/index.ts';
 
 const h = React.createElement;
 const family = new URLSearchParams(location.search).get('family');
@@ -181,9 +190,13 @@ const palette = (translucent) => h(CommandPalette.Root, { defaultOpen: true },
     h(CommandPalette.Content, null,
       h(CommandPalette.SearchField, null, h(CommandPalette.Input, { 'aria-label': 'Search commands', placeholder: 'Search commands' })),
       h(CommandPalette.ListBox, null, h(CommandPalette.Item, { id: 'settings', title: 'Open settings', textValue: 'Open settings' }))))));
+const text = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'A sentence to select.' }] }] };
 const parts = {
   'command-palette': () => palette(false),
   'command-palette-translucent': () => palette(true),
+  'text-editor': () => h(TextEditor, { label: 'Note', placeholder: 'Write a note', toolbar: false }),
+  'text-editor-selection': () => h(TextEditor, { label: 'Draft', defaultValue: text, toolbar: false, selectionActions: [{ id: 'explain', label: 'Explain' }], onSelectionRequest: () => {} }),
+  'multi-select-search': () => h(MultiSelect.Root, { label: 'Technologies', items: [{ id: 'react', label: 'React' }] }, (item) => h(MultiSelect.Item, { id: item.id, textValue: item.label }, item.label)),
 };
 createRoot(document.getElementById('root')).render(parts[family]());
 `;
@@ -280,9 +293,26 @@ for (const engine of browserEngines()) {
       const shortfalls = [];
       const seen = [];
       for (const scheme of ['light', 'dark']) {
-        for (const { family, backdrops = ['canvas'], ready, value } of clientCases) {
+        for (const { family, backdrops = ['canvas'], loaded, open, ready, value } of clientCases) {
           for (const backdrop of backdrops) {
             await tab.goto(`${url}/placeholders.html?family=${family}&scheme=${scheme}&backdrop=${backdrop}`, { waitUntil: 'load' });
+            await tab.locator(loaded ?? open ?? ready).first().waitFor();
+            if (open) await tab.locator(open).first().click();
+            if (family === 'text-editor-selection') {
+              // A double click on a word shows the selection bar and its instruction field. Focus first and wait out
+              // ProseMirror's 20 ms selection re-sync, which could otherwise overwrite the pointer selection.
+              await tab.locator('.ProseMirror').focus();
+              await tab.evaluate(() => new Promise((resolve) => setTimeout(resolve, 20)));
+              const word = await tab.evaluate(() => {
+                const range = document.createRange();
+                const node = document.querySelector('.ProseMirror p').firstChild;
+                range.setStart(node, 2);
+                range.setEnd(node, 10);
+                const { left, top, width, height } = range.getBoundingClientRect();
+                return { x: left + width / 2, y: top + height / 2 };
+              });
+              await tab.mouse.dblclick(word.x, word.y);
+            }
             await tab.locator(ready).first().waitFor();
             await awaitFontsAndFrames(tab);
             const label = `${scheme} over ${backdrop}`;
