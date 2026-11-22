@@ -25,6 +25,10 @@ import { MAX_QUERY_LENGTH, matchSearchTerm, parseSearchQuery } from './search.mj
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
+// The revision of the search ranking (score order, then the family grouping in createCatalogApi). It is bound into
+// every search cursor, so a cursor saved under another ranking is refused rather than skipping or repeating results.
+// Bump it whenever a change reorders the results of a search.
+const SEARCH_RANKING_REVISION = 1;
 const OPERATIONS = {
   getManifest: {
     available: true,
@@ -531,9 +535,15 @@ function sectionPage(bundle, artifact, request) {
   return { response: deepFreeze(response) };
 }
 
-function paginate(values, operation, request, catalogDigest) {
+// `ranking` is the revision of the order of `values` where that order can change; a cursor from another revision is
+// invalid.
+function paginate(values, operation, request, catalogDigest, ranking) {
   const requestWithoutCursor = { ...request, cursor: null };
-  const requestDigest = canonicalDigest({ operation, request: requestWithoutCursor });
+  const requestDigest = canonicalDigest({
+    operation,
+    request: requestWithoutCursor,
+    ...(ranking === undefined ? {} : { ranking }),
+  });
   let offset = 0;
   if (request.cursor !== null) {
     try {
@@ -880,7 +890,8 @@ export function createCatalogApi(inputBundle, options = {}) {
   // family's examples at about the family's own score. Only the family's best-ranked example keeps its place; its
   // further examples that miss a word of the query follow every other result, so a family's partial matches take
   // one place however many there are. A further example keeps its place when it matches every word of the query,
-  // or when the query names it with every word of its id slug or of its name.
+  // or when the query names it with every word of its id slug or of its name. A change to this order bumps
+  // SEARCH_RANKING_REVISION.
   function groupFamilyExamples(matches, queryTerms) {
     const terms = new Set(queryTerms);
     const placed = new Set();
@@ -1111,7 +1122,13 @@ export function createCatalogApi(inputBundle, options = {}) {
       }
     }
     matches.sort((left, right) => right.score - left.score || compareText(left.id, right.id));
-    const page = paginate(groupFamilyExamples(matches, queryTerms), 'searchArtifacts', normalized, bundle.catalogDigest);
+    const page = paginate(
+      groupFamilyExamples(matches, queryTerms),
+      'searchArtifacts',
+      normalized,
+      bundle.catalogDigest,
+      SEARCH_RANKING_REVISION,
+    );
     if (page.error) return page.error;
     return success('artifact.search', { query: normalized.query, items: page.items }, {
       ...baseMeta(bundle, resolutionContext, normalized),
