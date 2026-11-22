@@ -40,6 +40,13 @@ const entry = `import React from 'react';
     return shown ? h(Toast, { message: 'The draft is archived.', onDismiss, action: undo }) : h('p', { id: 'unmounted' }, 'Unmounted');
   }
 
+  // A toast whose action its owner can take away while it shows.
+  function RemovableAction() {
+    const [withAction, setWithAction] = React.useState(true);
+    window.removeAction = () => setWithAction(false);
+    return h(Toast, { message: 'The draft is archived.', duration: 60000, onDismiss, action: withAction ? undo : undefined });
+  }
+
   // A short toast that gains an action while it shows.
   function LateAction() {
     const [withAction, setWithAction] = React.useState(false);
@@ -59,6 +66,7 @@ const entry = `import React from 'react';
     page: () => h(ToastProvider, null, h(Controls)),
     declarative: () => h(ToastProvider, null, h(Controls), h(DeclarativeOwner)),
     'late-action': () => h(ToastProvider, null, h(Controls), h(LateAction)),
+    'removable-action': () => h(ToastProvider, null, h(Controls), h(RemovableAction)),
     sheet: () => h(ToastProvider, null, sheet(h(SheetContent))),
     'sheet-provider': () => sheet(h(ToastProvider, null, h(SheetContent))),
   };
@@ -189,6 +197,61 @@ for (const engine of browserEngines()) {
           assert.deepEqual(await calls(page), ['action', 'dismiss']);
           // The toast left from under the pointer, so no pointer ever left the region.
           await laterToastExpires(page, 'after a pointer activation');
+          assert.deepEqual(errors, [], errors.join('\n'));
+        } finally {
+          await page.close();
+        }
+      });
+
+      // An action taken away while it has focus sends focus where a dismissed toast sends it, so focus never falls to the
+      // body with the region's timers still paused: a keyboard user to the toast that stays, a pointer user back to the page.
+      await t.test('a focused action taken away by keyboard leaves focus on its toast, and the timers resume once focus leaves', async () => {
+        const { page, errors } = await open(browser, 'removable-action');
+        try {
+          await page.locator('.muxui-toast__action').waitFor();
+          await page.locator('#before').focus();
+          await page.keyboard.press('Tab');
+          await page.keyboard.press('Tab');
+          assert.equal(await activeLabel(page), 'muxui-toast__action');
+          await page.evaluate(() => window.removeAction());
+          await page.locator('.muxui-toast__action').waitFor({ state: 'detached' });
+          assert.equal(await activeLabel(page), 'muxui-toast', 'focus moves to the toast the action left');
+          await page.locator('#before').focus();
+          await laterToastExpires(page, 'after a keyboard user leaves the toast');
+          assert.deepEqual(await calls(page), []);
+          assert.deepEqual(errors, [], errors.join('\n'));
+        } finally {
+          await page.close();
+        }
+      });
+
+      await t.test('a focused action taken away by pointer returns focus to the page, so a later toast expires, and focus on another toast still pauses', async () => {
+        const { page, errors } = await open(browser, 'removable-action');
+        try {
+          const action = page.locator('.muxui-toast__action');
+          await action.waitFor();
+          await page.locator('#before').focus();
+          await page.waitForTimeout(400);
+          // A press released off the action focuses it by pointer without running it.
+          const box = await action.boundingBox();
+          await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+          await page.mouse.down();
+          await page.mouse.move(AWAY.x, AWAY.y);
+          await page.mouse.up();
+          assert.equal(await activeLabel(page), 'muxui-toast__action');
+          await page.evaluate(() => window.removeAction());
+          await action.waitFor({ state: 'detached' });
+          assert.equal(await activeLabel(page), 'before', 'focus returns to the element focused before the notifications');
+          await laterToastExpires(page, 'after a pointer user\'s action was taken away');
+
+          // Focus resting on a control of a toast that stays still holds the timers.
+          await page.locator('.muxui-toast__dismiss').focus();
+          await page.evaluate(() => window.addPlain(1500));
+          await page.waitForTimeout(2500);
+          assert.equal(await page.locator('.muxui-toast', { hasText: 'Saved' }).count(), 1, 'a focused toast control holds a later toast past its duration');
+          await page.locator('#before').focus();
+          await page.locator('.muxui-toast', { hasText: 'Saved' }).waitFor({ state: 'detached', timeout: 6000 });
+          assert.deepEqual(await calls(page), []);
           assert.deepEqual(errors, [], errors.join('\n'));
         } finally {
           await page.close();

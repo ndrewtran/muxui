@@ -1363,6 +1363,16 @@ function moveFocusFromExitingToast(node: HTMLElement, returnFocus: Element | nul
   else (active as HTMLElement).blur();
 }
 
+// An action that leaves a toast that stays, while it has focus, would drop focus to the body with the region still
+// counting it as focused, so every timer stays paused. Focus goes where a dismissed toast sends it: keyboard users to a
+// toast, here the one the action left, and pointer users back to the element focused before the region.
+function moveFocusFromLeavingAction(action: HTMLElement, toast: HTMLElement, returnFocus: Element | null) {
+  if (action.ownerDocument.activeElement !== action) return;
+  const target = getInteractionModality() !== 'pointer' ? toast : returnFocus;
+  if (target?.isConnected) (target as HTMLElement).focus({ preventScroll: true });
+  else action.blur();
+}
+
 interface ToastViewProps {
   toast: ToastRecord;
   queue: ReturnType<typeof createAnimatedToastQueue>;
@@ -1415,11 +1425,19 @@ function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, onA
     nodeRef.current = node;
     lifecycleRef(node);
   }, [lifecycleRef]);
+  // React detaches a ref before it removes the element, and a parent's before its children's, so the action is still in
+  // the page here, and the toast's own ref is already empty when the whole toast leaves.
+  const actionRef = React.useRef<HTMLButtonElement | null>(null);
+  const setActionRef = React.useCallback((node: HTMLButtonElement | null) => {
+    const leaving = actionRef.current;
+    actionRef.current = node;
+    if (!node && leaving && nodeRef.current) moveFocusFromLeavingAction(leaving, nodeRef.current, returnFocusRef.current);
+  }, [returnFocusRef]);
   return React.createElement(AriaToast, { ref: setRef, toast, className: classNames('muxui-toast', value.className), ...{ 'data-muxui-variant': value.variant, 'data-muxui-toast-exiting': toast.isExiting || undefined, 'aria-hidden': toast.isExiting || undefined, inert: toast.isExiting || undefined } },
     React.createElement(AriaToastContent, { className: 'muxui-toast__content' },
       React.createElement(AriaText, { slot: 'title', className: classNames('muxui-toast__title', hasTitle ? undefined : 'muxui-toast__title-fallback') }, hasTitle ? value.title : TOAST_FALLBACK_TITLE),
       React.createElement(AriaText, { slot: 'description', className: 'muxui-toast__message' }, value.message)),
-    value.actionLabel === undefined ? null : React.createElement(MuxUIButton, { size: 'sm', variant: 'neutral', className: 'muxui-toast__action', onActivate: () => onAction(toast.key) }, value.actionLabel),
+    value.actionLabel === undefined ? null : React.createElement(MuxUIButton, { ref: setActionRef, size: 'sm', variant: 'neutral', className: 'muxui-toast__action', onActivate: () => onAction(toast.key) }, value.actionLabel),
     React.createElement(IconButton, { slot: 'close', size: 'sm', className: 'muxui-toast__dismiss', 'aria-label': 'Dismiss notification' }, React.createElement(XIcon, { className: 'muxui-toast__dismiss-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 })),
     value.actionLabel === undefined ? null : React.createElement('span', { className: 'muxui-toast__announcer', role: 'status' }, announcedLabel === value.actionLabel ? value.actionLabel : ''));
 }
