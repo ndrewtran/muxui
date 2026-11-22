@@ -31,7 +31,7 @@ Choose the variant from what happened. A variant changes how the toast looks, no
 - Activating the action closes the toast as its dismiss control does, so `onDismiss` is called after `onAction`. Keep work that must wait for the toast to leave, such as a permanent delete, in `onDismiss`, and skip it when `onAction` has run.
 - A toast with an action stays at least 10 seconds, and its timer pauses while the pointer is over the notifications or focus is inside them.
 - The notifications follow the page's content in the Tab order, so keyboard users reach a toast with Tab after the page's last control, then its action and its dismiss control. Focus never moves to a toast by itself.
-- While a [Dialog](/components/dialog/) is open, Tab stays inside it, so a toast shown over a Dialog can be reached by pointer but not by keyboard until the Dialog closes.
+- While a [Dialog](/components/dialog/) is open, Tab stays inside it. A ToastProvider inside the Dialog shows its toasts inside it, where Tab reaches them, and they leave when the Dialog closes. A ToastProvider outside it shows its toasts above it, where only a pointer reaches them until the Dialog closes.
 - A toast can leave before someone reaches it, so do not make its action the only way to do something the user needs.
 
 The Toast with an Undo action example archives a draft at once and offers Undo in the toast.

@@ -7,8 +7,9 @@ import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, startSer
 // keyboard or pointer runs its handler once and closes the toast, after which a later toast still expires; unmounting
 // the toast while its action holds the timers paused settles nothing; the dismiss control still closes it without the
 // action; under reduced motion the toast does not travel; under forced colours the action is a system button. Inside a
-// Dialog sheet, a Tooltip portals into the sheet's layer while the notifications stay on the page body, above the sheet
-// and operable, whether the provider sits outside the sheet or inside it. Runs in every engine named by
+// Dialog sheet, a Tooltip portals into the sheet's layer; a provider at the page root shows its toasts on the body,
+// above the sheet and operable by pointer, and a provider inside the sheet shows them in the sheet's layer, where Tab
+// reaches them. Runs in every engine named by
 // MUXUI_BROWSER_ENGINES (see harness.mjs); WebKit has no forced-colors mode, so that case says so there.
 
 const entry = `import React from 'react';
@@ -345,8 +346,11 @@ for (const engine of browserEngines()) {
         }
       });
 
+      // A provider at the page root shows its toasts on the page, above an open sheet and reached by pointer; a provider
+      // inside the sheet shows them in the sheet's own layer, inside its focus containment, where Tab reaches them.
       for (const scenario of ['sheet', 'sheet-provider']) {
-        await t.test(`with the provider ${scenario === 'sheet' ? 'outside' : 'inside'} a sheet, the tooltip opens in the sheet's layer and the toast on the page, above the sheet and operable`, async () => {
+        const inside = scenario === 'sheet-provider';
+        await t.test(`with the provider ${inside ? 'inside' : 'outside'} a sheet, the tooltip opens in the sheet's layer and the toast ${inside ? 'in it, reached by Tab' : 'on the page, above the sheet'} and operable`, async () => {
           const { page, errors } = await open(browser, scenario);
           try {
             await page.locator('.muxui-dialog').waitFor();
@@ -367,14 +371,27 @@ for (const engine of browserEngines()) {
               const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
               return {
                 onBody: node.parentElement === document.body,
-                inLayer: Boolean(node.closest('.muxui-dialog__layer, .muxui-dialog')),
+                inLayer: Boolean(node.closest('.muxui-dialog__layer')),
                 hidden: Boolean(node.closest('[inert], [aria-hidden="true"]')),
                 hit: Boolean(hit?.closest('.muxui-toast__action')),
               };
             });
-            assert.deepEqual(region, { onBody: true, inLayer: false, hidden: false, hit: true }, 'the region is a page-level child of the body, not hidden, and on top at the action');
+            assert.deepEqual(region, { onBody: !inside, inLayer: inside, hidden: false, hit: true }, `the region is ${inside ? 'in the sheet layer' : 'a child of the body'}, not hidden, and on top at the action`);
 
-            await action.click();
+            if (inside) {
+              // Tab from the sheet's last control reaches the toast's controls, as it does for any control in the sheet.
+              await page.locator('#archive').focus();
+              const reached = new Set();
+              for (let presses = 0; presses < 8; presses += 1) {
+                await page.keyboard.press('Tab');
+                reached.add(await activeLabel(page));
+              }
+              assert.ok(reached.has('muxui-toast__action') && reached.has('muxui-toast__dismiss'), `Tab reaches the action and the dismiss control: ${[...reached].join(', ')}`);
+              await action.focus();
+              await page.keyboard.press('Enter');
+            } else {
+              await action.click();
+            }
             await page.locator('.muxui-toast').waitFor({ state: 'detached' });
             assert.deepEqual(await calls(page), ['action', 'dismiss']);
             assert.equal(await page.locator('.muxui-dialog').count(), 1, 'the sheet stays open');

@@ -17,7 +17,6 @@ import type {
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { FocusScope } from 'react-aria/FocusScope';
 import { mergeRefs } from 'react-aria/mergeRefs';
-import { UNSAFE_PortalProvider } from 'react-aria';
 import { useInteractOutside } from 'react-aria/useInteractOutside';
 import type { DropEvent } from 'react-aria/useDrop';
 // The modality useToastRegion uses; React Aria exports it only from this subpath.
@@ -1537,13 +1536,10 @@ export const ToastProvider: FC<ToastProviderProps> = function ToastProvider({ ch
   const value = React.useMemo(() => ({ manager, addDeclarative, dispose, refresh }), [addDeclarative, dispose, manager, refresh]);
   return React.createElement(ToastContext.Provider, { value }, children,
     React.createElement('span', { ref: motionOriginRef, className: 'muxui-toast__motion-origin', hidden: true, 'aria-hidden': 'true' }),
-    // The region is page-level: it portals into the document body even where the provider sits inside an overlay that
-    // hands its own layer to React Aria's portal provider, such as a Dialog sheet.
-    React.createElement(UNSAFE_PortalProvider, { getContainer: null, children:
-      // The region reads the queue only through its subscribe, visibleToasts, add, close, pauseAll, resumeAll, and clear;
-      // React Aria types it as the ToastQueue class, whose private members no other object has.
-      React.createElement(UNSTABLE_ToastRegion<ToastContent>, { ref: trackRegionFocus, queue: animatedQueue as unknown as UNSTABLE_ToastQueue<ToastContent>, className: classNames('muxui-toast__region', className), 'aria-label': 'Notifications', ...{ placement, 'data-muxui-placement': placement },
-        children: ({ toast }) => React.createElement(ToastView, { toast, queue: animatedQueue, placement, layoutVersion, originRef: motionOriginRef, returnFocusRef, onExitComplete: animatedQueue.commitClose, onAction: runAction }) }) }));
+    // The region reads the queue only through its subscribe, visibleToasts, add, close, pauseAll, resumeAll, and clear;
+    // React Aria types it as the ToastQueue class, whose private members no other object has.
+    React.createElement(UNSTABLE_ToastRegion<ToastContent>, { ref: trackRegionFocus, queue: animatedQueue as unknown as UNSTABLE_ToastQueue<ToastContent>, className: classNames('muxui-toast__region', className), 'aria-label': 'Notifications', ...{ placement, 'data-muxui-placement': placement },
+      children: ({ toast }) => React.createElement(ToastView, { toast, queue: animatedQueue, placement, layoutVersion, originRef: motionOriginRef, returnFocusRef, onExitComplete: animatedQueue.commitClose, onAction: runAction }) }));
 };
 
 export function useToast(): ToastManager {
