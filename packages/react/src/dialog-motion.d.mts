@@ -6,6 +6,10 @@ import type { ReactElement, ReactNode, RefObject } from 'react';
 export interface DialogMotionProps {
   children?: ReactNode;
   originRef?: RefObject<Element | null>;
+  /** Whether the panel is a sheet: it slides up from the bottom edge and a drag can dismiss it. */
+  sheet?: boolean;
+  /** Whether a drag on a sheet's grip or title dismisses it; true unless set. */
+  draggable?: boolean;
   onExitComplete?: () => void;
   onReducedChange?: (reduced: boolean) => void;
 }

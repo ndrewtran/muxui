@@ -1866,6 +1866,10 @@
     },
     {
       "family": "example",
+      "path": "catalog/components/dialog/examples/react/sheet.example.json"
+    },
+    {
+      "family": "example",
       "path": "catalog/components/text-editor/examples/react/formatting-controls.example.json"
     },
     {

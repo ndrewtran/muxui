@@ -142,6 +142,167 @@
 .muxui-dialog__close {
   color: var(--muxui-semantic-color-neutral-default-60);
 }
+
+/* A sheet rests on the bottom edge of the visible viewport. React Aria sets --visual-viewport-height on the
+   backdrop, and the sheet adds how far that viewport is scrolled down the page, so the sheet stays above an
+   on-screen keyboard. The panel scrolls as one, so a title or description of any length scrolls with the content,
+   while the top band keeps the grip and close button in reach and the actions keep the bottom. The panel pads each
+   physical side by that side's safe-area inset in either direction, and its parts add their own inset. */
+.muxui-dialog[data-muxui-presentation='sheet'] {
+  box-sizing: border-box;
+  top: auto;
+  bottom: calc(100% - var(--visual-viewport-height, 100%) - var(--muxui-dialog-viewport-top, 0px));
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  transform: translateY(var(--muxui-modal-y, 0px));
+  width: auto;
+  max-inline-size: 30rem;
+  max-height: calc(var(--visual-viewport-height, 100dvh) - env(safe-area-inset-top, 0px) - var(--muxui-semantic-layout-inset-xlarge));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-block-end-width: 0;
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+  padding-block-end: 0;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.muxui-dialog[data-muxui-presentation='sheet'] > :is(.muxui-dialog__title, .muxui-dialog__description, .muxui-dialog__content, .muxui-dialog__actions) {
+  padding-inline: var(--muxui-semantic-layout-inset-large);
+}
+
+/* The last part keeps the panel's bottom inset, which grows to the safe-area inset over a home indicator. */
+.muxui-dialog[data-muxui-presentation='sheet']:not(:has(> .muxui-dialog__actions)) > .muxui-dialog__content {
+  padding-block-end: max(var(--muxui-semantic-layout-inset-large), env(safe-area-inset-bottom, 0px));
+}
+
+.muxui-dialog[data-muxui-presentation='sheet'] > .muxui-dialog__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-block: var(--muxui-semantic-layout-inset-medium) max(var(--muxui-semantic-layout-inset-large), env(safe-area-inset-bottom, 0px));
+  background-color: inherit;
+}
+
+/* A dismissable sheet's top band is as tall as its close button, a target of at least 44 pixels whatever the root font
+   size: the close button leads the band at its logical end, and the grip spans the band under it, with a short bar in
+   its middle drawn in the grip's foreground colour. The band takes the place of the panel's top padding, and focus
+   scrolls clear of it and of the actions. */
+.muxui-dialog[data-muxui-presentation='sheet']:has(> .muxui-dialog__grip) {
+  padding-block-start: 0;
+  scroll-padding-block-start: max(44px, 2.75rem);
+}
+
+.muxui-dialog[data-muxui-presentation='sheet']:has(> .muxui-dialog__actions) {
+  scroll-padding-block-end: calc(var(--muxui-semantic-control-size-lg) + var(--muxui-semantic-layout-inset-medium) + max(var(--muxui-semantic-layout-inset-large), env(safe-area-inset-bottom, 0px)));
+}
+
+.muxui-dialog[data-muxui-presentation='sheet'] > .muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-dialog__close {
+  --muxui-icon-button-size: max(44px, 2.75rem);
+  inline-size: max(44px, 2.75rem);
+  min-block-size: max(44px, 2.75rem);
+  position: sticky;
+  top: 0;
+  right: auto;
+  z-index: 2;
+  order: -1;
+  align-self: flex-end;
+  margin-block-end: calc(-1 * (max(44px, 2.75rem) + var(--muxui-semantic-layout-control-content-gap)));
+  margin-inline-end: var(--muxui-semantic-layout-control-content-gap);
+}
+
+.muxui-dialog__grip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  block-size: max(44px, 2.75rem);
+  margin-block-end: calc(-1 * var(--muxui-semantic-layout-control-content-gap));
+  color: var(--muxui-semantic-content-faint);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
+}
+
+.muxui-dialog[data-muxui-presentation='sheet'] > .muxui-dialog__grip {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: inherit;
+}
+
+.muxui-dialog__grip::before {
+  content: '';
+  inline-size: var(--muxui-semantic-control-size-md);
+  block-size: var(--muxui-semantic-layout-resize-handle-size);
+  border-radius: var(--muxui-semantic-shape-pill-radius);
+  background-color: currentColor;
+}
+
+.muxui-dialog__grip:hover {
+  color: var(--muxui-semantic-content-muted);
+}
+
+/* A press on a drag zone holds the sheet until release; one finger moves it instead of panning the page. */
+.muxui-dialog[data-muxui-presentation='sheet']:has(> .muxui-dialog__grip):not([data-muxui-dialog-reduced]) > :is(.muxui-dialog__grip, .muxui-dialog__title) {
+  touch-action: pinch-zoom;
+}
+
+.muxui-dialog[data-muxui-state-dragging] {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.muxui-dialog[data-muxui-state-dragging] > .muxui-dialog__grip {
+  color: var(--muxui-semantic-content-default);
+  cursor: grabbing;
+}
+
+/* Reduced motion turns the drag off, so the band shows no grip bar. */
+.muxui-dialog[data-muxui-dialog-reduced] > .muxui-dialog__grip {
+  cursor: auto;
+}
+
+.muxui-dialog[data-muxui-dialog-reduced] > .muxui-dialog__grip::before {
+  display: none;
+}
+
+/* The sheet itself never fades, so its backdrop stays opaque and fades its scrim colour instead. */
+.muxui-dialog__backdrop[data-muxui-presentation='sheet'] {
+  transition: background-color var(--muxui-semantic-motion-modal-transition-duration) var(--muxui-semantic-motion-modal-transition-easing);
+}
+
+.muxui-dialog__backdrop[data-muxui-presentation='sheet'][data-muxui-state-exiting] {
+  transition: background-color var(--muxui-semantic-motion-modal-dismiss-transition-duration) var(--muxui-semantic-motion-modal-dismiss-transition-easing);
+}
+
+.muxui-dialog__backdrop[data-muxui-presentation='sheet']:is([data-muxui-state-entering], [data-muxui-state-exiting]) {
+  opacity: 1;
+  background-color: transparent;
+}
+
+/* The overlays opened inside a sheet portal into its layer: a line along the sheet's resting bottom edge, above the
+   panel, that moves with the sheet, so an overlay placed against a trigger in the sheet moves with that trigger. The
+   line is as wide as the page, so an overlay in it wraps as it does on the page, and has no height, so it takes no
+   press. It moves by its offset, not a transform, so a fixed overlay in it, such as a Dialog opened from the sheet,
+   still covers the page, and what portals into it takes none of the sheet's travel or viewport offset. */
+.muxui-dialog__layer {
+  position: fixed;
+  left: 0;
+  bottom: calc(100% - var(--visual-viewport-height, 100%) - var(--muxui-dialog-viewport-top, 0px) - var(--muxui-modal-y, 0px));
+  width: 100%;
+  height: 0;
+  z-index: 102;
+}
+
+.muxui-dialog__layer > * {
+  --muxui-modal-y: initial;
+  --muxui-dialog-viewport-top: initial;
+}
 /* MuxUI component source: popover.css */
 .muxui-popover {
   position: relative;
@@ -667,6 +828,28 @@
   .muxui-dialog__backdrop {
     background: CanvasText;
     opacity: 0.48;
+  }
+
+  /* A sheet's panel sits inside its backdrop, so that backdrop keeps full opacity and dims the page with a
+     translucent Canvas instead. */
+  .muxui-dialog__backdrop[data-muxui-presentation='sheet'] {
+    opacity: 1;
+    background: color-mix(in srgb, Canvas 48%, transparent);
+  }
+
+  /* Button's forced colours are zero-specificity, so the Dialog's own close colour would otherwise keep its grey. */
+  .muxui-dialog[data-muxui-presentation='sheet'] > .muxui-dialog__close {
+    color: ButtonText;
+  }
+
+  .muxui-dialog__grip::before {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+
+  .muxui-dialog__grip:hover::before,
+  .muxui-dialog[data-muxui-state-dragging] > .muxui-dialog__grip::before {
+    background-color: Highlight;
   }
 
   .muxui-file-trigger {

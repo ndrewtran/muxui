@@ -12,6 +12,7 @@
       "open",
       "defaultOpen",
       "dismissable",
+      "presentation",
       "trigger",
       "backdropClassName",
       "panelClassName",
@@ -26,7 +27,8 @@
     ],
     "defaults": {
       "defaultOpen": false,
-      "dismissable": true
+      "dismissable": true,
+      "presentation": "center"
     },
     "propDetails": {
       "title": {
@@ -93,6 +95,27 @@
         },
         "required": false,
         "description": "Whether Escape, an outside press, the trigger, and the built-in close button close the Dialog. When false, the Dialog renders no close button of its own, and only a button in the close slot closes it."
+      },
+      "presentation": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "center"
+            },
+            {
+              "kind": "literal",
+              "value": "sheet"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "center",
+          "sheet"
+        ],
+        "description": "Where the Dialog appears: center places it in the middle of the viewport; sheet places it along the bottom edge of the visible viewport, where a drag down from its grip or title dismisses it as Escape and an outside press do."
       },
       "trigger": {
         "type": {
