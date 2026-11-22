@@ -32,7 +32,7 @@ Choose the variant from what happened. A variant changes how the toast looks, no
 - Make the change in the application's own state when the user acts, and let the action reverse it. Do not leave lasting work, such as a permanent delete, to `onDismiss`: an unmount never calls it, so the work is lost when the provider goes, as it does when a Dialog that holds it closes.
 - A toast with an action stays at least 10 seconds, and the timers of all toasts pause while the pointer is over a toast or focus is inside one. The gap between toasts lets presses through to the page, so it does not pause them.
 - The notifications follow the page's content in the Tab order, so keyboard users reach a toast with Tab after the page's last control, then its action and its dismiss control. Focus never moves to a toast by itself.
-- While a [Dialog](/components/dialog/) is open, Tab stays inside it. A ToastProvider inside the Dialog shows its toasts inside it, where Tab reaches them, and they leave when the Dialog closes. A ToastProvider outside it shows its toasts above it, where only a pointer reaches them until the Dialog closes.
+- With a ToastProvider inside a [Dialog](/components/dialog/) sheet, Tab reaches its toasts, the action before the dismiss control. With the provider at the page root, or inside a modal [Popover](/components/popover/) or a centred Dialog, the toasts sit on the page outside the modal's Tab cycle, so Tab does not reach them while it is open, though assistive technology can still activate their buttons.
 - A toast can leave before someone reaches it, so do not make its action the only way to do something the user needs.
 
 The Toast with an Undo action example archives a draft at once and offers Undo in the toast.
