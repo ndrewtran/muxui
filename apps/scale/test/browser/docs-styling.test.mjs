@@ -8,12 +8,13 @@
 // of the shared script and the previews comes last. The reserved heights of the previews are docs-styling-heights.test.mjs.
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { step } from './deadlines.mjs';
 import { measured, pool, reservedHeights, withSite as withDocsSite } from './docs-site.mjs';
 
 // One page for each risk the section has: a plain component, a shared field, a portal, a provider with no element, a textless root, the long
 // collapsed groups and the long principal group.
 const sample = ['button', 'text-field', 'date-picker', 'alert-dialog', 'separator', 'code-block', 'data-diff', 'text', 'tag-group'];
-const withSite = (run) => withDocsSite('components/button/index.html', run);
+const withSite = (run, options) => withDocsSite('components/button/index.html', run, options);
 // The deadline for the computed table to be measured, as in docs-styling-heights.test.mjs: these run beside the other docs files on a shared runner.
 const measuredWithin = 30_000;
 
@@ -440,19 +441,19 @@ test('the measurement waits for whichever comes last, the shared script or the p
 });
 
 test('the recipe lowers nothing a preview paints under the contrast rule, in light and dark: 4.5:1 for normal text, 3:1 for large text, a glyph and a fill', async () => {
-	await withSite(async ({ origin, newPage }) => {
+	await withSite(async ({ origin, withPage }) => {
 		// Every element of the two previews of every family that has them, with the rule 4a's guard holds a recipe step to: text by its own
 		// computed size and weight (4.5:1, or 3:1 from 24px or 18.66px bold), a glyph (an svg) and a fill that holds no text 3:1 against
 		// what is behind them. The Default preview is what Mux paints without the recipe, so nothing is held to more than it had there:
 		// an element that is already under the rule (Mux's own, not the recipe's) has to stay where it was.
 		const worse = [];
 		const painted = new Map();
+		// Every wait has a deadline that names the family and the step (deadlines.mjs), and the walk one as a whole, as in docs-styling-heights.test.mjs.
 		await pool(Object.keys(reservedHeights), 6, async (slug) => {
-			for (const colorScheme of ['light', 'dark']) {
-				const page = await newPage({ colorScheme });
-				await page.goto(`${origin}/components/${slug}/`);
-				await measured(page);
-				const found = await page.evaluate(() => {
+			for (const colorScheme of ['light', 'dark']) await withPage({ colorScheme }, async (page) => {
+				await step(`${slug} ${colorScheme}: opening the page`, page.goto(`${origin}/components/${slug}/`), 45_000);
+				await step(`${slug} ${colorScheme}: measuring the previews`, measured(page), 30_000);
+				const found = await step(`${slug} ${colorScheme}: reading what the previews paint`, page.evaluate(() => {
 					const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
 					const rgba = (css) => { canvas.clearRect(0, 0, 1, 1); canvas.fillStyle = '#000'; canvas.fillStyle = css; canvas.fillRect(0, 0, 1, 1); const [r, g, b, a] = canvas.getImageData(0, 0, 1, 1).data; return [r, g, b, a / 255]; };
 					const linear = (value) => { const channel = value / 255; return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4; };
@@ -534,15 +535,14 @@ test('the recipe lowers nothing a preview paints under the contrast rule, in lig
 						// Nothing lowered under the rule, and nothing lowered at all where it was already under it.
 						worse: recipe.flatMap((entry, index) => (plain[index] !== undefined && entry.ratio + 0.005 < Math.min(entry.required, plain[index].ratio) ? [`${entry.label} ${entry.ratio.toFixed(2)}:1, needs ${Math.min(entry.required, plain[index].ratio).toFixed(2)}:1 (${plain[index].ratio.toFixed(2)}:1 without the recipe)`] : [])),
 					};
-				});
+				}));
 				assert.ok(found.same, `${slug} ${colorScheme}: the two previews paint the same elements`);
 				painted.set(slug, (painted.get(slug) ?? 0) + found.count);
 				for (const entry of found.worse) worse.push(`${slug} ${colorScheme} ${entry}`);
-				await page.context().close();
-			}
+			});
 		});
 		// A part drawn only by a background image or a border (ColorModeToggle's icon) is not an element this reads; the selector must still find most.
 		assert.ok([...painted.values()].filter((count) => count > 0).length >= Object.keys(reservedHeights).length * 0.9, `most previews paint elements this reads: ${[...painted].filter(([, count]) => count === 0).map(([slug]) => slug)} paint none`);
 		assert.deepEqual(worse, [], 'the recipe lowers what a preview paints under the contrast rule');
-	});
+	}, { within: 480_000 });
 });

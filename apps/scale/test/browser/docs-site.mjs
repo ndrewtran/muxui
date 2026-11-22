@@ -7,6 +7,7 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright-core';
 import { chromeExecutable } from './chrome.mjs';
+import { deadline, step } from './deadlines.mjs';
 
 export const docsRoot = resolve(import.meta.dirname, '../../../docs/dist');
 const mimeTypes = { '.css': 'text/css', '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.woff2': 'font/woff2' };
@@ -29,34 +30,61 @@ function staticDocsServer() {
 	});
 }
 
-/** Serves the built docs and launches headless Chrome. `ready` is a page the build must have written (`blocks/index.html`). */
+/**
+ * Serves the built docs and launches headless Chrome. `ready` is a page the build must have written (`blocks/index.html`). `close` closes both,
+ * the server even when the browser fails to launch or to close, and may be called more than once.
+ */
 export async function openSite(ready) {
 	await access(join(docsRoot, ready));
 	const server = staticDocsServer();
 	await new Promise((listening) => server.listen(0, '127.0.0.1', listening));
 	const origin = `http://127.0.0.1:${server.address().port}`;
-	const browser = await chromium.launch({ executablePath: await chromeExecutable(), headless: true });
+	const closeServer = () => {
+		server.closeAllConnections();
+		return new Promise((done) => server.close(() => done()));
+	};
+	let browser;
+	try {
+		browser = await chromium.launch({ executablePath: await chromeExecutable(), headless: true });
+	} catch (error) {
+		await closeServer();
+		throw error;
+	}
+	let closing;
 	return {
 		origin,
 		browser,
-		close: async () => {
-			await browser.close();
-			await new Promise((done) => server.close(done));
-		},
+		// Playwright kills a browser that has not closed within its own timeout, so this ends.
+		close: () => (closing ??= browser.close().finally(closeServer)),
 	};
 }
 
-/** Runs `run({ origin, newPage })` against the site, then fails if any page raised an error. `newPage` opens a page in a context of its own. */
-export async function withSite(ready, run, { colorScheme: defaultScheme = 'dark' } = {}) {
+/**
+ * Runs `run({ origin, newPage, withPage })` against the site, then fails if any page raised an error. `newPage` opens a page in a context of
+ * its own; `withPage(options, work)` does, runs `work(page)` and closes the context whatever happens. `within` is a deadline for the whole of
+ * `run`, behind the deadlines of its steps: when it passes the site closes, which fails whatever is still waiting.
+ */
+export async function withSite(ready, run, { colorScheme: defaultScheme = 'dark', within } = {}) {
 	const site = await openSite(ready);
 	const errors = [];
 	const newPage = async ({ width = 1280, height = 900, colorScheme = defaultScheme, reducedMotion = 'no-preference' } = {}) => {
-		const page = await (await site.browser.newContext({ viewport: { width, height }, colorScheme, reducedMotion })).newPage();
+		const page = await step('opening a page', async () => (await site.browser.newContext({ viewport: { width, height }, colorScheme, reducedMotion })).newPage());
 		page.on('pageerror', (error) => errors.push(error.message));
 		return page;
 	};
+	const withPage = async (options, work) => {
+		const page = await newPage(options);
+		try {
+			return await work(page);
+		} finally {
+			// A context that does not close goes with the browser; the work's own failure is the one to report.
+			await step('closing a page', page.context().close()).catch(() => {});
+		}
+	};
 	try {
-		await run({ origin: site.origin, newPage });
+		const running = run({ origin: site.origin, newPage, withPage });
+		// The work's own failure is thrown as it is: it already names the family and the step.
+		await (within === undefined ? running : deadline('the proof as a whole', running, within));
 		assert.deepEqual(errors, [], 'the pages raised no page errors');
 	} finally {
 		await site.close();
