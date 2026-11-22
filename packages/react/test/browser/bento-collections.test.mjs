@@ -78,6 +78,46 @@ function CollectionsFixture() {
     h('output', { id: 'readonly-changes' }, String(readOnlyChanges)));
 }
 
+/**
+ * Where everything a menu wait depends on was when it gave up, for a wait that has timed out now and then in CI: the trigger's box and open
+ * state, every open menu's box, popup position and transform and its focus highlight, the focused element, the viewport and scroll, the
+ * pointer and what is under it. It tells a menu that answered late from one in the wrong place or one that did not open.
+ */
+function explainMenuWait(page, wait, triggerId, wanted) {
+  return wait.catch(async (error) => {
+    const layout = await page.evaluate((triggerId) => {
+      const box = (node) => {
+        if (!node) return null;
+        const { x, y, width, height } = node.getBoundingClientRect();
+        return { x, y, width, height };
+      };
+      const name = (node) => node && `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${typeof node.className === 'string' && node.className ? `.${node.className.split(' ').join('.')}` : ''}`;
+      const trigger = document.getElementById(triggerId);
+      const pointer = window.__menuPointer;
+      const focused = document.activeElement;
+      return {
+        trigger: { box: box(trigger), expanded: trigger?.getAttribute('aria-expanded') ?? null },
+        anchor: box(document.getElementById('coordinate-anchor')),
+        menus: [...document.querySelectorAll('.muxui-menu')].map((menu) => {
+          const popup = menu.parentElement;
+          const highlight = menu.querySelector(':scope > [data-muxui-menu-focus]');
+          return {
+            label: menu.querySelector('[role="menu"]')?.getAttribute('aria-label') ?? menu.getAttribute('aria-label'),
+            box: box(menu),
+            popup: popup && { style: popup.getAttribute('style'), transform: getComputedStyle(popup).transform, opacity: getComputedStyle(popup).opacity },
+            highlight: highlight && { hidden: highlight.hidden, box: box(highlight), transform: getComputedStyle(highlight).transform },
+          };
+        }),
+        focused: focused && { element: name(focused), text: focused.textContent?.trim().slice(0, 24), box: box(focused), stateFocused: focused.hasAttribute('data-muxui-state-focused') },
+        viewport: { width: innerWidth, height: innerHeight, scrollX, scrollY },
+        pointer,
+        underPointer: pointer ? name(document.elementFromPoint(pointer.x, pointer.y)) : null,
+      };
+    }, triggerId).catch((reason) => `unreadable: ${reason.message}`);
+    throw new Error(`${error.message}\n${wanted}: ${JSON.stringify(layout)}`, { cause: error });
+  });
+}
+
 test('Bento collections hydrate and preserve nested menu, spatial grid, and Select form/focus contracts', { timeout: 90_000 }, async () => {
   const entry = `import React from 'react';
     import { hydrateRoot } from 'react-dom/client';
@@ -99,6 +139,11 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     await awaitFontsAndFrames(page);
     assert.equal(await page.locator('html').getAttribute('data-ready'), 'BUTTON,SPAN,SPAN,SPAN');
     assert.deepEqual(errors, []);
+    // The last pointer position, for explainMenuWait.
+    await page.evaluate(() => {
+      window.__menuPointer = null;
+      addEventListener('pointermove', (event) => { window.__menuPointer = { x: event.clientX, y: event.clientY }; }, true);
+    });
     const menuTrigger = page.locator('#menu-trigger');
     await menuTrigger.focus();
     await menuTrigger.press('ArrowDown');
@@ -107,14 +152,15 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     await cutItem.hover();
     await page.keyboard.press('ArrowDown');
     assert.equal(await page.getByRole('menuitem', { name: 'Share', exact: true }).evaluate((node) => document.activeElement === node), true);
-    await page.waitForFunction(() => {
+    // The highlight jumps onto the item and springs its transform back to none, so this holds only while that spring runs.
+    await explainMenuWait(page, page.waitForFunction(() => {
       const item = document.activeElement;
       const menu = item?.closest('.muxui-menu');
       const overlay = menu?.querySelector(':scope > [data-muxui-menu-focus]');
       const transform = overlay && getComputedStyle(overlay).transform;
       return item?.textContent?.trim() === 'Share' && item.hasAttribute('data-muxui-state-focused')
         && overlay && !overlay.hidden && transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)';
-    }, null, { timeout: 3000 });
+    }, null, { timeout: 3000 }), 'menu-trigger', 'Share should be focused, with the focus highlight shown and moved onto it');
     await page.waitForFunction(() => {
       const item = document.activeElement;
       const menu = item?.closest('.muxui-menu');
@@ -171,11 +217,13 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     assert.equal(await page.locator('#disabled-menu').isDisabled(), true);
     await page.locator('#coordinate-trigger').click();
     const popup = page.getByTestId('coordinate-popup');
-    await popup.waitFor();
-    await page.waitForFunction(() => {
-      const box = document.querySelector('[data-testid="coordinate-popup"]')?.getBoundingClientRect();
-      return box && Math.abs(box.x - 500) <= 1 && Math.abs(box.y - 100) <= 1;
-    });
+    await explainMenuWait(page, (async () => {
+      await popup.waitFor();
+      await page.waitForFunction(() => {
+        const box = document.querySelector('[data-testid="coordinate-popup"]')?.getBoundingClientRect();
+        return box && Math.abs(box.x - 500) <= 1 && Math.abs(box.y - 100) <= 1;
+      });
+    })(), 'coordinate-trigger', 'The coordinate menu should open with its corner on the anchor at (500, 100)');
     const coordinateBox = await popup.boundingBox();
     assert.ok(Math.abs(coordinateBox.x - 500) <= 1);
     assert.ok(Math.abs(coordinateBox.y - 100) <= 1);

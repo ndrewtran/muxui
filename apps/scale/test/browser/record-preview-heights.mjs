@@ -18,6 +18,7 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright-core';
 import { chromeExecutable } from './chrome.mjs';
+import { step } from './deadlines.mjs';
 import { measureIntrinsicHeights, motionOff, previewMargin } from './preview-heights.mjs';
 
 const docsRoot = resolve(import.meta.dirname, '../../../docs');
@@ -49,28 +50,37 @@ const only = checking ? (process.argv[process.argv.indexOf('--check') + 1] ?? ''
 const slugs = readdirSync(join(dist, 'components')).filter((slug) => readFileSync(join(dist, 'components', slug, 'index.html'), 'utf8').includes('data-styling-compare')).filter((slug) => only.length === 0 || only.includes(slug)).sort();
 const recorded = {};
 
+// Every wait has a deadline that names the page and the step (deadlines.mjs), so a stalled browser ends the run with a message, not a hang.
 async function record(slug) {
-	const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 }, ...motionOff })).newPage();
-	await page.goto(`${origin}/components/${slug}/`);
-	await page.waitForFunction(() => {
-		const islands = [...document.querySelectorAll('#styling [data-styling-pane] astro-island')];
-		return islands.length === 2 && islands.every((island) => island.firstElementChild !== null && island.querySelector('.example-loading') === null);
-	}, undefined, { timeout: 60000 });
-	const heights = await measureIntrinsicHeights(page);
-	await page.context().close();
-	return heights;
+	const page = await step(`${slug}: opening a page`, async () => (await browser.newContext({ viewport: { width: 1280, height: 900 }, ...motionOff })).newPage());
+	try {
+		await step(`${slug}: opening the page`, page.goto(`${origin}/components/${slug}/`), 45_000);
+		await step(`${slug}: rendering the previews`, page.waitForFunction(() => {
+			const islands = [...document.querySelectorAll('#styling [data-styling-pane] astro-island')];
+			return islands.length === 2 && islands.every((island) => island.firstElementChild !== null && island.querySelector('.example-loading') === null);
+		}, undefined, { timeout: 60000 }), 75_000);
+		return await step(`${slug}: measuring the intrinsic heights`, measureIntrinsicHeights(page), Number.POSITIVE_INFINITY);
+	} finally {
+		await step(`${slug}: closing the page`, page.context().close()).catch(() => {});
+	}
 }
 
 // Several pages at once: the work is waiting.
 const queue = [...slugs];
-await Promise.all(Array.from({ length: 6 }, async () => {
-	for (let slug = queue.shift(); slug !== undefined; slug = queue.shift()) {
-		const { narrow, wide } = await record(slug);
-		recorded[slug] = { narrow: narrow + previewMargin, wide: wide + previewMargin };
-	}
-}));
-await browser.close();
-await new Promise((done) => server.close(done));
+try {
+	await Promise.all(Array.from({ length: 6 }, async () => {
+		for (let slug = queue.shift(); slug !== undefined; slug = queue.shift()) {
+			const { narrow, wide } = await record(slug);
+			recorded[slug] = { narrow: narrow + previewMargin, wide: wide + previewMargin };
+		}
+	}));
+} finally {
+	// Playwright kills a browser that has not closed within its own timeout.
+	await browser.close().finally(() => {
+		server.closeAllConnections();
+		return new Promise((done) => server.close(() => done()));
+	});
+}
 
 const sorted = Object.fromEntries(Object.entries(recorded).sort(([left], [right]) => left.localeCompare(right)));
 if (checking) {
