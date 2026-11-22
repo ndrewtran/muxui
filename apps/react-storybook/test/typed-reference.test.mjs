@@ -490,8 +490,8 @@ test('an aliased part shows the generics, ref and native surface of the part it 
   const root = partNodes(page).find((node) => node.getAttribute('data-part') === 'TextEditor.Root');
   assert.equal(root.querySelector('[data-meta="same-as"]').textContent, 'TextEditor');
   assert.equal(root.querySelector('[data-meta="ref"]').textContent, 'TextEditorHandle');
-  assert.equal(root.querySelector('[data-meta="native"]').textContent, 'React.HTMLAttributes<HTMLDivElement> except valuedefaultValueonChange');
-  assert.deepEqual(texts(root.querySelectorAll('[data-meta="native"] code')), ['React.HTMLAttributes<HTMLDivElement>', 'value', 'defaultValue', 'onChange']);
+  assert.equal(root.querySelector('[data-meta="native"]').textContent, 'React.HTMLAttributes<HTMLDivElement> except valuedefaultValueonChangeautoFocus');
+  assert.deepEqual(texts(root.querySelectorAll('[data-meta="native"] code')), ['React.HTMLAttributes<HTMLDivElement>', 'value', 'defaultValue', 'onChange', 'autoFocus']);
 });
 
 // A change to the rendered page itself, with the model unchanged, is what a reader would see differently: the checker reads the
@@ -988,7 +988,7 @@ const pins = {
     if (rowsOf(part('TextArea.Root')).get('onChange')?.type !== '(value: string) => void') problems.push('TextArea.Root onChange is not (value: string) => void');
     return problems;
   },
-  // The 32 exports of @muxui/react/text-editor, each as text-editor-declarations.mjs writes it, which holds them against the source.
+  // The 34 exports of @muxui/react/text-editor, each as text-editor-declarations.mjs writes it, which holds them against the source.
   'TEXT-EDITOR-02': (page) => {
     const problems = [];
     const listed = [...page.querySelectorAll('table.muxui-docs-exports tbody tr[data-export]')];
@@ -1065,7 +1065,7 @@ test('a model that changes what a record pins fails the pin, as an omission from
   const source = readFileSync(resolve(repositoryRoot, 'packages/react/src/text-editor/index.ts'), 'utf8');
   for (const [from, to] of [
     ['execute(command: TextEditorCommand): boolean', 'execute(command: TextEditorCommand): number'],
-    ["{ type: 'link'; href: string }", "{ type: 'link'; href: number }"],
+    ["{ type: 'link'; href: string; text?: string }", "{ type: 'link'; href: number; text?: string }"],
     ['replace(content: string | TextEditorDocument): boolean;', 'replace(content: string | TextEditorDocument): number;'],
     ['  id: string;\n  label: string;', '  id: number;\n  label: string;'],
     ['limit?: number;', 'limit?: string;'],

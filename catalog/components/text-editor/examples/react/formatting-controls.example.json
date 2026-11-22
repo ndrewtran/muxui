@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:text-editor-formatting-controls-react",
+  "kind": "example",
+  "name": "TextEditor with its own formatting controls",
+  "summary": "Show the formatting at the selection in the application's own formatting buttons, send commands back, and add a link checked by the editor's address rule.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:text-editor#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 13
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/text-editor/examples/react/formatting-controls.tsx"
+}

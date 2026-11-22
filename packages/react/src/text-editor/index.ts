@@ -2,12 +2,13 @@ import React from 'react';
 import type { ChangeEvent, ForwardRefExoticComponent, HTMLAttributes, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefAttributes } from 'react';
 import { createPortal } from 'react-dom';
 import { Extension, getText, getTextSerializersFromSchema, isNodeEmpty } from '@tiptap/core';
-import type { Editor, EditorEvents } from '@tiptap/core';
+import type { ChainedCommands, Editor, EditorEvents } from '@tiptap/core';
 import { closeHistory, isHistoryTransaction } from '@tiptap/pm/history';
 import { Fragment, Slice } from '@tiptap/pm/model';
-import type { Mark, Node as ProseMirrorNode, Schema } from '@tiptap/pm/model';
+import type { Mark, Node as ProseMirrorNode, ResolvedPos, Schema } from '@tiptap/pm/model';
 import { AllSelection, Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
-import type { Transaction } from '@tiptap/pm/state';
+import type { EditorState, SelectionBookmark, Transaction } from '@tiptap/pm/state';
+import type { Mappable } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
@@ -67,15 +68,46 @@ export type TextEditorHorizontalRuleNode = { type: 'horizontalRule' };
 export type TextEditorBlockNode = TextEditorParagraphNode | TextEditorHeadingNode | TextEditorListNode | TextEditorBlockquoteNode | TextEditorCodeBlockNode | TextEditorImageNode | TextEditorHorizontalRuleNode;
 export type TextEditorNode = TextEditorInlineNode | TextEditorBlockNode | TextEditorListItemNode;
 export type TextEditorDocument = { type: 'doc'; content: [TextEditorBlockNode, ...TextEditorBlockNode[]] };
+/**
+ * A command for `execute`. `heading` and `paragraph` set the block and leave one that already is it alone; `text` inserts plain
+ * text as typing does; `link` with `text` inserts or replaces the link's text, and at a caret in a link `link` and `unlink`
+ * act on the whole link.
+ */
 export type TextEditorCommand =
-  | { type: 'bold' | 'italic' | 'underline' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'unlink' | 'generate' }
+  | { type: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'paragraph' | 'horizontalRule' | 'unlink' | 'generate' }
+  | { type: 'heading'; level: 1 | 2 | 3 | 4 | 5 | 6 }
+  | { type: 'text'; text: string }
   | { type: 'align'; value: TextEditorAlignment }
   | { type: 'color'; value: string }
   | { type: 'fontFamily'; value: TextEditorFontFamily }
   | { type: 'fontSize'; value: TextEditorFontSize }
-  | { type: 'link'; href: string }
+  | { type: 'link'; href: string; text?: string }
   | { type: 'image'; src: string; alt?: string };
-export type TextEditorHandle = { focus(): void; execute(command: TextEditorCommand): boolean };
+export type TextEditorHandle = {
+  /**
+   * Focuses the editable content with its selection. By default focus follows a frame later and scrolls the selection into
+   * view; `preventScroll` focuses at once and scrolls nothing.
+   */
+  focus(options?: { preventScroll?: boolean }): void;
+  execute(command: TextEditorCommand): boolean;
+};
+/** The formatting at the selection, as `onFormattingChange` reports it. It holds plain values only. */
+export type TextEditorFormatting = {
+  /** True for a caret, false while text or a block is selected. */
+  readonly empty: boolean;
+  /** Each mark is true when all the selected text carries it, or at a caret when the next typed text would. */
+  readonly marks: { readonly bold: boolean; readonly italic: boolean; readonly underline: boolean; readonly strike: boolean; readonly code: boolean };
+  /** The address of the link at a caret, the one the next typed text would take, or of the one link all the selected text is in; otherwise null. */
+  readonly link: string | null;
+  /** The kind of text block that holds the selection, or null when it spans more than one kind or holds no text block. */
+  readonly block: 'paragraph' | 'heading' | 'codeBlock' | null;
+  /** The level of the headings the selection is in, when they share one; otherwise null. */
+  readonly headingLevel: 1 | 2 | 3 | 4 | 5 | 6 | null;
+  /** The nearest list that holds the whole selection, or null. */
+  readonly list: 'bulletList' | 'orderedList' | null;
+  /** True when a quote holds the whole selection. */
+  readonly quote: boolean;
+};
 export type TextEditorActionCallbacks = { setLink(href: string): boolean; unsetLink(): boolean };
 /** An action in the bar under a text selection. The caller supplies any icon. */
 export type TextEditorSelectionAction = {
@@ -170,9 +202,19 @@ type TextEditorOwnProps = {
    * a failure message with Try again and Dismiss.
    */
   onSelectionRequest?: (request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>;
+  /** Focuses the editable content once it is in the page, without scrolling, when the editor is editable. Only the first mount reads it. */
+  autoFocus?: boolean;
+  /** Called once the editable content is in the page and can take focus. It renders on the client after mount, so this runs after hydration. */
+  onReady?: () => void;
+  /** Called with the formatting at the selection when the editor is ready, then whenever a selection move or an edit changes it. */
+  onFormattingChange?: (formatting: TextEditorFormatting) => void;
+  /** The least height of the content, in lines of its text. A fraction is rounded down, and a value below 1 means the default height. */
+  minRows?: number;
+  /** The greatest height of the content, in lines of its text, beyond which it scrolls. It is rounded as minRows is and never less than minRows. */
+  maxRows?: number;
 };
 
-export type TextEditorProps = Omit<HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange'> & TextEditorOwnProps;
+export type TextEditorProps = Omit<HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange' | 'autoFocus'> & TextEditorOwnProps;
 
 const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 const SAFE_IMAGE_PROTOCOLS = new Set(['http:', 'https:']);
@@ -193,6 +235,11 @@ const blockNodeTypes: ReadonlySet<unknown> = new Set([
 ]);
 const cx = (...values: unknown[]) => values.filter(Boolean).join(' ');
 
+/** A count for minRows or maxRows: a whole number of at least 1, or undefined for no count. */
+function rowCount(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 1 ? Math.floor(value) : undefined;
+}
+
 /**
  * A value offered as a document, node, mark, or attributes. It may be anything, so every function that takes one tests the
  * value and each property it reads before relying on it; the type is the bag of unknowns those reads compile against.
@@ -204,20 +251,55 @@ function hasOnlyKeys(value: object, keys: ReadonlySet<string>): boolean {
   return Object.keys(value).every((key) => keys.has(key));
 }
 
+/**
+ * Whether a mailto address names a user and password before its `@`: a colon before any `/`, `?` or `#`, then an `@`
+ * later on the same line. One pass, so a long address costs linear time where a backtracking pattern costs quadratic.
+ */
+function mailtoUserName(value: string): boolean {
+  let colon = false;
+  let beforePath = true;
+  for (let index = 'mailto:'.length; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code === 0x2028 || code === 0x2029) {
+      // A colon before a line separator cannot reach an `@` after it.
+      colon = false;
+    } else if (code === 64 && colon) {
+      return true;
+    } else if (code === 47 || code === 63 || code === 35) {
+      beforePath = false;
+    } else if (code === 58 && beforePath) {
+      colon = true;
+    }
+  }
+  return false;
+}
+
 function safeUrl(value: unknown, protocols: ReadonlySet<string>): string | undefined {
   if (typeof value !== 'string' || value.length === 0 || value.trim() !== value) return undefined;
   for (let index = 0; index < value.length; index += 1) {
     const code = value.charCodeAt(index);
-    if (code <= 31 || code === 127) return undefined;
+    if (code <= 31 || (code >= 127 && code <= 159)) return undefined;
   }
   try {
     const url = new URL(value);
     if (!protocols.has(url.protocol) || url.username !== '' || url.password !== '') return undefined;
-    if (url.protocol === 'mailto:' && /^mailto:[^/?#]*:.*@/iu.test(value)) return undefined;
+    if (url.protocol === 'mailto:' && mailtoUserName(value)) return undefined;
     return url.href;
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Whether an address found in typed or pasted text becomes a link, by the rule the link command applies to the address the
+ * link gets: the text as found, or, without a scheme, the text after http://, or after mailto: for an email address. Without
+ * a scheme the host also needs a dot and is not a bare IPv4 address, as the editor's own rule asks.
+ */
+function autoLinkable(value: string): boolean {
+  if (/^[a-z][a-z0-9+.-]*:/iu.test(value)) return safeUrl(value, SAFE_LINK_PROTOCOLS) !== undefined;
+  const email = /^[^\s/:@]+@[^\s/@]+$/u.test(value);
+  const host = (email ? value.slice(value.indexOf('@') + 1) : value).split(/[/?#:]/u)[0] ?? '';
+  return safeUrl(email ? `mailto:${value}` : `http://${value}`, SAFE_LINK_PROTOCOLS) !== undefined && host.includes('.') && !/^\d{1,3}(?:\.\d{1,3}){3}$/u.test(host);
 }
 
 function safeColor(value: unknown): value is string {
@@ -426,6 +508,17 @@ export function normalizeTextEditorDocument(value: unknown): TextEditorDocument 
   return { type: 'doc', content: content.length ? content as TextEditorDocument['content'] : [{ type: 'paragraph' }] };
 }
 
+/**
+ * The address as the link or image command stores it, or null when that command would refuse it: the same rule the document
+ * grammar applies. A link takes an absolute http, https, or mailto URL and an image an absolute http or https URL, with no
+ * user name or password, no surrounding space, and no control character. The result is the URL's normalized form, such as
+ * `https://example.com/` for `https://example.com`.
+ */
+export function normalizeTextEditorUrl(value: string, kind: 'link' | 'image'): string | null {
+  if (kind !== 'link' && kind !== 'image') return null;
+  return safeUrl(value, kind === 'image' ? SAFE_IMAGE_PROTOCOLS : SAFE_LINK_PROTOCOLS) ?? null;
+}
+
 // ProseMirror types attribute values as strings but hands them to setAttribute, which also takes the booleans the ARIA props can carry.
 type EditorAttributes = { [name: string]: string };
 
@@ -437,32 +530,422 @@ type EditorCallbacks = {
   onColorRequest?: (actions: { setColor(value: string): boolean }) => unknown;
 };
 
+/** What a transaction and an editor state share, so the caret helpers read either. */
+type SelectionState = { readonly doc: ProseMirrorNode; readonly selection: Selection; readonly storedMarks: readonly Mark[] | null };
+
+/** The text range that carries one link mark, with the mark. */
+type LinkRange = TextRange & { mark: Mark };
+
+const hrefOf = (mark: Mark | undefined): string | null => (typeof mark?.attrs.href === 'string' ? mark.attrs.href : null);
+
+/**
+ * The marks the next typed text takes at a caret: those held for it, or else the caret's, without a link that starts at the
+ * caret. ProseMirror gives a caret at the start of a block the marks of the text after it, so a link that starts a paragraph
+ * would otherwise reach back to its start, which is outside a link everywhere else. linkTypingBoundary holds the same marks
+ * for typing there.
+ */
+function typingMarks({ selection, storedMarks }: SelectionState): readonly Mark[] {
+  if (storedMarks) return storedMarks;
+  const { $from } = selection;
+  const link = $from.doc.type.schema.marks.link;
+  return $from.parentOffset === 0 && link ? link.removeFromSet($from.marks()) : $from.marks();
+}
+
+/** The link at a caret: the one the next typed text would take, so the link is inclusive at its end but not at its start. */
+function caretLinkMark(state: SelectionState): Mark | undefined {
+  const type = state.doc.type.schema.marks.link;
+  return type && state.selection.empty ? type.isInSet(typingMarks(state)) : undefined;
+}
+
+/** The text in the textblock of `$pos` that carries `mark` without a gap and reaches `$pos`, or null. */
+function markRange($pos: ResolvedPos, mark: Mark): TextRange | null {
+  const { parent } = $pos;
+  let start: number | null = null;
+  let position = $pos.start();
+  for (let index = 0; index < parent.childCount; index += 1) {
+    const child = parent.child(index);
+    const end = position + child.nodeSize;
+    if (mark.isInSet(child.marks)) {
+      start ??= position;
+      const next = index + 1 < parent.childCount ? parent.child(index + 1) : null;
+      if (!next || !mark.isInSet(next.marks)) {
+        if (start <= $pos.pos && $pos.pos <= end) return { from: start, to: end };
+        start = null;
+      }
+    } else {
+      start = null;
+    }
+    position = end;
+  }
+  return null;
+}
+
+/** The whole link a caret is in, past its start, or null at a caret outside one, for a link held only for typing, and for a range. */
+function caretLink(state: SelectionState): LinkRange | null {
+  const mark = caretLinkMark(state);
+  const range = mark ? markRange(state.selection.$from, mark) : null;
+  return mark && range && range.from < state.selection.from ? { ...range, mark } : null;
+}
+
+/** The address of the link at a caret, or of the one link all the selected text is in; otherwise null. */
+function selectionLink(state: SelectionState): string | null {
+  const type = state.doc.type.schema.marks.link;
+  if (!type) return null;
+  const { selection } = state;
+  if (selection.empty) return hrefOf(caretLinkMark(state));
+  let href: string | null | undefined;
+  state.doc.nodesBetween(selection.from, selection.to, (node) => {
+    if (!node.isText) return true;
+    const value = hrefOf(type.isInSet(node.marks));
+    href = href === undefined || href === value ? value : null;
+    return false;
+  });
+  return href ?? null;
+}
+
+/** Sets the whole link around a caret to a new address, keeping the caret where it is. */
+function relink(tr: Transaction, link: LinkRange, href: string): boolean {
+  // A step drops the marks held for typing, such as a bold switched on at the caret, so they are held again, with the new address.
+  const held = tr.storedMarks;
+  const mark = link.mark.type.create({ ...link.mark.attrs, href });
+  tr.addMark(link.from, link.to, mark);
+  if (held) tr.setStoredMarks(link.mark.isInSet(held) ? mark.addToSet(held) : held);
+  return true;
+}
+
+/**
+ * The caret the link command leaves after a label it inserted, with the marks it holds there for typing, which leave out the
+ * label's link. Undo history keeps a selection's bookmark from the start of each change and from each undo, and resolves it
+ * in the document it restores, so an undo or redo that brings this caret back brings back its marks too, which
+ * linkTypingBoundary holds again. Any edit maps it to a plain caret.
+ */
+class HeldMarksSelection extends TextSelection {
+  readonly held: readonly Mark[];
+
+  constructor($pos: ResolvedPos, held: readonly Mark[]) {
+    super($pos);
+    this.held = held;
+  }
+
+  override getBookmark(): HeldMarksBookmark {
+    return new HeldMarksBookmark(this.head, this.held);
+  }
+}
+
+/** The bookmark of a HeldMarksSelection, shaped as the text bookmark it stands in for, with the caret's held marks. */
+class HeldMarksBookmark implements SelectionBookmark {
+  readonly anchor: number;
+  readonly head: number;
+  readonly held: readonly Mark[];
+
+  constructor(pos: number, held: readonly Mark[]) {
+    this.anchor = pos;
+    this.head = pos;
+    this.held = held;
+  }
+
+  map(mapping: Mappable): HeldMarksBookmark {
+    return new HeldMarksBookmark(mapping.map(this.head), this.held);
+  }
+
+  resolve(doc: ProseMirrorNode): Selection {
+    const $pos = doc.resolve(this.head);
+    return $pos.parent.inlineContent ? new HeldMarksSelection($pos, this.held) : Selection.near($pos);
+  }
+}
+
+/**
+ * Puts `text`, linked to `href`, in place of the selected text, of the whole link at a caret in one, or at a caret, with the
+ * marks typed text would take there. The caret follows it, and the next typed text is not linked. Line breaks become spaces.
+ * Returns false where a link cannot go: in a code block, or in inline code, which excludes every other mark.
+ */
+function insertLink(tr: Transaction, href: string, text: string, link: LinkRange | null): boolean {
+  const { schema } = tr.doc.type;
+  const type = schema.marks.link;
+  if (!type) return false;
+  // Select All selects the document rather than text in it, so it is emptied first, as typing over it does, which leaves
+  // one empty paragraph for the link.
+  if (!link && tr.selection instanceof AllSelection) tr.deleteSelection();
+  const { selection } = tr;
+  const from = link ? link.from : selection.from;
+  const to = link ? link.to : selection.to;
+  const $from = tr.doc.resolve(from);
+  // Marks held at a caret, such as a bold switched on there, go on the label, also on one in place of a whole link.
+  const inherited = (link ? tr.storedMarks : null) ?? (from === to ? typingMarks(tr) : $from.marksAcross(tr.doc.resolve(to))) ?? [];
+  if (!$from.parent.inlineContent || !$from.parent.type.allowsMarkType(type) || inherited.some((mark) => mark.type !== type && mark.type.excludes(type))) return false;
+  const mark = type.create({ ...(link?.mark ?? type.isInSet(inherited))?.attrs, href });
+  const marks = mark.addToSet(inherited.filter((other) => $from.parent.type.allowsMarkType(other.type)));
+  const steps = tr.steps.length;
+  tr.replaceWith(from, to, schema.text(text.replace(/\r\n|\r|\n/gu, ' '), marks));
+  // The link mark is inclusive, so without these held marks the text typed straight after the new link would extend it.
+  const held = mark.removeFromSet(marks);
+  tr.setSelection(new HeldMarksSelection(tr.doc.resolve(tr.mapping.slice(steps).map(to, 1)), held));
+  tr.setStoredMarks(held);
+  tr.scrollIntoView();
+  return true;
+}
+
+/** Removes the whole link around a caret, and the link the next typed text would take. */
+function unlinkCaret(tr: Transaction, link: LinkRange | null): boolean {
+  const type = tr.doc.type.schema.marks.link;
+  if (!type) return false;
+  // The step drops the marks held for typing, so the others are held again.
+  const held = tr.storedMarks;
+  if (link) tr.removeMark(link.from, link.to, type);
+  if (held) tr.setStoredMarks(type.removeFromSet(held));
+  else tr.removeStoredMark(type);
+  return true;
+}
+
+/**
+ * Replaces the selection with plain text the way typing does. It takes the marks typed text would take, and a line break
+ * becomes a hard break, except in a code block, which holds line breaks as text and no marks.
+ */
+function insertPlainText(tr: Transaction, text: string): boolean {
+  const { selection } = tr;
+  const { $from } = selection;
+  // Typing keeps the caret in view, and so does this, inside the content's own scroll too.
+  tr.scrollIntoView();
+  if ($from.parent.type.spec.code) {
+    tr.replaceSelectionWith(tr.doc.type.schema.text(text.replace(/\r\n?/gu, '\n')), false);
+    return true;
+  }
+  const marks = (selection.empty ? typingMarks(tr) : tr.storedMarks ?? $from.marksAcross(selection.$to) ?? []).filter((mark) => $from.parent.type.allowsMarkType(mark.type));
+  const nodes = plainTextNodes(tr.doc.type.schema, text, marks);
+  tr.replaceSelection(new Slice(Fragment.from(nodes), 0, 0));
+  // A hard break carries no marks, so after a trailing line break they are held for the next typed text.
+  if (nodes.at(-1)?.type.name === 'hardBreak') tr.setStoredMarks(marks);
+  return true;
+}
+
+/**
+ * The text blocks a selection holds: the caret's, or each one whose text a range covers, and an empty one where the range
+ * starts in it, so a range that only reaches the start of the next block, as a triple click selects, holds the one it covers.
+ */
+function selectedTextblocks({ selection, doc }: EditorState): { node: ProseMirrorNode; pos: number }[] {
+  const blocks: { node: ProseMirrorNode; pos: number }[] = [];
+  if (selection.empty) {
+    if (selection.$from.parent.isTextblock) blocks.push({ node: selection.$from.parent, pos: selection.$from.before() });
+    return blocks;
+  }
+  const { from, to } = selection;
+  doc.nodesBetween(from, to, (node, pos) => {
+    if (!node.isTextblock) return true;
+    const start = pos + 1;
+    const end = pos + node.nodeSize - 1;
+    if (start === end ? from <= start && start < to : Math.max(from, start) < Math.min(to, end)) blocks.push({ node, pos });
+    return false;
+  });
+  return blocks;
+}
+
+/**
+ * Whether every selected text block already is a heading of `level`, or a paragraph for null. A heading or paragraph command
+ * there is a complete no-op, so the blocks keep their attributes, such as alignment, and nothing focuses, changes, or adds
+ * an undo step; the editor's own commands there would lift a list item's paragraph out of its list.
+ */
+function blocksAre(state: EditorState, level: unknown): boolean {
+  const blocks = selectedTextblocks(state);
+  return blocks.length > 0 && blocks.every(({ node }) => (level === null ? node.type.name === 'paragraph' : node.type.name === 'heading' && node.attrs.level === level));
+}
+
+/** The mark each mark command sets, so a command is refused where its mark cannot go. */
+const COMMAND_MARKS: Partial<Record<TextEditorCommand['type'], string>> = {
+  bold: 'bold', italic: 'italic', underline: 'underline', strike: 'strike', code: 'code', link: 'link', color: 'textStyle', fontFamily: 'textStyle', fontSize: 'textStyle',
+};
+
+/**
+ * Whether a mark can go on the selection: at a caret whose block takes it and whose marks for typing do not exclude it, or
+ * on some selected text whose block takes it and whose marks do not exclude it. A code block takes no mark, and inline code
+ * excludes every other.
+ */
+function markApplies(state: EditorState, name: string): boolean {
+  const type = state.schema.marks[name];
+  if (!type) return false;
+  const takes = (parent: ProseMirrorNode, marks: readonly Mark[]) => parent.inlineContent && parent.type.allowsMarkType(type) && !marks.some((mark) => mark.type !== type && mark.type.excludes(type));
+  const { selection, doc } = state;
+  if (selection.empty) return takes(selection.$from.parent, typingMarks(state));
+  let applies = false;
+  for (const { $from, $to } of selection.ranges) {
+    doc.nodesBetween($from.pos, $to.pos, (node, _pos, parent) => {
+      if (!applies && node.isInline && parent !== null && takes(parent, node.marks)) applies = true;
+      return !applies;
+    });
+  }
+  return applies;
+}
+
+/**
+ * Takes a mark off the selection where `on`, and otherwise puts it on. At a caret it holds the marks for the next typed
+ * text, starting from those typing would take, so none holds a link that starts there.
+ */
+function switchMark(tr: Transaction, name: string, on: boolean): boolean {
+  const type = tr.doc.type.schema.marks[name];
+  if (!type) return false;
+  const { selection } = tr;
+  if (selection.empty) {
+    const marks = typingMarks(tr);
+    tr.setStoredMarks(on ? type.removeFromSet(marks) : type.create().addToSet(marks));
+    return true;
+  }
+  for (const { $from, $to } of selection.ranges) {
+    if (on) tr.removeMark($from.pos, $to.pos, type);
+    else tr.addMark($from.pos, $to.pos, type.create());
+  }
+  return true;
+}
+
 function run(editor: Editor | null, action: TextEditorCommand, callbacks: EditorCallbacks = {}): boolean {
   if (!editor || editor.isDestroyed || !action || typeof action.type !== 'string') return false;
   if (action.type === 'generate') return typeof callbacks.onGenerate === 'function' && callbacks.onGenerate() !== false;
   if (!editor.isEditable) return false;
+  const mark = COMMAND_MARKS[action.type];
+  // A mark that cannot go on the selection is refused before anything is dispatched; one that is on can always come off.
+  if (mark !== undefined && !(action.type === 'link' && action.text !== undefined) && !editor.isActive(mark) && !markApplies(editor.state, mark)) return false;
+  // Settled before the chain, whose focus books a focus a frame later as soon as it is chained, even if the chain never runs.
+  if ((action.type === 'paragraph' || action.type === 'heading') && blocksAre(editor.state, action.type === 'heading' ? action.level : null)) return true;
+  // The character limit refuses a transaction before it reaches the state, so a command that leaves the state as it was did
+  // not apply. One that changes the document is one undo step of its own: it opens a history event of its own and closes it
+  // after, so the typing that follows is another. One that leaves the document as it was, also through steps that change
+  // nothing, such as an alignment a block already has, stays out of history, so it never splits the typing around it, an
+  // input method's composition included.
+  const before = editor.state;
+  const runs = (commands: ChainedCommands) => {
+    const result = commands.command(({ tr }) => {
+      if (tr.doc.eq(tr.before)) tr.setMeta('addToHistory', false);
+      else closeHistory(tr);
+      return true;
+    }).run();
+    if (!result || editor.state === before) return false;
+    if (!editor.state.doc.eq(before.doc) && !editor.isDestroyed) editor.view.dispatch(closeHistory(editor.state.tr));
+    return true;
+  };
   const chain = editor.chain().focus();
-  if (action.type === 'bold') return chain.toggleBold().run();
-  if (action.type === 'italic') return chain.toggleItalic().run();
-  if (action.type === 'underline' && typeof chain.toggleUnderline === 'function') return chain.toggleUnderline().run();
-  if (action.type === 'bulletList') return chain.toggleBulletList().run();
-  if (action.type === 'orderedList') return chain.toggleOrderedList().run();
-  if (action.type === 'blockquote') return chain.toggleBlockquote().run();
-  if (action.type === 'codeBlock') return chain.toggleCodeBlock().run();
-  if (action.type === 'align' && ALIGNMENTS.has(action.value)) return chain.setTextAlign(action.value).run();
-  if (action.type === 'color' && safeColor(action.value) && typeof chain.setColor === 'function') return chain.setColor(action.value).run();
-  if (action.type === 'fontFamily' && FONT_FAMILIES.has(action.value) && typeof chain.setFontFamily === 'function') return chain.setFontFamily(action.value).run();
-  if (action.type === 'fontSize' && FONT_SIZES.has(action.value) && typeof chain.setFontSize === 'function') return chain.setFontSize(action.value).run();
+  const switched = action.type === 'bold' || action.type === 'italic' || action.type === 'underline' || action.type === 'strike' || action.type === 'code' ? action.type : null;
+  if (switched !== null) {
+    // Over a range a mark switches as its shortcut and the toolbar take it, which count inline code as having every mark. At
+    // a caret it switches by the marks typing would take, refused where it cannot go, such as in a code block.
+    const { state } = editor;
+    const on = state.selection.empty ? readMarks(state)[switched] : editor.isActive(switched);
+    return (on || markApplies(state, switched)) && runs(chain.command(({ tr }) => switchMark(tr, switched, on)));
+  }
+  if (action.type === 'bulletList') return runs(chain.toggleBulletList());
+  if (action.type === 'orderedList') return runs(chain.toggleOrderedList());
+  if (action.type === 'blockquote') return runs(chain.toggleBlockquote());
+  if (action.type === 'codeBlock') return runs(chain.toggleCodeBlock());
+  // Set rather than toggled, as the heading shortcut would turn a heading of the same level back into a paragraph.
+  if (action.type === 'paragraph') return typeof chain.setParagraph === 'function' && runs(chain.setParagraph());
+  if (action.type === 'heading') {
+    const { level } = action;
+    return Number.isInteger(level) && level >= 1 && level <= 6 && typeof chain.setHeading === 'function' && runs(chain.setHeading({ level }));
+  }
+  if (action.type === 'horizontalRule' && typeof chain.setHorizontalRule === 'function') return runs(chain.setHorizontalRule());
+  if (action.type === 'text') {
+    const { text } = action;
+    return typeof text === 'string' && text !== '' && runs(chain.command(({ tr }) => insertPlainText(tr, text)));
+  }
+  if (action.type === 'align' && ALIGNMENTS.has(action.value)) return runs(chain.setTextAlign(action.value));
+  if (action.type === 'color' && safeColor(action.value) && typeof chain.setColor === 'function') return runs(chain.setColor(action.value));
+  if (action.type === 'fontFamily' && FONT_FAMILIES.has(action.value) && typeof chain.setFontFamily === 'function') return runs(chain.setFontFamily(action.value));
+  if (action.type === 'fontSize' && FONT_SIZES.has(action.value) && typeof chain.setFontSize === 'function') return runs(chain.setFontSize(action.value));
   if (action.type === 'link' && typeof chain.setLink === 'function') {
     const href = safeUrl(action.href, SAFE_LINK_PROTOCOLS);
-    return href ? chain.setLink({ href }).run() : false;
+    const { text } = action;
+    if (!href || (text !== undefined && (typeof text !== 'string' || text === ''))) return false;
+    const link = caretLink(editor.state);
+    // Without text, a selection or a caret outside a link keeps the editor's own link command.
+    if (text === undefined && !link) return runs(chain.setLink({ href }));
+    return runs(chain.command(({ tr }) => (text === undefined ? relink(tr, link!, href) : insertLink(tr, href, text, link))).setMeta('preventAutolink', true));
   }
-  if (action.type === 'unlink' && typeof chain.unsetLink === 'function') return chain.unsetLink().run();
+  if (action.type === 'unlink' && typeof chain.unsetLink === 'function') {
+    if (!editor.state.selection.empty) return runs(chain.unsetLink());
+    const link = caretLink(editor.state);
+    return runs(chain.command(({ tr }) => unlinkCaret(tr, link)).setMeta('preventAutolink', true));
+  }
   if (action.type === 'image') {
     const src = safeUrl(action.src, SAFE_IMAGE_PROTOCOLS);
-    return src ? chain.setImage({ src, ...(typeof action.alt === 'string' ? { alt: action.alt.slice(0, 1_000) } : {}) }).run() : false;
+    return src ? runs(chain.setImage({ src, ...(typeof action.alt === 'string' ? { alt: action.alt.slice(0, 1_000) } : {}) })) : false;
   }
   return false;
+}
+
+/** Focuses the editable content at once with its selection. ProseMirror's own focus scrolls nothing. */
+function focusWithoutScroll(editor: Editor) {
+  if (!editor.isDestroyed && editor.isEditable) editor.view.focus();
+}
+
+const sameFormatting = (a: TextEditorFormatting, b: TextEditorFormatting) => a.empty === b.empty && a.link === b.link && a.block === b.block
+  && a.headingLevel === b.headingLevel && a.list === b.list && a.quote === b.quote
+  && a.marks.bold === b.marks.bold && a.marks.italic === b.marks.italic && a.marks.underline === b.marks.underline
+  && a.marks.strike === b.marks.strike && a.marks.code === b.marks.code;
+
+/** The marks the next typed text takes at a caret. A block that takes no mark, such as a code block, takes none, whatever a shortcut held. */
+function caretMarks(state: SelectionState): readonly Mark[] {
+  const { parent } = state.selection.$from;
+  return typingMarks(state).filter((mark) => parent.type.allowsMarkType(mark.type));
+}
+
+/**
+ * Whether a toolbar tool shows its mark pressed: at a caret where the formatting report shows it, so never in a block that
+ * takes no mark, and over a range as the tool's command switches it.
+ */
+function markShown(editor: Editor, name: string): boolean {
+  if (!editor.state.selection.empty) return editor.isActive(name);
+  return caretMarks(editor.state).some((mark) => mark.type.name === name);
+}
+
+/** Each mark at the selection: on at a caret where the next typed text takes it, and over a range where all the selected text has it. */
+function readMarks(state: SelectionState): TextEditorFormatting['marks'] {
+  const { selection, doc } = state;
+  let has: (name: string) => boolean;
+  if (selection.empty) {
+    const marks = caretMarks(state);
+    has = (name) => marks.some((mark) => mark.type.name === name);
+  } else {
+    const texts: ProseMirrorNode[] = [];
+    for (const { $from, $to } of selection.ranges) {
+      doc.nodesBetween($from.pos, $to.pos, (node) => {
+        if (node.isText) texts.push(node);
+        return !node.isText;
+      });
+    }
+    has = (name) => texts.length > 0 && texts.every((node) => node.marks.some((mark) => mark.type.name === name));
+  }
+  return Object.freeze({ bold: has('bold'), italic: has('italic'), underline: has('underline'), strike: has('strike'), code: has('code') });
+}
+
+/**
+ * The formatting at the selection. The block, list, and quote come from the text blocks the selection holds, so a range that
+ * only reaches the edge of the next block, as a triple click selects, still reads as the block it covers.
+ */
+function readFormatting(editor: Editor): TextEditorFormatting {
+  const { state } = editor;
+  const { selection, doc } = state;
+  const blocks = selectedTextblocks(state);
+  const kinds = new Set(blocks.map(({ node }) => node.type.name));
+  const kind = kinds.size === 1 ? [...kinds][0] : null;
+  const block = kind === 'paragraph' || kind === 'heading' || kind === 'codeBlock' ? kind : null;
+  const levels = new Set(blocks.map(({ node }) => node.attrs.level));
+  const [level] = levels;
+  const headingLevel = block === 'heading' && levels.size === 1 && typeof level === 'number' && level >= 1 && level <= 6 ? level as NonNullable<TextEditorFormatting['headingLevel']> : null;
+  // The nodes that hold every counted block, from the nearest out.
+  const $first = doc.resolve(blocks[0]?.pos ?? selection.from);
+  let list: TextEditorFormatting['list'] = null;
+  let quote = false;
+  for (let depth = $first.sharedDepth(blocks.at(-1)?.pos ?? selection.to); depth > 0; depth -= 1) {
+    const { name } = $first.node(depth).type;
+    if (list === null && (name === 'bulletList' || name === 'orderedList')) list = name;
+    if (name === 'blockquote') quote = true;
+  }
+  return Object.freeze({
+    empty: selection.empty,
+    marks: readMarks(state),
+    link: selectionLink(state),
+    block,
+    headingLevel,
+    list,
+    quote,
+  });
 }
 
 /**
@@ -493,7 +976,7 @@ function Action({ editor, disabled, action, label, icon: Icon, callbacks }: Acti
       ? current.getAttributes('textStyle').fontFamily === action.value
       : action.type === 'fontSize'
         ? current.getAttributes('textStyle').fontSize === action.value
-        : current.isActive(action.type)), false);
+        : COMMAND_MARKS[action.type] === action.type ? markShown(current, action.type) : current.isActive(action.type)), false);
   // Generate with AI is an action, so it carries no pressed state; every other tool toggles formatting.
   const toggle = action.type !== 'generate';
   const buttonProps = {
@@ -783,6 +1266,32 @@ function fitsLimit(before: ProseMirrorNode, after: ProseMirrorNode, limit: numbe
 
 // Marks the transaction that applies the controlled value, which the parent owns and the limit never refuses.
 const EXTERNAL_VALUE = 'muxuiExternalValue';
+
+/**
+ * Holds the marks for typing without a link in two places where the next typed text would otherwise extend one. A caret at
+ * the start of a block takes the marks of the text after it, so text typed before a link that starts a paragraph would join
+ * it, though the start of a link is outside it everywhere else. And an undo or redo brings back the caret after a label the
+ * link command inserted but not the marks held for typing there, so it holds the ones that caret carries.
+ */
+function linkTypingBoundary() {
+  return Extension.create({
+    name: 'muxuiLinkTypingBoundary',
+    addProseMirrorPlugins() {
+      return [new Plugin({
+        key: new PluginKey('muxuiLinkTypingBoundary'),
+        appendTransaction(_transactions, _previous, state) {
+          const type = state.schema.marks.link;
+          const { selection, storedMarks } = state;
+          if (!type || storedMarks || !selection.empty) return null;
+          if (selection instanceof HeldMarksSelection) return state.tr.setStoredMarks(selection.held);
+          const { $from } = selection;
+          const marks = $from.marks();
+          return $from.parentOffset === 0 && type.isInSet(marks) ? state.tr.setStoredMarks(type.removeFromSet(marks)) : null;
+        },
+      })];
+    },
+  });
+}
 
 /**
  * Refuses an edit past the limit before it applies, so it never reaches the document, onChange, or undo history.
@@ -1435,10 +1944,11 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   value, defaultValue, onChange, disabled = false, invalid = false, placeholder = '', limit,
   toolbar = 'simple', floating = false, bubbleMenu = false, onLinkRequest, onImageRequest, onColorRequest, onGenerate,
   selectionActions, selectionInstruction = true, onSelectionRequest,
+  autoFocus = false, onReady, onFormattingChange, minRows, maxRows,
   label, description, errorMessage, required = false, readOnly = false,
   id, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, 'aria-describedby': ariaDescribedby,
   'aria-errormessage': ariaErrormessage, 'aria-invalid': ariaInvalid, 'aria-required': ariaRequired,
-  'aria-disabled': ariaDisabled, 'aria-readonly': ariaReadonly, className, ...props
+  'aria-disabled': ariaDisabled, 'aria-readonly': ariaReadonly, className, style, ...props
 }, ref) {
   // An omitted value is normalized like any other, so the editor never holds the shared `emptyDocument` itself.
   const initialValue = defaultValue === undefined ? emptyDocument : defaultValue;
@@ -1457,11 +1967,15 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
   const limitRef = React.useRef(limit);
   const placeholderRef = React.useRef(placeholder);
   const callbacksRef = React.useRef({ onGenerate, onLinkRequest, onImageRequest, onColorRequest });
+  const lifecycleRef = React.useRef({ autoFocus, onReady, onFormattingChange });
   controlledValueRef.current = value;
   onChangeRef.current = onChange;
   limitRef.current = characterLimit;
   placeholderRef.current = placeholder;
   callbacksRef.current = { onGenerate, onLinkRequest, onImageRequest, onColorRequest };
+  lifecycleRef.current = { autoFocus, onReady, onFormattingChange };
+  const minRowCount = rowCount(minRows);
+  const maxRowCount = rowCount(maxRows) === undefined ? undefined : Math.max(rowCount(maxRows)!, minRowCount ?? 1);
   const labelledBy = ariaLabelledby ?? (label !== undefined ? labelId : undefined);
   const describedBy = [ariaDescribedby, description !== undefined ? descriptionId : undefined, errorMessage !== undefined ? errorId : undefined].filter(Boolean).join(' ') || undefined;
   const editorAttributes = React.useMemo(() => ({
@@ -1483,7 +1997,7 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
     editable: !disabled && !readOnly,
     editorProps: { attributes: editorAttributes },
     extensions: [
-      StarterKit.configure({ link: { openOnClick: false } }),
+      StarterKit.configure({ link: { openOnClick: false, shouldAutoLink: autoLinkable } }),
       TextStyleKit,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Image,
@@ -1493,6 +2007,7 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
       placeholderLabel(placeholderRef),
       selectionRangePainter().extension,
       characterLimitFilter(limitRef),
+      linkTypingBoundary(),
     ],
     onUpdate: ({ editor: instance }) => {
       const next = normalizeTextEditorDocument(instance.getJSON());
@@ -1512,6 +2027,47 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
     editor.setOptions({ editorProps: { attributes: editorAttributes } });
     return undefined;
   }, [editor, editorAttributes]);
+
+  // Reports the formatting at once and after every transaction that changes it, selection-only moves included. It listens
+  // before the first report, so a command that report's callback runs is reported too. The last report outlives a remount
+  // of the effect, so strict mode does not report the same formatting twice, and a callback added while there was none is
+  // given the formatting at once.
+  const reportsFormatting = onFormattingChange !== undefined;
+  const reportedFormatting = React.useRef<{ editor: Editor; formatting: TextEditorFormatting } | null>(null);
+  const formattingUnreported = React.useRef(false);
+  React.useEffect(() => {
+    if (!editor) return undefined;
+    if (!reportsFormatting) {
+      formattingUnreported.current = true;
+      return undefined;
+    }
+    if (formattingUnreported.current) {
+      formattingUnreported.current = false;
+      reportedFormatting.current = null;
+    }
+    const report = () => {
+      const callback = lifecycleRef.current.onFormattingChange;
+      if (!callback || editor.isDestroyed) return;
+      const formatting = readFormatting(editor);
+      const last = reportedFormatting.current;
+      if (last?.editor === editor && sameFormatting(last.formatting, formatting)) return;
+      reportedFormatting.current = { editor, formatting };
+      callback(formatting);
+    };
+    editor.on('transaction', report);
+    report();
+    return () => { editor.off('transaction', report); };
+  }, [editor, reportsFormatting]);
+
+  // The editor mounts its editable content after the first render, into a detached element that EditorContent then moves
+  // into the page, so ready waits until the content is connected, once per editor, and focus follows it.
+  const readyEditor = React.useRef<Editor | null>(null);
+  React.useEffect(() => {
+    if (!editor || editor.isDestroyed || readyEditor.current === editor || !editor.view.dom.isConnected) return;
+    readyEditor.current = editor;
+    if (lifecycleRef.current.autoFocus) focusWithoutScroll(editor);
+    lifecycleRef.current.onReady?.();
+  });
 
   const syncControlledValue = React.useCallback(() => {
     const external = controlledValueRef.current;
@@ -1571,14 +2127,25 @@ const TextEditor = React.forwardRef<TextEditorHandle, TextEditorProps>(function 
     onColorRequest: onColorRequest ? (actions) => callbacksRef.current.onColorRequest?.(actions) : undefined,
   };
   React.useImperativeHandle(ref, () => ({
-    focus: () => { editor?.commands.focus(); },
+    focus: (options) => {
+      if (options?.preventScroll) {
+        if (editor) focusWithoutScroll(editor);
+      } else {
+        editor?.commands.focus();
+      }
+    },
     execute: (action) => run(editor, action, callbacksRef.current),
   }), [editor]);
 
   const variant = toolbar === 'floating' ? 'simple' : toolbar;
   const isFloating = floating ? floating : toolbar === 'floating';
+  // The row counts reach the stylesheet, which measures a row in the content's own line height.
+  const rowStyle = minRowCount === undefined && maxRowCount === undefined ? style : { '--muxui-text-editor-min-rows': minRowCount, '--muxui-text-editor-max-rows': maxRowCount, ...style };
   return React.createElement('div', {
-    ...props, className: cx('muxui-text-editor', className), 'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-read-only': readOnly ? readOnly : undefined, 'data-muxui-state-required': required ? required : undefined, 'data-muxui-state-invalid': (invalid ? invalid : errorMessage !== undefined) || undefined,
+    ...props,
+    className: cx('muxui-text-editor', minRowCount !== undefined && 'muxui-text-editor--min-rows', maxRowCount !== undefined && 'muxui-text-editor--max-rows', className),
+    style: rowStyle,
+    'data-muxui-state-disabled': disabled ? disabled : undefined, 'data-muxui-state-read-only': readOnly ? readOnly : undefined, 'data-muxui-state-required': required ? required : undefined, 'data-muxui-state-invalid': (invalid ? invalid : errorMessage !== undefined) || undefined,
   }, label !== undefined ? React.createElement('label', { id: labelId, htmlFor: contentId, className: 'muxui-text-editor__label' }, label) : null,
   toolbar ? React.createElement(Toolbar, { editor, disabled: disabled ? disabled : readOnly, variant, floating: isFloating, callbacks }) : null,
   editor && bubbleMenu ? React.createElement(BubbleMenu, { editor, disabled: disabled ? disabled : readOnly, callbacks }) : null,

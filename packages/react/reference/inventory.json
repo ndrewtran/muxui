@@ -1573,6 +1573,12 @@
           "module": "text-editor"
         },
         {
+          "name": "TextEditorFormatting",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
           "name": "TextEditorHandle",
           "kind": "type",
           "owner": "text-editor",
@@ -1694,6 +1700,12 @@
         },
         {
           "name": "normalizeTextEditorDocument",
+          "kind": "value",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
+          "name": "normalizeTextEditorUrl",
           "kind": "value",
           "owner": "text-editor",
           "module": "text-editor"

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:dialog-sheet-react",
+  "kind": "example",
+  "name": "Dialog as a sheet",
+  "summary": "Present a Dialog as a sheet along the bottom edge, with a list that scrolls inside it and a drag down, Escape, an outside press, or the close button to dismiss it.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:dialog#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 4
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/dialog/examples/react/sheet.tsx"
+}

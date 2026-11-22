@@ -110,6 +110,10 @@ export const clientFixtures = [
     element: ({ h, M }) => h(M.Dialog, { title: 'Settings', description: 'Review the settings.', actions: h(M.Button, null, 'Save'), defaultOpen: true }, 'Body'),
   },
   {
+    family: 'dialog', name: 'Dialog sheet open', state: 'open',
+    element: ({ h, M }) => h(M.Dialog, { title: 'Filters', description: 'Narrow the list.', presentation: 'sheet', defaultOpen: true }, 'Body'),
+  },
+  {
     family: 'lightbox', name: 'Lightbox open with controls', state: 'open',
     element: ({ h, M }) => h(M.Lightbox, { items: [{ key: 'one', label: 'One' }, { key: 'two', label: 'Two' }], defaultOpen: true, renderContent: (item) => h('p', null, item.label) },
       h(M.LightboxTrigger, { itemKey: 'one' }, 'Open'),

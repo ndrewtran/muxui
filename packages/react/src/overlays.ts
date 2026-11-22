@@ -404,6 +404,13 @@ function useOpenerFocusFallback() {
   }, [opener]);
 }
 
+type DialogPresentation = NonNullable<DialogOwnProps['presentation']>;
+
+function normalizeDialogPresentation(value: unknown): DialogPresentation {
+  if (value === 'center' || value === 'sheet') return value;
+  throw new TypeError('Dialog presentation must be one of: center, sheet');
+}
+
 interface DialogContentProps {
   title?: ReactNode;
   description?: ReactNode;
@@ -411,6 +418,7 @@ interface DialogContentProps {
   children?: ReactNode;
   ariaLabel?: string;
   dismissable: boolean;
+  presentation: DialogPresentation;
   explicitClose: () => void;
   className?: string;
   panelClassName?: string;
@@ -424,7 +432,7 @@ interface DialogContentProps {
   'aria-labelledby'?: string;
 }
 
-function DialogContent({ title, description, actions, children, ariaLabel, dismissable, explicitClose, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, contentRef, 'aria-describedby': ariaDescribedby, ...props }: DialogContentProps) {
+function DialogContent({ title, description, actions, children, ariaLabel, dismissable, presentation, explicitClose, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, contentRef, 'aria-describedby': ariaDescribedby, ...props }: DialogContentProps) {
   const descriptionId = React.useId();
   const describedby = [ariaDescribedby, description !== undefined && description !== null ? descriptionId : undefined].filter(Boolean).join(' ') || undefined;
   const triggerState = React.useContext(AriaOverlayTriggerStateContext);
@@ -432,7 +440,10 @@ function DialogContent({ title, description, actions, children, ariaLabel, dismi
   // RAC routes slot="close" buttons through this state's close; those
   // explicit actions still close a non-dismissable Dialog.
   const explicitCloseState = React.useMemo(() => triggerState && { ...triggerState, close: explicitClose }, [triggerState, explicitClose]);
-  const dialog = React.createElement(AriaDialog, { ...props, ref: contentRef, className: classNames(classNames('muxui-dialog', className), panelClassName), 'aria-label': ariaLabel, 'aria-describedby': describedby },
+  const dialog = React.createElement(AriaDialog, { ...props, ref: contentRef, className: classNames(classNames('muxui-dialog', className), panelClassName), 'aria-label': ariaLabel, 'aria-describedby': describedby, ...{ 'data-muxui-presentation': presentation } },
+    // The grip a sheet is dragged by. Dragging only repeats what Escape, an outside press and the close button do, so
+    // the grip is hidden from assistive technology, and a sheet that cannot be dismissed has none.
+    presentation === 'sheet' && dismissable ? React.createElement('div', { className: 'muxui-dialog__grip', 'aria-hidden': 'true' }) : null,
     hasRenderableLabel(title) ? React.createElement(AriaHeading, { slot: 'title', className: classNames('muxui-dialog__title', titleClassName) }, title) : null,
     description !== undefined && description !== null ? React.createElement('p', { id: descriptionId, className: classNames('muxui-dialog__description', descriptionClassName) }, description) : null,
     React.createElement('div', { className: classNames('muxui-dialog__content', contentClassName) }, children),
@@ -450,6 +461,7 @@ interface DialogTriggerState {
 
 interface DialogOverlayProps {
   dismissable: boolean;
+  presentation: DialogPresentation;
   backdropClassName?: string;
   children?: ReactNode;
   state: DialogTriggerState;
@@ -457,7 +469,7 @@ interface DialogOverlayProps {
   originRef: RefObject<Element | null>;
 }
 
-function DialogOverlay({ dismissable, backdropClassName, children, state, insideTrigger, originRef }: DialogOverlayProps) {
+function DialogOverlay({ dismissable, presentation, backdropClassName, children, state, insideTrigger, originRef }: DialogOverlayProps) {
   const isOpen = Boolean(state.isOpen);
   const [phase, setPhase] = React.useState({ open: isOpen, exiting: false });
   if (phase.open !== isOpen) setPhase({ open: isOpen, exiting: !isOpen });
@@ -473,8 +485,9 @@ function DialogOverlay({ dismissable, backdropClassName, children, state, inside
     if (!reduced || typeof backdrop.getAnimations !== 'function') return;
     const CSSTransition = backdrop.ownerDocument.defaultView?.CSSTransition;
     if (!CSSTransition) return;
+    // A centred Dialog's backdrop fades its opacity; a sheet's fades its scrim colour.
     for (const animation of backdrop.getAnimations()) {
-      if (animation instanceof CSSTransition && animation.transitionProperty === 'opacity') animation.cancel();
+      if (animation instanceof CSSTransition && (animation.transitionProperty === 'opacity' || animation.transitionProperty === 'background-color')) animation.cancel();
     }
   }, []);
   const overlayProps: ModalOverlayProps & RefAttributes<HTMLDivElement> = {
@@ -483,13 +496,14 @@ function DialogOverlay({ dismissable, backdropClassName, children, state, inside
     isKeyboardDismissDisabled: !dismissable,
     className: classNames('muxui-dialog__backdrop', backdropClassName),
     isExiting: !isOpen && phase.exiting,
+    ...{ 'data-muxui-presentation': presentation },
   };
   if (!insideTrigger) {
     overlayProps.isOpen = isOpen;
     overlayProps.onOpenChange = state.onOpenChange;
   }
   return React.createElement(AriaModalOverlay, overlayProps,
-    React.createElement(DialogMotion, { originRef, onExitComplete: releaseExit, onReducedChange: markReduced }, children));
+    React.createElement(DialogMotion, { originRef, sheet: presentation === 'sheet', draggable: dismissable, onExitComplete: releaseExit, onReducedChange: markReduced }, children));
 }
 
 function useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange }: { open?: boolean; defaultOpen: boolean; dismissable: boolean; onOpenChange?: (open: boolean) => void }): DialogTriggerState {
@@ -540,6 +554,8 @@ export interface DialogOwnProps {
   defaultOpen?: boolean;
   /** Whether Escape, an outside press, the trigger, and the built-in close button close the Dialog. When false, the Dialog renders no close button of its own, and only a button in the close slot closes it. */
   dismissable?: boolean;
+  /** Where the Dialog appears: center places it in the middle of the viewport; sheet places it along the bottom edge of the visible viewport, where a drag down from its grip or title dismisses it as Escape and an outside press do. */
+  presentation?: 'center' | 'sheet';
   /** The element that opens the Dialog. Without one, only open or defaultOpen opens it. */
   trigger?: ReactElement;
   /** A class added to the backdrop beside Mux UI's own. */
@@ -576,6 +592,7 @@ export const Dialog: ForwardRefExoticComponent<DialogProps & RefAttributes<HTMLE
     open,
     defaultOpen = false,
     dismissable = true,
+    presentation = 'center',
     description,
     actions,
     backdropClassName,
@@ -593,11 +610,12 @@ export const Dialog: ForwardRefExoticComponent<DialogProps & RefAttributes<HTMLE
   }, ref) {
     const hasTitle = hasRenderableLabel(title);
     if (!hasTitle && !hasAccessibleName(ariaLabel) && !hasAccessibleName(props['aria-labelledby'])) throw new Error('Dialog requires a title or accessible name');
+    const resolvedPresentation = normalizeDialogPresentation(presentation);
     const triggerState = useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange });
     const hasTrigger = React.isValidElement(trigger);
     const motionOriginRef = React.useRef<HTMLSpanElement>(null);
-    const content = React.createElement(DialogOverlay, { dismissable, backdropClassName, state: triggerState, insideTrigger: hasTrigger, originRef: motionOriginRef },
-      React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, explicitClose: triggerState.close, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children));
+    const content = React.createElement(DialogOverlay, { dismissable, presentation: resolvedPresentation, backdropClassName, state: triggerState, insideTrigger: hasTrigger, originRef: motionOriginRef },
+      React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, presentation: resolvedPresentation, explicitClose: triggerState.close, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children));
     if (hasTrigger) {
       return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange, children: CHILDREN_FOLLOW }, pressableTrigger(trigger, false, 'muxui-dialog__trigger'), content);
     }

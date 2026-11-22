@@ -276,6 +276,7 @@ export const partRows: readonly PartRow[] = [
   { family: 'date-range-picker', part: 'error', disposition: 'field', hook: 'muxui-field-error' },
   { family: 'dialog', part: 'backdrop', disposition: 'class', hook: 'muxui-dialog__backdrop' },
   { family: 'dialog', part: 'root', disposition: 'class', hook: 'muxui-dialog' },
+  { family: 'dialog', part: 'grip', disposition: 'class', hook: 'muxui-dialog__grip' },
   { family: 'dialog', part: 'title', disposition: 'class', hook: 'muxui-dialog__title' },
   { family: 'dialog', part: 'description', disposition: 'class', hook: 'muxui-dialog__description' },
   { family: 'dialog', part: 'content', disposition: 'class', hook: 'muxui-dialog__content' },
@@ -629,7 +630,7 @@ const kinds = (kind: StateKind, list: readonly string[]): Record<string, StateCl
 export const catalogStateKinds: Readonly<Record<string, StateClassification>> = {
   ...names([
     'disabled', 'focused', 'focus-visible', 'hovered', 'pressed', 'invalid', 'read-only', 'required', 'pending',
-    'selected', 'indeterminate', 'expanded', 'open', 'current', 'empty', 'drop-target',
+    'selected', 'indeterminate', 'expanded', 'open', 'current', 'empty', 'drop-target', 'dragging',
   ]),
   opening: ['state', 'entering'],
   closing: ['state', 'exiting'],
@@ -638,7 +639,7 @@ export const catalogStateKinds: Readonly<Record<string, StateClassification>> = 
   ...kinds('prop', [
     'sm', 'md', 'lg', 'radius-full', 'radius-lg', 'radius-md', 'radius-sm', 'elevated', 'outlined', 'attached',
     'below', 'inline', 'wrap', 'diff', 'truncated', 'external', 'collapsed', 'streaming', 'running', 'failed',
-    'timed', 'visa', 'mastercard', 'amex', 'discover', 'unknown', 'inverse', 'background',
+    'timed', 'visa', 'mastercard', 'amex', 'discover', 'unknown', 'inverse', 'background', 'sheet',
   ]),
   ...kinds('environment', ['dark', 'light', 'desktop', 'mobile']),
   ...kinds('derived', [
