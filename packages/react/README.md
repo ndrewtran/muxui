@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:b9b91e2ffd4ef0c577c09c26061d1877ee53c09546ce2fccfd6e5a606a026f32 -->
+<!-- @generated-content-sha256: sha256:6485ec3199386206a71e5c244577fcfbc708714a982c9cf90c71417a45107fd4 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -223,12 +223,12 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TextField | experimental | . | .muxui-text-field | label, description, errorMessage, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, type, inputProps |
 | ThemePicker | experimental | . | .muxui-theme-picker | value, defaultValue, random, disabled |
 | TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |
-| Toast | experimental | . | .muxui-toast | message, title, variant, duration |
+| Toast | experimental | . | .muxui-toast | message, title, variant, duration, action |
 | ToggleButton | experimental | . | .muxui-toggle-button | selected, defaultSelected, disabled, size, variant, preventFocusOnPress |
 | ToggleButtonGroup | experimental | . | .muxui-toggle-button-group | selectedIds, defaultSelectedIds, selectionMode, disabled, orientation, disallowEmptySelection, size |
 | TokenField | experimental | . | .muxui-token-field | label, value, defaultValue, disabled, readOnly, name, placeholder |
 | Toolbar | experimental | . | .muxui-toolbar | orientation, variant |
-| Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, open, defaultOpen, disabled |
+| Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, open, defaultOpen, disabled; shortcut: keys |
 | Tree | experimental | . | .muxui-tree | items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
 | Virtualizer | experimental | . | .muxui-virtualizer | layout, items, height, itemHeight, overscan, disabled, children, minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns |
 
@@ -471,8 +471,10 @@ Public parts: `trigger`, `root`, `content`.
 - The trigger stays operable: disabled adds no aria-disabled or data-muxui-state-disabled to it.
 - A Tooltip describes its trigger and does not name it, so an icon-only trigger needs its own accessible name.
 - The Tooltip surface has pointer events turned off, so links and buttons in its content do not receive clicks.
+- Tooltip.Shortcut shows key caps after the tooltip's text, one kbd per entry of keys, or its children when keys is empty or absent, and is hidden from assistive technology. Give the trigger its real shortcut with aria-keyshortcuts.
+- Mux selectors for the shortcut are .muxui-tooltip__shortcut and .muxui-tooltip__shortcut-key, and Shortcut refs target a span.
 
-Public parts: `trigger`, `tooltip`.
+Public parts: `trigger`, `tooltip`, `shortcut`.
 
 ### Dialog
 

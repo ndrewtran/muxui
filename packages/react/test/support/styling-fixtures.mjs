@@ -132,6 +132,10 @@ export const clientFixtures = [
     element: ({ h, M }) => h(M.Tooltip, { defaultOpen: true, trigger: h(M.Button, null, 'Help'), content: 'Tip' }),
   },
   {
+    family: 'tooltip', name: 'Tooltip open with a shortcut', state: 'open',
+    element: ({ h, M }) => h(M.Tooltip, { defaultOpen: true, trigger: h(M.Button, { 'aria-keyshortcuts': 'Control+B' }, 'Bold'), content: ['Bold', h(M.Tooltip.Shortcut, { key: 'shortcut', keys: ['Ctrl', 'B'] })] }),
+  },
+  {
     family: 'menu', name: 'Menu.Root open with sections', state: 'open',
     element: ({ h, M }) => h(M.Menu.Root, { defaultOpen: true },
       h(M.Menu.Trigger, null, 'Actions'),
@@ -209,6 +213,14 @@ export const clientFixtures = [
     family: 'toast', name: 'Toast shown', state: 'shown',
     element: ({ h, M }) => {
       const Action = () => { const { add } = M.useToast(); return h(M.Button, { onActivate: () => add('Your changes are saved.', { title: 'Saved' }) }, 'Save'); };
+      return h(M.ToastProvider, null, h(Action));
+    },
+    steps: [({ window, document }) => press(window, find(document, 'button'))],
+  },
+  {
+    family: 'toast', name: 'Toast shown with an action', state: 'shown',
+    element: ({ h, M }) => {
+      const Action = () => { const { add } = M.useToast(); return h(M.Button, { onActivate: () => add('The draft is archived.', { title: 'Archived', action: { label: 'Undo', onAction() {} } }) }, 'Archive'); };
       return h(M.ToastProvider, null, h(Action));
     },
     steps: [({ window, document }) => press(window, find(document, 'button'))],

@@ -1312,6 +1312,7 @@
         { "name": "TimeField", "kind": "value", "owner": "time-field", "module": "fields" },
         { "name": "TimeFieldProps", "kind": "type", "owner": "time-field", "module": "fields" },
         { "name": "Toast", "kind": "value", "owner": "toast", "module": "overlays" },
+        { "name": "ToastAction", "kind": "type", "owner": "toast", "module": "overlays" },
         { "name": "ToastManager", "kind": "type", "owner": "toast", "module": "overlays" },
         { "name": "ToastOptions", "kind": "type", "owner": "toast", "module": "overlays" },
         { "name": "ToastProps", "kind": "type", "owner": "toast", "module": "overlays" },
@@ -1358,6 +1359,7 @@
         { "name": "ToolbarProps", "kind": "type", "owner": "toolbar", "module": "toolbar" },
         { "name": "Tooltip", "kind": "value", "owner": "tooltip", "module": "overlays" },
         { "name": "TooltipProps", "kind": "type", "owner": "tooltip", "module": "overlays" },
+        { "name": "TooltipShortcutProps", "kind": "type", "owner": "tooltip", "module": "overlays" },
         { "name": "Tree", "kind": "value", "owner": "tree", "module": "tree" },
         { "name": "TreeProps", "kind": "type", "owner": "tree", "module": "tree" },
         {

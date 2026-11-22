@@ -100,7 +100,8 @@ const GUIDES = {
   'file-trigger': { native: ['capture'] },
   // `getFile()` is the file item's read; aria-label names the area.
   'drop-zone': { native: ['aria-label', 'getFile()'] },
-  tooltip: {},
+  // aria-keyshortcuts is the native attribute the trigger carries to state the shortcut Tooltip.Shortcut shows.
+  tooltip: { native: ['aria-keyshortcuts'] },
   'preview-trigger': {},
   // aria-label names the dialog surface.
   popover: { native: ['aria-label'] },

@@ -4,6 +4,7 @@ import type {
   FocusEvent,
   ForwardRefExoticComponent,
   ForwardedRef,
+  HTMLAttributes,
   KeyboardEvent,
   MouseEvent,
   PointerEvent,
@@ -49,6 +50,8 @@ const PREVIEW_GEOMETRY = Object.freeze({ placement: 'top', offset: 8, crossOffse
 const TOOLTIP_GEOMETRY = Object.freeze({ placement: 'top', offset: 0, crossOffset: 0, shouldFlip: true, containerPadding: 12 } as const);
 // How long a toast stays, in milliseconds, unless it says otherwise.
 const TOAST_DURATION = 5000;
+// A toast with an action stays at least this long, so there is time to reach and use the action.
+const TOAST_ACTION_MIN_DURATION = 10000;
 // React Aria's types make the children of its triggers a required prop. createElement sets that
 // prop from the children it takes after the props, so the props carry only this placeholder.
 const CHILDREN_FOLLOW = undefined;
@@ -1130,59 +1133,95 @@ export type TooltipOwnProps = {
 
 export type TooltipProps = TooltipOwnProps & { className?: string; anchorRef?: RefObject<Element | null> };
 
+/** The props Mux UI defines for Tooltip.Shortcut. Every other attribute of a span passes through to it. */
+export type TooltipShortcutOwnProps = {
+  /** The keys of the shortcut, each shown in a kbd element. The children show when there are none. */
+  keys?: readonly string[];
+};
+
+export type TooltipShortcutProps = HTMLAttributes<HTMLSpanElement> & TooltipShortcutOwnProps;
+
+// A forwardRef result carries no statics, so the compound states them.
+type TooltipComponent = ForwardRefExoticComponent<TooltipProps & RefAttributes<HTMLDivElement>> & {
+  Shortcut: ForwardRefExoticComponent<TooltipShortcutProps & RefAttributes<HTMLSpanElement>>;
+};
+
 /** RAC TooltipTrigger owns global hover/focus timing and keyboard modality semantics. */
-export const Tooltip: ForwardRefExoticComponent<TooltipProps & RefAttributes<HTMLDivElement>> = React.forwardRef<HTMLDivElement, TooltipProps>(function Tooltip({
-  content,
-  trigger,
-  delay = 500,
-  closeDelay = 0,
-  placement = TOOLTIP_GEOMETRY.placement,
-  offset = TOOLTIP_GEOMETRY.offset,
-  crossOffset = TOOLTIP_GEOMETRY.crossOffset,
-  shouldFlip = TOOLTIP_GEOMETRY.shouldFlip,
-  containerPadding = TOOLTIP_GEOMETRY.containerPadding,
-  anchorRef,
-  open,
-  defaultOpen = false,
-  disabled = false,
-  onOpenChange,
-  className,
-  ...props
-}, ref) {
-  if (!React.isValidElement(trigger)) throw new Error('Tooltip requires a focusable React element as trigger');
-  if (!hasRenderableLabel(content)) throw new Error('Tooltip requires content');
-  const normalizedDelay = normalizeNonNegativeFinite(delay, 500, 'Tooltip delay');
-  const normalizedCloseDelay = normalizeNonNegativeFinite(closeDelay, 0, 'Tooltip closeDelay');
-  const geometry = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, TOOLTIP_GEOMETRY, 'Tooltip');
-  const adapter = useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange });
-  const normalizedTrigger = overlayTrigger(trigger, { disabled, className: undefined, markPending: adapter.markPending, clearPending: adapter.clearPending });
-  return React.createElement(AriaTooltipTrigger, {
-    delay: normalizedDelay,
-    closeDelay: normalizedCloseDelay,
-    isOpen: adapter.isOpen,
-    onOpenChange: adapter.handleOpenChange,
-    children: CHILDREN_FOLLOW,
-  }, pressableTrigger(normalizedTrigger), React.createElement(TooltipMotion, {
-    ...props,
-    ref,
-    triggerRef: anchorRef,
-    placement: geometry.placement,
-    offset: geometry.offset,
-    crossOffset: geometry.crossOffset,
-    shouldFlip: geometry.shouldFlip,
-    containerPadding: geometry.containerPadding,
-    className: classNames('muxui-tooltip', className),
-  }, content));
-});
+export const Tooltip: TooltipComponent = /*#__PURE__*/ (() => {
+  const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function Tooltip({
+    content,
+    trigger,
+    delay = 500,
+    closeDelay = 0,
+    placement = TOOLTIP_GEOMETRY.placement,
+    offset = TOOLTIP_GEOMETRY.offset,
+    crossOffset = TOOLTIP_GEOMETRY.crossOffset,
+    shouldFlip = TOOLTIP_GEOMETRY.shouldFlip,
+    containerPadding = TOOLTIP_GEOMETRY.containerPadding,
+    anchorRef,
+    open,
+    defaultOpen = false,
+    disabled = false,
+    onOpenChange,
+    className,
+    ...props
+  }, ref) {
+    if (!React.isValidElement(trigger)) throw new Error('Tooltip requires a focusable React element as trigger');
+    if (!hasRenderableLabel(content)) throw new Error('Tooltip requires content');
+    const normalizedDelay = normalizeNonNegativeFinite(delay, 500, 'Tooltip delay');
+    const normalizedCloseDelay = normalizeNonNegativeFinite(closeDelay, 0, 'Tooltip closeDelay');
+    const geometry = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, TOOLTIP_GEOMETRY, 'Tooltip');
+    const adapter = useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange });
+    const normalizedTrigger = overlayTrigger(trigger, { disabled, className: undefined, markPending: adapter.markPending, clearPending: adapter.clearPending });
+    return React.createElement(AriaTooltipTrigger, {
+      delay: normalizedDelay,
+      closeDelay: normalizedCloseDelay,
+      isOpen: adapter.isOpen,
+      onOpenChange: adapter.handleOpenChange,
+      children: CHILDREN_FOLLOW,
+    }, pressableTrigger(normalizedTrigger), React.createElement(TooltipMotion, {
+      ...props,
+      ref,
+      triggerRef: anchorRef,
+      placement: geometry.placement,
+      offset: geometry.offset,
+      crossOffset: geometry.crossOffset,
+      shouldFlip: geometry.shouldFlip,
+      containerPadding: geometry.containerPadding,
+      className: classNames('muxui-tooltip', className),
+    }, content));
+  }) as TooltipComponent;
+  Tooltip.displayName = 'Tooltip';
 
-Tooltip.displayName = 'Tooltip';
+  // The keys are decoration, hidden from assistive technology, as Menu.Shortcut's are: the trigger states its real
+  // shortcut with aria-keyshortcuts. A key may repeat, so its place keys it.
+  Tooltip.Shortcut = React.forwardRef<HTMLSpanElement, TooltipShortcutProps>(function TooltipShortcut({ keys, children, className, ...props }, ref) {
+    return React.createElement('span', { ...props, ref, 'aria-hidden': 'true', className: classNames('muxui-tooltip__shortcut', className) },
+      keys && keys.length > 0 ? keys.map((key, index) => React.createElement('kbd', { key: `${index}:${key}`, className: 'muxui-tooltip__shortcut-key' }, key)) : children);
+  });
+  return Tooltip;
+})();
 
-/** A toast's content, which a declarative Toast updates in place. */
+/** A toast's content, which a declarative Toast updates in place. Its action's handler is held with its onDismiss. */
 interface ToastContent {
   message: ReactNode;
   title?: ReactNode;
   variant?: ToastOwnProps['variant'];
   className?: string;
+  actionLabel?: string;
+}
+
+/** What a toast reports, held by its key until it is dismissed or the provider tears down. */
+interface ToastCallbacks {
+  onDismiss?: () => void;
+  onAction?: () => void;
+}
+
+function normalizeToastAction(action: ToastAction | undefined) {
+  if (action === undefined) return undefined;
+  if (typeof action?.label !== 'string' || action.label.trim() === '') throw new TypeError('Toast action requires a label');
+  if (typeof action.onAction !== 'function') throw new TypeError('Toast action requires an onAction function');
+  return action;
 }
 
 // React Aria's timer keeps its pending timeout in a private field, and the queue's records carry a flag for an exit.
@@ -1192,7 +1231,7 @@ interface ToastRecord extends QueuedToast<ToastContent> {
 
 const ToastContext = React.createContext<{
   manager: ToastManager;
-  addDeclarative: (content: ToastContent, options: { duration: number; onDismiss?: () => void }) => string;
+  addDeclarative: (content: ToastContent, options: { duration: number } & ToastCallbacks) => string;
   dispose: (id: string, settle?: boolean) => void;
   refresh: () => void;
 } | null>(null);
@@ -1282,6 +1321,14 @@ function createAnimatedToastQueue(queue: UNSTABLE_ToastQueue<ToastContent>, clos
     releaseTimer(key: string) {
       if (entryHolds.delete(key)) resumeTimer(visibleRecord(key));
     },
+    // Leaves a toast at least `minimum` ms from now; a timer held by the region or an entry stays held.
+    raiseTimer(key: string, minimum: number) {
+      const record = visibleRecord(key);
+      if (!record?.timer) return;
+      record.timer.pause();
+      if (Reflect.get(record.timer, 'remaining') < minimum) Reflect.set(record.timer, 'remaining', minimum);
+      resumeTimer(record);
+    },
     pauseAll() {
       regionPaused = true;
       queue.pauseAll();
@@ -1316,19 +1363,41 @@ function moveFocusFromExitingToast(node: HTMLElement, returnFocus: Element | nul
   else (active as HTMLElement).blur();
 }
 
+// An action that leaves a toast that stays, while it has focus, would drop focus to the body with the region still
+// counting it as focused, so every timer stays paused. Focus goes where a dismissed toast sends it: keyboard users to a
+// toast, here the one the action left, and pointer users back to the element focused before the region.
+function moveFocusFromLeavingAction(action: HTMLElement, toast: HTMLElement, returnFocus: Element | null) {
+  if (action.ownerDocument.activeElement !== action) return;
+  const target = getInteractionModality() !== 'pointer' ? toast : returnFocus;
+  if (target?.isConnected) (target as HTMLElement).focus({ preventScroll: true });
+  else action.blur();
+}
+
 interface ToastViewProps {
   toast: ToastRecord;
   queue: ReturnType<typeof createAnimatedToastQueue>;
   placement: NonNullable<ToastProviderProps['placement']>;
   layoutVersion: number;
   onExitComplete: (key: string) => void;
+  onAction: (key: string) => void;
   originRef: RefObject<Element | null>;
   returnFocusRef: RefObject<Element | null>;
 }
 
-function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, originRef, returnFocusRef }: ToastViewProps) {
+function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, onAction, originRef, returnFocusRef }: ToastViewProps) {
   const value = toast.content;
   const hasTitle = hasRenderableLabel(value.title);
+  // The polite status that names the action is filled only once it is in the page, since a live region inserted with
+  // its text is often not announced: when the toast appears, and when an action appears on a toast already showing.
+  const [announcedLabel, setAnnouncedLabel] = React.useState<string | undefined>(undefined);
+  React.useEffect(() => setAnnouncedLabel(value.actionLabel), [value.actionLabel]);
+  // An action that appears on a toast already showing gets the floor a toast added with one gets at enqueue.
+  const hasAction = value.actionLabel !== undefined;
+  const hadActionRef = React.useRef(hasAction);
+  React.useEffect(() => {
+    if (hasAction && !hadActionRef.current) queue.raiseTimer(toast.key, TOAST_ACTION_MIN_DURATION);
+    hadActionRef.current = hasAction;
+  }, [hasAction, queue, toast.key]);
   const nodeRef = React.useRef<HTMLElement | null>(null);
   const entryFinishedRef = React.useRef(false);
   const finishEntry = React.useCallback(() => {
@@ -1356,11 +1425,29 @@ function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, ori
     nodeRef.current = node;
     lifecycleRef(node);
   }, [lifecycleRef]);
+  // React detaches a ref before it removes the element, and a parent's before its children's, so the action is still in
+  // the page here, and the toast's own ref is already empty when the whole toast leaves.
+  const actionRef = React.useRef<HTMLButtonElement | null>(null);
+  const setActionRef = React.useCallback((node: HTMLButtonElement | null) => {
+    const leaving = actionRef.current;
+    actionRef.current = node;
+    if (!node && leaving && nodeRef.current) moveFocusFromLeavingAction(leaving, nodeRef.current, returnFocusRef.current);
+  }, [returnFocusRef]);
   return React.createElement(AriaToast, { ref: setRef, toast, className: classNames('muxui-toast', value.className), ...{ 'data-muxui-variant': value.variant, 'data-muxui-toast-exiting': toast.isExiting || undefined, 'aria-hidden': toast.isExiting || undefined, inert: toast.isExiting || undefined } },
     React.createElement(AriaToastContent, { className: 'muxui-toast__content' },
       React.createElement(AriaText, { slot: 'title', className: classNames('muxui-toast__title', hasTitle ? undefined : 'muxui-toast__title-fallback') }, hasTitle ? value.title : TOAST_FALLBACK_TITLE),
       React.createElement(AriaText, { slot: 'description', className: 'muxui-toast__message' }, value.message)),
-    React.createElement(IconButton, { slot: 'close', size: 'sm', className: 'muxui-toast__dismiss', 'aria-label': 'Dismiss notification' }, React.createElement(XIcon, { className: 'muxui-toast__dismiss-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 })));
+    value.actionLabel === undefined ? null : React.createElement(MuxUIButton, { ref: setActionRef, size: 'sm', variant: 'neutral', className: 'muxui-toast__action', onActivate: () => onAction(toast.key) }, value.actionLabel),
+    React.createElement(IconButton, { slot: 'close', size: 'sm', className: 'muxui-toast__dismiss', 'aria-label': 'Dismiss notification' }, React.createElement(XIcon, { className: 'muxui-toast__dismiss-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 })),
+    value.actionLabel === undefined ? null : React.createElement('span', { className: 'muxui-toast__announcer', role: 'status' }, announcedLabel === value.actionLabel ? value.actionLabel : ''));
+}
+
+/** A toast's one action, such as Undo: a button with its own name and handler. */
+export interface ToastAction {
+  /** The button's text and accessible name, in a word or two, such as Undo. It is required, and a blank string does not count. */
+  label: string;
+  /** Runs once when the button is activated, before the toast closes and onDismiss reports the dismissal. */
+  onAction: () => void;
 }
 
 /** What a notification added through the manager can say and do. */
@@ -1369,6 +1456,7 @@ export interface ToastOptions {
   variant?: 'neutral' | 'success' | 'warning' | 'danger';
   duration?: number;
   onDismiss?: () => void;
+  action?: ToastAction;
   className?: string;
 }
 
@@ -1407,34 +1495,52 @@ export const ToastProvider: FC<ToastProviderProps> = function ToastProvider({ ch
       if (!node.contains(event.relatedTarget as Node | null)) returnFocusRef.current = event.relatedTarget as Element | null;
     });
   }, []);
-  const callbacksRef = React.useRef(new Map<string, (() => void) | undefined>());
+  const callbacksRef = React.useRef(new Map<string, ToastCallbacks>());
   const activeRef = React.useRef(true);
   const teardownRequestedRef = React.useRef(false);
   const notifyDismissed = React.useCallback((key: string) => {
     if (!activeRef.current || teardownRequestedRef.current) return;
     if (!callbacksRef.current.has(key)) return;
-    const callback = callbacksRef.current.get(key);
+    const callbacks = callbacksRef.current.get(key);
     callbacksRef.current.delete(key);
-    callback?.();
+    callbacks?.onDismiss?.();
   }, []);
-  const enqueue = React.useCallback((content: ToastContent, { duration, onDismiss }: { duration: number; onDismiss?: () => void }, allowDuringTeardown: boolean) => {
+  const enqueue = React.useCallback((content: ToastContent, { duration, ...callbacks }: { duration: number } & ToastCallbacks, allowDuringTeardown: boolean) => {
     if (!activeRef.current || (teardownRequestedRef.current && !allowDuringTeardown)) return '';
     let key: string;
     key = animatedQueue.add(content, {
-      timeout: duration,
+      timeout: content.actionLabel !== undefined && duration > 0 ? Math.max(duration, TOAST_ACTION_MIN_DURATION) : duration,
+      // React Aria's queue calls onClose before it removes the toast, so a toast that onDismiss adds would take the
+      // dismissed one's place and be removed instead. Its next change notification comes after the removal.
       onClose: () => {
         closingKeys.add(key);
-        notifyDismissed(key);
+        const unsubscribe = queue.subscribe(() => {
+          unsubscribe();
+          notifyDismissed(key);
+        });
       },
     });
-    callbacksRef.current.set(key, onDismiss);
+    callbacksRef.current.set(key, callbacks);
     return key;
-  }, [animatedQueue, notifyDismissed]);
+  }, [animatedQueue, notifyDismissed, queue]);
   const add = React.useCallback((message: ToastContent['message'], options: ToastOptions = {}) => {
     if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
-    const { duration, onDismiss, ...content } = options;
-    return enqueue({ ...content, message }, { duration: normalizeToastDuration(duration), onDismiss }, false);
+    const { duration, onDismiss, action, ...content } = options;
+    const normalizedAction = normalizeToastAction(action);
+    return enqueue({ ...content, message, actionLabel: normalizedAction?.label }, { duration: normalizeToastDuration(duration), onDismiss, onAction: normalizedAction?.onAction }, false);
   }, [enqueue]);
+  // The callbacks of a toast leave the map when it is dismissed, so its action runs at most once and never after a
+  // dismissal or a teardown. The toast then closes as its dismiss control closes it, and onDismiss reports that.
+  const runAction = React.useCallback((key: string) => {
+    if (!activeRef.current || teardownRequestedRef.current) return;
+    const callbacks = callbacksRef.current.get(key);
+    if (!callbacks) return;
+    try {
+      callbacks.onAction?.();
+    } finally {
+      animatedQueue.close(key);
+    }
+  }, [animatedQueue]);
   const remove = React.useCallback((id: string) => {
     if (!activeRef.current || teardownRequestedRef.current) return;
     animatedQueue.close(id);
@@ -1446,7 +1552,7 @@ export const ToastProvider: FC<ToastProviderProps> = function ToastProvider({ ch
     animatedQueue.dispose(id, settle);
   }, [animatedQueue]);
   // Declarative Toasts own a mutable content record; refresh re-renders it in place.
-  const addDeclarative = React.useCallback((content: ToastContent, options: { duration: number; onDismiss?: () => void }) => enqueue(content, options, true), [enqueue]);
+  const addDeclarative = React.useCallback((content: ToastContent, options: { duration: number } & ToastCallbacks) => enqueue(content, options, true), [enqueue]);
   const refresh = React.useCallback(() => setLayoutVersion((version) => version + 1), []);
   const lifecycleRef = React.useRef(0);
   React.useEffect(() => {
@@ -1471,7 +1577,7 @@ export const ToastProvider: FC<ToastProviderProps> = function ToastProvider({ ch
     // The region reads the queue only through its subscribe, visibleToasts, add, close, pauseAll, resumeAll, and clear;
     // React Aria types it as the ToastQueue class, whose private members no other object has.
     React.createElement(UNSTABLE_ToastRegion<ToastContent>, { ref: trackRegionFocus, queue: animatedQueue as unknown as UNSTABLE_ToastQueue<ToastContent>, className: classNames('muxui-toast__region', className), 'aria-label': 'Notifications', ...{ placement, 'data-muxui-placement': placement },
-      children: ({ toast }) => React.createElement(ToastView, { toast, queue: animatedQueue, placement, layoutVersion, originRef: motionOriginRef, returnFocusRef, onExitComplete: animatedQueue.commitClose }) }));
+      children: ({ toast }) => React.createElement(ToastView, { toast, queue: animatedQueue, placement, layoutVersion, originRef: motionOriginRef, returnFocusRef, onExitComplete: animatedQueue.commitClose, onAction: runAction }) }));
 };
 
 export function useToast(): ToastManager {
@@ -1496,6 +1602,8 @@ export interface ToastOwnProps {
   duration?: number;
   /** Reports the notification being dismissed, by a person or a timeout, at most once. An unmount does not call it. */
   onDismiss?: () => void;
+  /** One button in the notification, such as Undo, that runs its handler once and closes the notification. With an action, a duration other than 0 lasts at least 10000 ms. */
+  action?: ToastAction;
 }
 
 export interface ToastProps extends ToastOwnProps {
@@ -1508,26 +1616,30 @@ export const Toast: FC<ToastProps> = function Toast({
   variant = 'neutral',
   duration = TOAST_DURATION,
   onDismiss,
+  action,
   className,
 }) {
   const context = React.useContext(ToastContext);
   if (!context) throw new Error('Toast must be used within ToastProvider');
   if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
   const normalizedDuration = normalizeToastDuration(duration);
+  const actionLabel = normalizeToastAction(action)?.label;
   const { addDeclarative, dispose, refresh } = context;
   const contentRef = React.useRef<ToastContent | null>(null);
   const onDismissRef = React.useRef(onDismiss);
+  const onActionRef = React.useRef(action?.onAction);
   // Enqueue once; later renders update the same record in place, so inline
-  // callbacks or JSX do not re-enqueue the toast or reset its timer.
+  // callbacks, action objects or JSX do not re-enqueue the toast or reset its timer.
   useIsomorphicLayoutEffect(() => {
     onDismissRef.current = onDismiss;
+    onActionRef.current = action?.onAction;
     const content = contentRef.current;
     if (!content) {
-      contentRef.current = { message, title, variant, className };
+      contentRef.current = { message, title, variant, className, actionLabel };
       return;
     }
-    if (content.message === message && content.title === title && content.variant === variant && content.className === className) return;
-    Object.assign(content, { message, title, variant, className });
+    if (content.message === message && content.title === title && content.variant === variant && content.className === className && content.actionLabel === actionLabel) return;
+    Object.assign(content, { message, title, variant, className, actionLabel });
     refresh();
   });
   React.useEffect(() => {
@@ -1541,6 +1653,7 @@ export const Toast: FC<ToastProps> = function Toast({
         dismissed = true;
         onDismissRef.current?.();
       },
+      onAction: () => onActionRef.current?.(),
     });
     return () => queueMicrotask(() => {
       // An accepted dismissal keeps its exit animation, even if onDismiss

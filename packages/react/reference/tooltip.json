@@ -108,6 +108,22 @@
             { "name": "anchorRef", "optional": true, "type": "React.RefObject<Element | null>" }
           ],
           "ref": { "type": "HTMLDivElement" }
+        },
+        {
+          "member": "Shortcut",
+          "form": "forwardRef",
+          "members": [
+            {
+              "name": "keys",
+              "optional": true,
+              "type": "readonly string[]",
+              "doc": "The keys of the shortcut, each shown in a kbd element. The children show when there are none."
+            }
+          ],
+          "ref": { "type": "HTMLSpanElement" },
+          "natives": [
+            { "type": "React.HTMLAttributes<HTMLSpanElement>" }
+          ]
         }
       ]
     }
@@ -257,6 +273,31 @@
         { "name": "anchorRef", "optional": true, "type": "React.RefObject<Element | null>" }
       ],
       "refs": ["overlays#TooltipOwnProps"]
+    },
+    {
+      "id": "overlays#TooltipShortcutOwnProps",
+      "name": "TooltipShortcutOwnProps",
+      "module": "overlays",
+      "text": "type TooltipShortcutOwnProps = {\n  keys?: readonly string[];\n};",
+      "members": [
+        {
+          "name": "keys",
+          "optional": true,
+          "type": "readonly string[]",
+          "doc": "The keys of the shortcut, each shown in a kbd element. The children show when there are none."
+        }
+      ]
+    },
+    {
+      "id": "overlays#TooltipShortcutProps",
+      "name": "TooltipShortcutProps",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "TooltipShortcutProps" }
+      ],
+      "owner": "tooltip",
+      "text": "type TooltipShortcutProps = React.HTMLAttributes<HTMLSpanElement> & TooltipShortcutOwnProps;",
+      "refs": ["overlays#TooltipShortcutOwnProps"]
     }
   ]
 }

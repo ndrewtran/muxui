@@ -2528,7 +2528,7 @@ test('the On cell of every row is what the document shows: its tags, each carryi
       }
     }
   }
-  assert.equal(cells, 975, 'every row of every table was compared');
+  assert.equal(cells, 977, 'every row of every table was compared');
 });
 
 // The expectation above is derived in the test from the document; these cells are written out, so it cannot drift with the code: a part in a
@@ -2538,7 +2538,7 @@ test('the On cell reads as written for fixture families: portal tags, each part 
   const fixtures = {
     Button: { '.muxui-button': '<button>', '.muxui-button__label': '<span> in root', 'data-muxui-state-pending': 'root', 'data-muxui-state-hovered': 'root styled', 'data-muxui-size': 'root' },
     Select: { '.muxui-select__popup': '<div>', '.muxui-select__option': '<div>', 'data-muxui-state-open': 'root, trigger styled', 'data-muxui-state-selected': 'option styled', 'data-muxui-size': 'root, popup, list' },
-    Toast: { '.muxui-toast__dismiss': '<button> in root', 'data-muxui-variant': 'toast, dismiss' },
+    Toast: { '.muxui-toast__dismiss': '<button> in root', 'data-muxui-variant': 'toast, action, dismiss' },
     TagGroup: { '.muxui-tag-group__list': '<div> in root', 'data-muxui-state-disabled': 'tag, remove styled', 'data-muxui-variant': 'tag, remove' },
     DatePicker: { '.muxui-date-picker__popover .muxui-calendar': '<div>', 'data-muxui-state-disabled': 'root, calendar styled', 'data-muxui-state-invalid': 'root, calendar' },
     Popover: { '.muxui-popover__trigger': 'caller\'s element' },
