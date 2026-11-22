@@ -49,6 +49,10 @@
       "types": "./generated/text-editor.d.ts",
       "default": "./generated/text-editor.js"
     },
+    "./text-editor/markdown": {
+      "types": "./generated/text-editor-markdown.d.ts",
+      "default": "./generated/text-editor-markdown.js"
+    },
     "./markdown": {
       "types": "./generated/markdown.d.ts",
       "default": "./generated/markdown.js"

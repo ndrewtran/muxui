@@ -11,6 +11,7 @@ import {
   type TextEditorSelectionActions,
   type TextEditorSelectionRequest,
 } from '@muxui/react/text-editor';
+import { fromMarkdown, toMarkdown } from '@muxui/react/text-editor/markdown';
 
 const actions: readonly TextEditorSelectionAction[] = [
   { id: 'improve', label: 'Improve', icon: <svg aria-hidden="true" />, pendingLabel: 'Improving…' },
@@ -112,3 +113,10 @@ const emptyDocument: TextEditorDocument = { type: 'doc', content: [] };
 // @ts-expect-error A list item holds a paragraph first.
 const emptyItem: TextEditorDocument = { type: 'doc', content: [{ type: 'bulletList', content: [{ type: 'listItem', content: [] }] }] };
 void [oneBlock, emptyDocument, emptyItem];
+
+// The converters read Markdown into a document and write one back, from their own entry.
+const read: TextEditorDocument = fromMarkdown('# Title');
+const written: string = toMarkdown(read);
+// @ts-expect-error toMarkdown writes a document, not text.
+const rewritten = toMarkdown('# Title');
+void [written, rewritten];

@@ -137,6 +137,7 @@ export default defineConfig({
 				{ find: /^@muxui\/react\/themes\.css$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/themes.css') },
 				{ find: /^@muxui\/react\/themes$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/themes.mjs') },
 				{ find: /^@muxui\/react\/text-editor$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/text-editor.js') },
+				{ find: /^@muxui\/react\/text-editor\/markdown$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/text-editor-markdown.js') },
 				{ find: '@muxui/react', replacement: resolve(repositoryRoot, 'packages/react/generated/index.mjs') },
 			],
 		},

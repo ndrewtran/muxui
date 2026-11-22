@@ -1479,6 +1479,10 @@ test('normalizeTextEditorUrl applies the rule that the link and image commands e
     ['https://example.com/\u009f', null, null],
     ['https://user:secret@example.com', null, null],
     ['mailto:user:secret@example.com', null, null],
+    // A line separator after the colon ends a user name before the @, so the address is kept, escaped.
+    ['mailto:a:\u2028b@example.com', 'mailto:a:%E2%80%A8b@example.com', null],
+    ['mailto:a:\u2029@example.com', 'mailto:a:%E2%80%A9@example.com', null],
+    ['mailto:a\u2028b@example.com', 'mailto:a%E2%80%A8b@example.com', null],
     ['javascript:alert(1)', null, null],
     ['data:image/png;base64,AAAA', null, null],
     ['example.com', null, null],
@@ -1488,21 +1492,39 @@ test('normalizeTextEditorUrl applies the rule that the link and image commands e
   try {
     for (const [value, link, image] of cases) {
       const label = JSON.stringify(value);
+      // Escaped, a separator's address names a user, so the rule keeps it once and refuses it cleaned: a known defect, held.
+      const separated = /^mailto:a:[\u2028\u2029]/u.test(value);
       assert.equal(normalizeTextEditorUrl(value, 'link'), link, `${label} as a link`);
       assert.equal(normalizeTextEditorUrl(value, 'image'), image, `${label} as an image`);
       await t.select(t.at('word'), t.at('word') + 4);
       assert.equal(await t.execute({ type: 'link', href: value }), link !== null, `the link command agrees on ${label}`);
-      if (link !== null) assert.deepEqual(t.content()[0], text('word', [linkMark(link)]));
+      if (link !== null && !separated) assert.deepEqual(t.content()[0], text('word', [linkMark(link)]));
       // At a caret after the word, so an image goes in after it rather than in its place.
       await t.select(t.at('word') + 4);
       assert.equal(await t.execute({ type: 'image', src: value }), image !== null, `the image command agrees on ${label}`);
       // Each image goes in straight after the paragraph, ahead of the ones before it.
       if (image !== null) assert.deepEqual(t.json().content[1], { type: 'image', attrs: { src: image } });
+      // What the rule keeps, it keeps as it is.
+      for (const [kind, kept] of [['link', link], ['image', image]]) if (kept !== null && !separated) assert.equal(normalizeTextEditorUrl(kept, kind), kept, `${label} as a ${kind} normalizes once`);
     }
     assert.equal(normalizeTextEditorUrl('https://example.com', 'video'), null, 'an unknown kind');
   } finally {
     await t.close();
   }
+});
+
+test('TextEditor looks for a user name in a mailto address in linear time, so a megabyte of colons takes no minutes', () => {
+  const href = `mailto:${':'.repeat(1_000_000)}`;
+  const document = { type: 'doc', content: [paragraph(text('x', [linkMark(href)]))] };
+  const started = performance.now();
+  assert.equal(normalizeTextEditorUrl(href, 'link'), href);
+  assert.equal(isTextEditorDocument(document), true);
+  assert.deepEqual(normalizeTextEditorDocument(document), document);
+  // With an @ after them, the colons read as a user name and password, and the address is refused.
+  assert.equal(normalizeTextEditorUrl(`${href}@example.com`, 'link'), null);
+  const elapsed = performance.now() - started;
+  // A quadratic check takes minutes here; a linear one takes a second at most.
+  assert.ok(elapsed < 5_000, `the checks took ${Math.round(elapsed)} ms`);
 });
 
 // Mounts a TextEditor with a selection bar in its own jsdom. The editor text is

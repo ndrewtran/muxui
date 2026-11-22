@@ -11,7 +11,7 @@ import manifest from '../.storybook/generated/manifest.mjs';
 import { componentDeclarations, readDeclarationReference, readReactPackageFacts } from '../../component-reference.mjs';
 import { currentSurface } from '../../../packages/react/test/support/current-surface.mjs';
 import { typedReference } from '../src/component-docs.mjs';
-import { sourceProblems, textEditorExports, textEditorFunctions, textEditorNative, textEditorProps, textEditorRef, textEditorTypes } from './text-editor-declarations.mjs';
+import { sourceProblems, textEditorExports, textEditorFunctions, textEditorMarkdownFunctions, textEditorNative, textEditorProps, textEditorRef, textEditorTypes } from './text-editor-declarations.mjs';
 import { STORY_API_PARTS, argTypesForBinding, storyApi, storyApiBlocks } from '../src/storybook-factory.mjs';
 
 // The typed reference on every family Docs page (Decision 0031). What the page should show is read here straight from
@@ -988,14 +988,16 @@ const pins = {
     if (rowsOf(part('TextArea.Root')).get('onChange')?.type !== '(value: string) => void') problems.push('TextArea.Root onChange is not (value: string) => void');
     return problems;
   },
-  // The 34 exports of @muxui/react/text-editor, each as text-editor-declarations.mjs writes it, which holds them against the source.
+  // The 36 exports of @muxui/react/text-editor and its Markdown entry, each as text-editor-declarations.mjs writes it, which holds
+  // them against the source.
   'TEXT-EDITOR-02': (page) => {
     const problems = [];
     const listed = [...page.querySelectorAll('table.muxui-docs-exports tbody tr[data-export]')];
-    const subpath = `from '${packageName}/text-editor';`;
-    if (!listed.every((row) => row.querySelector('td code').textContent.endsWith(subpath))) problems.push('an export of the text-editor section is not imported from its subpath');
+    // The converters are imported from the Markdown entry, everything else from the editor's.
+    const subpath = (name) => `from '${packageName}/text-editor${name in textEditorMarkdownFunctions ? '/markdown' : ''}';`;
+    if (!listed.every((row) => row.querySelector('td code').textContent.endsWith(subpath(row.querySelector('th').textContent)))) problems.push('an export of the text-editor section is not imported from its subpath');
     const shown = listed.map((row) => `${row.querySelector('th').textContent}:${row.querySelectorAll('td')[0].textContent}`).sort();
-    const expected = textEditorExports.map((name) => `${name}:${name === 'TextEditor' ? 'component' : name in textEditorFunctions ? 'function' : 'type'}`).sort();
+    const expected = textEditorExports.map((name) => `${name}:${name === 'TextEditor' ? 'component' : name in textEditorFunctions || name in textEditorMarkdownFunctions ? 'function' : 'type'}`).sort();
     if (JSON.stringify(shown) !== JSON.stringify(expected)) problems.push(`the exports are ${shown.filter((item) => !expected.includes(item)).join()} instead of ${expected.filter((item) => !shown.includes(item)).join()}`);
     const component = partNodes(page).find((candidate) => candidate.getAttribute('data-part') === 'TextEditor');
     if (refOf(component) !== textEditorRef) problems.push(`TextEditor ref is ${refOf(component)}, expected ${textEditorRef}`);
@@ -1006,7 +1008,7 @@ const pins = {
     if (JSON.stringify(props) !== JSON.stringify(expectedProps)) problems.push(`the props are ${JSON.stringify(props.filter((row, index) => JSON.stringify(row) !== JSON.stringify(expectedProps[index])))}, expected ${JSON.stringify(expectedProps.filter((row, index) => JSON.stringify(row) !== JSON.stringify(props[index])))}`);
     const root = partNodes(page).find((candidate) => candidate.getAttribute('data-part') === 'TextEditor.Root');
     if (root?.querySelector('[data-meta="same-as"]')?.textContent !== 'TextEditor' || refOf(root) !== textEditorRef || nativeOf(root) !== native) problems.push(`TextEditor.Root is ${root?.querySelector('[data-meta="same-as"]')?.textContent} with ref ${refOf(root)} and native ${nativeOf(root)}`);
-    for (const [name, signature] of Object.entries(textEditorFunctions)) {
+    for (const [name, signature] of Object.entries({ ...textEditorFunctions, ...textEditorMarkdownFunctions })) {
       const shownSignature = page.querySelector(`div[data-export="${name}"] [data-meta="signature"]`)?.textContent;
       if (shownSignature !== signature) problems.push(`${name} is ${shownSignature}, expected ${signature}`);
     }
@@ -1057,6 +1059,8 @@ test('a model that changes what a record pins fails the pin, as an omission from
     ['TEXT-EDITOR-02', 'TextEditor', 'the native surface keeps onChange', (copy) => { partOf(copy, 'text-editor', 'TextEditor', null).natives[0].omit.pop(); }],
     ['TEXT-EDITOR-02', 'TextEditor', 'Root stops being an alias', (copy) => { delete partOf(copy, 'text-editor', 'TextEditor', 'Root').sameAs; }],
     ['TEXT-EDITOR-02', 'TextEditor', 'a function returns a number', (copy) => { const item = copy.files.get('text-editor').exports.find(({ name }) => name === 'normalizeTextEditorDocument'); item.signature = item.signature.replace('): TextEditorDocument', '): number'); }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'a converter moves to the editor\'s entry', (copy) => { copy.files.get('text-editor').exports.find(({ name }) => name === 'fromMarkdown').entry = './text-editor'; }],
+    ['TEXT-EDITOR-02', 'TextEditor', 'a converter writes a document', (copy) => { const item = copy.files.get('text-editor').exports.find(({ name }) => name === 'toMarkdown'); item.signature = item.signature.replace('): string', '): TextEditorDocument'); }],
   ];
   for (const [record, family, name, mutate] of mutations) {
     assert.notEqual(await failureOf(family, mutate, pins[record]), null, `${record}: ${name} must fail its pin`);
@@ -1075,6 +1079,10 @@ test('a model that changes what a record pins fails the pin, as an omission from
     assert.ok(source.includes(from), `the source holds ${from}`);
     assert.notDeepEqual(sourceProblems(repositoryRoot, source.replace(from, to)), [], `a source with ${to} must fail the source check`);
   }
+  const converters = readFileSync(resolve(repositoryRoot, 'packages/react/src/text-editor/text-editor-markdown.ts'), 'utf8');
+  const changed = converters.replace('export function toMarkdown(document: TextEditorDocument): string', 'export function toMarkdown(document: TextEditorDocument): number');
+  assert.notEqual(changed, converters, 'the converters\' module declares toMarkdown');
+  assert.notDeepEqual(sourceProblems(repositoryRoot, source, changed), [], 'a converter declared otherwise must fail the source check');
   // Negative control: an untouched copy passes both.
   for (const [record, family] of Object.entries(pinFamilies)) {
     assert.equal(await failureOf(family, () => {}, pins[record]), null, `${record} passes on the committed reference`);

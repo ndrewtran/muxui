@@ -231,10 +231,12 @@ test('parts and related exports list every export of the family with its exact i
 	assert.deepEqual(kinds('command-palette'), { CommandPalette: 'component', useCommandPalette: 'hook' });
 	assert.deepEqual(kinds('toast'), { Toast: 'component', ToastProvider: 'component', useToast: 'hook' });
 	assert.deepEqual(kinds('resizable'), { Resizable: 'component', ResizableHandle: 'component', ResizablePanel: 'component' });
-	assert.deepEqual(kinds('text-editor'), { TextEditor: 'component', isTextEditorDocument: 'function', normalizeTextEditorDocument: 'function', normalizeTextEditorUrl: 'function' });
+	assert.deepEqual(kinds('text-editor'), { TextEditor: 'component', isTextEditorDocument: 'function', normalizeTextEditorDocument: 'function', normalizeTextEditorUrl: 'function', fromMarkdown: 'function', toMarkdown: 'function' });
 	assert.equal(Object.values(kinds('markdown')).filter((kind) => kind === 'value').length, 5);
 	const imports = Object.fromEntries(page('text-editor').exports.map(({ name, import: line }) => [name, line]));
 	assert.equal(imports.TextEditor, "import { TextEditor } from '@muxui/react/text-editor';");
+	// An export of a second entry of the family shows that entry's import.
+	assert.equal(imports.fromMarkdown, "import { fromMarkdown } from '@muxui/react/text-editor/markdown';");
 	assert.equal(importLine('@muxui/react', '.', 'Card'), "import { Card } from '@muxui/react';");
 	assert.equal(importLine('@muxui/react', './markdown', 'Markdown', true), "import type { Markdown } from '@muxui/react/markdown';");
 	// Every part of a compound is listed under its export and reachable by an anchor that is the part's heading.
@@ -266,7 +268,7 @@ test('the anchors of a page are unique, and every family page shows its owner\'s
 
 test('the package exports page lists every entry of the export map, the package-level exports and the shared types with their reasons', () => {
 	const exported = buildPackageExports(reference, facts.packageName);
-	assert.deepEqual(exported.entries.map(({ key }) => key), ['.', './compatibility', './styles.css', './themes', './themes.css', './themes-apca.css', './testing', './text-editor', './markdown']);
+	assert.deepEqual(exported.entries.map(({ key }) => key), ['.', './compatibility', './styles.css', './themes', './themes.css', './themes-apca.css', './testing', './text-editor', './text-editor/markdown', './markdown']);
 	assert.deepEqual(exported.entries.filter(({ untyped }) => untyped !== undefined).map(({ key }) => key), ['./compatibility', './styles.css', './themes.css', './themes-apca.css', './testing']);
 	assert.deepEqual(exported.packageLevel.map(({ name }) => name), ['MuxProvider', 'reactCompatibility', 'supplementalFamilies', 'MUXUI_DEFAULT_THEME_PRESET_ID', 'MUXUI_THEME_ACTION_BACKGROUNDS', 'MUXUI_THEME_PRESETS', 'MUXUI_THEME_PRESETS_BY_ID']);
 	assert.ok(exported.packageLevel.every(({ reason }) => reason !== undefined));
