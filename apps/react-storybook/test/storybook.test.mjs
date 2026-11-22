@@ -1216,7 +1216,7 @@ test('Dialog specimen is a settings dialog because destructive confirmation belo
 
 test('Dialog open row is picked with the lifecycle rows and mounts one open dialog at a time', async () => {
   const { document: states, sections } = stateSections('Dialog');
-  assert.equal(states.querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 1, 'only dismissed has no public prop or interaction');
+  assert.equal(states.querySelectorAll('[data-muxui-storybook-state="unavailable"]').length, 2, 'only dismissed and dragging have no public prop or interaction');
   const select = states.querySelector('[data-muxui-storybook-lifecycle-select="Dialog"]');
   assert.deepEqual([...select.options].map((option) => option.value), ['open', 'entering', 'exiting']);
   assert.equal(sections.get('open').getAttribute('data-muxui-storybook-lifecycle'), 'open');
@@ -2528,7 +2528,7 @@ test('the On cell of every row is what the document shows: its tags, each carryi
       }
     }
   }
-  assert.equal(cells, 971, 'every row of every table was compared');
+  assert.equal(cells, 975, 'every row of every table was compared');
 });
 
 // The expectation above is derived in the test from the document; these cells are written out, so it cannot drift with the code: a part in a
@@ -2604,7 +2604,7 @@ test('a prop update that only writes or removes a reflected attribute updates th
 // fails the list it is in or the one it is missing from. Class parts that exist only after an overlay opens are `reactEmissionOnly`.
 // The catalog states React Aria reports for an interaction, or an overlay while it opens, closes or is open, show only while it happens.
 const interactionAndOverlayZero = Object.freeze([
-  'Activity.focused', 'AlertDialog.open', 'Calendar.focused', 'Card.focused', 'ColorPicker.focused', 'DataDiff.focused', 'Dialog.focused', 'Dialog.open',
+  'Activity.focused', 'AlertDialog.open', 'Calendar.focused', 'Card.focused', 'ColorPicker.focused', 'DataDiff.focused', 'Dialog.dragging', 'Dialog.focused', 'Dialog.open',
   'HeaderNav.focused', 'IconButton.focus-visible', 'IconButton.hovered', 'IconButton.pressed', 'Lightbox.open', 'Link.pressed', 'Menu.focused', 'Message.focused',
   'MultiSelect.open', 'Popover.focused', 'Popover.open', 'PreviewTrigger.closing', 'PreviewTrigger.open', 'PreviewTrigger.opening', 'PromptComposer.focused',
   'RangeCalendar.focused', 'SelectNative.focused', 'Sidebar.pressed', 'TextEditor.focused', 'ToggleButton.pressed', 'Toolbar.focused', 'Tooltip.closing', 'Tooltip.open', 'Tooltip.opening',

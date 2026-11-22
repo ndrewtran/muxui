@@ -678,6 +678,8 @@ function stateIsSupported(binding, state, family) {
     case 'inverse':
     case 'background':
       return family === 'HeaderNav' && props.has('variant');
+    case 'sheet':
+      return family === 'Dialog' && props.has('presentation');
     case 'inline':
     case 'below':
       return props.has('tagPlacement');
@@ -850,6 +852,9 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
     case 'inverse':
     case 'background':
       if (family === 'HeaderNav') args.variant = normalizedState;
+      break;
+    case 'sheet':
+      if (family === 'Dialog') args.presentation = normalizedState;
       break;
     case 'inline':
     case 'below':
@@ -2091,6 +2096,8 @@ function UncontrolledHarness({ record, args }) {
 
 const EXECUTABLE_ANATOMY_PARTS = Object.freeze({
   Autocomplete: new Set(['popover', 'list']),
+  // The grip renders only on a sheet, which the browser suite opens.
+  Dialog: new Set(['grip']),
   Virtualizer: new Set(['item']),
 });
 

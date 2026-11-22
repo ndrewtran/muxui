@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:ff5a67754983126d2625ab839d0e308c5d7e1b6c9407b153f4e00e1e66929bf0 -->
+<!-- @generated-content-sha256: sha256:b4312f119d81239ee6339f72876a79e2b4e051c9dfdc58f316942b757bc9eb95 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -172,7 +172,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | DateField | experimental | . | .muxui-date-field | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
 | DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
 | DateRangePicker | experimental | . | .muxui-date-range-picker | label, description, errorMessage, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, startName, endName |
-| Dialog | experimental | . | .muxui-dialog | title, description, actions, open, defaultOpen, dismissable, trigger, backdropClassName, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName |
+| Dialog | experimental | . | .muxui-dialog | title, description, actions, open, defaultOpen, dismissable, presentation, trigger, backdropClassName, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName |
 | Disclosure | experimental | . | .muxui-disclosure | title, expanded, defaultExpanded, disabled, id |
 | DisclosureGroup | experimental | . | .muxui-disclosure-group | expandedIds, defaultExpandedIds, multiple, disabled |
 | DropZone | experimental | . | .muxui-drop-zone | disabled |
@@ -492,8 +492,23 @@ Public parts: `trigger`, `tooltip`.
 - A button with slot="close" in the content or actions still closes it.
 - Pressing a close-slot button closes an uncontrolled Dialog and calls onOpenChange(false).
 - A controlled Dialog stays open until its owner sets open to false.
+- presentation sets where the Dialog appears: center, the default, in the middle of the viewport, or sheet along the bottom edge of the visible viewport.
+- A sheet slides up from below the viewport and leaves the same way without fading, while its backdrop fades its scrim colour.
+- A drag on a sheet starts on its grip or title; the description, the content, the actions, the close button, and any control inside the title keep their own presses.
+- A drag moves the sheet down with the pointer and never above its resting place; up past it, the drag scrolls the sheet's content instead.
+- Releasing a drag after the pointer has moved down further than the smaller of 96 pixels and half the sheet's height from where it was pressed, or flinging it down at 800 pixels a second or faster after at least 16 pixels, dismisses the sheet as Escape does; any other release returns it to rest, even while the sheet is still sliding in.
+- A drag dismissal calls onOpenChange(false) as Escape does, so a controlled owner that keeps the Dialog open keeps the sheet open, and the sheet returns to rest.
+- Pressing a sheet's grip or title moves neither focus nor the selection of a focused field.
+- A sheet scrolls as one, so a title or description of any length scrolls with the content, while the close button, a target of at least 44 pixels at the logical end of the top band, and the grip under it stay at the top and the actions stay at the bottom.
+- A sheet rests on the bottom edge of the visible viewport however far an on-screen keyboard shrinks or scrolls it, holds its place while the page is pinch-zoomed, and pads each physical side by that side's safe-area inset in either direction.
+- A sheet that is not dismissable has no grip and cannot be dragged.
+- Under reduced motion a sheet appears and leaves at once, shows no grip, and cannot be dragged.
+- The sheet's panel carries data-muxui-state-dragging while a drag holds it.
+- A drag ends and the sheet returns to rest when the Dialog stops being dismissable or the visible viewport changes its width, height or scroll during the drag.
+- An overlay placed against a trigger inside a sheet, such as a Popover, moves with that trigger whenever the sheet moves or the visible viewport scrolls, a Dialog opened from a sheet covers the page as one opened from the page does, and the sheet sends the page no resize event.
+- A Dialog whose presentation changes while it is open settles where the new presentation rests, with none of the other presentation's motion.
 
-Public parts: `backdrop`, `root`, `title`, `description`, `content`, `actions`, `close`.
+Public parts: `backdrop`, `root`, `grip`, `title`, `description`, `content`, `actions`, `close`.
 
 ### AlertDialog
 

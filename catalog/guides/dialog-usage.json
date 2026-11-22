@@ -1,1 +1,1 @@
-{"schemaVersion":"1.0.0","id":"muxui:guide:dialog-usage","kind":"guide","name":"Dialog usage","summary":"Portable usage guidance for Dialog.","lifecycle":"experimental","keywords":["dialog","modal","react"],"platforms":["web.react"],"source":"catalog/guides/dialog-usage.md"}
+{"schemaVersion":"1.0.0","id":"muxui:guide:dialog-usage","kind":"guide","name":"Dialog usage","summary":"Portable usage guidance for Dialog.","lifecycle":"experimental","keywords":["dialog","modal","react","sheet"],"platforms":["web.react"],"source":"catalog/guides/dialog-usage.md"}
