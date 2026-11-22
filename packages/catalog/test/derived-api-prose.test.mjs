@@ -252,7 +252,8 @@ function guideNames({ derived, record, entry: { native = [], reference: surfaces
     ...record.anatomy.map((part) => `${derived.export}.${part[0].toUpperCase()}${part.slice(1)}`),
     ...native,
   ];
-  const attributes = new Set([...shared, ...blockNames(api)]);
+  // Spans checked against the declaration reference of the component itself are props it takes, so its examples may set them.
+  const attributes = new Set([...shared, ...blockNames(api), ...(surfaces[derived.export] ?? [])]);
   const partAttributes = new Map(Object.values(api.partApis ?? {}).map((part) => [part.member, new Set([...shared, ...blockNames(part)])]));
   const partNames = Object.values(api.partApis ?? {}).flatMap(blockNames);
   return { attributes, partAttributes, prose: new Set([...attributes, ...partNames, ...Object.values(surfaces).flat(), ...Object.values(from).flat(), ...Object.values(described).flat()]) };

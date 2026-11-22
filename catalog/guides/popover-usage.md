@@ -30,12 +30,28 @@ Leave out the trigger when something other than one toggle opens the Popover, su
 - The Popover follows its anchor each time it renders: a replaced anchor, or one that layout has moved, places it again, and while the anchor is gone it stays where it was. A scroll leaves a modal Popover where it is and closes a non-modal one.
 - The server renders nothing of the Popover, and one open from the start opens after hydration. Reduced motion is read from around the anchor.
 - An overlay anchored to an element inside a sheet, a Popover or any other, must be rendered inside that sheet's children so it moves with the sheet. One rendered outside them stays where it was placed while the sheet moves.
-- A Popover that mounts open in the same update as the overlay around it, such as a sheet, a centred Dialog or another Popover, or as a menu rendered before it, opens on top of that overlay, takes focus, and closes first. Any other Popover that mounts open opens at once, so its content is in the page when your effects run, as when one selects the text of a field inside it.
+- A Popover that mounts open in the same update as the overlay around it, such as a sheet, a centred Dialog or another Popover, opens on top of that overlay, takes focus, and closes first. Any other Popover that mounts open opens at once, so its content is in the page when your effects run, as when one selects the text of a field inside it.
+- A Popover that opens in the same commit as a popup that is not around it, such as a menu opened by the same press, can leave both inert, and the keyboard is locked out until one of them closes. This holds whether the Popover mounts open then or was mounted before and is opened by the same update, and it is the same in earlier versions. Open the Popover from the menu item's action instead, or one commit after the other popup has opened. An editor Popover that stays mounted and is controlled opens from the item's action:
+
+```tsx
+import { Menu, Popover } from '@muxui/react';
+
+<Menu.Root onAction={() => setEditing(true)}>
+  <Menu.Trigger>Insert</Menu.Trigger>
+  <Menu.Popup>
+    <Menu.List aria-label="Insert" items={['Link']} />
+  </Menu.Popup>
+</Menu.Root>
+<Popover aria-label="Edit link" anchorRef={toolbarRef} open={editing} onOpenChange={setEditing}>
+  <LinkFields />
+</Popover>
+```
+
 - The Popover opened from code example opens an address field from a Link tool and places it under the toolbar.
 
 ## Keep it inside a region
 
-- Set `boundaryRef` when the Popover must stay inside an element smaller than the viewport, such as an embedded app or a sheet: it flips, shifts, narrows and shortens to fit, `containerPadding` from the region's edges: text wraps to the room left, and content taller than that scrolls inside it.
+- Set `boundaryRef` when the Popover must stay inside an element smaller than the viewport, such as an embedded app or a sheet: it flips, shifts, narrows and shortens to fit, `containerPadding` from the region's edges: text wraps to the room left, and content taller than that scrolls inside it. On a start or end placement the room is the space beside the anchor on the side the Popover opens on.
 - The Popover inside a boundary example keeps the Popover of a button in a region's corner inside that region.
 
 ## Where focus goes

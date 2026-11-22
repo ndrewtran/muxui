@@ -3,24 +3,6 @@ import { OverlayTriggerStateContext, PopoverContext } from 'react-aria-component
 import { AriaPopover } from './substrate.ts';
 import { useMotionLifecycle } from './motion-components.mjs';
 
-// Whether a popup started opening in the render under way: noted as one renders open for the first time since it last
-// closed, and cleared once the work queued with that render is done. A Popover that mounts open later in the same render
-// reads it, so that popup registers first (see PopupContent in overlays.ts).
-let popupOpening = false;
-
-/** Whether a popup started opening earlier in the render under way. */
-export function isPopupOpening() {
-  return popupOpening;
-}
-
-function notePopupOpening() {
-  if (popupOpening) return;
-  popupOpening = true;
-  queueMicrotask(() => {
-    popupOpening = false;
-  });
-}
-
 /**
  * RAC positioning and dismissal stay on the outer popover. The lifecycle
  * writes the independent `translate` channel there so the complete painted
@@ -52,12 +34,6 @@ export const PopoverMotion = /*#__PURE__*/ React.forwardRef(function PopoverMoti
     : usesLocalState ? localOpen : Boolean(contextOpen);
   const [phase, setPhase] = React.useState({ open: requestedOpen, exiting: false });
   if (phase.open !== requestedOpen) setPhase({ open: requestedOpen, exiting: !requestedOpen });
-  // Whether the popup was open when it last rendered to the page.
-  const shown = React.useRef(false);
-  if (requestedOpen && !shown.current) notePopupOpening();
-  React.useEffect(() => {
-    shown.current = requestedOpen;
-  });
 
   const lifecycleRef = useMotionLifecycle({
     isOpen: requestedOpen,

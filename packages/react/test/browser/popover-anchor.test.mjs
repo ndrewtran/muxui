@@ -19,9 +19,9 @@ import { awaitFontsAndFrames, browserEngines, launchBrowser, pageShell, reposito
 // viewport, it opens from its tool after the sheet rests, keeps its distance from its anchor on every frame while the
 // sheet slides in, and opened in the same update as the sheet it is on top of it; it stays inside the sheet's panel,
 // keeps its field focused, hides the sheet from the accessibility tree, and closes first. Opened in the same update as a
-// centred Dialog or another Popover around it, or mounting open with a menu that the same press opens, it is on top of
-// that too, and focus comes to rest on the body at no step; opened from a menu's item, it is on top as the menu closes.
-// A Popover open as it mounts on its own, with a trigger, is in the page when its owner's effects run.
+// centred Dialog or another Popover around it, it is on top of that too, and focus comes to rest on the body at no step;
+// so when it opens while a menu is open, or from a menu's item as the menu closes. A Popover open as it mounts on its
+// own is in the page when its owner's effects run, whatever opens elsewhere in the same update or in a render thrown away.
 // Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const WIDE = { width: 900, height: 700 };
@@ -43,8 +43,9 @@ function documentHtml(url) {
 }
 
 // A page rendered in the browser alone: the catalog's boundary example from its own source (`case=example`), or a
-// paragraph of ordinary text in a region 232 pixels wide (`case=paragraph`). Each has a Share trigger, and the region
-// that bounds the Popover is the first element in #root.
+// paragraph of ordinary text in a region 232 pixels wide (`case=paragraph`), its Share trigger at the region's inline
+// start and halfway down, placed as `placement` says. Each has a Share trigger, and the region that bounds the Popover
+// is the first element in #root.
 const BOUNDARY_ENTRY = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -52,14 +53,14 @@ import { Button, Popover } from '@muxui/react';
 import { PopoverBoundaryExample } from '/@fs${resolve(repositoryRoot, 'catalog/components/popover/examples/react/boundary.tsx')}';
 
 const h = React.createElement;
+const query = new URLSearchParams(window.location.search);
 function Paragraph() {
   const regionRef = React.useRef(null);
-  return h('div', { ref: regionRef, style: { inlineSize: 232, blockSize: 360, border: '1px solid' } },
-    h(Popover, { 'aria-label': 'About sharing', boundaryRef: regionRef, placement: 'bottom-start', trigger: h(Button, { variant: 'neutral' }, 'Share') },
+  return h('div', { ref: regionRef, style: { display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', inlineSize: 232, blockSize: 360, border: '1px solid' } },
+    h(Popover, { 'aria-label': 'About sharing', boundaryRef: regionRef, placement: query.get('placement'), trigger: h(Button, { variant: 'neutral' }, 'Share') },
       h('p', { style: { margin: 0 } }, 'Anyone with the link can open the page, and the people you invite by name can comment on it and edit it too.')));
 }
-const example = new URLSearchParams(window.location.search).get('case') === 'example';
-createRoot(document.getElementById('root')).render(h(example ? PopoverBoundaryExample : Paragraph));
+createRoot(document.getElementById('root')).render(h(query.get('case') === 'example' ? PopoverBoundaryExample : Paragraph));
 `;
 
 function boundaryHtml(url) {
@@ -210,16 +211,35 @@ for (const engine of browserEngines()) {
         assert.equal(await page.locator('[aria-expanded], [aria-controls], [aria-haspopup]').count(), 0, 'nothing claims to be its trigger');
       }));
 
+      // The rename Popover, once mounted: its owner's effect found the name field, selected the name, and typing replaces it.
+      const renamedAtOnce = async (page, label) => {
+        await page.locator('#name').waitFor();
+        await frames(page, 2);
+        assert.equal(await page.evaluate(() => window.__popoverAnchor.renameFound), true, `${label}: the owner's effect finds the name field in the page`);
+        assert.equal(await activeId(page), 'name', `${label}: the field the owner focused keeps focus`);
+        await page.keyboard.type('X');
+        assert.equal(await page.locator('#name').inputValue(), 'X', `${label}: typing replaces the name the owner selected`);
+      };
+
       await t.test('open as it mounts on its own, with defaultOpen or a controlled open, its content is in the page when its owner\'s effect runs', async () => {
         for (const how of ['default', 'controlled']) {
           await withPage({}, async (page) => {
             await setProps(page, { rename: how });
-            await page.locator('#name').waitFor();
-            await frames(page, 2);
-            assert.equal(await page.evaluate(() => window.__popoverAnchor.renameFound), true, `${how}: the owner's effect finds the name field in the page`);
-            assert.equal(await activeId(page), 'name', `${how}: the field the owner focused keeps focus`);
-            await page.keyboard.type('X');
-            assert.equal(await page.locator('#name').inputValue(), 'X', `${how}: typing replaces the name the owner selected`);
+            await renamedAtOnce(page, how);
+          });
+        }
+      });
+
+      await t.test('an unrelated Popover opening in the same update, in the same root or another, does not delay one open as it mounts, nor does a render thrown away', async () => {
+        const updates = {
+          'same root': () => { window.__popoverAnchor.setOpen(true); window.__popoverAnchor.setProps({ rename: 'default' }); },
+          'another root': () => window.__popoverAnchor.withElsewhere({ rename: 'default' }),
+          'a render thrown away': () => window.__popoverAnchor.setProps({ discarded: true, rename: 'default' }),
+        };
+        for (const [label, update] of Object.entries(updates)) {
+          await withPage({ props: { modal: false } }, async (page) => {
+            await page.evaluate(update);
+            await renamedAtOnce(page, label);
           });
         }
       });
@@ -308,20 +328,25 @@ for (const engine of browserEngines()) {
       }
 
       for (const dir of ['ltr', 'rtl']) {
-        await t.test(`in ${dir}, a boundary narrower than its content keeps it inside: the catalog's boundary example, and a paragraph in a region 232 pixels wide`, async () => {
-          for (const which of ['example', 'paragraph']) {
+        await t.test(`in ${dir}, a boundary narrower than its content keeps it inside: the catalog's boundary example, and a paragraph in a region 232 pixels wide on each side, where start has no room and flips to end`, async () => {
+          for (const [which, placement = 'bottom-start'] of [['example'], ['paragraph', 'bottom'], ['paragraph', 'top'], ['paragraph', 'end'], ['paragraph', 'start']]) {
+            const label = which === 'example' ? which : `${which} at ${placement}`;
             const context = await browser.newContext({ viewport: WIDE, locale: dir === 'rtl' ? 'ar-EG' : 'en-US' });
             const page = await context.newPage();
             page.setDefaultTimeout(10_000);
             const errors = [];
             page.on('pageerror', (error) => errors.push(error.message));
             try {
-              await page.goto(`${server.url}/popover-boundary.html?${new URLSearchParams({ case: which, dir })}`, { waitUntil: 'load' });
+              await page.goto(`${server.url}/popover-boundary.html?${new URLSearchParams({ case: which, dir, placement })}`, { waitUntil: 'load' });
               await page.getByRole('button', { name: 'Share' }).click();
               await popover(page).waitFor();
               await settled(page);
-              const [region, surface] = [await rectOf(page, '#root > div'), await rectOf(page, '.muxui-popover')];
-              assert.equal(await insideOf(page, '#root > div', 12), true, `${which}: it stays containerPadding inside the region: ${JSON.stringify({ region, surface })}`);
+              const [region, surface, share] = [await rectOf(page, '#root > div'), await rectOf(page, '.muxui-popover'), await rectOf(page, '.muxui-popover__trigger')];
+              assert.equal(await insideOf(page, '#root > div', 12), true, `${label}: it stays containerPadding inside the region: ${JSON.stringify({ region, surface })}`);
+              if (placement === 'start' || placement === 'end') {
+                const onEndSide = dir === 'rtl' ? surface.right <= share.left : surface.left >= share.right;
+                assert.equal(onEndSide, true, `${label}: it opens beside the trigger on the end side: ${JSON.stringify({ share, surface })}`);
+              }
               assert.deepEqual(errors, [], errors.join(' | '));
             } finally {
               await context.close();
@@ -515,11 +540,13 @@ for (const engine of browserEngines()) {
         }));
       }
 
-      await t.test('mounting open with a menu that one press of its trigger opens, it is on top: Escape closes it and then the menu, and focus never rests on the body', () => withPage({ props: { menu: true, mountWhenOpen: true } }, async (page) => {
+      await t.test('opened while a menu is open, it is on top: Escape closes it, focus rests in the menu, and the next Escape closes the menu', () => withPage({ props: { menu: true } }, async (page) => {
         const menu = page.getByRole('menu', { name: 'Insert' });
         await page.locator('#insert').click();
-        await popover(page).waitFor();
         await menu.waitFor();
+        await page.waitForFunction(() => document.querySelector('[role="menu"]').contains(document.activeElement));
+        await setOpen(page, true);
+        await popover(page).waitFor();
         await page.waitForFunction(() => document.querySelector('.muxui-popover').contains(document.activeElement));
         await page.keyboard.press('Escape');
         await popover(page).waitFor({ state: 'detached' });
@@ -533,7 +560,7 @@ for (const engine of browserEngines()) {
 
       await t.test('opened from an item of a menu, mounting open or not, it is on top as the menu closes, and Escape returns focus to the menu\'s trigger', async () => {
         for (const mountWhenOpen of [true, false]) {
-          await withPage({ props: { menu: 'item', mountWhenOpen } }, async (page) => {
+          await withPage({ props: { menu: true, mountWhenOpen } }, async (page) => {
             await page.locator('#insert').click();
             await page.getByRole('menuitem', { name: 'Image' }).click();
             await popover(page).waitFor();

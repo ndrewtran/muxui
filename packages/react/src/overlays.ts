@@ -25,11 +25,11 @@ import { runAfterTransition } from 'react-aria/private/utils/runAfterTransition'
 import { Button as MuxUIButton } from './button.ts';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import type { OverlayGeometry } from './overlay-positioning.mjs';
-import { ButtonContext as AriaButtonContext, DEFAULT_SLOT as ARIA_DEFAULT_SLOT, Dialog as AriaDialog, DialogContext as AriaDialogContext, DialogTrigger as AriaDialogTrigger, FileTrigger as AriaFileTrigger, Heading as AriaHeading, OverlayTriggerStateContext as AriaOverlayTriggerStateContext, PopoverContext as AriaPopoverContext, Pressable as AriaPressable, PreviewTrigger as AriaPreviewTrigger, RootMenuTriggerStateContext as AriaRootMenuTriggerStateContext, Text as AriaText, TooltipContext as AriaTooltipContext, TooltipTrigger as AriaTooltipTrigger, UNSTABLE_ToastContent as AriaToastContent, UNSTABLE_ToastQueue } from 'react-aria-components';
+import { ButtonContext as AriaButtonContext, DEFAULT_SLOT as ARIA_DEFAULT_SLOT, Dialog as AriaDialog, DialogContext as AriaDialogContext, DialogTrigger as AriaDialogTrigger, FileTrigger as AriaFileTrigger, Heading as AriaHeading, OverlayTriggerStateContext as AriaOverlayTriggerStateContext, PopoverContext as AriaPopoverContext, Pressable as AriaPressable, PreviewTrigger as AriaPreviewTrigger, RootMenuTriggerStateContext as AriaRootMenuTriggerStateContext, Text as AriaText, TooltipContext as AriaTooltipContext, TooltipTrigger as AriaTooltipTrigger, UNSTABLE_ToastContent as AriaToastContent, UNSTABLE_ToastQueue, useLocale } from 'react-aria-components';
 import { AriaDropZone, AriaModalOverlay, AriaPopover, AriaTooltip, AriaToast, AriaToastRegion as UNSTABLE_ToastRegion } from './substrate.ts';
 import type { DropItem, ModalOverlayProps, QueuedToast, TooltipProps as AriaTooltipProps } from 'react-aria-components';
 import { DialogMotion } from './dialog-motion.mjs';
-import { PopoverMotion, isPopupOpening } from './popover-motion.mjs';
+import { PopoverMotion } from './popover-motion.mjs';
 import { observeReducedMotion } from './motion.mjs';
 import { observeAncestorAttributes } from './motion-geometry.mjs';
 import { useMotionLayout, useMotionLifecycle } from './motion-components.mjs';
@@ -792,24 +792,55 @@ function useConnectedElement(ref: RefObject<Element | null> | undefined) {
 }
 
 /**
- * The width of `element`'s box: read as `observing` starts and again whenever the element's size changes while it lasts,
- * and kept from then until the next read, so a Popover keeps its width as it closes; undefined without an element.
+ * The widest a Popover can be and stay inside its boundary, containerPadding from the boundary's edges. For a top or
+ * bottom placement that is the boundary's width. For a start or end placement it is the room between the anchor, offset
+ * away, and the boundary's edge on that side, or on the other side when that side has more room and the Popover may
+ * flip, as React Aria then flips it there. It is read after each render while the Popover is open and whenever the
+ * boundary or the anchor changes size or the window resizes, and kept while the Popover closes; undefined without a
+ * boundary.
  */
-function useBoxWidth(element: Element | undefined, observing: boolean) {
-  const [width, setWidth] = React.useState<number>();
-  useIsomorphicLayoutEffect(() => {
-    if (!element) {
-      setWidth(undefined);
-      return undefined;
+function useBoundaryRoom(boundary: Element | undefined, anchorRef: RefObject<Element | null> | undefined, open: boolean, geometry: OverlayGeometry) {
+  const { direction } = useLocale();
+  const [room, setRoom] = React.useState<number>();
+  const measure = () => {
+    if (!boundary) return;
+    const box = boundary.getBoundingClientRect();
+    const { placement, offset, containerPadding: padding, shouldFlip } = geometry;
+    const side = placement.split(' ')[0];
+    let width = box.width - 2 * padding;
+    const anchor = anchorRef?.current;
+    if ((side === 'start' || side === 'end') && anchor?.isConnected) {
+      const rect = anchor.getBoundingClientRect();
+      const right = box.right - rect.right - offset - padding;
+      const left = rect.left - box.left - offset - padding;
+      const [placed, opposite] = (side === 'end') === (direction === 'ltr') ? [right, left] : [left, right];
+      width = Math.min(width, shouldFlip ? Math.max(placed, opposite) : placed);
     }
-    if (!observing) return undefined;
-    const measure = () => setWidth(element.getBoundingClientRect().width);
-    measure();
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-    observer?.observe(element);
-    return () => observer?.disconnect();
-  }, [element, observing]);
-  return width;
+    const next = Math.max(0, Math.floor(width));
+    setRoom((current) => (current === next ? current : next));
+  };
+  const latest = React.useRef(measure);
+  latest.current = measure;
+  useIsomorphicLayoutEffect(() => {
+    if (!boundary) {
+      if (room !== undefined) setRoom(undefined);
+    } else if (open) latest.current();
+  });
+  useIsomorphicLayoutEffect(() => {
+    if (!boundary || !open) return undefined;
+    const update = () => latest.current();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+    observer?.observe(boundary);
+    const anchor = anchorRef?.current;
+    if (anchor) observer?.observe(anchor);
+    const view = boundary.ownerDocument.defaultView;
+    view?.addEventListener('resize', update);
+    return () => {
+      observer?.disconnect();
+      view?.removeEventListener('resize', update);
+    };
+  }, [boundary, open, anchorRef]);
+  return room;
 }
 
 // A ref whose current is the element `ref` holds while that element is in the document, read each time it is read.
@@ -889,15 +920,15 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
     const anchor = anchorRef.current;
     return !anchor || !(anchor.contains(element) || element.contains(anchor));
   } : undefined;
-  // A Popover open as it mounts opens one commit later when another overlay mounts in the same commit: one around it
-  // that has not finished mounting, such as a sheet, a centred Dialog or another Popover opened by the same update, or a
-  // popup that started opening earlier in the same render, such as a menu opened by the same press. That overlay then
-  // registers first, so the Popover is the topmost overlay and the one that hides the rest, as when it opens with that
-  // overlay already open. Only the popup waits; its trigger reports the open state at once. Any other Popover opens in
-  // the commit that renders it, so its content is in the page when the effects around it run.
+  // A Popover open as it mounts inside an overlay that has not finished mounting, such as a sheet, a centred Dialog or
+  // another Popover opened by the same update, opens one commit later, once that overlay has run its effects: it then
+  // registers after it, so the Popover is the topmost overlay and the one that hides the rest, as when it opens inside
+  // an overlay already open. Only the popup waits; its trigger reports the open state at once. Any other Popover opens in
+  // the commit that renders it, so its content is in the page when the effects around it run. A popup that is not around
+  // it and opens in the same commit, such as a menu opened by the same press, is not waited for (see the usage guide).
   const overlayState = React.useContext(AriaOverlayTriggerStateContext);
   const enclosingMounted = React.useContext(OverlayMountedContext);
-  const [waiting, setWaiting] = React.useState(() => enclosingMounted?.current === false || isPopupOpening());
+  const [waiting, setWaiting] = React.useState(() => enclosingMounted?.current === false);
   React.useEffect(() => setWaiting(false), []);
   const popupState = React.useMemo(() => (overlayState?.isOpen && waiting ? { ...overlayState, isOpen: false } : overlayState), [overlayState, waiting]);
   const open = popupState?.isOpen === true;
@@ -906,9 +937,9 @@ const PopupContent = /*#__PURE__*/ React.forwardRef<HTMLElement, PopupContentPro
   // Without a connected boundary element, the viewport bounds the Popover.
   const boundary = useConnectedElement(boundaryRef) ?? undefined;
   // React Aria caps the Popover's height at the room its boundary leaves, but not its width; the positioner's width is
-  // capped here at the boundary's, less containerPadding on each side, so its content wraps to stay inside.
-  const boundaryWidth = useBoxWidth(boundary, open);
-  const style = boundaryWidth === undefined ? undefined : { maxWidth: Math.max(0, boundaryWidth - 2 * geometry.containerPadding) };
+  // capped here at the room the boundary leaves on the side it opens on, so its content wraps to stay inside.
+  const room = useBoundaryRoom(boundary, anchorRef ?? contextTriggerRef, open, geometry);
+  const style = room === undefined ? undefined : { maxWidth: room };
   const positionerRef = React.useRef<HTMLElement | null>(null);
   const setRef = React.useMemo(() => mergeRefs(positionerRef, ref), [ref]);
   // RAC never dismisses a non-modal popover on outside press. Presses inside

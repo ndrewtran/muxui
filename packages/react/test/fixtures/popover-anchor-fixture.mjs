@@ -15,6 +15,21 @@ function AnchorIsland({ anchorRef }) {
   return shown ? h('span', { id: 'island', ref: anchorRef, style: { display: 'inline-block', marginInlineStart: 120 } }, 'Island anchor') : null;
 }
 
+// A promise that never settles: a component that uses it suspends for good.
+const NEVER = new Promise(() => {});
+
+function Suspends() {
+  React.use(NEVER);
+  return null;
+}
+
+// A Popover that starts opening in a render a Suspense boundary throws away, because its sibling suspends.
+function DiscardedPopover() {
+  return h(React.Suspense, { fallback: h('span', { id: 'discarded' }, 'Loading') },
+    h(Popover, { 'aria-label': 'Discarded', modal: false, defaultOpen: true, trigger: h('button', { type: 'button' }, 'Discarded') }, 'Discarded'),
+    h(Suspends));
+}
+
 // A Popover with a trigger, open as it mounts, whose owner focuses the name field inside it and selects the name in its
 // own effect, as a rename control does. `how` gives it `defaultOpen` (`default`) or controls it (`controlled`); the
 // effect records whether it found the field in the page.
@@ -56,9 +71,9 @@ function RenameName({ how }) {
  * - `mounted: false` removes the Popover, and `mountWhenOpen` renders it only while `open` is true, so it mounts open.
  * - `sheetOpen` and `onSheetOpenChange` control the container, and `#reply-with-link` on the page opens the container
  *   and the Popover in one press.
- * - `rename` adds a second Popover open as it mounts, whose owner selects the text of its name field (see RenameName).
- * - `menu` adds an Insert menu to the toolbar whose opening also opens the Popover, so one press of its trigger,
- *   `#insert`, opens both; with `menu: 'item'`, choosing one of its items opens the Popover instead.
+ * - `rename` adds a second Popover open as it mounts, whose owner selects the text of its name field (see RenameName),
+ *   rendered after the Popover; `discarded` renders, before it, a Popover whose render a Suspense boundary throws away.
+ * - `menu` adds an Insert menu to the toolbar, opened by `#insert`, whose items open the Popover.
  * Every other prop (`modal`, `placement`, `colorScheme`, `dismissable`) passes to the Popover.
  */
 export function PopoverAnchorFixture({
@@ -85,6 +100,7 @@ export function PopoverAnchorFixture({
   onSheetOpenChange,
   frameScope,
   rename,
+  discarded = false,
   menu = false,
   mountWhenOpen = false,
   ...popoverProps
@@ -102,7 +118,7 @@ export function PopoverAnchorFixture({
 
   const toolbar = h('div', { id: `${prefix}toolbar`, ref: anchored('row'), role: 'toolbar', 'aria-label': 'Formatting', style: { display: 'flex', justifyContent: 'flex-end', gap: 4, padding: 4, marginBlockStart: toolbarAt === 'bottom' ? 440 : 0 } },
     h('button', { type: 'button', id: `${prefix}bold` }, 'Bold'),
-    menu ? h(Menu.Root, menu === 'item' ? { onAction: () => onOpenChange?.(true) } : { onOpenChange: (next) => next && onOpenChange?.(true) },
+    menu ? h(Menu.Root, { onAction: () => onOpenChange?.(true) },
       h(Menu.Trigger, { id: 'insert' }, 'Insert'),
       h(Menu.Popup, null, h(Menu.List, { 'aria-label': 'Insert', items: ['Image', 'Table'] }))) : null,
     opener === 'removed' ? null : h('button', {
@@ -159,6 +175,7 @@ export function PopoverAnchorFixture({
       ...frameScope,
     }, toolbar, island, lateBlock, editor, second, lines),
     h('button', { type: 'button', id: 'outside', style: { position: 'absolute', insetInlineStart: 600, insetBlockStart: 40 } }, 'Outside'),
-    rename ? h('div', { style: { position: 'absolute', insetInlineStart: 600, insetBlockStart: 120 } }, h(RenameName, { how: rename })) : null,
-    popover);
+    discarded ? h(DiscardedPopover) : null,
+    popover,
+    rename ? h('div', { style: { position: 'absolute', insetInlineStart: 600, insetBlockStart: 120 } }, h(RenameName, { how: rename })) : null);
 }
