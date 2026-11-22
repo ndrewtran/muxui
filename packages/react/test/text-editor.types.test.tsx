@@ -1,7 +1,11 @@
 import {
   TextEditor,
+  normalizeTextEditorUrl,
   type TextEditorActionCallbacks,
+  type TextEditorCommand,
   type TextEditorDocument,
+  type TextEditorFormatting,
+  type TextEditorHandle,
   type TextEditorProps,
   type TextEditorSelectionAction,
   type TextEditorSelectionActions,
@@ -60,6 +64,46 @@ const narrowImage: ImageActions = { insertImage: (src: 'https://example.com/a.pn
 const narrowColor: ColorActions = { setColor: (value: '#000000') => true };
 const narrowLink: TextEditorActionCallbacks = { setLink: (href: 'https://example.com') => true, unsetLink: () => true };
 void [narrowReplace, narrowImage, narrowColor, narrowLink];
+
+// Commands for a custom toolbar: marks, blocks by level, a rule, plain text, and a link with its own text.
+const commands: TextEditorCommand[] = [
+  { type: 'strike' }, { type: 'code' }, { type: 'heading', level: 6 }, { type: 'paragraph' }, { type: 'horizontalRule' },
+  { type: 'text', text: 'Hello' }, { type: 'link', href: 'https://example.com', text: 'Example' }, { type: 'link', href: 'https://example.com' },
+];
+// @ts-expect-error A heading level is 1 to 6.
+const deepHeading: TextEditorCommand = { type: 'heading', level: 7 };
+// @ts-expect-error A heading needs its level.
+const bareHeading: TextEditorCommand = { type: 'heading' };
+// @ts-expect-error Text to insert is a string.
+const numberText: TextEditorCommand = { type: 'text', text: 1 };
+void [commands, deepHeading, bareHeading, numberText];
+
+// The formatting is plain, read-only values.
+const readFormatting = (formatting: TextEditorFormatting) => {
+  const marks: boolean[] = [formatting.marks.bold, formatting.marks.italic, formatting.marks.underline, formatting.marks.strike, formatting.marks.code];
+  const link: string | null = formatting.link;
+  const block: 'paragraph' | 'heading' | 'codeBlock' | null = formatting.block;
+  const level: 1 | 2 | 3 | 4 | 5 | 6 | null = formatting.headingLevel;
+  const list: 'bulletList' | 'orderedList' | null = formatting.list;
+  const flags: boolean[] = [formatting.empty, formatting.quote];
+  void [marks, link, block, level, list, flags];
+};
+// @ts-expect-error The formatting is read-only.
+const writeFormatting = (formatting: TextEditorFormatting) => { formatting.marks.bold = true; };
+const lifecycle = <TextEditor aria-label="Reply" autoFocus onReady={() => {}} onFormattingChange={readFormatting} minRows={3} maxRows={10} />;
+// @ts-expect-error A row count is a number.
+const stringRows = <TextEditor aria-label="Reply" minRows="3" />;
+void [writeFormatting, lifecycle, stringRows];
+
+// Focus takes an optional preventScroll, and the address check names its kind.
+declare const handle: TextEditorHandle;
+handle.focus();
+handle.focus({ preventScroll: true });
+const address: string | null = normalizeTextEditorUrl('https://example.com', 'link');
+const picture: string | null = normalizeTextEditorUrl('https://example.com/a.png', 'image');
+// @ts-expect-error The kind is link or image.
+const video = normalizeTextEditorUrl('https://example.com/a.mp4', 'video');
+void [address, picture, video];
 
 // A document holds at least one block, and a list item a paragraph before its other blocks.
 const oneBlock: TextEditorDocument = { type: 'doc', content: [{ type: 'paragraph' }] };

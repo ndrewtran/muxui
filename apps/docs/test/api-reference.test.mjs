@@ -131,7 +131,7 @@ test('a part that is the same component as another shows that part\'s ref, nativ
 	assert.equal(aliases, 1, 'TextEditor.Root is the one alias in the reference');
 	const root = partNamed(page('text-editor'), 'TextEditor.Root');
 	assert.equal(root.ref, 'TextEditorHandle');
-	assert.deepEqual(root.natives, [{ type: 'React.HTMLAttributes<HTMLDivElement>', omit: ['value', 'defaultValue', 'onChange'] }]);
+	assert.deepEqual(root.natives, [{ type: 'React.HTMLAttributes<HTMLDivElement>', omit: ['value', 'defaultValue', 'onChange', 'autoFocus'] }]);
 	assert.deepEqual(root.groups, []);
 });
 
@@ -231,7 +231,7 @@ test('parts and related exports list every export of the family with its exact i
 	assert.deepEqual(kinds('command-palette'), { CommandPalette: 'component', useCommandPalette: 'hook' });
 	assert.deepEqual(kinds('toast'), { Toast: 'component', ToastProvider: 'component', useToast: 'hook' });
 	assert.deepEqual(kinds('resizable'), { Resizable: 'component', ResizableHandle: 'component', ResizablePanel: 'component' });
-	assert.deepEqual(kinds('text-editor'), { TextEditor: 'component', isTextEditorDocument: 'function', normalizeTextEditorDocument: 'function' });
+	assert.deepEqual(kinds('text-editor'), { TextEditor: 'component', isTextEditorDocument: 'function', normalizeTextEditorDocument: 'function', normalizeTextEditorUrl: 'function' });
 	assert.equal(Object.values(kinds('markdown')).filter((kind) => kind === 'value').length, 5);
 	const imports = Object.fromEntries(page('text-editor').exports.map(({ name, import: line }) => [name, line]));
 	assert.equal(imports.TextEditor, "import { TextEditor } from '@muxui/react/text-editor';");
@@ -261,7 +261,7 @@ test('the anchors of a page are unique, and every family page shows its owner\'s
 		for (const type of api.types) assert.ok(type.imports.length > 0 && type.imports.every((line) => line.startsWith('import type { ')), `${slug} ${type.name}`);
 		types += api.types.length;
 	}
-	assert.equal(types, 311, 'the 342 exported types less the 24 shared and 7 package-level');
+	assert.equal(types, 312, 'the 343 exported types less the 24 shared and 7 package-level');
 });
 
 test('the package exports page lists every entry of the export map, the package-level exports and the shared types with their reasons', () => {

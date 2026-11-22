@@ -1,5 +1,5 @@
-// The 32 exports of @muxui/react/text-editor as TEXT-EDITOR-02 expects the text-editor page to show them: the component with
-// its ref, attribute surface and every prop, the two functions with their signatures, and the 29 exported types declared as written.
+// The 34 exports of @muxui/react/text-editor as TEXT-EDITOR-02 expects the text-editor page to show them: the component with
+// its ref, attribute surface and every prop, the three functions with their signatures, and the 30 exported types declared as written.
 //
 // They are written out in full on purpose, read once from the reviewed page and checked against
 // packages/react/src/text-editor/index.ts. A pin states the fact, not the reference it is read from: it holds while the page shows
@@ -8,7 +8,7 @@
 
 export const textEditorRef = 'TextEditorHandle';
 
-export const textEditorNative = [{ type: 'React.HTMLAttributes<HTMLDivElement>', omit: ['value', 'defaultValue', 'onChange'] }];
+export const textEditorNative = [{ type: 'React.HTMLAttributes<HTMLDivElement>', omit: ['value', 'defaultValue', 'onChange', 'autoFocus'] }];
 
 /** Every prop of TextEditor, in the order the page lists them. All are optional. */
 export const textEditorProps = [
@@ -34,11 +34,17 @@ export const textEditorProps = [
 	['selectionActions', 'readonly TextEditorSelectionAction[]'],
 	['selectionInstruction', 'boolean'],
 	['onSelectionRequest', '(request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>'],
+	['autoFocus', 'boolean'],
+	['onReady', '() => void'],
+	['onFormattingChange', '(formatting: TextEditorFormatting) => void'],
+	['minRows', 'number'],
+	['maxRows', 'number'],
 ];
 
 export const textEditorFunctions = {
 	isTextEditorDocument: 'isTextEditorDocument(value: unknown): value is TextEditorDocument',
 	normalizeTextEditorDocument: 'normalizeTextEditorDocument(value: unknown): TextEditorDocument',
+	normalizeTextEditorUrl: 'normalizeTextEditorUrl(value: string, kind: \'link\' | \'image\'): string | null',
 };
 
 /** The exported types, each declared exactly as the page shows it. */
@@ -63,7 +69,13 @@ export const textEditorTypes = {
   content?: TextEditorPlainTextNode[];
 };`,
 	TextEditorCommand: `type TextEditorCommand = {
-  type: 'bold' | 'italic' | 'underline' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'unlink' | 'generate';
+  type: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'paragraph' | 'horizontalRule' | 'unlink' | 'generate';
+} | {
+  type: 'heading';
+  level: 1 | 2 | 3 | 4 | 5 | 6;
+} | {
+  type: 'text';
+  text: string;
 } | {
   type: 'align';
   value: TextEditorAlignment;
@@ -79,6 +91,7 @@ export const textEditorTypes = {
 } | {
   type: 'link';
   href: string;
+  text?: string;
 } | {
   type: 'image';
   src: string;
@@ -90,8 +103,17 @@ export const textEditorTypes = {
 };`,
 	TextEditorFontFamily: `type TextEditorFontFamily = 'Inter' | 'Comic Sans MS, Comic Sans' | 'serif' | 'monospace' | 'cursive';`,
 	TextEditorFontSize: `type TextEditorFontSize = '12px' | '14px' | '16px' | '18px' | '20px' | '24px' | '28px' | '32px';`,
+	TextEditorFormatting: `type TextEditorFormatting = {
+  readonly empty: boolean;
+  readonly marks: { readonly bold: boolean; readonly italic: boolean; readonly underline: boolean; readonly strike: boolean; readonly code: boolean };
+  readonly link: string | null;
+  readonly block: 'paragraph' | 'heading' | 'codeBlock' | null;
+  readonly headingLevel: 1 | 2 | 3 | 4 | 5 | 6 | null;
+  readonly list: 'bulletList' | 'orderedList' | null;
+  readonly quote: boolean;
+};`,
 	TextEditorHandle: `type TextEditorHandle = {
-  focus(): void;
+  focus(options?: { preventScroll?: boolean }): void;
   execute(command: TextEditorCommand): boolean;
 };`,
 	TextEditorHardBreakNode: `type TextEditorHardBreakNode = {
@@ -140,7 +162,7 @@ export const textEditorTypes = {
   type: 'text';
   text: string;
 };`,
-	TextEditorProps: `type TextEditorProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange'> & TextEditorOwnProps;`,
+	TextEditorProps: `type TextEditorProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange' | 'autoFocus'> & TextEditorOwnProps;`,
 	TextEditorSelectionAction: `type TextEditorSelectionAction = {
   id: string;
   label: string;

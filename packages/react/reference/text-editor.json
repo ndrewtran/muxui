@@ -151,6 +151,37 @@
               "type": "(request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>",
               "refs": ["text-editor#TextEditorSelectionRequest", "text-editor#TextEditorSelectionActions"],
               "doc": "Called when an action or instruction is sent. A returned promise shows the pending state; a rejection shows\na failure message with Try again and Dismiss."
+            },
+            {
+              "name": "autoFocus",
+              "optional": true,
+              "type": "boolean",
+              "doc": "Focuses the editable content once it is in the page, without scrolling, when the editor is editable. Only the first mount reads it."
+            },
+            {
+              "name": "onReady",
+              "optional": true,
+              "type": "() => void",
+              "doc": "Called once the editable content is in the page and can take focus. It renders on the client after mount, so this runs after hydration."
+            },
+            {
+              "name": "onFormattingChange",
+              "optional": true,
+              "type": "(formatting: TextEditorFormatting) => void",
+              "refs": ["text-editor#TextEditorFormatting"],
+              "doc": "Called with the formatting at the selection when the editor is ready, then whenever a selection move or an edit changes it."
+            },
+            {
+              "name": "minRows",
+              "optional": true,
+              "type": "number",
+              "doc": "The least height of the content, in lines of its text. A fraction is rounded down, and a value below 1 means the default height."
+            },
+            {
+              "name": "maxRows",
+              "optional": true,
+              "type": "number",
+              "doc": "The greatest height of the content, in lines of its text, beyond which it scrolls. It is rounded as minRows is and never less than minRows."
             }
           ],
           "ref": {
@@ -160,7 +191,7 @@
           "natives": [
             {
               "type": "React.HTMLAttributes<HTMLDivElement>",
-              "omit": ["value", "defaultValue", "onChange"]
+              "omit": ["value", "defaultValue", "onChange", "autoFocus"]
             }
           ]
         },
@@ -196,6 +227,19 @@
         "type": "TextEditorDocument",
         "refs": ["text-editor#TextEditorDocument"]
       }
+    },
+    {
+      "name": "normalizeTextEditorUrl",
+      "entry": "./text-editor",
+      "module": "text-editor",
+      "kind": "function",
+      "doc": "The address as the link or image command stores it, or null when that command would refuse it: the same rule the document\ngrammar applies. A link takes an absolute http, https, or mailto URL and an image an absolute http or https URL, with no\nuser name or password, no surrounding space, and no control character. The result is the URL's normalized form, such as\n`https://example.com/` for `https://example.com`.",
+      "signature": "normalizeTextEditorUrl(value: string, kind: 'link' | 'image'): string | null",
+      "parameters": [
+        { "name": "value", "type": "string" },
+        { "name": "kind", "type": "'link' | 'image'" }
+      ],
+      "returns": { "type": "string | null" }
     }
   ],
   "types": [
@@ -322,7 +366,7 @@
         { "entry": "./text-editor", "name": "TextEditorCommand" }
       ],
       "owner": "text-editor",
-      "text": "type TextEditorCommand = {\n  type: 'bold' | 'italic' | 'underline' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'unlink' | 'generate';\n} | {\n  type: 'align';\n  value: TextEditorAlignment;\n} | {\n  type: 'color';\n  value: string;\n} | {\n  type: 'fontFamily';\n  value: TextEditorFontFamily;\n} | {\n  type: 'fontSize';\n  value: TextEditorFontSize;\n} | {\n  type: 'link';\n  href: string;\n} | {\n  type: 'image';\n  src: string;\n  alt?: string;\n};",
+      "text": "type TextEditorCommand = {\n  type: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'bulletList' | 'orderedList' | 'blockquote' | 'codeBlock' | 'paragraph' | 'horizontalRule' | 'unlink' | 'generate';\n} | {\n  type: 'heading';\n  level: 1 | 2 | 3 | 4 | 5 | 6;\n} | {\n  type: 'text';\n  text: string;\n} | {\n  type: 'align';\n  value: TextEditorAlignment;\n} | {\n  type: 'color';\n  value: string;\n} | {\n  type: 'fontFamily';\n  value: TextEditorFontFamily;\n} | {\n  type: 'fontSize';\n  value: TextEditorFontSize;\n} | {\n  type: 'link';\n  href: string;\n  text?: string;\n} | {\n  type: 'image';\n  src: string;\n  alt?: string;\n};",
       "refs": [
         "text-editor#TextEditorAlignment",
         "text-editor#TextEditorFontFamily",
@@ -375,6 +419,63 @@
       "values": ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"]
     },
     {
+      "id": "text-editor#TextEditorFormatting",
+      "name": "TextEditorFormatting",
+      "module": "text-editor",
+      "public": [
+        { "entry": "./text-editor", "name": "TextEditorFormatting" }
+      ],
+      "owner": "text-editor",
+      "text": "type TextEditorFormatting = {\n  readonly empty: boolean;\n  readonly marks: { readonly bold: boolean; readonly italic: boolean; readonly underline: boolean; readonly strike: boolean; readonly code: boolean };\n  readonly link: string | null;\n  readonly block: 'paragraph' | 'heading' | 'codeBlock' | null;\n  readonly headingLevel: 1 | 2 | 3 | 4 | 5 | 6 | null;\n  readonly list: 'bulletList' | 'orderedList' | null;\n  readonly quote: boolean;\n};",
+      "members": [
+        {
+          "name": "empty",
+          "readonly": true,
+          "type": "boolean",
+          "doc": "True for a caret, false while text or a block is selected."
+        },
+        {
+          "name": "marks",
+          "readonly": true,
+          "type": "{ readonly bold: boolean; readonly italic: boolean; readonly underline: boolean; readonly strike: boolean; readonly code: boolean }",
+          "doc": "Each mark is true when all the selected text carries it, or at a caret when the next typed text would."
+        },
+        {
+          "name": "link",
+          "readonly": true,
+          "type": "string | null",
+          "doc": "The address of the link at a caret, the one the next typed text would take, or of the one link all the selected text is in; otherwise null."
+        },
+        {
+          "name": "block",
+          "readonly": true,
+          "type": "'paragraph' | 'heading' | 'codeBlock' | null",
+          "values": ["paragraph", "heading", "codeBlock", null],
+          "doc": "The kind of text block that holds the selection, or null when it spans more than one kind or holds no text block."
+        },
+        {
+          "name": "headingLevel",
+          "readonly": true,
+          "type": "1 | 2 | 3 | 4 | 5 | 6 | null",
+          "values": [1, 2, 3, 4, 5, 6, null],
+          "doc": "The level of the headings the selection is in, when they share one; otherwise null."
+        },
+        {
+          "name": "list",
+          "readonly": true,
+          "type": "'bulletList' | 'orderedList' | null",
+          "values": ["bulletList", "orderedList", null],
+          "doc": "The nearest list that holds the whole selection, or null."
+        },
+        {
+          "name": "quote",
+          "readonly": true,
+          "type": "boolean",
+          "doc": "True when a quote holds the whole selection."
+        }
+      ]
+    },
+    {
       "id": "text-editor#TextEditorHandle",
       "name": "TextEditorHandle",
       "module": "text-editor",
@@ -382,9 +483,14 @@
         { "entry": "./text-editor", "name": "TextEditorHandle" }
       ],
       "owner": "text-editor",
-      "text": "type TextEditorHandle = {\n  focus(): void;\n  execute(command: TextEditorCommand): boolean;\n};",
+      "text": "type TextEditorHandle = {\n  focus(options?: { preventScroll?: boolean }): void;\n  execute(command: TextEditorCommand): boolean;\n};",
       "members": [
-        { "name": "focus", "method": true, "type": "(): void" },
+        {
+          "name": "focus",
+          "method": true,
+          "type": "(options?: { preventScroll?: boolean }): void",
+          "doc": "Focuses the editable content with its selection. By default focus follows a frame later and scrolls the selection into\nview; `preventScroll` focuses at once and scrolls nothing."
+        },
         {
           "name": "execute",
           "method": true,
@@ -590,7 +696,7 @@
       "id": "text-editor#TextEditorOwnProps",
       "name": "TextEditorOwnProps",
       "module": "text-editor",
-      "text": "type TextEditorOwnProps = {\n  value?: TextEditorDocument;\n  defaultValue?: TextEditorDocument;\n  onChange?: (value: TextEditorDocument) => void;\n  label?: React.ReactNode;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  placeholder?: string;\n  limit?: number;\n  toolbar?: false | 'simple' | 'advanced' | 'floating';\n  floating?: boolean;\n  bubbleMenu?: boolean;\n  onLinkRequest?: (actions: TextEditorActionCallbacks) => void;\n  onImageRequest?: (actions: { insertImage(src: string, alt?: string): boolean }) => void;\n  onColorRequest?: (actions: { setColor(value: string): boolean }) => void;\n  onGenerate?: () => void;\n  selectionActions?: readonly TextEditorSelectionAction[];\n  selectionInstruction?: boolean;\n  onSelectionRequest?: (request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>;\n};",
+      "text": "type TextEditorOwnProps = {\n  value?: TextEditorDocument;\n  defaultValue?: TextEditorDocument;\n  onChange?: (value: TextEditorDocument) => void;\n  label?: React.ReactNode;\n  description?: React.ReactNode;\n  errorMessage?: React.ReactNode;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  invalid?: boolean;\n  placeholder?: string;\n  limit?: number;\n  toolbar?: false | 'simple' | 'advanced' | 'floating';\n  floating?: boolean;\n  bubbleMenu?: boolean;\n  onLinkRequest?: (actions: TextEditorActionCallbacks) => void;\n  onImageRequest?: (actions: { insertImage(src: string, alt?: string): boolean }) => void;\n  onColorRequest?: (actions: { setColor(value: string): boolean }) => void;\n  onGenerate?: () => void;\n  selectionActions?: readonly TextEditorSelectionAction[];\n  selectionInstruction?: boolean;\n  onSelectionRequest?: (request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>;\n  autoFocus?: boolean;\n  onReady?: () => void;\n  onFormattingChange?: (formatting: TextEditorFormatting) => void;\n  minRows?: number;\n  maxRows?: number;\n};",
       "members": [
         {
           "name": "value",
@@ -730,6 +836,37 @@
           "type": "(request: TextEditorSelectionRequest, actions: TextEditorSelectionActions) => void | Promise<unknown>",
           "refs": ["text-editor#TextEditorSelectionRequest", "text-editor#TextEditorSelectionActions"],
           "doc": "Called when an action or instruction is sent. A returned promise shows the pending state; a rejection shows\na failure message with Try again and Dismiss."
+        },
+        {
+          "name": "autoFocus",
+          "optional": true,
+          "type": "boolean",
+          "doc": "Focuses the editable content once it is in the page, without scrolling, when the editor is editable. Only the first mount reads it."
+        },
+        {
+          "name": "onReady",
+          "optional": true,
+          "type": "() => void",
+          "doc": "Called once the editable content is in the page and can take focus. It renders on the client after mount, so this runs after hydration."
+        },
+        {
+          "name": "onFormattingChange",
+          "optional": true,
+          "type": "(formatting: TextEditorFormatting) => void",
+          "refs": ["text-editor#TextEditorFormatting"],
+          "doc": "Called with the formatting at the selection when the editor is ready, then whenever a selection move or an edit changes it."
+        },
+        {
+          "name": "minRows",
+          "optional": true,
+          "type": "number",
+          "doc": "The least height of the content, in lines of its text. A fraction is rounded down, and a value below 1 means the default height."
+        },
+        {
+          "name": "maxRows",
+          "optional": true,
+          "type": "number",
+          "doc": "The greatest height of the content, in lines of its text, beyond which it scrolls. It is rounded as minRows is and never less than minRows."
         }
       ],
       "refs": [
@@ -737,7 +874,8 @@
         "text-editor#TextEditorActionCallbacks",
         "text-editor#TextEditorSelectionAction",
         "text-editor#TextEditorSelectionRequest",
-        "text-editor#TextEditorSelectionActions"
+        "text-editor#TextEditorSelectionActions",
+        "text-editor#TextEditorFormatting"
       ]
     },
     {
@@ -796,7 +934,7 @@
         { "entry": "./text-editor", "name": "TextEditorProps" }
       ],
       "owner": "text-editor",
-      "text": "type TextEditorProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange'> & TextEditorOwnProps;",
+      "text": "type TextEditorProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange' | 'autoFocus'> & TextEditorOwnProps;",
       "refs": ["text-editor#TextEditorOwnProps"]
     },
     {

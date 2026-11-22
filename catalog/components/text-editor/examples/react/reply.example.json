@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:text-editor-reply-react",
+  "kind": "example",
+  "name": "TextEditor for a reply that opens focused",
+  "summary": "Open a reply that takes focus without scrolling once it is ready, grows with its text between a least and greatest number of rows, and takes keyboard input back from another control.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:text-editor#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 14
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/text-editor/examples/react/reply.tsx"
+}
