@@ -101,3 +101,16 @@ test('a query naming an example keeps it where its score ranks it', () => {
   assert.equal(placeOf(byScore, id), 2);
   assert.ok(placeOf(items, id) >= 1 && placeOf(items, id) <= placeOf(byScore, id), `${id} ranks at ${placeOf(items, id)}`);
 });
+
+// An example that matches every word of the query answers the whole query, so it keeps the place its score gives it,
+// whatever its family. "react sidebar" keeps every Sidebar example where score order puts it, the first seven, and a
+// five-result page of "sidebar" still shows at least four of them.
+test('an example that matches every query word keeps its place', () => {
+  const sidebarExamples = (items) => items.filter(({ id }) => id.startsWith('muxui:example:sidebar-'));
+  const items = searchAll(api, 'react sidebar');
+  const byScore = [...items].sort((left, right) => right.score - left.score || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+  const places = sidebarExamples(byScore).map(({ id }) => placeOf(byScore, id));
+  assert.deepEqual(places, places.map((_, index) => index + 1));
+  assert.deepEqual(sidebarExamples(items).map(({ id }) => placeOf(items, id)), places);
+  assert.ok(sidebarExamples(api.searchArtifacts({ query: 'sidebar', limit: 5 }).data.items).length >= 4);
+});

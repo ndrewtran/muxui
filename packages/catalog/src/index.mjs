@@ -878,8 +878,9 @@ export function createCatalogApi(inputBundle, options = {}) {
 
   // Every component example id carries its family's slug, so a query that names a family matches each of the
   // family's examples at about the family's own score. Only the family's best-ranked example keeps its place; its
-  // further examples follow every other result, so the examples of a family take one place however many there are.
-  // An example the query names, with every word of its id slug or of its name, keeps its place.
+  // further examples that miss a word of the query follow every other result, so a family's partial matches take
+  // one place however many there are. A further example keeps its place when it matches every word of the query,
+  // or when the query names it with every word of its id slug or of its name.
   function groupFamilyExamples(matches, queryTerms) {
     const terms = new Set(queryTerms);
     const placed = new Set();
@@ -891,6 +892,7 @@ export function createCatalogApi(inputBundle, options = {}) {
         kept.push(match);
       } else if (
         !placed.has(example.family)
+        || new Set(match.matchReasons.map(({ queryTerm }) => queryTerm)).size === terms.size
         || example.names.some((words) => words.length > 0 && words.every((word) => terms.has(word)))
       ) {
         placed.add(example.family);
