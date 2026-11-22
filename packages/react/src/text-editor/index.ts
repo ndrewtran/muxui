@@ -204,6 +204,29 @@ function hasOnlyKeys(value: object, keys: ReadonlySet<string>): boolean {
   return Object.keys(value).every((key) => keys.has(key));
 }
 
+/**
+ * Whether a mailto address names a user and password before its `@`: a colon before any `/`, `?` or `#`, then an `@`
+ * later on the same line. One pass, so a long address costs linear time where a backtracking pattern costs quadratic.
+ */
+function mailtoUserName(value: string): boolean {
+  let colon = false;
+  let beforePath = true;
+  for (let index = 'mailto:'.length; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code === 0x2028 || code === 0x2029) {
+      // A colon before a line separator cannot reach an `@` after it.
+      colon = false;
+    } else if (code === 64 && colon) {
+      return true;
+    } else if (code === 47 || code === 63 || code === 35) {
+      beforePath = false;
+    } else if (code === 58 && beforePath) {
+      colon = true;
+    }
+  }
+  return false;
+}
+
 function safeUrl(value: unknown, protocols: ReadonlySet<string>): string | undefined {
   if (typeof value !== 'string' || value.length === 0 || value.trim() !== value) return undefined;
   for (let index = 0; index < value.length; index += 1) {
@@ -213,7 +236,7 @@ function safeUrl(value: unknown, protocols: ReadonlySet<string>): string | undef
   try {
     const url = new URL(value);
     if (!protocols.has(url.protocol) || url.username !== '' || url.password !== '') return undefined;
-    if (url.protocol === 'mailto:' && /^mailto:[^/?#]*:.*@/iu.test(value)) return undefined;
+    if (url.protocol === 'mailto:' && mailtoUserName(value)) return undefined;
     return url.href;
   } catch {
     return undefined;
