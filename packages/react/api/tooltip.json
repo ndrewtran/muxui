@@ -235,6 +235,31 @@
         },
         "description": "How a floating overlay is placed beside its trigger."
       }
+    },
+    "partApis": {
+      "shortcut": {
+        "member": "Shortcut",
+        "props": [
+          "keys"
+        ],
+        "events": [],
+        "defaults": {},
+        "propDetails": {
+          "keys": {
+            "type": {
+              "kind": "array",
+              "element": {
+                "kind": "string"
+              },
+              "readonly": true
+            },
+            "required": false,
+            "description": "The keys of the shortcut, each shown in a kbd element. The children show when there are none."
+          }
+        },
+        "eventDetails": {},
+        "types": {}
+      }
     }
   }
 }

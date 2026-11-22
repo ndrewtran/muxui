@@ -1875,6 +1875,14 @@
     {
       "family": "example",
       "path": "catalog/components/text-editor/examples/react/reply.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/toast/examples/react/undo.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/tooltip/examples/react/shortcut.example.json"
     }
   ]
 }

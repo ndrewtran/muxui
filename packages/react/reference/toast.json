@@ -43,6 +43,13 @@
               "type": "() => void",
               "doc": "Reports the notification being dismissed, by a person or a timeout, at most once. An unmount does not call it."
             },
+            {
+              "name": "action",
+              "optional": true,
+              "type": "ToastAction",
+              "refs": ["overlays#ToastAction"],
+              "doc": "One button in the notification, such as Undo, that runs its handler once and closes the notification. With an action, a duration other than 0 lasts at least 10000 ms."
+            },
             { "name": "className", "optional": true, "type": "string" }
           ],
           "ref": null
@@ -88,6 +95,28 @@
   ],
   "types": [
     {
+      "id": "overlays#ToastAction",
+      "name": "ToastAction",
+      "module": "overlays",
+      "public": [
+        { "entry": ".", "name": "ToastAction" }
+      ],
+      "owner": "toast",
+      "text": "interface ToastAction {\n  label: string;\n  onAction: () => void;\n}",
+      "members": [
+        {
+          "name": "label",
+          "type": "string",
+          "doc": "The button's text and accessible name, in a word or two, such as Undo. It is required, and a blank string does not count."
+        },
+        {
+          "name": "onAction",
+          "type": "() => void",
+          "doc": "Runs once when the button is activated, before the toast closes and onDismiss reports the dismissal."
+        }
+      ]
+    },
+    {
       "id": "overlays#ToastManager",
       "name": "ToastManager",
       "module": "overlays",
@@ -114,7 +143,7 @@
         { "entry": ".", "name": "ToastOptions" }
       ],
       "owner": "toast",
-      "text": "interface ToastOptions {\n  title?: React.ReactNode;\n  variant?: 'neutral' | 'success' | 'warning' | 'danger';\n  duration?: number;\n  onDismiss?: () => void;\n  className?: string;\n}",
+      "text": "interface ToastOptions {\n  title?: React.ReactNode;\n  variant?: 'neutral' | 'success' | 'warning' | 'danger';\n  duration?: number;\n  onDismiss?: () => void;\n  action?: ToastAction;\n  className?: string;\n}",
       "members": [
         { "name": "title", "optional": true, "type": "React.ReactNode" },
         {
@@ -125,14 +154,21 @@
         },
         { "name": "duration", "optional": true, "type": "number" },
         { "name": "onDismiss", "optional": true, "type": "() => void" },
+        {
+          "name": "action",
+          "optional": true,
+          "type": "ToastAction",
+          "refs": ["overlays#ToastAction"]
+        },
         { "name": "className", "optional": true, "type": "string" }
-      ]
+      ],
+      "refs": ["overlays#ToastAction"]
     },
     {
       "id": "overlays#ToastOwnProps",
       "name": "ToastOwnProps",
       "module": "overlays",
-      "text": "interface ToastOwnProps {\n  message: Exclude<React.ReactNode, null | undefined | boolean>;\n  title?: React.ReactNode;\n  variant?: 'neutral' | 'success' | 'warning' | 'danger';\n  duration?: number;\n  onDismiss?: () => void;\n}",
+      "text": "interface ToastOwnProps {\n  message: Exclude<React.ReactNode, null | undefined | boolean>;\n  title?: React.ReactNode;\n  variant?: 'neutral' | 'success' | 'warning' | 'danger';\n  duration?: number;\n  onDismiss?: () => void;\n  action?: ToastAction;\n}",
       "members": [
         {
           "name": "message",
@@ -163,8 +199,16 @@
           "optional": true,
           "type": "() => void",
           "doc": "Reports the notification being dismissed, by a person or a timeout, at most once. An unmount does not call it."
+        },
+        {
+          "name": "action",
+          "optional": true,
+          "type": "ToastAction",
+          "refs": ["overlays#ToastAction"],
+          "doc": "One button in the notification, such as Undo, that runs its handler once and closes the notification. With an action, a duration other than 0 lasts at least 10000 ms."
         }
-      ]
+      ],
+      "refs": ["overlays#ToastAction"]
     },
     {
       "id": "overlays#ToastProps",
