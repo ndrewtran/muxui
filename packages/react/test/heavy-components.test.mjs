@@ -214,6 +214,38 @@ test('TextEditor only accepts portable HTTP image URLs', () => {
   assert.equal(isTextEditorDocument(documentWithImage('file:///tmp/image.png')), false);
   assert.equal(isTextEditorDocument(documentWithImage('https://user:pass@example.com/object-id')), false);
 });
+
+// The pattern the mailto user-name check replaced, kept as the oracle for the linear check.
+const backtrackingMailtoUserName = /^mailto:[^/?#]*:.*@/iu;
+const documentWithLink = (href) => ({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'x', marks: [{ type: 'link', attrs: { href } }] }] }] });
+
+test('TextEditor refuses a mailto link that names a user and password, as the earlier pattern did', () => {
+  assert.equal(isTextEditorDocument(documentWithLink('mailto:me@example.com')), true);
+  assert.equal(isTextEditorDocument(documentWithLink('mailto:user:pass@example.com')), false);
+  assert.equal(isTextEditorDocument(documentWithLink('mailto:me@example.com?subject=a:b@c')), true);
+  // Every address of up to five characters from the ones the rule reads, between two letters so none is trimmed.
+  const alphabet = ['x', ':', '@', '/', '?', '#', ' ', ' '];
+  let middles = [''];
+  for (let length = 1; length <= 5; length += 1) {
+    middles = middles.flatMap((middle) => alphabet.map((character) => middle + character));
+    for (const middle of middles) {
+      const href = `mailto:x${middle}x`;
+      assert.equal(isTextEditorDocument(documentWithLink(href)), !backtrackingMailtoUserName.test(href), JSON.stringify(href));
+    }
+  }
+});
+
+test('TextEditor checks a megabyte-long mailto address in linear time', () => {
+  const href = `mailto:${':'.repeat(1_000_000)}`;
+  const started = performance.now();
+  assert.equal(isTextEditorDocument(documentWithLink(href)), true);
+  assert.deepEqual(normalizeTextEditorDocument(documentWithLink(href)), documentWithLink(href));
+  // With an @ after them, the colons read as a user name and password, and the address is refused.
+  assert.equal(isTextEditorDocument(documentWithLink(`${href}@example.com`)), false);
+  const elapsed = performance.now() - started;
+  // The earlier pattern did not finish this within a minute; a linear check takes well under a second.
+  assert.ok(elapsed < 5_000, `the checks took ${Math.round(elapsed)} ms`);
+});
 test('Resizable is server-renderable with separator ARIA bounds', () => {
   const html = renderToStaticMarkup(React.createElement(Resizable, { defaultSizes: { left: 40, right: 60 } }, React.createElement(ResizablePanel, { id: 'left', minSize: 20 }), React.createElement(ResizableHandle, { id: 'split', before: 'left', after: 'right', 'aria-label': 'Resize panes' }), React.createElement(ResizablePanel, { id: 'right', minSize: 20 })));
   assert.match(html, /role="separator"/u); assert.match(html, /aria-valuenow="40"/u);
