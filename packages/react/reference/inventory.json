@@ -1633,6 +1633,12 @@
           "module": "text-editor"
         },
         {
+          "name": "TextEditorMarkdown",
+          "kind": "type",
+          "owner": "text-editor",
+          "module": "text-editor"
+        },
+        {
           "name": "TextEditorNode",
           "kind": "type",
           "owner": "text-editor",

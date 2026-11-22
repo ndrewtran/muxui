@@ -988,7 +988,7 @@ const pins = {
     if (rowsOf(part('TextArea.Root')).get('onChange')?.type !== '(value: string) => void') problems.push('TextArea.Root onChange is not (value: string) => void');
     return problems;
   },
-  // The 36 exports of @muxui/react/text-editor and its Markdown entry, each as text-editor-declarations.mjs writes it, which holds
+  // The 37 exports of @muxui/react/text-editor and its Markdown entry, each as text-editor-declarations.mjs writes it, which holds
   // them against the source.
   'TEXT-EDITOR-02': (page) => {
     const problems = [];

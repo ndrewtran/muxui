@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:text-editor-markdown-value-react",
+  "kind": "example",
+  "name": "TextEditor with a Markdown value",
+  "summary": "Keep a note as Markdown: the editor reads the Markdown it is given and reports Markdown after each change.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:text-editor#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 15
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/text-editor/examples/react/markdown-value.tsx"
+}

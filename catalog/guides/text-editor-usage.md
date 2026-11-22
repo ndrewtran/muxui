@@ -1,6 +1,6 @@
 # TextEditor usage
 
-Use TextEditor to edit formatted content. Its value is a document made of blocks, not HTML or Markdown, and `onChange` receives the new document after each accepted edit.
+Use TextEditor to edit formatted content. Its value is a document made of blocks, not HTML, and `onChange` receives the new document after each accepted edit. With `markdown`, the value is Markdown text instead, as Markdown under Content describes.
 
 ## Choosing a toolbar
 
@@ -67,12 +67,22 @@ The TextEditor with a character limit example limits a note and checks it before
 ## Content
 
 - Give the editor a visible `label`, and put guidance in `description`.
-- Treat a stored document as untrusted. Check it with `isTextEditorDocument`, or clean it with `normalizeTextEditorDocument`, as the TextEditor with a stored document example does.
+- Treat a stored document as untrusted. Check it with `isTextEditorDocument`, or clean it with `normalizeTextEditorDocument`, as the TextEditor with a stored document example does. Text is never empty: the check refuses empty text and cleaning drops it.
+- However a link or an image comes in, typed, pasted, dropped, or in a value, it keeps its address only where the link and image commands would. A refused link keeps its text and a refused image its description; an image typed as Markdown stays the text typed.
+- The editor keeps an empty paragraph after a final block that is not one, such as code or an image, so the caret can go below it. It adds that paragraph itself, so `onChange` does not report it, and a controlled document without it changes nothing.
+- A controlled document is compared with the content as the editor holds both, so marks in another order, text split where its marks stay the same, and attributes left at their defaults, such as a numbered list's start, replace nothing.
+- A controlled value that replaces the content is applied as given, with no address in it linked, also when undo or redo brings it back, and is one undo step of its own, apart from the typing just before and after it.
 
 ### Markdown
 
+- For content kept as Markdown, give the editor `markdown`: the Markdown `value` or `defaultValue`, an `onChange` that receives Markdown, and `fromMarkdown` and `toMarkdown` from `@muxui/react/text-editor/markdown`.
 - `@muxui/react/text-editor` never loads the converters, and `@muxui/react/text-editor/markdown` never loads the editor, so code that only reads or writes Markdown, on a server too, takes no editor with it.
-- To convert at the edges, as on a server, `fromMarkdown` reads CommonMark and strike into a document that `isTextEditorDocument` accepts, and `toMarkdown` writes one back. Both are pure and synchronous, and take time linear in their input.
+- `onChange` runs when the Markdown changes. An edit Markdown cannot show, such as an empty paragraph or a space at the end of a line, reports nothing.
+- A controlled value is compared as Markdown, so the editor keeps its content and caret for the Markdown it reported and for Markdown that reads the same, such as underscores where the editor writes asterisks. Other Markdown replaces the content.
+- With `markdown` the editor takes the Markdown preset. `preset="markdown"` gives that preset to an editor whose value stays a document. It holds no underline, color, font or alignment, so a paste loses them, their commands return false and report off, their shortcuts do nothing, and the toolbar shows Strikethrough in place of Underline.
+- With `markdown`, pasted plain text is read as Markdown and pasted HTML as HTML. Text pasted as plain text, with Shift, stays as typed. A paste over selected text takes its place, so an address pasted there is text, as a bare address is in Markdown.
+- `limit` counts the editor's text with `markdown` too, not the characters of the Markdown.
+- To convert at the edges instead, as on a server, `fromMarkdown` reads CommonMark and strike into a document that `isTextEditorDocument` accepts, and `toMarkdown` writes one back. Both are pure and synchronous, and take time linear in their input.
 - Dense formatting costs more time than its length suggests. A megabyte of ordinary prose writes in about 0.15 s and reads in about 0.2 s, but a megabyte of text whose formatting overlaps in every word, 27 MB as a document, takes about six seconds to write. An application that converts untrusted documents on a server should bound their size or convert them in a worker.
 - Converting drops what Markdown cannot hold, and any link or image address the editor refuses, keeping its text. A link keeps an absolute http, https or mailto address and an image an absolute http or https one, never with a user name or password. A relative or fragment-only address is dropped.
 - Raw HTML and syntax outside the editor's grammar, such as tables, footnotes, task lists, reference links and bare addresses, stay literal text, and are written back escaped so they read as the same text.
@@ -82,6 +92,8 @@ A round trip changes these once; a second changes nothing.
 - Reading: a soft line break becomes a space, and spaces and tabs at the ends of a line go. A hard break that ends a block goes, and one in a heading becomes a space. Link and image titles go. An image is a block, so one in a paragraph splits it, and one in a link or a heading becomes its description, which is plain text of at most 1,000 characters. Inline code takes no other formatting. A code fence keeps the first word of its info string as the language, and indented code has none. A numbered list from 0 starts at 1, and tight and loose lists read alike. A list item that starts with another block gets an empty first paragraph. Markers nested deeper than the editor holds stay literal text.
 - Writing: underline, color, font, size, alignment and letter or roman numbering go, and so do empty paragraphs. A line break inside text becomes a space, and a list starts at most at 999999999. In a list item, a code line of only spaces reads back empty. Where formatting meets other formatting inside a word, a mark that goes on past the others is closed and opened again around them, so italic that goes on where bold and strike start keeps all three. Where Markdown still cannot write the word, it loses its italic, then strike, then bold, until it can, and the rest of the paragraph keeps its formatting.
 - Both ways: bold, italic or strike that starts or ends on a space, or on punctuation a letter touches, gives that space or punctuation up, as Markdown cannot open or close there.
+
+The TextEditor with a Markdown value example keeps a Markdown note.
 
 ## Common mistake
 

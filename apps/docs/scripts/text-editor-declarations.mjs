@@ -1,6 +1,6 @@
-// The 36 exports of @muxui/react/text-editor and @muxui/react/text-editor/markdown as TEXT-EDITOR-02 expects the text-editor page to
+// The 37 exports of @muxui/react/text-editor and @muxui/react/text-editor/markdown as TEXT-EDITOR-02 expects the text-editor page to
 // show them: the component with its ref, attribute surface and every prop, the three functions and the two converters with their
-// signatures, and the 30 exported types declared as written.
+// signatures, and the 31 exported types declared as written.
 //
 // They are written out in full on purpose, read once from the reviewed page and checked against
 // packages/react/src/text-editor/index.ts. A pin states the fact, not the reference it is read from: it holds while the page shows
@@ -40,6 +40,8 @@ export const textEditorProps = [
 	['onFormattingChange', '(formatting: TextEditorFormatting) => void'],
 	['minRows', 'number'],
 	['maxRows', 'number'],
+	['preset', '\'rich\' | \'markdown\''],
+	['markdown', 'TextEditorMarkdown'],
 ];
 
 export const textEditorFunctions = {
@@ -152,6 +154,13 @@ export const textEditorTypes = {
 } | {
   type: 'textStyle';
   attrs: { color?: string; fontFamily?: TextEditorFontFamily; fontSize?: TextEditorFontSize };
+};`,
+	TextEditorMarkdown: `type TextEditorMarkdown = {
+  fromMarkdown: (markdown: string) => TextEditorDocument;
+  toMarkdown: (document: TextEditorDocument) => string;
+  value?: string;
+  defaultValue?: string;
+  onChange?: (markdown: string) => void;
 };`,
 	TextEditorNode: `type TextEditorNode = TextEditorInlineNode | TextEditorBlockNode | TextEditorListItemNode;`,
 	TextEditorOrderedListNode: `type TextEditorOrderedListNode = {

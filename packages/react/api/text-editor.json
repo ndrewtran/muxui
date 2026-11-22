@@ -24,7 +24,9 @@
       "selectionInstruction",
       "autoFocus",
       "minRows",
-      "maxRows"
+      "maxRows",
+      "preset",
+      "markdown"
     ],
     "events": [
       "change",
@@ -46,7 +48,8 @@
       "floating": false,
       "bubbleMenu": false,
       "selectionInstruction": true,
-      "autoFocus": false
+      "autoFocus": false,
+      "preset": "rich"
     },
     "propDetails": {
       "value": {
@@ -215,6 +218,35 @@
         },
         "required": false,
         "description": "The greatest height of the content, in lines of its text, beyond which it scrolls. It is rounded as minRows is and never less than minRows."
+      },
+      "preset": {
+        "type": {
+          "kind": "union",
+          "members": [
+            {
+              "kind": "literal",
+              "value": "rich"
+            },
+            {
+              "kind": "literal",
+              "value": "markdown"
+            }
+          ]
+        },
+        "required": false,
+        "enum": [
+          "rich",
+          "markdown"
+        ],
+        "description": "`rich` holds all the editor's formatting. `markdown` limits it to what Markdown holds: no underline, color, font or\nalignment. They are not in its document, so a paste loses them, their commands return false, and no tool or shortcut\noffers them; the toolbar shows Strikethrough in place of Underline. Only the first mount reads it."
+      },
+      "markdown": {
+        "type": {
+          "kind": "reference",
+          "name": "TextEditorMarkdown"
+        },
+        "required": false,
+        "description": "Makes the value Markdown text, read and reported through this object in place of `value`, `defaultValue` and `onChange`,\nwith the `markdown` preset. Pasted plain text is read as Markdown. Only the first mount reads whether it is set."
       }
     },
     "eventDetails": {
@@ -1280,6 +1312,97 @@
             }
           ]
         }
+      },
+      "TextEditorMarkdown": {
+        "type": {
+          "kind": "object",
+          "members": [
+            {
+              "name": "fromMarkdown",
+              "type": {
+                "kind": "function",
+                "parameters": [
+                  {
+                    "name": "markdown",
+                    "type": {
+                      "kind": "string"
+                    },
+                    "required": true
+                  }
+                ],
+                "returns": {
+                  "kind": "reference",
+                  "name": "TextEditorDocument"
+                }
+              },
+              "required": true,
+              "readonly": false,
+              "description": "`fromMarkdown` from `@muxui/react/text-editor/markdown`, which reads the Markdown into the editor."
+            },
+            {
+              "name": "toMarkdown",
+              "type": {
+                "kind": "function",
+                "parameters": [
+                  {
+                    "name": "document",
+                    "type": {
+                      "kind": "reference",
+                      "name": "TextEditorDocument"
+                    },
+                    "required": true
+                  }
+                ],
+                "returns": {
+                  "kind": "string"
+                }
+              },
+              "required": true,
+              "readonly": false,
+              "description": "`toMarkdown` from `@muxui/react/text-editor/markdown`, which writes the editor's content as Markdown."
+            },
+            {
+              "name": "value",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "The Markdown, when the application controls it."
+            },
+            {
+              "name": "defaultValue",
+              "type": {
+                "kind": "string"
+              },
+              "required": false,
+              "readonly": false,
+              "description": "The first Markdown, when the editor manages its own."
+            },
+            {
+              "name": "onChange",
+              "type": {
+                "kind": "function",
+                "parameters": [
+                  {
+                    "name": "markdown",
+                    "type": {
+                      "kind": "string"
+                    },
+                    "required": true
+                  }
+                ],
+                "returns": {
+                  "kind": "void"
+                }
+              },
+              "required": false,
+              "readonly": false,
+              "description": "Called with the Markdown after an edit that changes it. It does not run at mount, for an edit the Markdown cannot show, such as an empty paragraph, or when `value` changes from outside."
+            }
+          ]
+        },
+        "description": "A Markdown value for `markdown`: the text and its callback, with `fromMarkdown` and `toMarkdown` from\n`@muxui/react/text-editor/markdown`, which this entry never loads itself."
       },
       "TextEditorOrderedListNode": {
         "type": {

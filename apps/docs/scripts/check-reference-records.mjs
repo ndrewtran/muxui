@@ -7,7 +7,7 @@
 //   DISCLOSURE-01    title is required and children optional, the ref is HTMLDivElement, and there is no Disclosure.Title.
 //   SWITCH-FIELD-01  Root's ref is HTMLDivElement and Button's is HTMLLabelElement, with onChange(checked: boolean), name and value.
 //   TEXT-AREA-01     TextArea.Root's ref is HTMLDivElement, TextArea.TextArea's is HTMLTextAreaElement, with its native surface named.
-//   TEXT-EDITOR-02   the text-editor page lists all 36 exports of its two entries, each declared exactly (the component's props, five signatures, 30 types).
+//   TEXT-EDITOR-02   the text-editor page lists all 37 exports of its two entries, each declared exactly (the component's props, five signatures, 31 types).
 //   X-002 (part)     CommandPalette says which parts need a Root around them.
 //   DATA-DIFF        DataDiff closes its table with the members it types never (a reviewed fact, not a ledger record).
 import { readFileSync } from 'node:fs';
@@ -82,7 +82,7 @@ const ref = (record, part, expected) => expect(record, part?.ref === expected, `
 	const { api } = page('text-editor');
 	const names = ['TextEditor', ...Object.keys(textEditorFunctions), ...Object.keys(textEditorMarkdownFunctions), ...Object.keys(textEditorTypes)];
 	const shown = [...api.exports.map(({ name }) => name), ...api.types.map(({ name }) => name)];
-	expect(record, names.length === 36 && shown.length === 36 && names.every((name) => shown.includes(name)), `the page must list the 36 exports of @muxui/react/text-editor and its Markdown entry, and lists ${shown.length}: missing ${names.filter((name) => !shown.includes(name)).join(', ') || 'none'}.`);
+	expect(record, names.length === 37 && shown.length === 37 && names.every((name) => shown.includes(name)), `the page must list the 37 exports of @muxui/react/text-editor and its Markdown entry, and lists ${shown.length}: missing ${names.filter((name) => !shown.includes(name)).join(', ') || 'none'}.`);
 	// The converters are imported from the Markdown entry, everything else from the editor's.
 	for (const item of api.exports) {
 		const entry = item.name in textEditorMarkdownFunctions ? '@muxui/react/text-editor/markdown' : '@muxui/react/text-editor';

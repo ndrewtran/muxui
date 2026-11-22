@@ -169,7 +169,7 @@ const GUIDES = {
   tree: {},
   // **bold** is the Markdown a paste is measured after; the three helpers are exports of the module whose declarations the derived
   // API does not read; preventScroll is the native focus option the handle's focus takes, whose methods the handle type declares.
-  'text-editor': { native: ['**bold**', 'isTextEditorDocument', 'normalizeTextEditorDocument', 'normalizeTextEditorUrl', 'fromMarkdown', 'toMarkdown', 'preventScroll'], reference: { TextEditorHandle: ['execute', 'focus'] } },
+  'text-editor': { native: ['**bold**', 'isTextEditorDocument', 'normalizeTextEditorDocument', 'normalizeTextEditorUrl', 'preventScroll'], reference: { TextEditorHandle: ['execute', 'focus'] } },
   // null is the value a controlled selectedId takes to mean nothing selected.
   'combo-box': { native: ['null'] },
   // onSubmit is the form's native event, @ and / are the characters that open suggestions, and placeholder and maxLength are the native textarea attributes inputProps takes.

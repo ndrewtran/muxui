@@ -504,6 +504,7 @@
         "catalog/components/text-editor/examples/react/basic.tsx",
         "catalog/components/text-editor/examples/react/formatting-controls.tsx",
         "catalog/components/text-editor/examples/react/limit.tsx",
+        "catalog/components/text-editor/examples/react/markdown-value.tsx",
         "catalog/components/text-editor/examples/react/reply.tsx",
         "catalog/components/text-editor/examples/react/selection-actions.tsx",
         "catalog/components/text-editor/examples/react/stored-document.tsx"

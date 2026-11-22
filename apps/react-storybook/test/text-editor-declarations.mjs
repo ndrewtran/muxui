@@ -1,6 +1,6 @@
-// The 36 exports of @muxui/react/text-editor and @muxui/react/text-editor/markdown, as the ledger record TEXT-EDITOR-02 asks the
+// The 37 exports of @muxui/react/text-editor and @muxui/react/text-editor/markdown, as the ledger record TEXT-EDITOR-02 asks the
 // TextEditor Docs page to show them: the component with its ref, attribute surface and every prop, the three functions and the two
-// converters with their signatures, and the 30 exported types declared as the page prints them.
+// converters with their signatures, and the 31 exported types declared as the page prints them.
 //
 // They are written out in full on purpose and checked against packages/react/src/text-editor/index.ts and the converters' module
 // (`sourceProblems`), so a pin
@@ -43,6 +43,8 @@ export const textEditorProps = [
   ['onFormattingChange', '(formatting: TextEditorFormatting) => void'],
   ['minRows', 'number'],
   ['maxRows', 'number'],
+  ['preset', "'rich' | 'markdown'"],
+  ['markdown', 'TextEditorMarkdown'],
 ];
 
 export const textEditorFunctions = {
@@ -156,6 +158,13 @@ export const textEditorTypes = {
   type: 'textStyle';
   attrs: { color?: string; fontFamily?: TextEditorFontFamily; fontSize?: TextEditorFontSize };
 };`,
+  TextEditorMarkdown: `type TextEditorMarkdown = {
+  fromMarkdown: (markdown: string) => TextEditorDocument;
+  toMarkdown: (document: TextEditorDocument) => string;
+  value?: string;
+  defaultValue?: string;
+  onChange?: (markdown: string) => void;
+};`,
   TextEditorNode: 'type TextEditorNode = TextEditorInlineNode | TextEditorBlockNode | TextEditorListItemNode;',
   TextEditorOrderedListNode: `type TextEditorOrderedListNode = {
   type: 'orderedList';
@@ -201,7 +210,7 @@ export const textEditorTypes = {
 };`,
 };
 
-/** The 36 exports by name: the component, the three functions, the two converters and the 30 types, in the order the page's index lists them. */
+/** The 37 exports by name: the component, the three functions, the two converters and the 31 types, in the order the page's index lists them. */
 export const textEditorExports = ['TextEditor', 'isTextEditorDocument', 'normalizeTextEditorDocument', 'normalizeTextEditorUrl', ...Object.keys(textEditorMarkdownFunctions), ...Object.keys(textEditorTypes)];
 
 /** Strips what the printer and the author format differently: comments, whitespace, separators, the `React.` namespace and a leading `|`. */

@@ -6,6 +6,7 @@ import {
   type TextEditorDocument,
   type TextEditorFormatting,
   type TextEditorHandle,
+  type TextEditorMarkdown,
   type TextEditorProps,
   type TextEditorSelectionAction,
   type TextEditorSelectionActions,
@@ -114,9 +115,21 @@ const emptyDocument: TextEditorDocument = { type: 'doc', content: [] };
 const emptyItem: TextEditorDocument = { type: 'doc', content: [{ type: 'bulletList', content: [{ type: 'listItem', content: [] }] }] };
 void [oneBlock, emptyDocument, emptyItem];
 
-// The converters read Markdown into a document and write one back, from their own entry.
+// The Markdown value mode takes and reports Markdown text, with the converters from their own entry.
+const controlledMarkdown = <TextEditor aria-label="Post" markdown={{ fromMarkdown, toMarkdown, value: '# Title', onChange: (markdown) => { const text: string = markdown; void text; } }} />;
+const uncontrolledMarkdown = <TextEditor aria-label="Post" toolbar="advanced" markdown={{ fromMarkdown, toMarkdown, defaultValue: '**bold**' }} />;
+const markdownPreset = <TextEditor aria-label="Note" preset="markdown" defaultValue={oneBlock} onChange={(value) => { const kept: TextEditorDocument = value; void kept; }} />;
+const markdownValue: TextEditorMarkdown = { fromMarkdown, toMarkdown, value: '' };
+// @ts-expect-error The Markdown value mode needs both converters.
+const noConverters = <TextEditor aria-label="Post" markdown={{ value: '# Title' }} />;
+// @ts-expect-error The Markdown value is text, not a document.
+const documentMarkdown = <TextEditor aria-label="Post" markdown={{ fromMarkdown, toMarkdown, value: oneBlock }} />;
+// @ts-expect-error The Markdown callback receives text, not a document.
+const documentCallback = <TextEditor aria-label="Post" markdown={{ fromMarkdown, toMarkdown, onChange: (value: TextEditorDocument) => { void value; } }} />;
+// @ts-expect-error The preset is rich or markdown.
+const htmlPreset = <TextEditor aria-label="Note" preset="html" />;
 const read: TextEditorDocument = fromMarkdown('# Title');
 const written: string = toMarkdown(read);
 // @ts-expect-error toMarkdown writes a document, not text.
 const rewritten = toMarkdown('# Title');
-void [written, rewritten];
+void [controlledMarkdown, uncontrolledMarkdown, markdownPreset, markdownValue, noConverters, documentMarkdown, documentCallback, htmlPreset, written, rewritten];
