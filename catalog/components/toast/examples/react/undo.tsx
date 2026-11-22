@@ -8,8 +8,9 @@ function Drafts() {
   const [drafts, setDrafts] = useState(DRAFTS);
 
   function archive(draft: string) {
+    // The archive happens now, in the application's state, and does not wait for the toast to leave.
     setDrafts((current) => current.filter((item) => item !== draft));
-    // The action closes the toast, and the toast stays at least 10 seconds so there is time to reach it.
+    // The toast only offers Undo, which reverses it. The action closes the toast, which stays at least 10 seconds.
     add(`${draft} archived.`, {
       action: { label: 'Undo', onAction: () => setDrafts((current) => DRAFTS.filter((item) => item === draft || current.includes(item))) },
     });
