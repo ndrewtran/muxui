@@ -25,6 +25,17 @@ Choose the variant from what happened. A variant changes how the toast looks, no
 - Write the message as the result in one short sentence, such as Report exported.
 - Add a title only to say what the message is about, such as Export.
 
+## An action such as Undo
+
+- Give a toast one `action` when the result can be reversed or followed up at once, such as Undo after archiving. Its `label` names the button in a word or two, and its `onAction` runs once when it is activated.
+- Activating the action closes the toast as its dismiss control does, so `onDismiss` is called after `onAction`. Keep work that must wait for the toast to leave, such as a permanent delete, in `onDismiss`, and skip it when `onAction` has run.
+- A toast with an action stays at least 10 seconds, and its timer pauses while the pointer is over the notifications or focus is inside them.
+- The notifications follow the page's content in the Tab order, so keyboard users reach a toast with Tab after the page's last control, then its action and its dismiss control. Focus never moves to a toast by itself.
+- While a [Dialog](/components/dialog/) is open, Tab stays inside it, so a toast shown over a Dialog can be reached by pointer but not by keyboard until the Dialog closes.
+- A toast can leave before someone reaches it, so do not make its action the only way to do something the user needs.
+
+The Toast with an Undo action example archives a draft at once and offers Undo in the toast.
+
 ## Common mistake
 
 Reporting a failure the user must act on only in a toast. It leaves after its duration, and the error text and the way to retry leave with it. Show the error beside the control that failed, and add a toast only if a short note helps.
@@ -37,7 +48,7 @@ Components that call useToast or mount Toast sit inside a ToastProvider, which r
 - `placement` is the viewport corner of the region: `top-start`, `top-end`, `bottom-start`, or `bottom-end`. It defaults to `top-end`.
 - `className` styles the region.
 
-useToast returns a manager. Its add method takes a message and the options `title`, `variant`, `duration`, `onDismiss`, and `className`, enqueues a toast, and returns the toast's key. Its remove method closes the toast with that key, so keep the key when the application needs to close the toast itself. The Toast keys and removal example sets both provider props, keeps a pending export on its Button, and removes the finished result's toast by its key.
+useToast returns a manager. Its add method takes a message and the options `title`, `variant`, `duration`, `onDismiss`, `action`, and `className`, enqueues a toast, and returns the toast's key. Its remove method closes the toast with that key, so keep the key when the application needs to close the toast itself. The Toast keys and removal example sets both provider props, keeps a pending export on its Button, and removes the finished result's toast by its key.
 
 ## Declarative toasts
 

@@ -16,6 +16,13 @@ Tooltip content describes the trigger and is not interactive: the Tooltip surfac
 
 A Tooltip describes its trigger. It does not name it, so a trigger that shows only an icon needs its own accessible name, and the Tooltip text adds a description to that name. IconButton requires an accessible name. The Tooltip on an icon button example gives an IconButton its own name and a Tooltip.
 
+## Shortcuts
+
+- Show a tool's keyboard shortcut with Tooltip.Shortcut after the Tooltip's text. Its key caps are decoration hidden from assistive technology, so state the same shortcut on the trigger with `aria-keyshortcuts`.
+- Tooltip.Shortcut only shows keys. The application registers the shortcut, and the caps should match the keys of the platform it runs on.
+
+The Tooltip with a keyboard shortcut example gives a Bold IconButton its shortcut and shows it in the Tooltip.
+
 ## Content
 
 - Say what the trigger does or means in a short phrase, such as Shortcuts and tips for this page.

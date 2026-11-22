@@ -476,7 +476,11 @@
   position: relative;
   box-sizing: border-box;
   display: grid;
+  /* The content takes the room the controls after it leave: the dismiss control, and an action before it, which flows
+     into a third column. */
   grid-template-columns: minmax(0, 1fr) auto;
+  grid-auto-columns: auto;
+  grid-auto-flow: column;
   gap: var(--muxui-semantic-layout-control-content-gap);
   align-items: start;
   width: 100%;
@@ -543,6 +547,12 @@
 .muxui-toast__message {
   margin: 0;
   color: var(--muxui-semantic-color-neutral-70);
+}
+
+/* The action sits between the content and the dismiss control, centred on the content however many lines it takes. It
+   keeps its Button's own colours, so forced colours paint it as a system button. */
+.muxui-toast__action {
+  align-self: center;
 }
 
 .muxui-toast__dismiss {
@@ -672,6 +682,36 @@
     translate var(--muxui-semantic-motion-dismiss-transition-duration) var(--muxui-semantic-motion-dismiss-transition-easing),
     scale var(--muxui-semantic-motion-dismiss-transition-duration) var(--muxui-semantic-motion-dismiss-transition-easing),
     filter var(--muxui-semantic-motion-dismiss-transition-duration) var(--muxui-semantic-motion-dismiss-transition-easing);
+}
+
+/* A shortcut follows the tooltip's text as small key caps, drawn with the tokens of Menu.Shortcut. They resolve in the
+   tooltip content's own scheme, the inverse of the page's. */
+.muxui-tooltip__shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-shortcut-gap);
+  margin-inline-start: var(--muxui-semantic-layout-shortcut-gap);
+  vertical-align: middle;
+  color: var(--muxui-semantic-content-muted);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
+  font-weight: var(--muxui-semantic-typography-label-weight);
+  white-space: nowrap;
+}
+
+.muxui-tooltip__shortcut-key {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: calc(var(--muxui-semantic-control-size-lg) / 2);
+  height: calc(var(--muxui-semantic-control-size-lg) / 2);
+  padding: 0 var(--muxui-semantic-layout-inset-tight);
+  border-radius: var(--muxui-semantic-shape-indicator-radius);
+  background-color: var(--muxui-semantic-color-neutral-16);
+  color: var(--muxui-semantic-content-default);
+  font: inherit;
+  line-height: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -855,6 +895,24 @@
   .muxui-file-trigger {
     background: ButtonFace;
     color: ButtonText;
+  }
+
+  /* A disabled DropZone keeps full opacity below and draws its text and dashed edge in GrayText, so it reads as
+     disabled beside an enabled one, whose edge and text are the system text colour. Important, as forced-colour
+     adaptations are, so neither the dark scheme's scoped edge nor a consumer colour takes it away. */
+  .muxui-drop-zone[data-muxui-state-disabled] {
+    border-color: GrayText !important;
+    color: GrayText !important;
+  }
+
+  .muxui-tooltip__shortcut,
+  .muxui-tooltip__shortcut-key {
+    color: inherit;
+  }
+
+  .muxui-tooltip__shortcut-key {
+    outline: 1px solid currentColor;
+    outline-offset: -1px;
   }
 
   /* Opacity would hide the system disabled/GrayText contrast treatment. */

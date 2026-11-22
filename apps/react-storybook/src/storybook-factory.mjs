@@ -2157,6 +2157,13 @@ function anatomyArgsForBinding(record, sourceArgs) {
           e(MuxUI.Menu.List, { 'aria-label': 'Share' }, e(MuxUI.Menu.Item, { id: 'copy-link' }, 'Copy link')))),
     ];
   }
+  // A shortcut after the text gives the tooltip its shortcut part; the trigger states the same shortcut.
+  if (record.family === 'Tooltip') {
+    args.content = ['Make the selection bold', e(MuxUI.Tooltip.Shortcut, { key: 'shortcut', keys: ['Ctrl', 'B'] })];
+    args.trigger = e(MuxUI.Button, { 'aria-keyshortcuts': 'Control+B' }, 'Bold');
+  }
+  // An Undo action gives the toast its action part.
+  if (record.family === 'Toast') args.action = { label: 'Undo', onAction() {} };
   if (record.family === 'CodeBlock') args.mode = 'diff';
   if (record.family === 'Message') args.defaultSourcesExpanded = true;
   if (record.family === 'Dialog') args.actions = e(MuxUI.Button, null, 'Confirm');

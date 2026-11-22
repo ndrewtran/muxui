@@ -287,8 +287,9 @@ const annotatedFamilies = [
   ['header-nav', 'HeaderNav', 5, ['icon-button']],
   // Nine parts, and the two modal-parts wrappers its Backdrop and Popup use, which are marked and so are kept only with them.
   ['alert-dialog', 'AlertDialog', 11, ['button', 'icon-button']],
-  // Thirteen parts, and the ten constructors of the Menu it draws and the one of the Tooltip, which are marked and so are kept only with them.
-  ['sidebar', 'Sidebar', 24, ['icon-button', 'menu', 'overlays']],
+  // Thirteen parts, the ten constructors of the Menu it draws, the popover motion wrapper its menu opens in, and the Tooltip and
+  // Tooltip.Shortcut, which are marked and so are kept only with them.
+  ['sidebar', 'Sidebar', 26, ['icon-button', 'menu', 'overlays']],
   ['button-group', 'ButtonGroup', 1],
   ['color-mode-toggle', 'ColorModeToggle', 1],
   ['progress-circle', 'ProgressCircle', 4],

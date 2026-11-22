@@ -46,7 +46,8 @@ export const DERIVED_API_COMPONENTS = Object.freeze([
   { slug: 'resizable', name: 'Resizable', source: 'packages/react/src/supplemental/resizable.ts' },
   { slug: 'file-trigger', name: 'FileTrigger', source: 'packages/react/src/overlays.ts' },
   { slug: 'drop-zone', name: 'DropZone', source: 'packages/react/src/overlays.ts' },
-  { slug: 'tooltip', name: 'Tooltip', source: 'packages/react/src/overlays.ts' },
+  // Tooltip is its own root; Shortcut owns props beside it.
+  { slug: 'tooltip', name: 'Tooltip', source: 'packages/react/src/overlays.ts', parts: { shortcut: 'Shortcut' } },
   { slug: 'preview-trigger', name: 'PreviewTrigger', source: 'packages/react/src/overlays.ts' },
   { slug: 'popover', name: 'Popover', source: 'packages/react/src/overlays.ts' },
   { slug: 'toast', name: 'Toast', source: 'packages/react/src/overlays.ts' },
