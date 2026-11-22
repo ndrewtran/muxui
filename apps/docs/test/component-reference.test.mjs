@@ -241,7 +241,7 @@ test('a component\'s share lists the other exports of its owner as related, and 
   assert.deepEqual(related('resizable'), ['ResizableHandle:component', 'ResizablePanel:component']);
   assert.deepEqual(related('command-palette'), ['useCommandPalette:function']);
   assert.deepEqual(related('toast'), ['ToastProvider:component', 'useToast:function']);
-  assert.deepEqual(related('text-editor'), ['isTextEditorDocument:function', 'normalizeTextEditorDocument:function', 'normalizeTextEditorUrl:function']);
+  assert.deepEqual(related('text-editor'), ['isTextEditorDocument:function', 'normalizeTextEditorDocument:function', 'normalizeTextEditorUrl:function', 'fromMarkdown:function', 'toMarkdown:function']);
   assert.equal(related('lightbox').length, 8);
   assert.equal(related('markdown').length, 5);
   for (const slug of ['icon-button', 'toast', 'markdown']) {

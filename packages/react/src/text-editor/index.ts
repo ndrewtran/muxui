@@ -39,6 +39,7 @@ import type { Color, DialogTriggerProps } from 'react-aria-components';
 import { Button } from '../button.ts';
 import type { ButtonProps } from '../button.ts';
 import { IconButton } from '../supplemental/icon-button.ts';
+import { normalizeAddress } from './text-editor-address.ts';
 
 // Every icon is a per-icon Lucide module, which default-exports one component of this type.
 type LucideIcon = typeof Bold;
@@ -216,8 +217,6 @@ type TextEditorOwnProps = {
 
 export type TextEditorProps = Omit<HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange' | 'autoFocus'> & TextEditorOwnProps;
 
-const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
-const SAFE_IMAGE_PROTOCOLS = new Set(['http:', 'https:']);
 const SAFE_COLORS = new Set([
   '#000000', '#374151', '#6b7280', '#d1d5db', '#ffffff', '#ef4444', '#f97316',
   '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e',
@@ -252,54 +251,15 @@ function hasOnlyKeys(value: object, keys: ReadonlySet<string>): boolean {
 }
 
 /**
- * Whether a mailto address names a user and password before its `@`: a colon before any `/`, `?` or `#`, then an `@`
- * later on the same line. One pass, so a long address costs linear time where a backtracking pattern costs quadratic.
- */
-function mailtoUserName(value: string): boolean {
-  let colon = false;
-  let beforePath = true;
-  for (let index = 'mailto:'.length; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
-    if (code === 0x2028 || code === 0x2029) {
-      // A colon before a line separator cannot reach an `@` after it.
-      colon = false;
-    } else if (code === 64 && colon) {
-      return true;
-    } else if (code === 47 || code === 63 || code === 35) {
-      beforePath = false;
-    } else if (code === 58 && beforePath) {
-      colon = true;
-    }
-  }
-  return false;
-}
-
-function safeUrl(value: unknown, protocols: ReadonlySet<string>): string | undefined {
-  if (typeof value !== 'string' || value.length === 0 || value.trim() !== value) return undefined;
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
-    if (code <= 31 || (code >= 127 && code <= 159)) return undefined;
-  }
-  try {
-    const url = new URL(value);
-    if (!protocols.has(url.protocol) || url.username !== '' || url.password !== '') return undefined;
-    if (url.protocol === 'mailto:' && mailtoUserName(value)) return undefined;
-    return url.href;
-  } catch {
-    return undefined;
-  }
-}
-
-/**
  * Whether an address found in typed or pasted text becomes a link, by the rule the link command applies to the address the
  * link gets: the text as found, or, without a scheme, the text after http://, or after mailto: for an email address. Without
  * a scheme the host also needs a dot and is not a bare IPv4 address, as the editor's own rule asks.
  */
 function autoLinkable(value: string): boolean {
-  if (/^[a-z][a-z0-9+.-]*:/iu.test(value)) return safeUrl(value, SAFE_LINK_PROTOCOLS) !== undefined;
+  if (/^[a-z][a-z0-9+.-]*:/iu.test(value)) return normalizeAddress(value, 'link') !== null;
   const email = /^[^\s/:@]+@[^\s/@]+$/u.test(value);
   const host = (email ? value.slice(value.indexOf('@') + 1) : value).split(/[/?#:]/u)[0] ?? '';
-  return safeUrl(email ? `mailto:${value}` : `http://${value}`, SAFE_LINK_PROTOCOLS) !== undefined && host.includes('.') && !/^\d{1,3}(?:\.\d{1,3}){3}$/u.test(host);
+  return normalizeAddress(email ? `mailto:${value}` : `http://${value}`, 'link') !== null && host.includes('.') && !/^\d{1,3}(?:\.\d{1,3}){3}$/u.test(host);
 }
 
 function safeColor(value: unknown): value is string {
@@ -340,7 +300,7 @@ function safeMarks(value: unknown, strict = false): TextEditorMark[] | null | un
         if (strict) return null;
         continue;
       }
-      const href = safeUrl(mark.attrs?.href, SAFE_LINK_PROTOCOLS);
+      const href = normalizeAddress(mark.attrs?.href, 'link');
       if (!href) {
         if (strict) return null;
         continue;
@@ -416,7 +376,7 @@ function safeNode(value: Candidate, context = 'block', depth = 0, strict = false
       || (strict && !hasOnlyKeys(value.attrs, new Set(['src', 'alt'])))
       || (!strict && !hasOnlyKeys(value.attrs, new Set(['src', 'alt', 'title', 'width', 'height'])))
       || (value.attrs.alt !== undefined && (value.attrs.alt === null ? strict : typeof value.attrs.alt !== 'string'))) return null;
-    const src = safeUrl(value.attrs?.src, SAFE_IMAGE_PROTOCOLS);
+    const src = normalizeAddress(value.attrs?.src, 'image');
     if (!src) return null;
     return {
       type: 'image',
@@ -515,8 +475,7 @@ export function normalizeTextEditorDocument(value: unknown): TextEditorDocument 
  * `https://example.com/` for `https://example.com`.
  */
 export function normalizeTextEditorUrl(value: string, kind: 'link' | 'image'): string | null {
-  if (kind !== 'link' && kind !== 'image') return null;
-  return safeUrl(value, kind === 'image' ? SAFE_IMAGE_PROTOCOLS : SAFE_LINK_PROTOCOLS) ?? null;
+  return normalizeAddress(value, kind);
 }
 
 // ProseMirror types attribute values as strings but hands them to setAttribute, which also takes the booleans the ARIA props can carry.
@@ -849,7 +808,7 @@ function run(editor: Editor | null, action: TextEditorCommand, callbacks: Editor
   if (action.type === 'fontFamily' && FONT_FAMILIES.has(action.value) && typeof chain.setFontFamily === 'function') return runs(chain.setFontFamily(action.value));
   if (action.type === 'fontSize' && FONT_SIZES.has(action.value) && typeof chain.setFontSize === 'function') return runs(chain.setFontSize(action.value));
   if (action.type === 'link' && typeof chain.setLink === 'function') {
-    const href = safeUrl(action.href, SAFE_LINK_PROTOCOLS);
+    const href = normalizeAddress(action.href, 'link');
     const { text } = action;
     if (!href || (text !== undefined && (typeof text !== 'string' || text === ''))) return false;
     const link = caretLink(editor.state);
@@ -863,7 +822,7 @@ function run(editor: Editor | null, action: TextEditorCommand, callbacks: Editor
     return runs(chain.command(({ tr }) => unlinkCaret(tr, link)).setMeta('preventAutolink', true));
   }
   if (action.type === 'image') {
-    const src = safeUrl(action.src, SAFE_IMAGE_PROTOCOLS);
+    const src = normalizeAddress(action.src, 'image');
     return src ? runs(chain.setImage({ src, ...(typeof action.alt === 'string' ? { alt: action.alt.slice(0, 1_000) } : {}) })) : false;
   }
   return false;

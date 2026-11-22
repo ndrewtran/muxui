@@ -1,5 +1,6 @@
-// The 34 exports of @muxui/react/text-editor as TEXT-EDITOR-02 expects the text-editor page to show them: the component with
-// its ref, attribute surface and every prop, the three functions with their signatures, and the 30 exported types declared as written.
+// The 36 exports of @muxui/react/text-editor and @muxui/react/text-editor/markdown as TEXT-EDITOR-02 expects the text-editor page to
+// show them: the component with its ref, attribute surface and every prop, the three functions and the two converters with their
+// signatures, and the 30 exported types declared as written.
 //
 // They are written out in full on purpose, read once from the reviewed page and checked against
 // packages/react/src/text-editor/index.ts. A pin states the fact, not the reference it is read from: it holds while the page shows
@@ -45,6 +46,12 @@ export const textEditorFunctions = {
 	isTextEditorDocument: 'isTextEditorDocument(value: unknown): value is TextEditorDocument',
 	normalizeTextEditorDocument: 'normalizeTextEditorDocument(value: unknown): TextEditorDocument',
 	normalizeTextEditorUrl: 'normalizeTextEditorUrl(value: string, kind: \'link\' | \'image\'): string | null',
+};
+
+/** The converters, which the page imports from @muxui/react/text-editor/markdown. */
+export const textEditorMarkdownFunctions = {
+	fromMarkdown: 'fromMarkdown(markdown: string): TextEditorDocument',
+	toMarkdown: 'toMarkdown(document: TextEditorDocument): string',
 };
 
 /** The exported types, each declared exactly as the page shows it. */

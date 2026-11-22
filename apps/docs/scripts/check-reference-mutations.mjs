@@ -128,6 +128,9 @@ await withTemporaryBuildDirectory('muxui-reference-mutations-', (temp) => {
 		{ label: 'move an import (normalizeTextEditorDocument from the root)', slug: 'text-editor', expect: ['export normalizeTextEditorDocument differs', 'without the import'], apply: () => edit('text-editor', (file) => {
 			component(file, 'normalizeTextEditorDocument').entry = '.';
 		}) },
+		{ label: 'move a converter to the editor entry (fromMarkdown)', slug: 'text-editor', expect: ['export fromMarkdown differs'], pin: { record: 'TEXT-EDITOR-02', includes: 'fromMarkdown' }, apply: () => edit('text-editor', (file) => {
+			component(file, 'fromMarkdown').entry = './text-editor';
+		}) },
 		{ label: 'delete a type (TextEditorSelectionActions)', slug: 'text-editor', expect: ['types are'], pin: { record: 'TEXT-EDITOR-02', includes: 'TextEditorSelectionActions' }, apply: () => edit('text-editor', (file) => {
 			file.types.splice(file.types.findIndex(({ name }) => name === 'TextEditorSelectionActions'), 1);
 		}) },
@@ -216,5 +219,5 @@ await withTemporaryBuildDirectory('muxui-reference-mutations-', (temp) => {
 	if (missed.length > 0 || unrelated.length > 0) {
 		throw new Error(`The typed reference checks missed a change, or reported one that was not made:\n${[...missed, ...unrelated.map((line) => `unexpected ${line}`)].map((line) => `- ${line}`).join('\n')}`);
 	}
-	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, an import, a type, a legal value, a requirement, the members a part forbids, a return type, a payload field, a declaration module's source, the source of every shared type's module and a package-level value's) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact; ${sourceMutations.length} changes to a copy of a source of the Styling section (a README paragraph, a part-map hook, a state classification, an interaction state no rule selects, a stylesheet read, a token alias) each fail it on the page that shows them, the README change on all ${componentRoutes.length} (${reported.length} problems reported, none elsewhere).`);
+	console.log(`Reference mutation contract passed: ${mutations.length} changes to a copy of the declaration reference (a part, two hooks, a helper, refs, two imports, a type, a legal value, a requirement, the members a part forbids, a return type, a payload field, a declaration module's source, the source of every shared type's module and a package-level value's) each fail the component reference checker on their own page, and ${mutations.filter(({ pin }) => pin !== undefined).length} of them fail the pin of their ledger record or reviewed fact; ${sourceMutations.length} changes to a copy of a source of the Styling section (a README paragraph, a part-map hook, a state classification, an interaction state no rule selects, a stylesheet read, a token alias) each fail it on the page that shows them, the README change on all ${componentRoutes.length} (${reported.length} problems reported, none elsewhere).`);
 });

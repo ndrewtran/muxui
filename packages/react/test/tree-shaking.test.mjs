@@ -383,16 +383,22 @@ test('a bundle that uses one supplemental family keeps its own module, only the 
 
 // TextEditor's Root self-alias is assigned after its forwardRef, so the component is built in a pure-annotated function; without
 // it a bundler keeps the whole module's component, and the Button and IconButton modules (and the shared helpers) it needs, for a consumer who imports only
-// the document helpers. The module itself still ships (its helpers are in it).
+// the document helpers. The module itself still ships (its helpers are in it), with the address rule its grammar applies.
 test('tsc keeps the pure annotation on TextEditor\'s wrapper, and a bundle of its document helper drops the component', async () => {
   const emitted = readFileSync(resolve(generated, 'text-editor.js'), 'utf8');
   assert.match(emitted, /^export const TextEditor = \/\*#__PURE__\*\/ \(\(\) => \{$/mu);
   const helperOnly = await bundledModuleSizes('isTextEditorDocument', 'text-editor.js');
   const withEditor = await bundledModuleSizes('TextEditor', 'text-editor.js');
-  assert.deepEqual(helperOnly.map(([id]) => id), ['text-editor.js']);
-  assert.deepEqual(withEditor.map(([id]) => id).sort(), ['button.js', 'control-utils.js', 'icon-button.js', 'styling-contract.js', 'substrate.js', 'text-editor.js']);
+  assert.deepEqual(helperOnly.map(([id]) => id).sort(), ['text-editor-address.js', 'text-editor.js']);
+  assert.deepEqual(withEditor.map(([id]) => id).sort(), ['button.js', 'control-utils.js', 'icon-button.js', 'styling-contract.js', 'substrate.js', 'text-editor-address.js', 'text-editor.js']);
   const size = (sizes) => sizes.find(([id]) => id === 'text-editor.js')[1];
   assert.ok(size(helperOnly) < size(withEditor) / 2, 'the helper keeps a small part of the module');
+});
+
+// The Markdown converters are a module of their own that imports only the editor's address rule at run time, so a bundle of
+// either keeps those two modules, and the editor's bundle above keeps neither converter.
+test('a bundle of the Markdown converters keeps their module and the address rule, without the editor', async () => {
+  for (const name of ['fromMarkdown', 'toMarkdown']) assert.deepEqual((await bundledModules(name, 'text-editor-markdown.js')).sort(), ['text-editor-address.js', 'text-editor-markdown.js'], name);
 });
 
 // The substrate wraps 81 React Aria components in pure-annotated calls. A call left unannotated, or one whose argument

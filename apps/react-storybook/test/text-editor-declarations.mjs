@@ -1,8 +1,9 @@
-// The 34 exports of @muxui/react/text-editor, as the ledger record TEXT-EDITOR-02 asks the TextEditor Docs page to show them: the
-// component with its ref, attribute surface and every prop, the three functions with their signatures, and the 30 exported types
-// declared as the page prints them.
+// The 36 exports of @muxui/react/text-editor and @muxui/react/text-editor/markdown, as the ledger record TEXT-EDITOR-02 asks the
+// TextEditor Docs page to show them: the component with its ref, attribute surface and every prop, the three functions and the two
+// converters with their signatures, and the 30 exported types declared as the page prints them.
 //
-// They are written out in full on purpose and checked against packages/react/src/text-editor/index.ts (`sourceProblems`), so a pin
+// They are written out in full on purpose and checked against packages/react/src/text-editor/index.ts and the converters' module
+// (`sourceProblems`), so a pin
 // states the fact and not the reference the page is read from: it holds while the page shows what the record asks for, and fails
 // when a declaration changes (a return type, a payload field, a callback) so that the page shows anything else. A declaration that
 // really changes means this file changes with it, in the same commit.
@@ -48,6 +49,12 @@ export const textEditorFunctions = {
   isTextEditorDocument: 'isTextEditorDocument(value: unknown): value is TextEditorDocument',
   normalizeTextEditorDocument: 'normalizeTextEditorDocument(value: unknown): TextEditorDocument',
   normalizeTextEditorUrl: "normalizeTextEditorUrl(value: string, kind: 'link' | 'image'): string | null",
+};
+
+/** The converters, exported from @muxui/react/text-editor/markdown. */
+export const textEditorMarkdownFunctions = {
+  fromMarkdown: 'fromMarkdown(markdown: string): TextEditorDocument',
+  toMarkdown: 'toMarkdown(document: TextEditorDocument): string',
 };
 
 /** The exported types, each as the page prints it. */
@@ -194,8 +201,8 @@ export const textEditorTypes = {
 };`,
 };
 
-/** The 34 exports by name: the component, the three functions and the 30 types, in the order the page's index lists them. */
-export const textEditorExports = ['TextEditor', 'isTextEditorDocument', 'normalizeTextEditorDocument', 'normalizeTextEditorUrl', ...Object.keys(textEditorTypes)];
+/** The 36 exports by name: the component, the three functions, the two converters and the 30 types, in the order the page's index lists them. */
+export const textEditorExports = ['TextEditor', 'isTextEditorDocument', 'normalizeTextEditorDocument', 'normalizeTextEditorUrl', ...Object.keys(textEditorMarkdownFunctions), ...Object.keys(textEditorTypes)];
 
 /** Strips what the printer and the author format differently: comments, whitespace, separators, the `React.` namespace and a leading `|`. */
 const squash = (text) => text
@@ -207,19 +214,29 @@ const squash = (text) => text
 
 /**
  * Where this file differs from the TextEditor source: every type is declared there as written here, every prop has the same
- * name and type in `TextEditorOwnProps`, the three functions and the ref and attribute surface are the source's. Empty when it
- * holds; by default it reads the source on disk, so a change to a declaration shows up even when no model reads it.
+ * name and type in `TextEditorOwnProps`, the three functions and the ref and attribute surface are the source's, and the two
+ * converters are the converters' module's. Empty when it holds; by default it reads the sources on disk, so a change to a
+ * declaration shows up even when no model reads it.
  */
-export function sourceProblems(repositoryRoot, source = readFileSync(resolve(repositoryRoot, 'packages/react/src/text-editor/index.ts'), 'utf8')) {
+export function sourceProblems(
+  repositoryRoot,
+  source = readFileSync(resolve(repositoryRoot, 'packages/react/src/text-editor/index.ts'), 'utf8'),
+  converters = readFileSync(resolve(repositoryRoot, 'packages/react/src/text-editor/text-editor-markdown.ts'), 'utf8'),
+) {
   const squashed = squash(source);
   const problems = [];
   for (const [name, text] of Object.entries(textEditorTypes)) {
     if (!squashed.includes(`export${squash(text)}`)) problems.push(`the source does not declare ${name} as ${text}`);
   }
   const exported = [...source.matchAll(/^export (?:type|function|const) (\w+)/gmu)].map(([, name]) => name).filter((name) => name.includes('TextEditor'));
-  const expected = new Set(textEditorExports);
+  const expected = new Set(textEditorExports.filter((name) => !(name in textEditorMarkdownFunctions)));
   for (const name of exported) if (!expected.has(name)) problems.push(`the source exports ${name}, which this file does not pin`);
   for (const name of expected) if (!exported.includes(name)) problems.push(`this file pins ${name}, which the source does not export`);
+  const convertersExported = [...converters.matchAll(/^export (?:type|function|const) (\w+)/gmu)].map(([, name]) => name);
+  if (convertersExported.join() !== Object.keys(textEditorMarkdownFunctions).join()) problems.push(`the converters' module exports ${convertersExported.join(', ')}`);
+  for (const [name, signature] of Object.entries(textEditorMarkdownFunctions)) {
+    if (!squash(converters).includes(`exportfunction${squash(signature)}`)) problems.push(`the converters' module does not declare ${name} as ${signature}`);
+  }
   const own = /type TextEditorOwnProps = \{([\s\S]*?)\n\};/u.exec(source)?.[1];
   if (own === undefined) {
     problems.push('the source has no TextEditorOwnProps');

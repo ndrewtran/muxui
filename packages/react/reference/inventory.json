@@ -1713,6 +1713,25 @@
       ]
     },
     {
+      "key": "./text-editor/markdown",
+      "exports": [
+        {
+          "name": "fromMarkdown",
+          "kind": "value",
+          "owner": "text-editor",
+          "module": "text-editor-markdown",
+          "reason": "the Markdown converters of TextEditor, on an entry of their own so they load without the editor"
+        },
+        {
+          "name": "toMarkdown",
+          "kind": "value",
+          "owner": "text-editor",
+          "module": "text-editor-markdown",
+          "reason": "the Markdown converters of TextEditor, on an entry of their own so they load without the editor"
+        }
+      ]
+    },
+    {
       "key": "./markdown",
       "exports": [
         {

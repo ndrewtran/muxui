@@ -41,6 +41,7 @@ const OWNER_EXCEPTIONS = Object.freeze({
     ...group(PACKAGE_LEVEL, 'the compatibility record of the package, not a component', 'reactCompatibility'),
     ...group(PACKAGE_LEVEL, 'the list of supplemental family names, not a component', 'supplementalFamilies'),
   }),
+  './text-editor/markdown': Object.freeze(group('text-editor', 'the Markdown converters of TextEditor, on an entry of their own so they load without the editor', 'fromMarkdown', 'toMarkdown')),
   './themes': Object.freeze(group(PACKAGE_LEVEL, 'theme presets belong to the package, not to a component family',
     'MUXUI_DEFAULT_THEME_PRESET_ID', 'MUXUI_THEME_ACTION_BACKGROUNDS', 'MUXUI_THEME_PRESETS', 'MUXUI_THEME_PRESETS_BY_ID', 'MuxUIMonochromeThemeId', 'MuxUIStandardThemeId', 'MuxUIThemeCollection', 'MuxUIThemeId', 'MuxUIThemePreset', 'MuxUIThemeSwatch')),
 });

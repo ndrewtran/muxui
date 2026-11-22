@@ -1,7 +1,10 @@
 {
   "schema": "muxui-declaration-reference-v1",
   "owner": "text-editor",
-  "sources": { "text-editor": "packages/react/src/text-editor/index.ts" },
+  "sources": {
+    "text-editor": "packages/react/src/text-editor/index.ts",
+    "text-editor-markdown": "packages/react/src/text-editor/text-editor-markdown.ts"
+  },
   "exports": [
     {
       "name": "TextEditor",
@@ -240,6 +243,37 @@
         { "name": "kind", "type": "'link' | 'image'" }
       ],
       "returns": { "type": "string | null" }
+    },
+    {
+      "name": "fromMarkdown",
+      "entry": "./text-editor/markdown",
+      "module": "text-editor-markdown",
+      "kind": "function",
+      "doc": "Reads Markdown (CommonMark plus GFM `~~strike~~`) into a TextEditor document that `isTextEditorDocument` accepts. It is\npure and synchronous and needs no DOM, so it runs on a server. Raw HTML and syntax outside the editor's grammar stay\nliteral text, and a link or image address the editor would refuse is dropped with its text kept. The module header\nlists everything the conversion normalizes.",
+      "signature": "fromMarkdown(markdown: string): TextEditorDocument",
+      "parameters": [
+        { "name": "markdown", "type": "string" }
+      ],
+      "returns": {
+        "type": "TextEditorDocument",
+        "refs": ["text-editor#TextEditorDocument"]
+      }
+    },
+    {
+      "name": "toMarkdown",
+      "entry": "./text-editor/markdown",
+      "module": "text-editor-markdown",
+      "kind": "function",
+      "doc": "Writes a TextEditor document as Markdown (CommonMark plus GFM `~~strike~~`) that `fromMarkdown` reads back as the same\ndocument, once the losses in the module header are applied. It is pure and synchronous and needs no DOM. Underline,\ncolour, fonts, sizes and alignment are dropped, as Markdown cannot hold them, and so are addresses the editor would\nrefuse. There is no trailing newline; an empty document gives an empty string.",
+      "signature": "toMarkdown(document: TextEditorDocument): string",
+      "parameters": [
+        {
+          "name": "document",
+          "type": "TextEditorDocument",
+          "refs": ["text-editor#TextEditorDocument"]
+        }
+      ],
+      "returns": { "type": "string" }
     }
   ],
   "types": [
