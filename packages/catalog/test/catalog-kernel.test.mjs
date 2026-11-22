@@ -838,7 +838,12 @@ test('E-G0.2-03: a search cursor from another ranking is refused, and one from t
     pages.push(...response.data.items.map(({ id }) => id));
     cursor = response.meta.nextCursor;
   } while (cursor !== null);
-  assert.deepEqual(pages, searchArtifacts({ ...search, limit: 100 }).data.items.map(({ id }) => id));
+  // The reference is the whole ranking in one untruncated page, and the query spans several pages of five, so the
+  // paged walk is compared through its last page.
+  const whole = searchArtifacts({ ...search, limit: 100 });
+  assert.equal(whole.meta.truncated, false);
+  assert.ok(whole.data.items.length > 2 * search.limit, `"${search.query}" spans more than two pages`);
+  assert.deepEqual(pages, whole.data.items.map(({ id }) => id));
 });
 
 test('E-G0.2-04: search is bounded and retrieval traverses only direct relations', () => {
