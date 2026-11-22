@@ -286,3 +286,31 @@ for (const [path, dismiss] of [
     assert.deepEqual(calls, path === 'the action' ? ['action', 'dismiss'] : ['dismiss'], 'onDismiss runs once, after the action when there is one');
   });
 }
+
+// An action that appears on a toast already showing gets the same 10000 ms floor from when it appears, and its status
+// is filled after the status is in the page, so the name arrives as a change a live region announces.
+test('an action added to a toast already showing raises its time to 10000 ms and is announced as a change', async (t) => {
+  let addAction;
+  function Owner() {
+    const [withAction, setWithAction] = React.useState(false);
+    addAction = () => setWithAction(true);
+    return React.createElement(Toast, { message: 'Archived', duration: 400, action: withAction ? { label: 'Undo', onAction() {} } : undefined });
+  }
+  const { delays } = await mountProvider(t, React.createElement(Owner));
+  await settle();
+  const toast = document.body.querySelector('.muxui-toast');
+  assert.equal(toast.querySelector('.muxui-toast__announcer'), null);
+  const records = [];
+  const observer = new MutationObserver((list) => records.push(...list));
+  observer.observe(toast, { childList: true, subtree: true, characterData: true });
+  delays.length = 0;
+  await act(async () => addAction());
+  await settle();
+  observer.disconnect();
+  const status = toast.querySelector('.muxui-toast__announcer');
+  assert.equal(status.textContent, 'Undo');
+  assert.ok(records.some((record) => record.target === status && [...record.addedNodes].some((node) => node.textContent === 'Undo')), 'the name is added to a status already in the page');
+  assert.ok(delays.includes(10000), `the timer restarts with 10000 ms left (${delays.join(', ')})`);
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  assert.equal(toast.isConnected && !toast.hasAttribute('data-muxui-toast-exiting'), true, 'the toast outlives its 400 ms');
+});

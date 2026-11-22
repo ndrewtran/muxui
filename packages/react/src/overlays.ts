@@ -1321,6 +1321,14 @@ function createAnimatedToastQueue(queue: UNSTABLE_ToastQueue<ToastContent>, clos
     releaseTimer(key: string) {
       if (entryHolds.delete(key)) resumeTimer(visibleRecord(key));
     },
+    // Leaves a toast at least `minimum` ms from now; a timer held by the region or an entry stays held.
+    raiseTimer(key: string, minimum: number) {
+      const record = visibleRecord(key);
+      if (!record?.timer) return;
+      record.timer.pause();
+      if (Reflect.get(record.timer, 'remaining') < minimum) Reflect.set(record.timer, 'remaining', minimum);
+      resumeTimer(record);
+    },
     pauseAll() {
       regionPaused = true;
       queue.pauseAll();
@@ -1369,10 +1377,17 @@ interface ToastViewProps {
 function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, onAction, originRef, returnFocusRef }: ToastViewProps) {
   const value = toast.content;
   const hasTitle = hasRenderableLabel(value.title);
-  // The polite status that names the action starts empty and is filled once the toast is in the page, since a live
-  // region inserted with its text is often not announced.
-  const [announced, setAnnounced] = React.useState(false);
-  React.useEffect(() => setAnnounced(true), []);
+  // The polite status that names the action is filled only once it is in the page, since a live region inserted with
+  // its text is often not announced: when the toast appears, and when an action appears on a toast already showing.
+  const [announcedLabel, setAnnouncedLabel] = React.useState<string | undefined>(undefined);
+  React.useEffect(() => setAnnouncedLabel(value.actionLabel), [value.actionLabel]);
+  // An action that appears on a toast already showing gets the floor a toast added with one gets at enqueue.
+  const hasAction = value.actionLabel !== undefined;
+  const hadActionRef = React.useRef(hasAction);
+  React.useEffect(() => {
+    if (hasAction && !hadActionRef.current) queue.raiseTimer(toast.key, TOAST_ACTION_MIN_DURATION);
+    hadActionRef.current = hasAction;
+  }, [hasAction, queue, toast.key]);
   const nodeRef = React.useRef<HTMLElement | null>(null);
   const entryFinishedRef = React.useRef(false);
   const finishEntry = React.useCallback(() => {
@@ -1406,7 +1421,7 @@ function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, onA
       React.createElement(AriaText, { slot: 'description', className: 'muxui-toast__message' }, value.message)),
     value.actionLabel === undefined ? null : React.createElement(MuxUIButton, { size: 'sm', variant: 'neutral', className: 'muxui-toast__action', onActivate: () => onAction(toast.key) }, value.actionLabel),
     React.createElement(IconButton, { slot: 'close', size: 'sm', className: 'muxui-toast__dismiss', 'aria-label': 'Dismiss notification' }, React.createElement(XIcon, { className: 'muxui-toast__dismiss-icon', 'aria-hidden': 'true', focusable: 'false', size: 16 })),
-    value.actionLabel === undefined ? null : React.createElement('span', { className: 'muxui-toast__announcer', role: 'status' }, announced ? value.actionLabel : ''));
+    value.actionLabel === undefined ? null : React.createElement('span', { className: 'muxui-toast__announcer', role: 'status' }, announcedLabel === value.actionLabel ? value.actionLabel : ''));
 }
 
 /** A toast's one action, such as Undo: a button with its own name and handler. */

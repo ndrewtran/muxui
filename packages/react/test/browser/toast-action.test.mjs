@@ -40,6 +40,13 @@ const entry = `import React from 'react';
     return shown ? h(Toast, { message: 'The draft is archived.', onDismiss, action: undo }) : h('p', { id: 'unmounted' }, 'Unmounted');
   }
 
+  // A short toast that gains an action while it shows.
+  function LateAction() {
+    const [withAction, setWithAction] = React.useState(false);
+    window.addAction = () => setWithAction(true);
+    return h(Toast, { message: 'The draft is archived.', duration: 400, onDismiss, action: withAction ? undo : undefined });
+  }
+
   function SheetContent() {
     const manager = useToast();
     return h('div', { style: { display: 'flex', gap: 8 } },
@@ -51,6 +58,7 @@ const entry = `import React from 'react';
   const scenarios = {
     page: () => h(ToastProvider, null, h(Controls)),
     declarative: () => h(ToastProvider, null, h(Controls), h(DeclarativeOwner)),
+    'late-action': () => h(ToastProvider, null, h(Controls), h(LateAction)),
     sheet: () => h(ToastProvider, null, sheet(h(SheetContent))),
     'sheet-provider': () => sheet(h(ToastProvider, null, h(SheetContent))),
   };
@@ -181,6 +189,22 @@ for (const engine of browserEngines()) {
           assert.deepEqual(await calls(page), ['action', 'dismiss']);
           // The toast left from under the pointer, so no pointer ever left the region.
           await laterToastExpires(page, 'after a pointer activation');
+          assert.deepEqual(errors, [], errors.join('\n'));
+        } finally {
+          await page.close();
+        }
+      });
+
+      await t.test('an action that appears on a 400 ms toast keeps it at least 10000 ms from then and is named by its status', async () => {
+        const { page, errors } = await open(browser, 'late-action');
+        try {
+          await page.locator('.muxui-toast').waitFor();
+          await page.evaluate(() => window.addAction());
+          await page.locator('.muxui-toast__action').waitFor();
+          await page.waitForFunction(() => document.querySelector('.muxui-toast__announcer')?.textContent === 'Undo');
+          await page.waitForTimeout(1500);
+          assert.equal(await page.locator(live).count(), 1, 'the toast outlives its 400 ms once it has an action');
+          assert.deepEqual(await calls(page), []);
           assert.deepEqual(errors, [], errors.join('\n'));
         } finally {
           await page.close();
