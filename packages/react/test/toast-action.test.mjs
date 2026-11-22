@@ -256,3 +256,33 @@ for (const strict of [false, true]) {
     }
   });
 }
+
+// The queue finishes removing a toast before onDismiss runs, so a toast that onDismiss adds stays, and the dismissed one
+// leaves, whichever way it was dismissed.
+for (const [path, dismiss] of [
+  ['the action', (toast) => toast.querySelector('.muxui-toast__action').click()],
+  ['the dismiss control', (toast) => toast.querySelector('.muxui-toast__dismiss').click()],
+  ['a timeout', () => new Promise((resolve) => setTimeout(resolve, 1300))],
+]) {
+  test(`a toast that onDismiss adds after ${path} stays, and onDismiss runs once`, async (t) => {
+    const { manager } = await mountProvider(t);
+    const calls = [];
+    const timed = path === 'a timeout';
+    await act(async () => {
+      manager().add('Archived', {
+        duration: timed ? 1000 : 60000,
+        onDismiss: () => {
+          calls.push('dismiss');
+          manager().add('Restored', { duration: 60000 });
+        },
+        ...(timed ? {} : { action: { label: 'Undo', onAction: () => calls.push('action') } }),
+      });
+    });
+    const original = document.body.querySelector('.muxui-toast');
+    await act(async () => dismiss(original));
+    await settle();
+    const live = [...document.body.querySelectorAll('.muxui-toast:not([data-muxui-toast-exiting])')].map((node) => node.querySelector('.muxui-toast__message').textContent);
+    assert.deepEqual(live, ['Restored'], 'only the added toast is live');
+    assert.deepEqual(calls, path === 'the action' ? ['action', 'dismiss'] : ['dismiss'], 'onDismiss runs once, after the action when there is one');
+  });
+}

@@ -1477,14 +1477,19 @@ export const ToastProvider: FC<ToastProviderProps> = function ToastProvider({ ch
     let key: string;
     key = animatedQueue.add(content, {
       timeout: content.actionLabel !== undefined && duration > 0 ? Math.max(duration, TOAST_ACTION_MIN_DURATION) : duration,
+      // React Aria's queue calls onClose before it removes the toast, so a toast that onDismiss adds would take the
+      // dismissed one's place and be removed instead. Its next change notification comes after the removal.
       onClose: () => {
         closingKeys.add(key);
-        notifyDismissed(key);
+        const unsubscribe = queue.subscribe(() => {
+          unsubscribe();
+          notifyDismissed(key);
+        });
       },
     });
     callbacksRef.current.set(key, callbacks);
     return key;
-  }, [animatedQueue, notifyDismissed]);
+  }, [animatedQueue, notifyDismissed, queue]);
   const add = React.useCallback((message: ToastContent['message'], options: ToastOptions = {}) => {
     if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
     const { duration, onDismiss, action, ...content } = options;
