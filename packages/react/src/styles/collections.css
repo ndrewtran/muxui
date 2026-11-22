@@ -1001,7 +1001,22 @@
   color: var(--muxui-item-focus-color);
 }
 
-/* A shortcut sits at the item's end as small key caps, clear of the label. */
+/* An item of a checkable list leads with a fixed slot for its check mark, so checked and unchecked labels align. */
+.muxui-menu__item-indicator {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.muxui-menu__item-check {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+/* A shortcut sits at the item's end as small key caps, clear of the label and the check mark. */
 .muxui-menu__shortcut {
   display: inline-flex;
   flex-shrink: 0;
@@ -1045,6 +1060,16 @@
   .muxui-menu__item[data-muxui-state-focused]:not([data-muxui-state-disabled]):not([aria-disabled='true']) {
     background-color: Highlight;
     color: HighlightText;
+  }
+
+  /* The check mark shows a checked item, so it keeps the menu's colours and only the focused item is highlighted; a
+     disabled one keeps GrayText. */
+  .muxui-menu__item[data-muxui-state-selected]:not([data-muxui-state-focused]) {
+    background: Canvas;
+  }
+
+  .muxui-menu__item[data-muxui-state-selected]:not([data-muxui-state-focused], [data-muxui-state-disabled], [aria-disabled='true']) {
+    color: CanvasText;
   }
 
   .muxui-menu__shortcut,

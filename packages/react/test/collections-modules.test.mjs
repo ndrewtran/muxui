@@ -52,7 +52,7 @@ test('each context and WeakMap is declared in exactly one collections module', a
     for (const [, name] of text.matchAll(declaration)) declaredIn.set(name, [...(declaredIn.get(name) ?? []), module]);
   }
   // The shared and family-level contexts and the one read-only WeakMap; Menu's two sit at module scope, as a wrapper holds only components.
-  assert.deepEqual([...declaredIn.keys()].sort(), ['ColorPickerContext', 'GridListContext', 'GridVirtualizerContext', 'ListBoxContext', 'MenuAnchorContext', 'MenuContext', 'SelectContext', 'readOnlyTargetGuards']);
+  assert.deepEqual([...declaredIn.keys()].sort(), ['ColorPickerContext', 'GridListContext', 'GridVirtualizerContext', 'ListBoxContext', 'MenuAnchorContext', 'MenuContext', 'MenuListPathContext', 'MenuSubmenuContext', 'SelectContext', 'readOnlyTargetGuards']);
   for (const [name, modules] of declaredIn) assert.equal(modules.length, 1, `${name} is declared in ${modules.join(', ')}`);
 });
 

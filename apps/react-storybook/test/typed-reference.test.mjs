@@ -823,8 +823,8 @@ test('the Controls describe each prop with its member comment and its declared t
   assert.deepEqual(derivedButUndeclared, [], 'no derived family has a Controls row that no part declares');
   assert.equal(typed + undeclared, total, 'every Controls row is typed or left alone');
   assert.ok(differing > 0, 'some props are declared differently by different alternatives, as Text\'s variant and size are');
-  // Menu's popup (six props), list (items) and submenu (delay), which the adapter folds into the root's Controls.
-  assert.equal(merged.get('Menu'), 8, 'merged-part rows name their owner');
+  // Menu's popup (six props), list (items, selectionMode, selectedIds and defaultSelectedIds) and submenu (delay), which the adapter folds into the root's Controls.
+  assert.equal(merged.get('Menu'), 11, 'merged-part rows name their owner');
   assert.ok([...merged.keys()].every((family) => family in STORY_API_PARTS), 'only a family the adapter folds parts into has merged-part rows');
   // CommandPalette's trigger (1), backdrop (1) and item (5) props, which the adapter folds into the root's Controls.
   assert.equal(merged.get('CommandPalette'), 7, 'merged-part rows name their owner');

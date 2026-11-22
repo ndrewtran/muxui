@@ -2268,6 +2268,7 @@ export const NOT_OBSERVED_IN_CANVAS = Object.freeze({
   Input: Object.freeze({ 'data-muxui-state-empty': Object.freeze(['no-writer-found']) }),
   ListBox: Object.freeze({ 'data-muxui-state-empty': Object.freeze(['not-reached', 'The list carries it only when it has no items.']) }),
   Markdown: Object.freeze({ 'data-muxui-state-invalid': Object.freeze(['spelled-differently', 'The root carries data-muxui-markdown-error with the failure code.']) }),
+  Menu: Object.freeze({ 'data-muxui-state-selected': Object.freeze(['not-reached', 'A checked item of a checkable list carries it; this canvas composes plain action items.']) }),
   MultiSelect: Object.freeze({
     'data-muxui-state-empty': Object.freeze(['not-reached', 'The option list carries it when empty, and the list is in the closed popup.']),
     'data-muxui-state-selected': Object.freeze(['not-reached', 'A selected option carries it, and the options are in the closed popup.']),

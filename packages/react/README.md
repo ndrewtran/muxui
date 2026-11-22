@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:b9b91e2ffd4ef0c577c09c26061d1877ee53c09546ce2fccfd6e5a606a026f32 -->
+<!-- @generated-content-sha256: sha256:fcf86dcd1138e549a23241cd46c1a39fbee067d4c3c4fa0fba27d909f32356b4 -->
 # @muxui/react
 
 The standalone Mux UI renderer for React.
@@ -189,7 +189,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Link | experimental | . | .muxui-link | href, disabled, current, target, rel |
 | ListBox | experimental | . | .muxui-list-box | items, selectedIds, defaultSelectedIds, disabled, selectionMode, layout, orientation; section: title; item: id, textValue, disabled |
 | Markdown | experimental | ./markdown | .muxui-markdown | source, baseUrl, invalidFallback |
-| Menu | experimental | . | .muxui-menu | open, defaultOpen, disabled, shouldCloseOnSelect; trigger: disabled; popup: placement, offset, crossOffset, shouldFlip, containerPadding, modal; list: items, disabled, shouldCloseOnSelect; item: id, textValue, disabled, shouldCloseOnSelect; shortcut: keys; submenu: delay; section: title |
+| Menu | experimental | . | .muxui-menu | open, defaultOpen, disabled, shouldCloseOnSelect; trigger: disabled; popup: placement, offset, crossOffset, shouldFlip, containerPadding, modal; list: items, disabled, shouldCloseOnSelect, selectionMode, selectedIds, defaultSelectedIds; item: id, textValue, disabled, shouldCloseOnSelect; shortcut: keys; submenu: delay; section: title |
 | Message | experimental | . | .muxui-message | sender, author, actions, sources, sourcesExpanded, defaultSourcesExpanded, followUps, streaming, streamingLabel |
 | Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions |
 | MultiSelect | experimental | . | .muxui-multi-select | size, label, placeholder, description, errorMessage, disabled, required, invalid, supportingText, emptyStateTitle, emptyStateDescription, items, selectedKeys, defaultSelectedKeys, showSearch, showFooter, selectedCountFormatter; item: disabled, textValue |
@@ -246,13 +246,16 @@ These contracts are projected from the component bindings in the canonical catal
 - A Menu.Trigger inside a Toolbar sends Tab or Shift+Tab out of the Toolbar, as Tab from the closed trigger does.
 - Menu.Submenu accepts exactly a Menu.Item trigger and a Menu.Popup as its two children. It has no DOM host, className, or ref; style its item using .muxui-menu__item[data-muxui-state-has-submenu] and [data-muxui-state-open].
 - Items require stable string IDs. Supply textValue for rich content. A per-item onAction runs before list and root onAction/onSelect. Data-backed actions preserve normalized item metadata; compound actions return identity fields id, key, and value.
+- Menu.List and the standalone Menu take selectionMode, selectedIds, defaultSelectedIds, and onSelectionChange for checkable items. single makes radio items, one checked at a time, and pressing the checked item keeps it checked; its selectedIds and defaultSelectedIds take at most one id, and 'all' or several ids throw; multiple makes checkbox items that toggle. Left unset, the items are plain action items.
+- An uncontrolled checkable list under a Menu.Root keeps its checked items while its popup is closed and shows them when it opens again: the root popup's list and each submenu's list, named by the item that opens it, keep their own, so one uncontrolled checkable list per popup. It reads defaultSelectedIds once, when it first mounts; switched to single, it keeps the item checked earliest, or its first enabled item when every item was checked. A checkable item exposes aria-checked and leads with a check mark slot that shows the mark only while it is checked, so labels stay aligned. Checked state is separate from aria-current, which an item still forwards.
+- Activating a checkable item also calls onAction and onSelect, and closes the menu by shouldCloseOnSelect as any item does; set it false to keep a checkbox menu open.
 - Menu.Shortcut shows key caps at the end of an item, one kbd per entry of keys, or its children when keys is empty or absent, and is hidden from assistive technology. Give the item its real shortcut with aria-keyshortcuts.
 - Menu.Popup accepts placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, and modal. Placement uses top, bottom, start, end, or a logical alignment such as bottom-start or end-top. Geometry numbers must be finite, containerPadding and delay must be nonnegative. Without a placement, a top-level popup opens at bottom-start and a popup inside a Menu.Submenu opens beside its item at end-top.
 - For context coordinates, position a consumer-owned element at the desired point and pass its element ref as anchorRef while controlling Menu.Root open. modal=false allows outside content to remain accessible.
-- Mux selectors are .muxui-menu__root, .muxui-menu__trigger, .muxui-menu__popup, .muxui-menu__list, .muxui-menu__item, .muxui-menu__shortcut, .muxui-menu__shortcut-key, .muxui-menu__section, .muxui-menu__header, and .muxui-menu__separator. Item states use data-muxui-state-disabled, data-muxui-state-focused, data-muxui-state-focus-visible, data-muxui-state-has-submenu, and data-muxui-state-open. Root uses data-muxui-state-open and data-muxui-state-disabled.
+- Mux selectors are .muxui-menu__root, .muxui-menu__trigger, .muxui-menu__popup, .muxui-menu__list, .muxui-menu__item, .muxui-menu__item-indicator, .muxui-menu__item-check, .muxui-menu__shortcut, .muxui-menu__shortcut-key, .muxui-menu__section, .muxui-menu__header, and .muxui-menu__separator. Item states use data-muxui-state-disabled, data-muxui-state-focused, data-muxui-state-focus-visible, data-muxui-state-selected, data-muxui-state-has-submenu, and data-muxui-state-open. Root uses data-muxui-state-open and data-muxui-state-disabled.
 - Trigger refs target native buttons and preserve native handlers. Root, Popup, List, and Item refs target divs; Section and Header refs target section/header elements; Separator refs target an hr; Shortcut refs target a span.
 
-Public parts: `root`, `trigger`, `popup`, `list`, `item`, `shortcut`, `submenu`, `section`, `header`, `separator`.
+Public parts: `root`, `trigger`, `popup`, `list`, `item`, `item-indicator`, `shortcut`, `submenu`, `section`, `header`, `separator`.
 
 ### ListBox
 

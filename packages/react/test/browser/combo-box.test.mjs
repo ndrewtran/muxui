@@ -52,6 +52,38 @@ const entry = `import React from 'react';
           { id: 'archived', title: 'Archived', items: [] },
         ],
       })),
+    // The text and the selection controlled, over items the application replaces, as results that arrive from a
+    // search do: window.setItems replaces them, and ?selection controls only the selection.
+    changing: function Changing() {
+      const params = new URLSearchParams(location.search);
+      const textControlled = !params.has('selection');
+      // ?late starts with Sydney selected before any items have arrived.
+      const late = params.has('late');
+      // ?textvalue gives Sydney a textValue apart from its label, which the application shows.
+      // ?display shows a chosen item as its label and initial, as Sydney (S), text that is neither its label nor its textValue.
+      const display = (item) => params.has('display') ? item.label + ' (' + item.label[0] + ')' : item.label;
+      const first = params.has('textvalue') ? cities.map((city) => city.id === 'syd' ? { ...city, textValue: 'Sydney (NSW)' } : city) : cities;
+      const [items, setItems] = React.useState(late ? [] : first);
+      const [text, setText] = React.useState(late ? 'Sydney' : '');
+      const [selectedId, setSelectedId] = React.useState(late ? 'syd' : null);
+      window.setItems = setItems;
+      return h('form', { onSubmit: submit },
+        h('button', { type: 'submit' }, 'Submit'),
+        h(ComboBox, {
+          label: 'City', name: 'city', items, selectedId,
+          ...(textControlled ? { value: text, onChange: setText } : {}),
+          onSelect: (item) => {
+            // While window.keep is set, the application refuses a new item and keeps its selection and text.
+            if (window.keep && item && item.id !== selectedId) return log('refused', item.id);
+            log('select', item?.id ?? 'none');
+            setSelectedId(item?.id ?? null);
+            if (textControlled) setText(item === undefined ? '' : display(item));
+            // While window.replace is set, choosing an item also replaces the results, in the same update, without it.
+            if (window.replace && item) setItems([{ id: 'mel', label: 'Melbourne' }, { id: 'per', label: 'Perth' }].filter(({ id }) => id !== item.id));
+          },
+        }),
+        h('output', null, 'selected ' + (selectedId ?? 'none')));
+    },
     // A field far wider than its options, so a list sized by its options alone shows as narrower than the field.
     list: () => h('div', { style: { width: '600px', padding: '24px' } }, h(ComboBox, { label: 'Town', items: towns })),
     // Forty options, far more than the list shows, above content that makes the page taller than the viewport.
@@ -201,6 +233,157 @@ test('real browser ComboBox groups its options in named sections that filter, na
     await input.fill('ki');
     await page.waitForFunction(() => document.querySelectorAll('[role="listbox"] [role="group"]').length === 1);
     assert.deepEqual(await groups(), [['Joined', ['Baking']]]);
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await page.close();
+  }
+});
+
+// The application replaces the items, as results that arrive from a search do, so the selected item may leave them.
+// The selection keeps its id, the form still submits it, and nothing reports it cleared. With the text controlled too,
+// Escape and leaving the field revert typed text to the selected item: the field reports the item through onSelect,
+// from the items it last held, and the application sets its text again. Emptying the input still clears the
+// selection, once.
+test('real browser ComboBox keeps a selection the items no longer hold, reverts to it, and still clears', { timeout: 90_000, skip: chromiumSkip }, async (t) => {
+  const { url } = server;
+  const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
+  try {
+    page.setDefaultTimeout(10_000);
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text()); });
+    const input = page.getByRole('combobox', { name: 'City' });
+    const selects = async () => (await page.evaluate(() => window.events)).filter(([type]) => type === 'select');
+    const submit = async () => {
+      await page.locator('button[type="submit"]').click();
+      return (await page.evaluate(() => window.events)).findLast(([type]) => type === 'submit')[1];
+    };
+    const expanded = () => input.getAttribute('aria-expanded');
+    const settle = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    // Types after the text, then leaves by `leave` and returns the text the field shows.
+    const typeAndLeave = async (leave) => {
+      await input.focus();
+      await input.press('End');
+      await input.pressSequentially('x');
+      if (leave === 'Escape') await input.press('Escape');
+      else await page.locator('button[type="submit"]').focus();
+      await page.waitForFunction(() => document.querySelector('input[role="combobox"]').value === 'Sydney').catch(() => {});
+      await settle();
+      return input.inputValue();
+    };
+    // A selection set before its items arrive reverts to them once they have.
+    await page.goto(`${url}/combo-box.html?case=changing&late`, { waitUntil: 'load' });
+    await page.waitForFunction(() => document.documentElement.dataset.ready === 'changing');
+    await awaitFontsAndFrames(page);
+    await page.evaluate(() => window.setItems([{ id: 'mel', label: 'Melbourne' }, { id: 'syd', label: 'Sydney' }]));
+    await settle();
+    assert.equal(await typeAndLeave('Escape'), 'Sydney', 'late items: Escape reverts to the selection');
+    assert.deepEqual(await submit(), ['syd'], 'late items: the form submits the selection');
+
+    // A selection the application accepts in the same update that replaces the results without it is kept: Escape,
+    // leaving the field and a press outside it revert to it.
+    await page.goto(`${url}/combo-box.html?case=changing`, { waitUntil: 'load' });
+    await page.waitForFunction(() => document.documentElement.dataset.ready === 'changing');
+    await awaitFontsAndFrames(page);
+    await page.evaluate(() => { window.replace = true; });
+    await input.pressSequentially('Syd');
+    await page.locator('.muxui-combo-box__option', { hasText: 'Sydney' }).click();
+    await page.getByText('selected syd').waitFor();
+    await settle();
+    assert.equal(await typeAndLeave('Escape'), 'Sydney', 'replaced results: Escape reverts to the selection');
+    assert.equal(await typeAndLeave('blur'), 'Sydney', 'replaced results: leaving the field reverts to the selection');
+    await input.focus();
+    await input.press('End');
+    await input.pressSequentially('x');
+    await page.mouse.click(700, 600);
+    await page.waitForFunction(() => document.querySelector('input[role="combobox"]').value === 'Sydney').catch(() => {});
+    assert.equal(await input.inputValue(), 'Sydney', 'replaced results: a press outside reverts to the selection');
+    assert.deepEqual(await submit(), ['syd'], 'replaced results: the form submits the selection');
+
+    // The application shows its own text for the selection. Typing it down to the item's label, beside an option that
+    // contains that label, still differs from the text the application set, so Escape restores that text and closes
+    // the list.
+    await page.goto(`${url}/combo-box.html?case=changing&display`, { waitUntil: 'load' });
+    await page.waitForFunction(() => document.documentElement.dataset.ready === 'changing');
+    await awaitFontsAndFrames(page);
+    await input.pressSequentially('Syd');
+    await page.locator('.muxui-combo-box__option', { hasText: 'Sydney' }).click();
+    await page.getByText('selected syd').waitFor();
+    assert.equal(await input.inputValue(), 'Sydney (S)');
+    await page.evaluate(() => window.setItems([{ id: 'harbour', label: 'Sydney Harbour' }]));
+    await settle();
+    await input.focus();
+    await input.press('End');
+    for (let press = 0; press < 4; press += 1) await input.press('Backspace');
+    assert.equal(await input.inputValue(), 'Sydney', 'typed down to the label');
+    await input.press('Escape');
+    await page.waitForFunction(() => document.querySelector('input[role="combobox"]').value === 'Sydney (S)').catch(() => {});
+    await settle();
+    assert.equal(await input.inputValue(), 'Sydney (S)', 'Escape restores the text the application set');
+    assert.equal(await expanded(), 'false', 'and closes the list');
+
+    for (const [search, mode] of [['', 'controlled text'], ['&textvalue', 'controlled text, textValue apart from the label'], ['&selection', 'uncontrolled text']]) {
+      await page.goto(`${url}/combo-box.html?case=changing${search}`, { waitUntil: 'load' });
+      await page.waitForFunction(() => document.documentElement.dataset.ready === 'changing');
+      await awaitFontsAndFrames(page);
+      await input.pressSequentially('Syd');
+      await page.locator('.muxui-combo-box__option', { hasText: 'Sydney' }).click();
+      await page.getByText('selected syd').waitFor();
+
+      // New results leave Sydney out.
+      await page.evaluate(() => window.setItems([{ id: 'mel', label: 'Melbourne' }, { id: 'per', label: 'Perth' }]));
+      await settle();
+      assert.equal(await input.inputValue(), 'Sydney', `${mode}: the field still shows the selection`);
+      assert.deepEqual(await submit(), ['syd'], `${mode}: the form still submits the selected id`);
+
+      if (mode.startsWith('controlled text')) {
+        assert.equal(await typeAndLeave('Escape'), 'Sydney', 'Escape reverts the typed text');
+        assert.equal(await typeAndLeave('blur'), 'Sydney', 'leaving the field reverts the typed text');
+        // Beside an option that contains the restored text, Escape reverts it and leaves the list closed, however often
+        // it is pressed.
+        await page.evaluate(() => window.setItems([{ id: 'harbour', label: 'Sydney Harbour' }]));
+        await settle();
+        assert.equal(await typeAndLeave('Escape'), 'Sydney', 'Escape reverts beside an option that contains the text');
+        assert.equal(await expanded(), 'false', 'the revert does not open the list');
+        for (let press = 0; press < 2; press += 1) {
+          await input.press('Escape');
+          await settle();
+          assert.equal(await expanded(), 'false', 'a further Escape leaves the list closed');
+        }
+        assert.equal(await input.inputValue(), 'Sydney');
+
+        // A new item the application refuses leaves the selection it kept: Escape and leaving the field revert to it.
+        await page.evaluate(() => { window.keep = true; });
+        for (const leave of ['Escape', 'blur']) {
+          await input.fill('Sydney H');
+          await page.locator('.muxui-combo-box__option', { hasText: 'Sydney Harbour' }).click();
+          await settle();
+          if (leave === 'Escape') await input.press('Escape');
+          else await page.locator('button[type="submit"]').focus();
+          await page.waitForFunction(() => document.querySelector('input[role="combobox"]').value === 'Sydney').catch(() => {});
+          assert.equal(await input.inputValue(), 'Sydney', `${leave} after a refused choice reverts to the kept selection`);
+        }
+        assert.deepEqual((await page.evaluate(() => window.events)).filter(([type]) => type === 'refused').map(([, id]) => id), ['harbour', 'harbour']);
+        await page.evaluate(() => { window.keep = false; });
+        assert.deepEqual(await submit(), ['syd'], 'the form submits the kept selection');
+      } else {
+        // React Aria owns this text, and it resets the text from the items it holds, so it shows none for a
+        // selection they left out. The selection itself is kept.
+        await typeAndLeave('Escape');
+        await t.test('uncontrolled text reverts to a selection the items no longer hold', { skip: 'React Aria resets text it owns from the items it holds; control the text to keep it' }, () => {});
+      }
+      await page.getByText('selected syd').waitFor();
+      assert.ok((await selects()).every(([, id]) => id === 'syd'), `${mode}: nothing reports the selection cleared: ${JSON.stringify(await selects())}`);
+      assert.deepEqual(await submit(), ['syd'], mode);
+
+      // Emptying the input clears the selection, reported once.
+      await input.fill('Syd');
+      const before = (await selects()).length;
+      await input.clear();
+      await page.getByText('selected none').waitFor();
+      assert.deepEqual((await selects()).slice(before), [['select', 'none']], `${mode}: emptying the input clears the selection once`);
+      assert.deepEqual(await submit(), [''], mode);
+    }
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await page.close();

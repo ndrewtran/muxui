@@ -141,10 +141,10 @@ export const clientFixtures = [
         h(M.Menu.Item, { id: 'paste' }, 'Paste')))),
   },
   {
-    family: 'menu', name: 'Menu.Root open with a shortcut', state: 'open',
+    family: 'menu', name: 'Menu.Root open with checkable items and a shortcut', state: 'open',
     element: ({ h, M }) => h(M.Menu.Root, { defaultOpen: true },
       h(M.Menu.Trigger, null, 'Text style'),
-      h(M.Menu.Popup, null, h(M.Menu.List, { 'aria-label': 'Text style' },
+      h(M.Menu.Popup, null, h(M.Menu.List, { 'aria-label': 'Text style', selectionMode: 'single', defaultSelectedIds: ['normal'] },
         h(M.Menu.Item, { id: 'normal' }, 'Normal text'),
         h(M.Menu.Item, { id: 'heading', textValue: 'Heading', 'aria-keyshortcuts': 'Control+Alt+1' }, 'Heading', h(M.Menu.Shortcut, { keys: ['Ctrl', 'Alt', '1'] }))))),
   },

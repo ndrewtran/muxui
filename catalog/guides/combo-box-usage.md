@@ -22,6 +22,12 @@ A ComboBox keeps the input text and the selected option as separate state. The o
 - Typing filters every section, and a section with no match is hidden. The arrow keys move through the options of every section as one list; the headers are not stops.
 - Keep item IDs unique across sections. The Options in named sections example groups teams this way.
 
+## When the items change
+
+- A selection outlives the items that held it. When a new search leaves the selected option out, the field keeps its ID, the form still submits it, and `onSelect` does not report it cleared.
+- If you control both the text and the selection, Escape and leaving the field after typing call `onSelect` with the selected item, so set the text to its label there, as you do when an option is chosen.
+- If the field holds its own text, reverting it shows no text for a selection the items no longer hold, though the selection stays. Control the text as well when the items can change under a selection.
+
 ## Content
 
 - Label the field with the record it picks, such as Depot or Customer, not Search.

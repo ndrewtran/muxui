@@ -2528,7 +2528,7 @@ test('the On cell of every row is what the document shows: its tags, each carryi
       }
     }
   }
-  assert.equal(cells, 975, 'every row of every table was compared');
+  assert.equal(cells, 976, 'every row of every table was compared');
 });
 
 // The expectation above is derived in the test from the document; these cells are written out, so it cannot drift with the code: a part in a
@@ -2619,7 +2619,7 @@ const notObservedInCanvas = Object.freeze([
   'Select data-muxui-state-selected not-reached', 'Separator data-muxui-state-orientation spelled-differently', 'Slider data-muxui-state-selected no-writer-found',
   'TagGroup data-muxui-state-selected not-reached', 'Virtualizer data-muxui-state-disabled not-reached', 'DataDiff data-muxui-state-empty spelled-differently',
   'HeaderNav data-muxui-state-current spelled-differently', 'Input data-muxui-state-empty no-writer-found', 'Markdown data-muxui-state-invalid spelled-differently',
-  'MultiSelect data-muxui-state-empty not-reached', 'MultiSelect data-muxui-state-selected not-reached', 'PaymentInput data-muxui-state-empty no-writer-found',
+  'Menu data-muxui-state-selected not-reached', 'MultiSelect data-muxui-state-empty not-reached', 'MultiSelect data-muxui-state-selected not-reached', 'PaymentInput data-muxui-state-empty no-writer-found',
   'RadioField data-muxui-state-invalid not-reached', 'Resizable data-muxui-state-invalid not-reached', 'SelectNative data-muxui-state-empty no-writer-found',
   'Sidebar data-muxui-state-current not-reached', 'Sidebar data-muxui-state-expanded spelled-differently', 'TagSelect data-muxui-state-empty not-reached',
   'TagSelect data-muxui-state-selected spelled-differently', 'TextArea data-muxui-state-empty no-writer-found',

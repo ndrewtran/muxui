@@ -122,27 +122,66 @@ export const ComboBox: ForwardRefExoticComponent<ComboBoxProps & RefAttributes<H
     // React Aria reports a cleared selection as a null key, except when both the text and
     // the selection are controlled: then the application owns both, so the clear is read from the emptied input.
     const bothControlled = value !== undefined && selectedId !== undefined;
+    // The selected item's record, kept while the items change, so a selection the items no longer hold, such as a
+    // result a new search left out, still has its item to report. A selection the caller controls follows selectedId:
+    // an item chosen is pending until the next render, and becomes the record if selectedId then names it, even when
+    // the same update replaced the items without it.
+    const remembered = React.useRef<NormalizedItem | undefined>(undefined);
+    const pending = React.useRef<NormalizedItem | undefined>(undefined);
+    // The text the application shows for its selection, which a revert restores. It is the text the application sets
+    // when the selection changes or by itself, not text typed into the field, which reaches it through onChange first,
+    // so it may be neither the item's label nor its textValue.
+    const typed = React.useRef<string | undefined>(undefined);
+    const shown = React.useRef(value);
+    React.useEffect(() => {
+      const id = selectedId === undefined ? (remembered.current === undefined ? defaultSelectedId : remembered.current.id) : selectedId;
+      const current = id == null ? undefined : (normalized.find((item) => item.id === id) ?? (pending.current?.id === id ? pending.current : undefined));
+      if (value !== typed.current || (current !== undefined && current.id !== remembered.current?.id)) shown.current = value;
+      if (current) remembered.current = current;
+      else if (remembered.current?.id !== id) remembered.current = undefined;
+      pending.current = undefined;
+    });
+    // While a revert restores the text of a selection the items no longer hold, React Aria holds no text for that
+    // selection, reads the restored text as typing, and would open the list on an option that contains it. So the
+    // field does not let it open the list in the update the revert makes, whatever text the application restores.
+    const reverting = React.useRef(false);
     // Two checks, not ||: extraction reads a fallback on an owned prop as an executed default.
     const handleSelection = (key: Key | null) => {
       if (disabled) return;
       if (readOnly) return;
       if (key == null) {
         if (!bothControlled) onSelect?.(undefined);
+        // With both controlled, React Aria reports a null key only as Escape or leaving the field reverts the text,
+        // and reports null for a selected item the items no longer hold. The application sets the text, so it gets
+        // the item it last held, unless the text is already the one it set.
+        else if (selectedId !== null && remembered.current?.id === selectedId && value !== shown.current) {
+          reverting.current = true;
+          onSelect?.(remembered.current);
+          // React renders the update onSelect made first: it queued that render as the application set its state.
+          queueMicrotask(() => { reverting.current = false; });
+        }
         return;
       }
-      const item = normalized.find((candidate) => candidate.id === String(key));
-      if (item && !item.disabled) onSelect?.(item);
+      const id = String(key);
+      const item = normalized.find((candidate) => candidate.id === id) ?? (remembered.current?.id === id ? remembered.current : undefined);
+      if (item && !item.disabled) {
+        // A controlled selection is remembered once the caller accepts it, through selectedId.
+        if (selectedId === undefined) remembered.current = item;
+        else pending.current = item;
+        onSelect?.(item);
+      }
     };
     const handleInput = (next: string) => {
       if (disabled) return;
       if (readOnly) return;
+      typed.current = next;
       onChange?.(next);
       if (bothControlled && next === '' && selectedId !== null) onSelect?.(undefined);
     };
     // defaultItems lets React Aria filter options by the typed text; items would mean consumer-filtered.
     // The list is at least as wide as the field, so zero container padding keeps a full-width field's list aligned
     // at the viewport edge instead of pushed past it; the position hook still keeps the list on screen.
-    return React.createElement(AriaComboBox<NormalizedItem | NormalizedSection>, { ...props, ref, defaultItems: grouped === undefined ? normalized : grouped, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: handleInput, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid ? invalid : undefined, name, className: classNames('muxui-combo-box', className), ...{ 'data-muxui-size': resolvedSize }, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
+    return React.createElement(AriaComboBox<NormalizedItem | NormalizedSection>, { ...props, ref, defaultItems: grouped === undefined ? normalized : grouped, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, ...(reverting.current ? { menuTrigger: 'manual' } : {}), onInputChange: handleInput, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid ? invalid : undefined, name, className: classNames('muxui-combo-box', className), ...{ 'data-muxui-size': resolvedSize }, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
       label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
       React.createElement(AriaGroup, { className: 'muxui-combo-box__control' },
         React.createElement(AriaInput, { className: 'muxui-field-input', placeholder }),

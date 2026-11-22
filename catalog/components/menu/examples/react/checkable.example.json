@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:menu-checkable-react",
+  "kind": "example",
+  "name": "Menu with checkable items and shortcuts",
+  "summary": "Check one option of a menu at a time, show each option's keyboard shortcut at the item's end, and state the shortcut with aria-keyshortcuts.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:menu#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/menu/examples/react/checkable.tsx"
+}

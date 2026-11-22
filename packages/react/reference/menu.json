@@ -52,6 +52,34 @@
               "refs": ["collection-items#MuxUICollectionItem"],
               "doc": "Called with the same item as `onAction`, right after it."
             },
+            {
+              "name": "selectionMode",
+              "optional": true,
+              "type": "'none' | 'single' | 'multiple'",
+              "values": ["none", "single", "multiple"],
+              "doc": "Whether the items can be checked. `single` makes them radio items, one checked at a time, and pressing the checked item keeps it checked; `multiple` makes them checkbox items, each pressed on and off. Each item of a checkable list shows a check mark while it is checked. Left unset, the items are plain actions."
+            },
+            {
+              "name": "selectedIds",
+              "optional": true,
+              "type": "MuxUISelection",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "The checked item ids when the caller controls them, or `'all'`."
+            },
+            {
+              "name": "defaultSelectedIds",
+              "optional": true,
+              "type": "MuxUISelection",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "The ids checked at first when the list controls them itself, or `'all'`."
+            },
+            {
+              "name": "onSelectionChange",
+              "optional": true,
+              "type": "(ids: MuxUISelection) => void",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "Called with the checked item ids, or `'all'`, when an item is checked or unchecked. It is not called while the list is disabled."
+            },
             { "name": "children", "optional": true, "type": "React.ReactNode" },
             { "name": "className", "optional": true, "type": "string" }
           ],
@@ -251,6 +279,34 @@
               "refs": ["collection-items#MuxUICollectionItem"],
               "doc": "Called with the same item as `onAction`, right after it."
             },
+            {
+              "name": "selectionMode",
+              "optional": true,
+              "type": "'none' | 'single' | 'multiple'",
+              "values": ["none", "single", "multiple"],
+              "doc": "Whether the items can be checked. `single` makes them radio items, one checked at a time, and pressing the checked item keeps it checked; `multiple` makes them checkbox items, each pressed on and off. Each item of a checkable list shows a check mark while it is checked. Left unset, the items are plain actions."
+            },
+            {
+              "name": "selectedIds",
+              "optional": true,
+              "type": "MuxUISelection",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "The checked item ids when the caller controls them, or `'all'`."
+            },
+            {
+              "name": "defaultSelectedIds",
+              "optional": true,
+              "type": "MuxUISelection",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "The ids checked at first when the list controls them itself, or `'all'`."
+            },
+            {
+              "name": "onSelectionChange",
+              "optional": true,
+              "type": "(ids: MuxUISelection) => void",
+              "refs": ["collection-items#MuxUISelection"],
+              "doc": "Called with the checked item ids, or `'all'`, when an item is checked or unchecked. It is not called while the list is disabled."
+            },
             { "name": "children", "optional": true, "type": "React.ReactNode" },
             { "name": "className", "optional": true, "type": "string" },
             { "name": "aria-label", "optional": true, "type": "string" },
@@ -442,6 +498,16 @@
       "refs": ["collection-items#MuxUICollectionItem"]
     },
     {
+      "id": "collection-items#MuxUISelection",
+      "name": "MuxUISelection",
+      "module": "collection-items",
+      "public": [
+        { "entry": ".", "name": "MuxUISelection" }
+      ],
+      "owner": "shared",
+      "text": "type MuxUISelection = string[] | 'all';"
+    },
+    {
       "id": "fields#MuxUIAriaAccessibleName",
       "name": "MuxUIAriaAccessibleName",
       "module": "fields",
@@ -503,7 +569,7 @@
       "id": "menu#MenuListOwnProps",
       "name": "MenuListOwnProps",
       "module": "menu",
-      "text": "type MenuListOwnProps = {\n  items?: MuxUIItems;\n  disabled?: boolean;\n  shouldCloseOnSelect?: boolean;\n  onAction?: (item?: MuxUICollectionItem) => void;\n  onSelect?: (item?: MuxUICollectionItem) => void;\n};",
+      "text": "type MenuListOwnProps = {\n  items?: MuxUIItems;\n  disabled?: boolean;\n  shouldCloseOnSelect?: boolean;\n  onAction?: (item?: MuxUICollectionItem) => void;\n  onSelect?: (item?: MuxUICollectionItem) => void;\n  selectionMode?: 'none' | 'single' | 'multiple';\n  selectedIds?: MuxUISelection;\n  defaultSelectedIds?: MuxUISelection;\n  onSelectionChange?: (ids: MuxUISelection) => void;\n};",
       "members": [
         {
           "name": "items",
@@ -537,9 +603,41 @@
           "type": "(item?: MuxUICollectionItem) => void",
           "refs": ["collection-items#MuxUICollectionItem"],
           "doc": "Called with the same item as `onAction`, right after it."
+        },
+        {
+          "name": "selectionMode",
+          "optional": true,
+          "type": "'none' | 'single' | 'multiple'",
+          "values": ["none", "single", "multiple"],
+          "doc": "Whether the items can be checked. `single` makes them radio items, one checked at a time, and pressing the checked item keeps it checked; `multiple` makes them checkbox items, each pressed on and off. Each item of a checkable list shows a check mark while it is checked. Left unset, the items are plain actions."
+        },
+        {
+          "name": "selectedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "The checked item ids when the caller controls them, or `'all'`."
+        },
+        {
+          "name": "defaultSelectedIds",
+          "optional": true,
+          "type": "MuxUISelection",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "The ids checked at first when the list controls them itself, or `'all'`."
+        },
+        {
+          "name": "onSelectionChange",
+          "optional": true,
+          "type": "(ids: MuxUISelection) => void",
+          "refs": ["collection-items#MuxUISelection"],
+          "doc": "Called with the checked item ids, or `'all'`, when an item is checked or unchecked. It is not called while the list is disabled."
         }
       ],
-      "refs": ["collection-items#MuxUIItems", "collection-items#MuxUICollectionItem"]
+      "refs": [
+        "collection-items#MuxUIItems",
+        "collection-items#MuxUICollectionItem",
+        "collection-items#MuxUISelection"
+      ]
     },
     {
       "id": "menu#MenuListProps",
