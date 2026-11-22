@@ -281,7 +281,41 @@ function iconFixture(css) {
   return `<!doctype html><html data-muxui-color-scheme="light"><head><style>${css}</style></head><body>${body}</body></html>`;
 }
 
+// A host reset that sets a weight on span, in a layer ordered before Mux UI's as a site's reset usually is. The label is a span, so
+// it would take the host's weight; it keeps its Button's, in every variant, in a ButtonGroup and while pending with its text shown.
+function weightFixture(css) {
+  const h = React.createElement;
+  const body = renderToString(h('div', null,
+    h('span', { id: 'host-span' }, 'Host'),
+    ...roleVariants.map((variant) => h(Button, { key: variant, variant }, 'Join')),
+    h(ButtonGroup, { 'aria-label': 'Actions' }, h(Button, null, 'Save'), h(Button, { variant: 'neutral' }, 'Cancel')),
+    h(Button, { pending: true, showTextWhileLoading: true }, 'Saving')));
+  return '<!doctype html><html data-muxui-color-scheme="light"><head>'
+    + '<style>@layer host-reset, muxui.tokens, muxui.components, muxui.utilities; @layer host-reset { span { font-weight: 300; } }</style>'
+    + `<style>${css}</style></head><body>${body}</body></html>`;
+}
+
 for (const engine of browserEngines()) {
+  test(`A Button label keeps its Button's weight when the host sets a weight on span in ${engine}`, { timeout: 120_000 }, async () => {
+    const browser = await launchBrowser(engine);
+    try {
+      const tab = await browser.newPage();
+      await tab.setContent(weightFixture(generatedStyles));
+      const { host, labels } = await tab.evaluate(() => ({
+        host: getComputedStyle(document.getElementById('host-span')).fontWeight,
+        labels: [...document.querySelectorAll('.muxui-button__label')].map((label) => [getComputedStyle(label).fontWeight, getComputedStyle(label.closest('.muxui-button')).fontWeight]),
+      }));
+      assert.equal(host, '300', 'the host rule reaches an unclassed span');
+      assert.equal(labels.length, roleVariants.length + 3);
+      for (const [label, button] of labels) {
+        assert.notEqual(button, host, 'the Button keeps its own weight');
+        assert.equal(label, button, 'the label takes the Button\'s weight');
+      }
+    } finally {
+      await browser.close();
+    }
+  });
+
   test(`An icon beside a Button or ToggleButton label takes the size's icon size in ${engine}`, { timeout: 120_000 }, async () => {
     const browser = await launchBrowser(engine);
     try {

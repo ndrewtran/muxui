@@ -144,6 +144,20 @@ function measure({ owned, properties: names, typography: fontNames, size: sizeNa
 }
 
 /**
+ * Runs in the page: the computed weight of every Button label and of the Button it labels, with the weight the host's element-type
+ * rule gives an unclassed span. The label is a span, which the reset's `font` shorthand reaches, and weight is not among the
+ * properties the pages are compared on.
+ */
+const labelWeights = () => ({
+  span: getComputedStyle(document.getElementById('control-type')).fontWeight,
+  labels: [...document.querySelectorAll('.muxui-button__label')].map((label) => ({
+    example: label.closest('[data-example]').dataset.example,
+    label: getComputedStyle(label).fontWeight,
+    button: getComputedStyle(label.closest('.muxui-button')).fontWeight,
+  })),
+});
+
+/**
  * The elements of `html` that a component rendered without a class and nothing hides, found in a parse of the markup: the position of
  * each among the markup's elements, and a name for the failure list. An exception that is `hidden` renders nothing; one that is
  * `boxless` has no text or box of its own, and the guard compares the parts below it instead.
@@ -168,6 +182,7 @@ const states = [
 let browser;
 let pages;
 let counts;
+let weights;
 before(async () => {
   const [stylesheet, themes, catalog] = await Promise.all([
     readFile(resolve(packageRoot, 'generated/styles.css'), 'utf8'),
@@ -200,6 +215,7 @@ before(async () => {
   const reset = await open(true);
   const args = { owned, properties, typography, size, wrappers };
   pages = { bare: await bare.evaluate(measure, args), reset: await reset.evaluate(measure, args) };
+  weights = { bare: await bare.evaluate(labelWeights), reset: await reset.evaluate(labelWeights) };
   await Promise.all([bare.close(), reset.close()]);
   // The parse the wrappers were found in and the page agree on the elements, or a position would name another element.
   counts = { page: pages.bare.counts, parse: Object.fromEntries([...found].map(([name, { count }]) => [name, count])) };
@@ -280,4 +296,16 @@ test('the wrappers a library renders around the data-driven labels, the document
 test('no Mux UI part or library wrapper takes box sizing, margins, typography or size from the host page', () => {
   const found = leaks();
   assert.equal(found.length, 0, `${found.length} values change when the host adds its reset and typography (part, pseudo-element, property, bare, reset):\n${report(found)}`);
+});
+
+test('a Button label keeps its Button\'s weight when the host sets a weight on span', () => {
+  const families = new Set(weights.reset.labels.map(({ example }) => example.split('/')[0]));
+  assert.ok(families.size > 20, `Button labels in ${families.size} families were read`);
+  assert.equal(weights.bare.span, '400', 'the bare page leaves an unclassed span at the browser weight');
+  assert.equal(weights.reset.span, '400', 'the host\'s element-type rule sets the weight of an unclassed span');
+  for (const [name, { labels }] of Object.entries(weights)) {
+    const moved = labels.filter(({ label, button }) => label !== button);
+    assert.deepEqual(moved, [], `${name} page: ${moved.length} labels do not take their Button's weight`);
+    assert.ok(labels.some(({ button }) => button !== weights.reset.span), `${name} page: a Button weight differs from the host's, so a label that took the host's would show`);
+  }
 });
