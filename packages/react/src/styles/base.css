@@ -1191,7 +1191,7 @@
 }
 
 .muxui-date-segment[data-muxui-state-placeholder] {
-  color: var(--muxui-semantic-content-faint);
+  color: var(--muxui-field-placeholder-color);
   font-style: italic;
 }
 

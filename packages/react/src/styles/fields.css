@@ -220,10 +220,6 @@
   outline: none;
 }
 
-.muxui-number-field__control > .muxui-field-input::placeholder {
-  color: var(--muxui-semantic-content-muted);
-}
-
 .muxui-number-field__stepper {
   inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
@@ -755,12 +751,6 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-field-input::placeholder {
-    color: var(--muxui-semantic-color-neutral-default-60);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
     .muxui-date-input,
     .muxui-number-field__control > .muxui-field-input
@@ -782,9 +772,15 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-date-segment[data-muxui-state-type='literal'],
-  :scope .muxui-date-segment[data-muxui-state-placeholder] {
+  :scope .muxui-date-segment[data-muxui-state-type='literal'] {
     color: var(--muxui-semantic-color-neutral-default-60);
+  }
+}
+
+/* The dark segment colour above would otherwise reach a placeholder segment. */
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-date-segment[data-muxui-state-placeholder] {
+    color: var(--muxui-field-placeholder-color);
   }
 }
 
@@ -798,12 +794,6 @@
     ) .muxui-date-segment[data-muxui-state-focused] {
       color: var(--muxui-semantic-content-on-solid);
     }
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-number-field__control > .muxui-field-input::placeholder {
-    color: var(--muxui-semantic-color-neutral-default-60);
   }
 }
 

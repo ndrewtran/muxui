@@ -1750,7 +1750,7 @@ header.muxui-header-nav.muxui-header-nav--background {
 }
 
 .muxui-multi-select__value--placeholder {
-  color: var(--muxui-semantic-color-neutral-60);
+  color: var(--muxui-field-placeholder-color);
 }
 
 .muxui-multi-select__value--selected {
@@ -2439,7 +2439,7 @@ header.muxui-header-nav.muxui-header-nav--background {
 }
 
 .muxui-sidebar__search-input::placeholder {
-  color: var(--muxui-semantic-color-neutral-70);
+  color: var(--muxui-field-placeholder-color);
 }
 
 .muxui-sidebar__search-input:focus {
@@ -3357,10 +3357,6 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     color: var(--muxui-semantic-color-neutral-60);
   }
 
-  :scope .muxui-sidebar__search-input::placeholder {
-    color: var(--muxui-semantic-color-neutral-40);
-  }
-
   :scope .muxui-sidebar__divider {
     background: var(--muxui-semantic-color-neutral-90);
   }
@@ -4005,7 +4001,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 .muxui-text-area__textarea::placeholder {
-  color: var(--muxui-semantic-color-neutral-50);
+  color: var(--muxui-field-placeholder-color);
 }
 
 .muxui-text-area__textarea:focus,

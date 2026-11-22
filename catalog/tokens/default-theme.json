@@ -1303,9 +1303,9 @@
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Placeholder content for editable fields.",
+      "meaning": "Placeholder content for editable fields; neutral step 70 keeps WCAG 4.5:1 on every field surface in both schemes.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-50",
+      "alias": "semantic.color.neutral-70",
       "equivalence": "semantic-equivalence"
     },
     "semantic.field.label": {
