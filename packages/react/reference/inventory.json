@@ -972,6 +972,7 @@
         },
         { "name": "Popover", "kind": "value", "owner": "popover", "module": "overlays" },
         { "name": "PopoverProps", "kind": "type", "owner": "popover", "module": "overlays" },
+        { "name": "PopoverPropsWithout", "kind": "type", "owner": "popover", "module": "overlays" },
         {
           "name": "PreviewTrigger",
           "kind": "value",
