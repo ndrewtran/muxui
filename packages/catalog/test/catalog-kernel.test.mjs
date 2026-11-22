@@ -811,6 +811,41 @@ test('catalog descriptors and query requests require the current API version', (
   }), /MUXUI_CATALOG_INTEGRITY_MISMATCH/u);
 });
 
+// A search cursor is bound to the ranking that ordered its pages, so a cursor saved under another ranking is refused
+// and the caller starts again instead of skipping or repeating results. A cursor whose request digest is the plain
+// one a list cursor carries, as every search cursor did before the ranking had a revision, stands for such a cursor.
+test('E-G0.2-03: a search cursor from another ranking is refused, and one from this ranking pages exactly', () => {
+  const forge = (operation, request) => Buffer.from(JSON.stringify({
+    catalogDigest: baseBundle.catalogDigest,
+    operation,
+    requestDigest: canonicalDigest({
+      operation,
+      request: { ...request, section: null, cursor: null, queryApiVersion: baseBundle.apiVersion },
+    }),
+    offset: 5,
+  }), 'utf8').toString('base64url');
+  const selectors = { limit: 5, detail: 'brief', platform: null, purpose: null, uses: null };
+  // The forged list cursor opens its page, so the forged search cursor differs from a valid one only in the ranking.
+  const list = { ...selectors, kind: null };
+  assert.equal(listArtifacts({ ...list, cursor: forge('listArtifacts', list) }).type, 'artifact.list');
+  const search = { ...selectors, query: 'tool calls' };
+  assert.equal(searchArtifacts({ ...search, cursor: forge('searchArtifacts', search) }).error?.code, 'MUXUI_CURSOR_INVALID');
+
+  const pages = [];
+  let cursor = null;
+  do {
+    const response = searchArtifacts({ ...search, cursor });
+    pages.push(...response.data.items.map(({ id }) => id));
+    cursor = response.meta.nextCursor;
+  } while (cursor !== null);
+  // The reference is the whole ranking in one untruncated page, and the query spans several pages of five, so the
+  // paged walk is compared through its last page.
+  const whole = searchArtifacts({ ...search, limit: 100 });
+  assert.equal(whole.meta.truncated, false);
+  assert.ok(whole.data.items.length > 2 * search.limit, `"${search.query}" spans more than two pages`);
+  assert.deepEqual(pages, whole.data.items.map(({ id }) => id));
+});
+
 test('E-G0.2-04: search is bounded and retrieval traverses only direct relations', () => {
   const search = searchArtifacts({ query: 'button', limit: 1, detail: 'brief' });
   assert.equal(search.data.items.length, 1);

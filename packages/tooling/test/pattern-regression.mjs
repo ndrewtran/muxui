@@ -3,7 +3,7 @@
 // `measureRegression` reads discovery precision, component search stability, and dense budgets from a catalog API;
 // `regressionFailures` compares them with `pattern-regression-thresholds.json`. `pattern-regression.test.mjs` holds
 // the shipped patterns to the thresholds in the working tree.
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createCatalogApi } from '../../catalog/src/index.mjs';
@@ -39,10 +39,10 @@ export async function loadThresholds() {
   return thresholds;
 }
 
-/** The catalog API compiled from the source manifest with `keep` deciding which records stay. */
-async function compileApi(keep) {
+/** The catalog API compiled from the source manifest with `keep` deciding which records stay, plus `extra` records. */
+async function compileApi(keep, extra = []) {
   const manifest = JSON.parse(await readFile(resolve(repositoryRoot, 'packages/catalog/catalog-sources.json'), 'utf8'));
-  manifest.records = manifest.records.filter(keep);
+  manifest.records = [...manifest.records.filter(keep), ...extra];
   const directory = await mkdtemp(join(tmpdir(), 'muxui-pattern-regression-'));
   try {
     const sourceManifestPath = join(directory, 'catalog-sources.json');
@@ -55,6 +55,20 @@ async function compileApi(keep) {
 
 /** The real catalog with every pattern and variant example left out. */
 export const compileApiWithoutPatterns = () => compileApi(({ path }) => !path.startsWith('catalog/patterns/'));
+
+const crowdedFamily = 'packages/tooling/test/fixtures/crowded-family';
+let crowded;
+
+/**
+ * The real catalog plus the ten test-only Tooltip examples in `fixtures/crowded-family`, which share the basic
+ * example's source. One compile per process serves every caller.
+ */
+export const compileApiWithCrowdedFamily = () => (crowded ??= compileCrowdedFamily());
+
+async function compileCrowdedFamily() {
+  const names = (await readdir(resolve(repositoryRoot, crowdedFamily))).filter((name) => name.endsWith('.example.json'));
+  return compileApi(() => true, names.sort().map((name) => ({ family: 'example', path: `${crowdedFamily}/${name}` })));
+}
 
 function dense(api, args) {
   const parsed = parseCliArguments([...args, '--dense']);
