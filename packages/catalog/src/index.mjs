@@ -865,6 +865,42 @@ export function createCatalogApi(inputBundle, options = {}) {
       ? artifact.record.variants.map(({ example }) => [example, artifact])
       : []
   )));
+  // Each component example's family, and the words of its id slug and of its name as a query would parse them.
+  const exampleFamilies = new Map(bundle.artifacts.flatMap((artifact) => (
+    artifact.kind === 'example' && artifact.record.binding !== undefined
+      ? [[artifact.id, {
+        family: artifact.record.binding.ref.split('#')[0],
+        names: [artifact.id.slice(artifact.id.lastIndexOf(':') + 1), artifact.name]
+          .map((text) => parseSearchQuery(text).terms ?? []),
+      }]]
+      : []
+  )));
+
+  // Every component example id carries its family's slug, so a query that names a family matches each of the
+  // family's examples at about the family's own score. Only the family's best-ranked example keeps its place; its
+  // further examples follow every other result, so the examples of a family take one place however many there are.
+  // An example the query names, with every word of its id slug or of its name, keeps its place.
+  function groupFamilyExamples(matches, queryTerms) {
+    const terms = new Set(queryTerms);
+    const placed = new Set();
+    const kept = [];
+    const further = [];
+    for (const match of matches) {
+      const example = exampleFamilies.get(match.id);
+      if (example === undefined) {
+        kept.push(match);
+      } else if (
+        !placed.has(example.family)
+        || example.names.some((words) => words.length > 0 && words.every((word) => terms.has(word)))
+      ) {
+        placed.add(example.family);
+        kept.push(match);
+      } else {
+        further.push(match);
+      }
+    }
+    return [...kept, ...further];
+  }
 
   // Patterns declare only web.react, and graph validation gives every participant
   // a web.react binding, so a pattern is installed when each required participant's
@@ -1073,7 +1109,7 @@ export function createCatalogApi(inputBundle, options = {}) {
       }
     }
     matches.sort((left, right) => right.score - left.score || compareText(left.id, right.id));
-    const page = paginate(matches, 'searchArtifacts', normalized, bundle.catalogDigest);
+    const page = paginate(groupFamilyExamples(matches, queryTerms), 'searchArtifacts', normalized, bundle.catalogDigest);
     if (page.error) return page.error;
     return success('artifact.search', { query: normalized.query, items: page.items }, {
       ...baseMeta(bundle, resolutionContext, normalized),
