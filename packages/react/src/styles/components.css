@@ -49,7 +49,7 @@
 .muxui-separator--vertical { block-size: auto; inline-size: 1px; min-block-size: auto; }
 
 @media (prefers-reduced-motion: reduce) {
-  .muxui-breadcrumbs__link, .muxui-link, .muxui-disclosure__trigger, .muxui-disclosure__trigger-icon, .muxui-meter__fill, .muxui-progress-bar__fill { animation: none; transition: none; }
+  .muxui-breadcrumbs__link, .muxui-link, .muxui-disclosure__trigger, .muxui-disclosure__header::before, .muxui-disclosure__trigger-icon, .muxui-meter__fill, .muxui-progress-bar__fill { animation: none; transition: none; }
 }
 
 @media (forced-colors: active) {
@@ -1589,8 +1589,38 @@
   z-index: 1;
 }
 
+/* The trigger's fill is the header's ::before, sized to the whole item so it takes the item's own corners at any radius
+   (a trigger shorter than twice the radius would scale its own corners down), then clipped to the header's bottom edge
+   so it never reaches the panel. The clip reaches past the other three edges, so the focus ring keeps its outer edge
+   there. */
 .muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header {
   border-radius: inherit;
+  clip-path: inset(-100vmax -100vmax 0);
+}
+
+/* A focused trigger's ring reaches 1px below the header. The clip lets that edge through, and the ring covers the fill
+   that comes with it. */
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header:has(> .muxui-disclosure__trigger:is(:focus-visible, [data-muxui-state-focus-visible])) {
+  clip-path: inset(-100vmax -100vmax -1px);
+}
+
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-color: transparent;
+  pointer-events: none;
+  transition: background-color var(--muxui-semantic-motion-interaction-transition-duration) var(--muxui-semantic-motion-interaction-transition-easing);
+}
+
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header:has(> .muxui-disclosure__trigger:active:not([data-muxui-state-disabled], [data-muxui-state-pending]))::before {
+  background-color: var(--muxui-semantic-action-neutral-background-pressed);
+}
+
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header:has(> .muxui-disclosure__trigger:hover:not([data-muxui-state-disabled], [data-muxui-state-pending]))::before {
+  background-color: var(--muxui-semantic-action-neutral-background);
 }
 
 .muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger {
@@ -1614,8 +1644,15 @@
   white-space: normal;
 }
 
-.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger:hover:not([data-muxui-state-disabled], [data-muxui-state-pending]) {
-  background-color: var(--muxui-semantic-action-neutral-background);
+/* The header draws the fill, so the trigger paints none of its own in any state. An open item's trigger is square where
+   the panel starts, so its focus ring follows the fill. */
+.muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header > .muxui-disclosure__trigger:is(:hover, :active) {
+  background-color: transparent;
+}
+
+.muxui-disclosure-group > .muxui-disclosure[data-muxui-state-expanded] > .muxui-disclosure__header > .muxui-disclosure__trigger {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 /* The caller's title node is a direct child of the trigger. Its own flex or grid layout takes the label gap between an

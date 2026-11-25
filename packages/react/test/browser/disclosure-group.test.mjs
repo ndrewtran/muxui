@@ -217,3 +217,105 @@ test('a standalone Disclosure title wraps inside its container and a short title
     await browser.close();
   }
 });
+
+// The trigger's hover and pressed fill takes the item's own outline at a group radius larger than half the trigger's height
+// (3rem here, the trigger is about 45px): an open item's fill keeps the item's top corners and is square where the panel
+// starts, a closed item's fill is the item's shape, and no fill reaches the panel. Points sit 3px or more from any edge, so
+// antialiasing does not reach them. Chromium only, static markup under the published stylesheet.
+const radiusMarkup = renderToString(h('div', { style: { '--muxui-component-disclosuregroup-radius': '3rem', inlineSize: '320px', padding: '24px' } },
+  h('div', { id: 'open' }, h(DisclosureGroup, { defaultExpandedIds: ['a'] },
+    h(Disclosure, { id: 'a', title: 'One' }, 'Body'), h(Disclosure, { id: 'b', title: 'Two' }, 'Body'))),
+  h('div', { id: 'closed', style: { marginBlockStart: '24px' } }, h(DisclosureGroup, null,
+    h(Disclosure, { id: 'a', title: 'One' }, 'Body'), h(Disclosure, { id: 'b', title: 'Two' }, 'Body')))));
+
+/** The colours of screenshot pixels, read back through a canvas. */
+async function pixelsAt(page, points) {
+  const shot = await page.screenshot({ type: 'png' });
+  return page.evaluate(async ({ data, at }) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${data}`;
+    await image.decode();
+    const canvas = Object.assign(document.createElement('canvas'), { width: image.naturalWidth, height: image.naturalHeight });
+    const context = canvas.getContext('2d');
+    context.drawImage(image, 0, 0);
+    // The pixel that covers the point.
+    return at.map(([x, y]) => [...context.getImageData(Math.floor(x), Math.floor(y), 1, 1).data.slice(0, 3)]);
+  }, { data: shot.toString('base64'), at: points });
+}
+
+test('DisclosureGroup paints the hovered or pressed trigger fill in the item\'s outline at a large group radius', { timeout: 60_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const page = await browser.newPage({ viewport: { width: 480, height: 480 } });
+    // Transitions off, so a sample reads the settled fill.
+    await page.setContent(`<!doctype html><html data-muxui-color-scheme="light"><head><style>${styles}</style><style>*, ::before, ::after { transition-duration: 0s !important; }</style></head><body style="margin: 0; background: #fff">${radiusMarkup}</body></html>`);
+    const boxes = (scope) => page.evaluate((id) => [...document.querySelectorAll(`#${id} .muxui-disclosure`)].map((item) => {
+      const box = item.getBoundingClientRect();
+      return { x: box.x, y: box.y, width: box.width, height: box.height, header: item.querySelector('.muxui-disclosure__header').getBoundingClientRect().height };
+    }), scope);
+    const [open] = await boxes('open');
+    const [first, last] = await boxes('closed');
+    const radius = 48;
+    assert.ok(open.header < radius && open.header > radius / 2, `the trigger (${open.header}px) is shorter than the radius and taller than half of it`);
+    // A point inside the trigger box but outside the item's top-left arc, and one inside the arc by the header's bottom edge.
+    const outsideTopArc = (item) => [item.x + 5, item.y + 10];
+    const insideByHeaderBottom = (item) => [item.x + 3, item.y + item.header - 3];
+    const fillCentre = (item) => [item.x + item.width * 0.6, item.y + item.header / 2];
+    // `surface` is a point on an unfilled item surface, which the fill must differ from.
+    const check = async (state, item, surface, expectations) => {
+      const points = [[4, 4], surface, fillCentre(item), ...expectations.map(([, point]) => point)];
+      const [blank, panel, fill, ...seen] = await pixelsAt(page, points);
+      assert.notDeepEqual(fill, panel, `${state}: the fill differs from the item surface`);
+      const reference = { page: blank, fill };
+      for (const [index, [name, , expected]] of expectations.entries()) {
+        const close = seen[index].every((channel, at) => Math.abs(channel - reference[expected][at]) <= 2);
+        assert.ok(close, `${state}: ${name} is ${expected} (${reference[expected]}), saw ${seen[index]}`);
+      }
+      return panel;
+    };
+    const trigger = (scope, index) => page.locator(`#${scope} .muxui-disclosure__trigger`).nth(index);
+
+    await trigger('open', 0).hover();
+    const panelPoint = [open.x + open.width * 0.6, open.y + open.height - 6];
+    const panel = await check('open item hovered', open, panelPoint, [
+      ['outside the top-left arc', outsideTopArc(open), 'page'],
+      ['inside the arc by the header bottom', insideByHeaderBottom(open), 'fill'],
+      ['inside the arc by the header bottom, right', [open.x + open.width - 3, open.y + open.header - 3], 'fill'],
+    ]);
+    const [below] = await pixelsAt(page, [[open.x + 3, open.y + open.header + 3]]);
+    assert.ok(below.every((channel, at) => Math.abs(channel - panel[at]) <= 2), `open item hovered: no fill under the header (${below})`);
+
+    // Pressed with the pointer still over it, and pressed by the keyboard.
+    await page.mouse.down();
+    await check('open item pressed', open, panelPoint, [['outside the top-left arc', outsideTopArc(open), 'page']]);
+    await page.mouse.up();
+    await page.mouse.move(0, 0);
+    await trigger('open', 0).focus();
+    await page.keyboard.down(' ');
+    const [pressedCorner, pageColour] = await pixelsAt(page, [outsideTopArc(open), [4, 4]]);
+    await page.keyboard.up(' ');
+    assert.deepEqual(pressedCorner, pageColour, 'open item pressed by the keyboard: no fill outside the top-left arc');
+
+    // The focus ring keeps its outer edge, the row under the header, on an open and a closed item.
+    const ringEdge = (item) => [item.x + item.width * 0.6, item.y + item.header + 0.5];
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => document.activeElement?.blur());
+    const unfocused = await pixelsAt(page, [ringEdge(open), ringEdge(first)]);
+    // The keyboard was the last input, so focusing a trigger shows its ring.
+    await trigger('open', 0).focus();
+    const [openEdge] = await pixelsAt(page, [ringEdge(open)]);
+    assert.notDeepEqual(openEdge, unfocused[0], 'open item focused: the ring shows its edge under the header');
+    await trigger('closed', 0).focus();
+    const [closedEdge] = await pixelsAt(page, [ringEdge(first)]);
+    assert.notDeepEqual(closedEdge, unfocused[1], 'closed item focused: the ring shows its edge under the header');
+
+    // A closed last item: its fill is the item's own shape, rounded at the bottom.
+    await trigger('closed', 1).hover();
+    await check('closed last item hovered', last, fillCentre(first), [
+      ['outside the bottom-left arc', [last.x + 5, last.y + last.height - 10], 'page'],
+      ['inside the bottom-left arc', [last.x + 8, last.y + last.height / 2], 'fill'],
+    ]);
+  } finally {
+    await browser.close();
+  }
+});
