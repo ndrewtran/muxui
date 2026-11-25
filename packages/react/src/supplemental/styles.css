@@ -3137,13 +3137,13 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 .muxui-sidebar[data-muxui-foldable] {
   /* The gutter on each side of the rail's icon column; the rail size above is built from the same inset. */
   --muxui-component-sidebar-rail-gutter: var(--muxui-semantic-layout-inset-tiny);
-  /* The fold clock: what the sidebar fades, collapses or holds while it folds and unfolds runs on it. Root's
-     descendants, a consumer's own parts among them, can read it; reduced motion sets the duration to zero. */
+  /* The fold clock: Root's width and everything it moves, fades, collapses or holds while it folds and unfolds run on
+     it. Root's descendants, a consumer's own parts among them, can read it; reduced motion sets the duration to zero. */
   --muxui-component-sidebar-fold-duration: var(--muxui-semantic-motion-reveal-transition-duration);
   --muxui-component-sidebar-fold-easing: var(--muxui-semantic-motion-reveal-transition-easing);
   flex: none;
   overflow: hidden;
-  transition: inline-size var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
+  transition: inline-size var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing);
 }
 
 /* A scroll container would hold a sticky Footer inside Root, whose foot can sit below the window; clip clips the same
@@ -3163,21 +3163,21 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 .muxui-sidebar[data-muxui-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__footer, .muxui-sidebar__account-card) {
   transition:
-    padding var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
-    margin var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
+    padding var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
+    margin var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing);
 }
 
 .muxui-sidebar[data-muxui-foldable] .muxui-sidebar__account-avatar {
   transition:
-    width var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
-    height var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
+    width var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
+    height var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing);
 }
 
 .muxui-sidebar[data-muxui-foldable] .muxui-sidebar__search-icon {
   transition:
-    left var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
-    width var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
-    height var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing);
+    left var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
+    width var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
+    height var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3388,8 +3388,8 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   /* The header's own content keeps one line until the sidebar is open: it inherits the header's white-space. */
   .muxui-sidebar[data-muxui-foldable] .muxui-sidebar__header {
     transition:
-      padding var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
-      margin var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
+      padding var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
+      margin var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
       white-space 0s var(--muxui-component-sidebar-fold-duration);
     transition-behavior: allow-discrete;
   }
@@ -3399,7 +3399,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   }
 
   /* Text overflowing a row while the edge crops it never makes the list scroll sideways. */
-  .muxui-sidebar[data-muxui-foldable] .muxui-sidebar__nav-list {
+  .muxui-sidebar[data-muxui-foldable] .muxui-sidebar__nav-list:not(.muxui-sidebar__footer > *) {
     overflow-x: hidden;
   }
 
@@ -3529,8 +3529,8 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   /* The account card's outline fades with the card's narrowing. */
   .muxui-sidebar[data-muxui-foldable] .muxui-sidebar__account-card {
     transition:
-      padding var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
-      margin var(--muxui-semantic-motion-reveal-transition-duration) var(--muxui-semantic-motion-reveal-transition-easing),
+      padding var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
+      margin var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
       box-shadow var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing);
   }
 
@@ -3546,14 +3546,9 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   }
 
   /* The FeatureCard fades out, then gives up its space; unfolding, it takes its space at once and fades in once the
-     sidebar is open, so its text never shows re-wrapping. Nothing visible moves: the rows above end at the list. */
+     sidebar is open, so its text is never seen re-wrapping as it widens. Nothing else moves: the list above ends there. */
   .muxui-sidebar[data-muxui-foldable] .muxui-sidebar__feature-card {
     transition: opacity var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing) var(--muxui-component-sidebar-fold-duration);
-  }
-
-  /* Folding, the card's text keeps its open line width and the card's edge crops it; the card clips at once. */
-  .muxui-sidebar[data-muxui-collapsed] :is(.muxui-sidebar__feature-card-title, .muxui-sidebar__feature-card-description) {
-    min-inline-size: calc(var(--muxui-component-sidebar-open-size) - 2 * (var(--muxui-semantic-layout-section-gap) + var(--muxui-semantic-layout-inset-large) + 1px));
   }
 
   .muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__feature-card {
@@ -3576,8 +3571,8 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   }
 
   /* An open nested group fades and gives up its height. Where heights can animate, the rows below glide up with it;
-     elsewhere its height goes when the fade ends. */
-  .muxui-sidebar[data-muxui-foldable] .muxui-sidebar__nav-children:not([hidden]) {
+     elsewhere its height goes when the fade ends. A closed group's list is not rendered, so it is left as it was. */
+  .muxui-sidebar[data-muxui-foldable] .muxui-sidebar__nav-children:not([hidden], details:not([open]) *) {
     transition:
       opacity var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
       block-size var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
@@ -3587,7 +3582,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
     interpolate-size: allow-keywords;
   }
 
-  .muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-children:not([hidden]) {
+  .muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-children:not([hidden], details:not([open]) *) {
     display: flex;
     block-size: 0;
     margin-block-start: 0;
@@ -3606,7 +3601,12 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 @supports (transition-behavior: allow-discrete) and (not (interpolate-size: allow-keywords)) {
-  .muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-children:not([hidden]) {
+  /* Without height animation, unfolding gives an open group its height at once, and it fades in. */
+  .muxui-sidebar[data-muxui-foldable] .muxui-sidebar__nav-children:not([hidden], details:not([open]) *) {
+    transition: opacity var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing);
+  }
+
+  .muxui-sidebar[data-muxui-collapsed] .muxui-sidebar__nav-children:not([hidden], details:not([open]) *) {
     transition:
       opacity var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
       visibility var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),

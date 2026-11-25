@@ -288,6 +288,7 @@ for (const engine of browserEngines()) {
             const foot = await tab.evaluate(boxOf, '.muxui-sidebar__footer');
             assert.ok(Math.abs(foot.bottom - root.bottom) < 1 && foot.right <= root.right + 0.5, label('folded, the footer sits at the foot inside the rail'));
             assert.equal(await tab.getByRole('link', { name: 'Help' }).count(), 1, label('folded, the footer row keeps its name'));
+            assert.equal(await tab.evaluate(() => getComputedStyle(document.querySelector('.muxui-sidebar__footer > .muxui-sidebar__nav-list')).overflowY), 'visible', label('folded, the footer rows are not a scroll container'));
             assert.deepEqual(errors, [], label('no page errors'));
           } finally {
             await page_.close();
