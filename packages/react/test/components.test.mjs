@@ -497,7 +497,8 @@ test('DisclosureGroup uses soft accordion geometry without changing standalone D
   assert.ok(grouped);
   assert.equal(grouped.closest('.muxui-disclosure-group')?.classList.contains('muxui-disclosure-group'), true);
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure > \.muxui-disclosure__header > \.muxui-disclosure__trigger\s*\{[^}]*width:\s*100%[\s\S]*min-block-size:\s*var\(--muxui-semantic-control-size-md\)[\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)/u);
+  assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure > \.muxui-disclosure__header > \.muxui-disclosure__trigger\s*\{[^}]*width:\s*100%[\s\S]*min-block-size:\s*var\(--muxui-disclosure-group-row-size\)[\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)/u);
+  assert.match(styles, /--muxui-disclosure-group-row-size:\s*max\(\s*var\(--muxui-semantic-control-size-md\),/u, 'the grouped row is at least a medium control');
   assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure > \.muxui-disclosure__panel-host > \.muxui-disclosure__motion-panel > \.muxui-disclosure__panel\s*\{[^}]*padding-inline:\s*calc\(var\(--muxui-semantic-control-padding-inline\) \* 1\.25\)/u);
   assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure\s*\{[^}]*background-color:\s*var\(--muxui-component-disclosuregroup-background\)/u);
   assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure\s*\{[^}]*transition:[^}]*margin-block-start var\(--muxui-component-disclosuregroup-transition-duration\) var\(--muxui-component-disclosuregroup-transition-easing\)[^}]*border-radius var\(--muxui-component-disclosuregroup-transition-duration\) var\(--muxui-component-disclosuregroup-transition-easing\)/u);

@@ -316,7 +316,8 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
       const panel = group.querySelector('.muxui-disclosure__motion-panel');
       return {
         gap: pixels('--muxui-semantic-layout-group-gap'),
-        radius: pixels('--muxui-component-disclosuregroup-radius'),
+        // The group caps its radius at half the trigger row's height.
+        radius: Math.min(pixels('--muxui-component-disclosuregroup-radius'), group.querySelector('.muxui-disclosure__header').getBoundingClientRect().height / 2),
         iconSize: group.querySelector('.muxui-disclosure__trigger-icon').getBoundingClientRect().width,
         duration: getComputedStyle(panel).getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),
         surroundingDuration: style.getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),

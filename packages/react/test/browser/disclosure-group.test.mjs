@@ -220,8 +220,8 @@ test('a standalone Disclosure title wraps inside its container and a short title
 
 // The trigger's hover and pressed fill takes the item's own outline at a group radius larger than half the trigger's height
 // (3rem here, the trigger is about 45px): an open item's fill keeps the item's top corners and is square where the panel
-// starts, a closed item's fill is the item's shape, and no fill reaches the panel. Points sit 3px or more from any edge, so
-// antialiasing does not reach them. Chromium only, static markup under the published stylesheet.
+// starts, a closed item's fill is the item's shape, and no fill reaches the panel. Points sit 2px or more clear of any
+// edge or arc, so antialiasing does not reach them. Chromium only, static markup under the published stylesheet.
 const radiusMarkup = renderToString(h('div', { style: { '--muxui-component-disclosuregroup-radius': '3rem', inlineSize: '320px', padding: '24px' } },
   h('div', { id: 'open' }, h(DisclosureGroup, { defaultExpandedIds: ['a'] },
     h(Disclosure, { id: 'a', title: 'One' }, 'Body'), h(Disclosure, { id: 'b', title: 'Two' }, 'Body'))),
@@ -255,10 +255,9 @@ test('DisclosureGroup paints the hovered or pressed trigger fill in the item\'s 
     }), scope);
     const [open] = await boxes('open');
     const [first, last] = await boxes('closed');
-    const radius = 48;
-    assert.ok(open.header < radius && open.header > radius / 2, `the trigger (${open.header}px) is shorter than the radius and taller than half of it`);
+    assert.ok(48 > open.header, `the 3rem radius is past the cap, half the row (${open.header}px)`);
     // A point inside the trigger box but outside the item's top-left arc, and one inside the arc by the header's bottom edge.
-    const outsideTopArc = (item) => [item.x + 5, item.y + 10];
+    const outsideTopArc = (item) => [item.x + 2, item.y + 4];
     const insideByHeaderBottom = (item) => [item.x + 3, item.y + item.header - 3];
     const fillCentre = (item) => [item.x + item.width * 0.6, item.y + item.header / 2];
     // `surface` is a point on an unfilled item surface, which the fill must differ from.
@@ -312,9 +311,47 @@ test('DisclosureGroup paints the hovered or pressed trigger fill in the item\'s 
     // A closed last item: its fill is the item's own shape, rounded at the bottom.
     await trigger('closed', 1).hover();
     await check('closed last item hovered', last, fillCentre(first), [
-      ['outside the bottom-left arc', [last.x + 5, last.y + last.height - 10], 'page'],
+      ['outside the bottom-left arc', [last.x + 2, last.y + last.height - 5], 'page'],
       ['inside the bottom-left arc', [last.x + 8, last.y + last.height / 2], 'fill'],
     ]);
+  } finally {
+    await browser.close();
+  }
+});
+
+// A group item's corners render the same closed and open. The group caps its radius at half the trigger row's height,
+// so a closed item, only as tall as its row, never scales its corners down: at 3rem both states are the row's pill, and
+// at the default both keep the same corner. The corner is read from pixels: where the item's surface starts along rows
+// near its top-left corner, to a fraction of a pixel from the antialiased coverage. Chromium only, static markup under
+// the published stylesheet.
+const cornerScopes = [['large', '3rem'], ['default', undefined]];
+const cornerMarkup = renderToString(h('div', { style: { inlineSize: '320px', padding: '24px' } }, ...cornerScopes.flatMap(([id, radius]) => [false, true].map((open) => h('div', {
+  key: `${id}-${open}`, id: `${id}-${open ? 'open' : 'closed'}`, style: { '--muxui-component-disclosuregroup-radius': radius, marginBlockEnd: '24px' },
+}, h(DisclosureGroup, { defaultExpandedIds: open ? ['a'] : [] }, h(Disclosure, { id: 'a', title: 'One' }, 'Body')))))));
+
+test('DisclosureGroup renders an item\'s corners the same closed and open, at a large radius and at the default', { timeout: 60_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const page = await browser.newPage({ viewport: { width: 480, height: 640 } });
+    await page.setContent(`<!doctype html><html data-muxui-color-scheme="light"><head><style>${styles}</style></head><body style="margin: 0; background: #fff">${cornerMarkup}</body></html>`);
+    const span = 40;
+    const rows = [0.5, 1.5, 3.5, 6.5, 10.5];
+    // How far in from the item's left edge its surface starts on each row: the summed share of each pixel the surface
+    // does not cover, against the page and an inside pixel of the item.
+    const insets = async (id) => {
+      const box = await page.locator(`#${id} .muxui-disclosure`).boundingBox();
+      const points = rows.flatMap((row) => Array.from({ length: span }, (_, at) => [box.x + at + 0.5, box.y + row]));
+      const [blank, surface, ...seen] = await pixelsAt(page, [[4, 4], [box.x + box.width / 2, box.y + 12], ...points]);
+      const covered = ([red]) => (blank[0] - red) / (blank[0] - surface[0]);
+      return rows.map((_, index) => seen.slice(index * span, (index + 1) * span).reduce((sum, pixel) => sum + 1 - Math.min(1, Math.max(0, covered(pixel))), 0));
+    };
+    for (const [id] of cornerScopes) {
+      const [closed, open] = [await insets(`${id}-closed`), await insets(`${id}-open`)];
+      assert.ok(closed[0] > 4, `${id}: the corner is rounded (${closed[0].toFixed(2)}px in on the first row)`);
+      for (const [index, row] of rows.entries()) {
+        assert.ok(Math.abs(closed[index] - open[index]) <= 0.25, `${id}: the corner ${row}px down starts ${closed[index].toFixed(2)}px in closed and ${open[index].toFixed(2)}px open`);
+      }
+    }
   } finally {
     await browser.close();
   }

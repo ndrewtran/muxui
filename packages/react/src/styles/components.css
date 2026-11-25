@@ -1542,7 +1542,17 @@
   overflow: visible;
 }
 
+/* The trigger row's one-line height, from the tokens that size it: its padding and the taller of the label's line and
+   the chevron, at least a medium control. It is the trigger's minimum height, and the corner radius is capped at half
+   of it, so a closed item, only as tall as its row, never scales its corners down: the corners are the same closed and
+   open, and a radius past the cap is a pill in both. A title that wraps keeps the one-line corners. */
 .muxui-disclosure-group > .muxui-disclosure {
+  --muxui-disclosure-group-row-size: max(
+    var(--muxui-semantic-control-size-md),
+    calc(var(--muxui-semantic-control-padding-block) * 3
+      + max(var(--muxui-semantic-typography-text-line-height) * var(--muxui-semantic-typography-label-m-font-size), var(--muxui-component-disclosuregroup-icon-size)))
+  );
+  --muxui-disclosure-group-corner-radius: min(var(--muxui-component-disclosuregroup-radius), var(--muxui-disclosure-group-row-size) / 2);
   position: relative;
   align-items: stretch;
   width: 100%;
@@ -1574,24 +1584,23 @@
 .muxui-disclosure-group > .muxui-disclosure:first-child,
 .muxui-disclosure-group > .muxui-disclosure[data-muxui-state-expanded],
 .muxui-disclosure-group > .muxui-disclosure[data-muxui-state-expanded] + .muxui-disclosure {
-  border-top-left-radius: var(--muxui-component-disclosuregroup-radius);
-  border-top-right-radius: var(--muxui-component-disclosuregroup-radius);
+  border-top-left-radius: var(--muxui-disclosure-group-corner-radius);
+  border-top-right-radius: var(--muxui-disclosure-group-corner-radius);
 }
 
 .muxui-disclosure-group > .muxui-disclosure:last-child,
 .muxui-disclosure-group > .muxui-disclosure[data-muxui-state-expanded],
 .muxui-disclosure-group > .muxui-disclosure:has(+ .muxui-disclosure[data-muxui-state-expanded]) {
-  border-bottom-left-radius: var(--muxui-component-disclosuregroup-radius);
-  border-bottom-right-radius: var(--muxui-component-disclosuregroup-radius);
+  border-bottom-left-radius: var(--muxui-disclosure-group-corner-radius);
+  border-bottom-right-radius: var(--muxui-disclosure-group-corner-radius);
 }
 
 .muxui-disclosure-group > .muxui-disclosure:focus-within {
   z-index: 1;
 }
 
-/* The trigger's fill is the header's ::before, sized to the whole item so it takes the item's own corners at any radius
-   (a trigger shorter than twice the radius would scale its own corners down), then clipped to the header's bottom edge
-   so it never reaches the panel. The clip reaches past the other three edges, so the focus ring keeps its outer edge
+/* The trigger's fill is the header's ::before, sized to the whole item so it takes the item's own corners in every
+   state and through the open and close motion, then clipped to the header's bottom edge so it never reaches the panel. The clip reaches past the other three edges, so the focus ring keeps its outer edge
    there. */
 .muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header {
   border-radius: inherit;
@@ -1629,7 +1638,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-block-size: var(--muxui-semantic-control-size-md);
+  min-block-size: var(--muxui-disclosure-group-row-size);
   padding: calc(var(--muxui-semantic-control-padding-block) * 1.5) calc(var(--muxui-semantic-control-padding-inline) * 1.25);
   border: 0;
   border-radius: inherit;
