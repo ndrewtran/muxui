@@ -216,6 +216,8 @@ const SidebarAccountContext = React.createContext<SidebarAccountValue | null>(nu
 function useSidebarAccount() { const account = React.useContext(SidebarAccountContext); if (!account) throw new Error('Sidebar.AccountMenu must be used inside Sidebar.AccountCard'); return account; }
 function useSidebarPart(part: string) { const context = React.useContext(SidebarContext); if (!context) throw new Error(`Sidebar.${part} must be used inside Sidebar.Provider`); return context; }
 const SIDEBAR_EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
+// The parts a folded rail hides. They fade out on the fold clock, so they still render when folding starts.
+const SIDEBAR_FOLD_HIDDEN = '.muxui-sidebar__nav-toggle, .muxui-sidebar__nav-children, .muxui-sidebar__section-toggle, .muxui-sidebar__account-trigger, .muxui-sidebar__feature-card, .muxui-sidebar__search-input';
 // userAgentData is not in the DOM library yet.
 const sidebarShortcutModifier = (event: KeyboardEvent) => (/mac|iphone|ipad|ipod/iu.test((navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform ?? '') ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey);
 // Providers that own a shortcut. One pair of document listeners serves them all, so exactly one Provider handles a chord.
@@ -398,7 +400,7 @@ const SidebarRoot = /*#__PURE__*/ React.forwardRef<HTMLElement, SidebarProps>(fu
   useIsomorphicLayoutEffect(() => {
     const root = node.current;
     const active = root?.ownerDocument.activeElement;
-    if (!sidebar?.collapsed || !root || !active || !root.contains(active) || !sidebarUnreachable(active)) return;
+    if (!sidebar?.collapsed || !root || !active || !root.contains(active) || !(sidebarUnreachable(active) || active.closest(SIDEBAR_FOLD_HIDDEN))) return;
     const group = sidebarGroupHeader(active);
     const search = active.closest('.muxui-sidebar__search')?.querySelector<HTMLElement>('.muxui-sidebar__search-button');
     sidebarFocusFirst([group, search, ...sidebar.toggles, root], sidebar.roots);
@@ -494,7 +496,8 @@ const SidebarSection = /*#__PURE__*/ React.forwardRef<HTMLLIElement, SidebarSect
   const title = collapsible
     ? h(AriaButton, { ref: toggleRef, className: 'muxui-sidebar__section-toggle', 'aria-expanded': open, 'aria-controls': listId, onPress: () => setOpen(!open) }, heading, h(ChevronDownIcon, { className: 'muxui-sidebar__nav-chevron', 'aria-hidden': true, focusable: 'false' }))
     : heading;
-  return h('li', { ...props, ref, className: cx('muxui-sidebar__section', className) }, title, h('ul', { ref: listRef, id: collapsible ? listId : undefined, className: 'muxui-sidebar__section-items', 'aria-labelledby': labelId, hidden: shown ? undefined : true }, children));
+  // The heading's own box lets a folding rail collapse its height while the label keeps its place.
+  return h('li', { ...props, ref, className: cx('muxui-sidebar__section', className) }, h('div', { className: 'muxui-sidebar__section-heading' }, title), h('ul', { ref: listRef, id: collapsible ? listId : undefined, className: 'muxui-sidebar__section-items', 'aria-labelledby': labelId, hidden: shown ? undefined : true }, children));
 });
 /** The column's foot, after the nav list: it stays in view while the list scrolls, and sticks to the bottom of the window when Root runs past it. */
 const SidebarFooter = /*#__PURE__*/ React.forwardRef<HTMLDivElement, PartProps<HTMLDivElement>>(function SidebarFooter(props, ref) { return nativePart('div', 'muxui-sidebar__footer', props, ref); });

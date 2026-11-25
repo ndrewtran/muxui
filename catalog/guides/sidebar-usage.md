@@ -38,6 +38,7 @@ This is a teaching preference, not a limit. Sidebar supports groups of any depth
 
 - A layout beside a folding sidebar can read its widths from `--muxui-component-sidebar-open-size` and `--muxui-component-sidebar-rail-size`, instead of restating them. Add the 1px edge unless the border is hidden.
 - Set `--muxui-component-sidebar-background` and `--muxui-component-sidebar-border-color` on Root to give one sidebar the page's ground and edge, in light and dark. The Sidebar beside a layout example uses all four.
+- Parts of your own inside Root that change when it folds can run on its clock: transition them over `--muxui-component-sidebar-fold-duration` with `--muxui-component-sidebar-fold-easing`. Reduced motion sets the duration to zero. To remove a part once it has faded, delay its removal by the same duration.
 
 ## Column and drawer
 

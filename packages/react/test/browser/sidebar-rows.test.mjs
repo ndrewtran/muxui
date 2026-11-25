@@ -59,10 +59,10 @@ const page = (url) => pageShell({
   entry: '/sidebar-rows-entry.mjs',
 });
 
-/** Visible box of a node, or null when it has no layout box; runs in the page. */
+/** Visible box of a node, or null when it has no layout box or is hidden; runs in the page. */
 function boxOf(selector) {
   const node = document.querySelector(selector);
-  if (!node || node.getClientRects().length === 0) return null;
+  if (!node || node.getClientRects().length === 0 || getComputedStyle(node).visibility === 'hidden') return null;
   const { left, top, right, bottom, width, height } = node.getBoundingClientRect();
   return { left, top, right, bottom, width, height };
 }
@@ -282,7 +282,8 @@ for (const engine of browserEngines()) {
             const menuAction = await tab.evaluate(() => { const node = document.querySelector('#beacon-menu').closest('.muxui-sidebar__nav-action'); return { width: node.getBoundingClientRect().width, clip: getComputedStyle(node).clipPath, focusInside: node.contains(document.activeElement) }; });
             assert.ok(menuAction.width > 1 && menuAction.clip === 'none' && !menuAction.focusInside, label(`folded, the action stays shown while its menu is open (${JSON.stringify(menuAction)})`));
             await tab.keyboard.press('Escape');
-            const divider = await tab.evaluate(boxOf, '.muxui-sidebar__nav-divider');
+            // The line is the divider's content box: the row less its padding.
+            const divider = await tab.evaluate(() => { const node = document.querySelector('.muxui-sidebar__nav-divider'); const style = getComputedStyle(node); return { width: node.getBoundingClientRect().width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) }; });
             assert.ok(Math.abs(divider.width - 16) < 0.5, label(`folded, the divider narrows to the icon column (${divider.width})`));
             const foot = await tab.evaluate(boxOf, '.muxui-sidebar__footer');
             assert.ok(Math.abs(foot.bottom - root.bottom) < 1 && foot.right <= root.right + 0.5, label('folded, the footer sits at the foot inside the rail'));

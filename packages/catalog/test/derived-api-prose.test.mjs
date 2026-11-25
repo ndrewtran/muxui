@@ -73,7 +73,7 @@ test('the Button guide covers exactly the variants its derived API declares', as
 // `described` lists, by derived type name, the spans a guide states about a format that type's description
 // states, such as the date format; each must appear in that description, so a changed format fails the guide.
 // It excuses prose spans only too.
-const SIDEBAR_CUSTOM_PROPERTIES = ['--muxui-component-sidebar-open-size', '--muxui-component-sidebar-rail-size', '--muxui-component-sidebar-background', '--muxui-component-sidebar-border-color'];
+const SIDEBAR_CUSTOM_PROPERTIES = ['--muxui-component-sidebar-open-size', '--muxui-component-sidebar-rail-size', '--muxui-component-sidebar-background', '--muxui-component-sidebar-border-color', '--muxui-component-sidebar-fold-duration', '--muxui-component-sidebar-fold-easing'];
 const GUIDES = {
   button: { native: ['type', 'submit', 'reset', 'requestSubmit'] },
   'icon-button': { native: ['aria-label', 'aria-labelledby', 'type="button"', 'type="submit"'] },

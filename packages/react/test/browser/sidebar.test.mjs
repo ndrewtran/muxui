@@ -179,10 +179,10 @@ function readSidebar() {
   };
 }
 
-/** Visible box of a node, or null when it has no layout box; runs in the page. */
+/** Visible box of a node, or null when it has no layout box or is hidden; runs in the page. */
 function boxOf(selector) {
   const node = document.querySelector(selector);
-  if (!node || node.getClientRects().length === 0) return null;
+  if (!node || node.getClientRects().length === 0 || getComputedStyle(node).visibility === 'hidden') return null;
   const { left, top, width, height } = node.getBoundingClientRect();
   return { left, top, width, height };
 }
@@ -262,7 +262,9 @@ for (const engine of browserEngines()) {
         const rail = probe.getBoundingClientRect().width + parseFloat(getComputedStyle(root).borderRightWidth);
         probe.remove();
         const width = root.getBoundingClientRect().width;
-        return root.hasAttribute('data-muxui-collapsed') === collapsed && (collapsed ? Math.abs(width - rail) < 0.5 : width > 200);
+        // Settled once the fold clock has run out too: text keeps its place until then.
+        const moving = root.getAnimations({ subtree: true }).some((animation) => animation.playState === 'running');
+        return root.hasAttribute('data-muxui-collapsed') === collapsed && (collapsed ? Math.abs(width - rail) < 0.5 : width > 200) && !moving;
       }, { collapsed }, { message, report: () => document.querySelector('aside').getBoundingClientRect().width });
       // A key press makes RAC treat the next focus as keyboard focus, which is what shows tooltips.
       const focusByKeyboard = async (tab, selector) => { await tab.keyboard.press('Escape'); await tab.locator(selector).focus(); };
@@ -761,6 +763,142 @@ for (const engine of browserEngines()) {
   });
 }
 
+/**
+ * Folds or unfolds Root with its Toggle, then holds every transition at `at` of the fold clock (Root's own width
+ * transition) and reads the text and the row below the section heading; with `finish`, ends them instead. Runs in the page.
+ */
+async function holdFold({ fold, at, finish = false }) {
+  const root = document.querySelector('aside');
+  if (root.hasAttribute('data-muxui-collapsed') !== fold) {
+    document.querySelector('.muxui-sidebar__toggle').click();
+    await new Promise((resolve) => { const check = () => (root.hasAttribute('data-muxui-collapsed') === fold ? resolve() : requestAnimationFrame(check)); check(); });
+  }
+  const clock = parseFloat(getComputedStyle(root).transitionDuration) * 1000;
+  const running = document.getAnimations().filter((animation) => root.contains(animation.effect?.target ?? null));
+  for (const animation of running) {
+    if (finish) animation.finish();
+    else { animation.pause(); animation.currentTime = at * clock; }
+  }
+  const text = (selector) => {
+    const node = document.querySelector(selector);
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const { width, height } = node.getBoundingClientRect();
+    const style = getComputedStyle(node);
+    return {
+      width,
+      height,
+      textWidth: range.getBoundingClientRect().width,
+      lines: new Set([...range.getClientRects()].map((rect) => Math.round(rect.top))).size,
+      truncated: node.scrollWidth > node.clientWidth + 0.5,
+      opacity: Number(style.opacity),
+      clip: style.clipPath,
+    };
+  };
+  return {
+    running: running.length,
+    nav: text('a[href="#overview"] .muxui-sidebar__nav-label'),
+    section: text('.muxui-sidebar__section-label'),
+    row: document.querySelector('a[href="#overview"]').getBoundingClientRect().top,
+  };
+}
+
+// Folding and unfolding run on one clock: text keeps its single-line width and fades while the edge crops it, the
+// section heading collapses with the rows below gliding, and a sidebar that loads folded or under reduced motion
+// shows no motion.
+for (const engine of browserEngines()) {
+  test(`Sidebar text fades and holds its layout while Root folds and unfolds in ${engine}`, { timeout: 300_000 }, async (t) => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/sidebar.ts', 'src/collections.mjs'],
+      pages: { '/sidebar.html': page },
+      modules: { '/sidebar-entry.mjs': entry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar.html`, 'aside');
+      const open = async (query = '', options = {}) => {
+        const context = await browser.newContext({ viewport: { width: 900, height: 700 }, locale: 'en-US', reducedMotion: 'no-preference', ...options });
+        const tab = await context.newPage();
+        await tab.goto(`${url}/sidebar.html${query}`, { waitUntil: 'load' });
+        await tab.locator('aside').waitFor({ timeout: 15_000 });
+        await awaitFontsAndFrames(tab);
+        // Two words, so a heading laid out in a narrow box would wrap.
+        await tab.evaluate(() => { document.querySelector('.muxui-sidebar__section-label').textContent = 'Shared projects'; });
+        return { tab, context };
+      };
+      const discrete = await (async () => {
+        const { tab, context } = await open();
+        try { return await tab.evaluate(() => CSS.supports('transition-behavior', 'allow-discrete')); } finally { await context.close(); }
+      })();
+      if (!discrete) {
+        t.diagnostic(`skipped in ${engine}: no discrete transitions, so the fold stays instant`);
+        return;
+      }
+
+      {
+        const { tab, context } = await open();
+        try {
+          const rest = await tab.evaluate(holdFold, { fold: false, at: 0 });
+          const folded = await tab.evaluate(holdFold, { fold: true, at: 0, finish: true });
+          assert.ok(folded.nav.width <= 1 && folded.nav.clip !== 'none' && folded.section.width <= 1 && folded.section.clip !== 'none', `${engine}: folded, the labels are clipped (${JSON.stringify(folded)})`);
+
+          // Early in unfolding the row is narrow: the text keeps one line at its open size, uncut, and is fading in.
+          const unfolding = await tab.evaluate(holdFold, { fold: false, at: 0.05 });
+          for (const part of ['nav', 'section']) {
+            const now = unfolding[part];
+            assert.ok(now.lines === 1 && !now.truncated && Math.abs(now.height - rest[part].height) < 0.5 && now.width >= now.textWidth - 0.5, `${engine}: unfolding, the ${part} label keeps one uncut line (${JSON.stringify({ now, rest: rest[part] })})`);
+            assert.ok(now.opacity < 1, `${engine}: unfolding, the ${part} label is fading in (${now.opacity})`);
+          }
+          assert.ok(unfolding.row > folded.row + 0.5 && unfolding.row < rest.row - 0.5, `${engine}: unfolding, the row below the heading glides between its places (${folded.row} < ${unfolding.row} < ${rest.row})`);
+          const open_ = await tab.evaluate(holdFold, { fold: false, at: 0, finish: true });
+          assert.ok(open_.nav.opacity === 1 && open_.section.opacity === 1 && Math.abs(open_.row - rest.row) < 0.5, `${engine}: unfolded, the text and rows are back (${JSON.stringify(open_)})`);
+
+          // Partway through folding, the label is still laid out and fading; the row has not jumped to its folded place.
+          const folding = await tab.evaluate(holdFold, { fold: true, at: 0.25 });
+          for (const part of ['nav', 'section']) {
+            const now = folding[part];
+            assert.ok(now.opacity > 0 && now.opacity < 1 && now.clip === 'none' && now.lines === 1 && !now.truncated && now.width > 1, `${engine}: folding, the ${part} label fades in place before it is clipped (${JSON.stringify(now)})`);
+          }
+          assert.ok(folding.row > folded.row + 0.5 && folding.row < rest.row - 0.5, `${engine}: folding, the row below the heading glides between its places (${folded.row} < ${folding.row} < ${rest.row})`);
+          const done = await tab.evaluate(holdFold, { fold: true, at: 0, finish: true });
+          assert.ok(done.nav.width <= 1 && done.nav.clip !== 'none' && done.section.clip !== 'none' && Math.abs(done.row - folded.row) < 0.5, `${engine}: once folded, the labels are clipped again (${JSON.stringify(done)})`);
+        } finally {
+          await context.close();
+        }
+      }
+
+      // Under reduced motion, and for a sidebar that loads folded, nothing runs: the labels are clipped at once.
+      for (const [name, query, options] of [
+        ['reduced motion (system)', '', { reducedMotion: 'reduce' }],
+        ['reduced motion (scope)', '?motion=reduced', {}],
+      ]) {
+        const { tab, context } = await open(query, options);
+        try {
+          const folded = await tab.evaluate(holdFold, { fold: true, at: 0 });
+          assert.ok(folded.running === 0 && folded.nav.width <= 1 && folded.nav.clip !== 'none' && folded.nav.opacity === 0, `${engine} ${name}: folding is instant (${JSON.stringify(folded)})`);
+          const unfolded = await tab.evaluate(holdFold, { fold: false, at: 0 });
+          assert.ok(unfolded.running === 0 && unfolded.nav.opacity === 1 && unfolded.section.opacity === 1, `${engine} ${name}: unfolding is instant (${JSON.stringify(unfolded)})`);
+        } finally {
+          await context.close();
+        }
+      }
+      {
+        const { tab, context } = await open('?folded=1');
+        try {
+          const loaded = await tab.evaluate(holdFold, { fold: true, at: 0 });
+          assert.ok(loaded.running === 0 && loaded.nav.opacity === 0 && loaded.nav.clip !== 'none' && loaded.section.clip !== 'none', `${engine}: a sidebar that loads folded shows no labels and runs no motion (${JSON.stringify(loaded)})`);
+        } finally {
+          await context.close();
+        }
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
 // Cross-engine proof for Sidebar's nested navigation, in light and dark: details groups and
 // link groups (a link beside a toggle button) open and close from the pointer and the keyboard,
 // controlled groups follow their caller, the current page carries aria-current and the current
@@ -827,7 +965,7 @@ const nestedPage = (url) => pageShell({
 /** Box of a node, or null when it is not rendered: display:none, hidden, or inside a closed details; runs in the page. */
 function nestedBoxOf(selector) {
   const node = document.querySelector(selector);
-  if (!node || node.getClientRects().length === 0 || !node.checkVisibility()) return null;
+  if (!node || node.getClientRects().length === 0 || !node.checkVisibility() || getComputedStyle(node).visibility === 'hidden') return null;
   const { left, top, width, height } = node.getBoundingClientRect();
   return { left, top, width, height };
 }
