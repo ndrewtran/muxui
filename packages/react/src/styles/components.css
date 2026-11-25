@@ -1600,8 +1600,8 @@
 }
 
 /* The trigger's fill is the header's ::before, sized to the whole item so it takes the item's own corners in every
-   state and through the open and close motion, then clipped to the header's bottom edge so it never reaches the panel. The clip reaches past the other three edges, so the focus ring keeps its outer edge
-   there. */
+   state and through the open and close motion, then clipped to the header's bottom edge so it never reaches the panel.
+   The clip reaches past the other three edges, so the focus ring keeps its outer edge there. */
 .muxui-disclosure-group > .muxui-disclosure > .muxui-disclosure__header {
   border-radius: inherit;
   clip-path: inset(-100vmax -100vmax 0);
