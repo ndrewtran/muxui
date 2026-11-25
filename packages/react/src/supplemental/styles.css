@@ -3133,14 +3133,18 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   z-index: 1;
 }
 
+/* The fold clock: a folding Root's width and everything it moves, fades, collapses or holds run on it, and so do a
+   section's rows opening and closing, in Root and in the drawer. Their descendants, a consumer's own parts among them,
+   can read it; reduced motion sets the duration to zero. */
+:is(.muxui-sidebar, .muxui-sidebar__mobile-dialog) {
+  --muxui-component-sidebar-fold-duration: var(--muxui-semantic-motion-reveal-transition-duration);
+  --muxui-component-sidebar-fold-easing: var(--muxui-semantic-motion-reveal-transition-easing);
+}
+
 /* Folding icon rail: a Root inside Sidebar.Provider sizes itself and animates between the expanded width and the rail. */
 .muxui-sidebar[data-muxui-foldable] {
   /* The gutter on each side of the rail's icon column; the rail size above is built from the same inset. */
   --muxui-component-sidebar-rail-gutter: var(--muxui-semantic-layout-inset-tiny);
-  /* The fold clock: Root's width and everything it moves, fades, collapses or holds while it folds and unfolds run on
-     it. Root's descendants, a consumer's own parts among them, can read it; reduced motion sets the duration to zero. */
-  --muxui-component-sidebar-fold-duration: var(--muxui-semantic-motion-reveal-transition-duration);
-  --muxui-component-sidebar-fold-easing: var(--muxui-semantic-motion-reveal-transition-easing);
   flex: none;
   overflow: hidden;
   transition: inline-size var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing);
@@ -3181,7 +3185,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .muxui-sidebar[data-muxui-foldable] {
+  :is(.muxui-sidebar, .muxui-sidebar__mobile-dialog) {
     --muxui-component-sidebar-fold-duration: 0s;
   }
 
@@ -3191,7 +3195,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   }
 }
 
-:where([data-muxui-motion='reduced']) .muxui-sidebar[data-muxui-foldable] {
+:where([data-muxui-motion='reduced']) :is(.muxui-sidebar, .muxui-sidebar__mobile-dialog) {
   --muxui-component-sidebar-fold-duration: 0s;
 }
 
@@ -3597,6 +3601,26 @@ details[open] > summary .muxui-sidebar__nav-chevron,
       margin var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing),
       padding var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing);
     transition-behavior: allow-discrete;
+  }
+}
+
+/* A collapsible section's rows open and close on the fold clock: by the heading's button, and when a folding rail shows a
+   closed section's rows and hides them again. Closed, they stay rendered at no height, hidden, so they take no focus and
+   leave the accessibility tree as hidden rows did. Where heights cannot animate, they show and hide at once as before. */
+@supports (transition-behavior: allow-discrete) and (interpolate-size: allow-keywords) {
+  :is(.muxui-sidebar, .muxui-sidebar__mobile-dialog) .muxui-sidebar__section-items {
+    interpolate-size: allow-keywords;
+    transition: block-size var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing), opacity var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing), overflow 0s var(--muxui-component-sidebar-fold-duration);
+    transition-behavior: allow-discrete;
+  }
+
+  :is(.muxui-sidebar, .muxui-sidebar__mobile-dialog) .muxui-sidebar__section-items[hidden] {
+    display: flex;
+    block-size: 0;
+    overflow: clip;
+    opacity: 0;
+    visibility: hidden;
+    transition: block-size var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing), opacity var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing), visibility var(--muxui-component-sidebar-fold-duration) var(--muxui-component-sidebar-fold-easing);
   }
 }
 

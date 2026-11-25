@@ -370,3 +370,120 @@ for (const engine of browserEngines()) {
     }
   });
 }
+
+/**
+ * Presses the Section heading's button or Root's Toggle, then holds every transition at `at` of the fold clock (Root's
+ * width transition), or ends them with `finish`, and reads the Section's rows. Runs in the page.
+ */
+async function holdSection({ press, at, finish = false }) {
+  const root = document.querySelector('aside');
+  const list = document.querySelector('.muxui-sidebar__section-items');
+  if (press) {
+    const before = list.hidden;
+    document.querySelector(press).click();
+    await new Promise((resolve) => { const check = () => (list.hidden !== before ? resolve() : requestAnimationFrame(check)); check(); });
+  }
+  const clock = parseFloat(getComputedStyle(root).transitionDuration) * 1000;
+  const running = document.getAnimations().filter((animation) => root.contains(animation.effect?.target ?? null));
+  for (const animation of running) {
+    if (finish) animation.finish();
+    else { animation.pause(); animation.currentTime = at * clock; }
+  }
+  const row = document.querySelector('a[href="#atlas"]');
+  const shown = row.getClientRects().length > 0 && getComputedStyle(row).visibility !== 'hidden';
+  // The rows' own motion; the heading's chevron turns on its own state clock.
+  const moving = running.filter((animation) => list.contains(animation.effect.target)).map((animation) => animation.transitionProperty);
+  return { running: moving.length, moving, hidden: list.hidden, height: list.getBoundingClientRect().height, opacity: Number(getComputedStyle(list).opacity), shown };
+}
+
+// A collapsible Section's rows open and close on the fold clock, by its heading's button and when a folding rail shows a
+// closed Section's rows; closed, they take no focus. Without height animation, they show and hide at once as before.
+for (const engine of browserEngines()) {
+  test(`Sidebar Section rows open and close on the fold clock in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/sidebar.ts', 'src/supplemental/icon-button.ts', 'src/collections.mjs'],
+      pages: { '/sidebar-rows.html': page },
+      modules: { '/sidebar-rows-entry.mjs': entry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar-rows.html`, 'aside');
+      const open = async (query = '', options = {}) => {
+        const browserContext = await browser.newContext({ viewport: { width: 900, height: 640 }, locale: 'en-US', reducedMotion: 'no-preference', ...options });
+        const tab = await browserContext.newPage();
+        await tab.goto(`${url}/sidebar-rows.html${query}`, { waitUntil: 'load' });
+        await tab.locator('aside').waitFor({ timeout: 15_000 });
+        await awaitFontsAndFrames(tab);
+        return { tab, context: browserContext };
+      };
+      const heading = '.muxui-sidebar__section-toggle';
+      const toggle = '.muxui-sidebar__toggle';
+      const between = (value, low, high) => value > low + 0.5 && value < high - 0.5;
+
+      {
+        const { tab, context } = await open();
+        try {
+          const animates = await tab.evaluate(() => CSS.supports('transition-behavior', 'allow-discrete') && CSS.supports('interpolate-size', 'allow-keywords'));
+          const rest = await tab.evaluate(holdSection, { at: 0 });
+          if (!animates) {
+            // Today's behaviour: the rows go and come back at once.
+            const closed = await tab.evaluate(holdSection, { press: heading, at: 0 });
+            assert.ok(closed.hidden && !closed.shown, `${engine}: without height animation, closing hides the rows at once (${JSON.stringify(closed)})`);
+            const folded = await tab.evaluate(holdSection, { press: toggle, at: 0 });
+            assert.ok(!folded.hidden && folded.shown && folded.opacity === 1, `${engine}: without height animation, folding shows the rows at once (${JSON.stringify(folded)})`);
+            return;
+          }
+
+          // Closing by the heading: partway, the rows are still shown, fading, between heights; then hidden.
+          const closing = await tab.evaluate(holdSection, { press: heading, at: 0.25 });
+          assert.ok(closing.hidden && closing.shown && between(closing.height, 0, rest.height) && closing.opacity > 0 && closing.opacity < 1, `${engine}: closing, the rows fade and close their height (${JSON.stringify({ closing, rest })})`);
+          const closed = await tab.evaluate(holdSection, { at: 0, finish: true });
+          assert.ok(!closed.shown && closed.height === 0, `${engine}: closed, the rows are hidden (${JSON.stringify(closed)})`);
+          assert.equal(await tab.getByRole('link', { name: 'Atlas' }).count(), 0, `${engine}: closed, a row leaves the accessibility tree`);
+          await tab.locator('a[href="#atlas"]').evaluate((node) => node.focus());
+          assert.equal(await tab.evaluate(() => document.activeElement?.getAttribute('href')), null, `${engine}: closed, a row takes no focus`);
+
+          // Folding with the Section closed: partway, its rows are partly shown and opening; folded, they show and take focus.
+          const opening = await tab.evaluate(holdSection, { press: toggle, at: 0.25 });
+          const rail = await tab.evaluate(holdSection, { at: 0, finish: true });
+          assert.ok(!opening.hidden && opening.shown && between(opening.height, 0, rail.height) && opening.opacity > 0 && opening.opacity < 1, `${engine}: folding, a closed Section's rows fade in and open (${JSON.stringify({ opening, rail })})`);
+          assert.ok(rail.shown && rail.opacity === 1, `${engine}: folded, the rows show (${JSON.stringify(rail)})`);
+          await tab.locator('a[href="#atlas"]').focus();
+          assert.equal(await tab.evaluate(() => document.activeElement?.getAttribute('href')), '#atlas', `${engine}: folded, a row takes focus`);
+          await tab.evaluate(() => document.activeElement.blur());
+
+          // Unfolding: the closed Section's rows fade and close again.
+          const unfolding = await tab.evaluate(holdSection, { press: toggle, at: 0.25 });
+          assert.ok(unfolding.hidden && unfolding.shown && between(unfolding.height, 0, rail.height) && unfolding.opacity < 1, `${engine}: unfolding, the rows fade and close (${JSON.stringify(unfolding)})`);
+          const reclosed = await tab.evaluate(holdSection, { at: 0, finish: true });
+          assert.ok(!reclosed.shown && reclosed.height === 0, `${engine}: unfolded, the closed Section's rows are hidden again (${JSON.stringify(reclosed)})`);
+
+          // Opening by the heading: partway between heights, then open.
+          const reopening = await tab.evaluate(holdSection, { press: heading, at: 0.25 });
+          assert.ok(!reopening.hidden && reopening.shown && between(reopening.height, 0, rest.height), `${engine}: opening, the rows open their height (${JSON.stringify(reopening)})`);
+          const reopened = await tab.evaluate(holdSection, { at: 0, finish: true });
+          assert.ok(Math.abs(reopened.height - rest.height) < 0.5 && reopened.opacity === 1, `${engine}: open, the rows are back (${JSON.stringify(reopened)})`);
+        } finally {
+          await context.close();
+        }
+      }
+
+      // Under reduced motion, the rows go and come back at once.
+      for (const [name, query, options] of [['reduced motion (system)', '', { reducedMotion: 'reduce' }], ['reduced motion (scope)', '?motion=reduced', {}]]) {
+        const { tab, context } = await open(query, options);
+        try {
+          const closed = await tab.evaluate(holdSection, { press: heading, at: 0 });
+          assert.ok(closed.running === 0 && !closed.shown, `${engine} ${name}: closing is instant (${JSON.stringify(closed)})`);
+          const folded = await tab.evaluate(holdSection, { press: toggle, at: 0 });
+          assert.ok(folded.running === 0 && folded.shown && folded.opacity === 1, `${engine} ${name}: folding shows the rows at once (${JSON.stringify(folded)})`);
+        } finally {
+          await context.close();
+        }
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
